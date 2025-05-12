@@ -1,0 +1,16 @@
+@echo off
+echo Starting Accountability Log Application in Docker...
+
+echo Building and starting containers...
+docker-compose up -d --build
+
+echo Application is starting...
+echo.
+echo Frontend: http://localhost
+echo Backend API: http://localhost:5000
+echo.
+echo Press any key to view logs or Ctrl+C to exit...
+pause
+
+echo Viewing logs - press Ctrl+C to exit logs view (application will keep running)...
+docker-compose logs -f
