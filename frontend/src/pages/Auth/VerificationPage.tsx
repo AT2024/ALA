@@ -75,7 +75,7 @@ const VerificationPage = () => {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <img 
-            src="/logo.png" 
+            src="C:\Users\amitaik\Desktop\ala-improved\frontend\src\alphataulogo.png" 
             alt="AlphaTau Logo" 
             className="mx-auto mb-4 h-16 w-auto"
           />

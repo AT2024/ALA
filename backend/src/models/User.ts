@@ -13,10 +13,11 @@ interface UserAttributes {
   verificationExpires: Date | null;
   failedAttempts: number;
   lastLogin: Date | null;
+  metadata: any; // New field to store Priority user data
 }
 
 // For creating a new user
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'verificationCode' | 'verificationExpires' | 'failedAttempts' | 'lastLogin'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'verificationCode' | 'verificationExpires' | 'failedAttempts' | 'lastLogin' | 'metadata'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: string;
@@ -28,6 +29,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public verificationExpires!: Date | null;
   public failedAttempts!: number;
   public lastLogin!: Date | null;
+  public metadata!: any;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -35,8 +37,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
   // Helper methods
   public async generateVerificationCode(): Promise<string> {
-    // Generate a 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // TESTING ONLY: Use a fixed verification code "123456" for easier testing
+    // In production, this should generate a random code and use a real SMS/email service
+    const verificationCode = process.env.NODE_ENV === 'production' 
+      ? Math.floor(100000 + Math.random() * 900000).toString() 
+      : "123456"; // Fixed code for development and testing
     
     // Hash the verification code
     const hashedCode = await bcrypt.hash(verificationCode, 10);
@@ -132,6 +137,11 @@ User.init(
     lastLogin: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {},
     },
   },
   {

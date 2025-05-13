@@ -1,8 +1,39 @@
-import { Router } from 'express';
-const router = Router();
-// Sample route to ensure router is functional
-router.get('/', (req, res) => {
-  res.json({ message: 'Treatment route is working' });
-});
-// Define treatment routes here
+import express from 'express';
+import {
+  getTreatments,
+  getTreatmentById,
+  createTreatment,
+  updateTreatment,
+  completeTreatment,
+  getTreatmentApplicators,
+  addApplicator,
+  exportTreatment,
+} from '../controllers/treatmentController';
+import { updateApplicator } from '../controllers/applicatorController';
+import { protect } from '../middleware/authMiddleware';
+
+const router = express.Router();
+
+// Protect all routes
+router.use(protect);
+
+// Treatment routes
+router.route('/')
+  .get(getTreatments)
+  .post(createTreatment);
+
+router.route('/:id')
+  .get(getTreatmentById)
+  .put(updateTreatment);
+
+router.post('/:id/complete', completeTreatment);
+router.get('/:id/export', exportTreatment);
+
+// Treatment applicator routes
+router.route('/:id/applicators')
+  .get(getTreatmentApplicators)
+  .post(addApplicator);
+
+router.patch('/:treatmentId/applicators/:id', updateApplicator);
+
 export default router;

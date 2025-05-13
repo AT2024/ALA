@@ -106,30 +106,50 @@ git clone <repository-url>
 cd ala-improved
 ```
 
-2. Start the application using Docker Compose:
+2. Start the application using our interactive launcher:
 
 ```bash
 # On Windows
-run-local-docker.bat
-
-# On Linux/macOS
-docker-compose up -d
+run-docker-app.bat
 ```
 
-This will:
-- Build the Docker images for frontend and backend
-- Start PostgreSQL database
+This will present you with two options:
+- **Development Mode**: For local development with hot-reloading and debugging capabilities
+- **Production Mode**: For testing the production configuration locally
+
+The launcher will:
+- Build the appropriate Docker images for your selected environment
+- Start PostgreSQL database with proper configuration
 - Set up networking between containers
+- Configure environment variables based on your selection
 - Expose the application on http://localhost
 
 3. To stop the application:
 
 ```bash
 # On Windows
-stop-local-docker.bat
+stop-docker-app.bat
 
 # On Linux/macOS
 docker-compose down
+```
+
+#### Environment Configuration
+
+Our Docker setup includes three configuration files:
+
+1. **docker-compose.yml**: Base configuration shared between environments
+2. **docker-compose.dev.yml**: Development-specific settings with source code mounting for hot-reloading
+3. **docker-compose.prod.yml**: Production-ready configuration with security and performance optimizations
+
+For advanced users who prefer the command line:
+
+```bash
+# Development mode
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+# Production mode (requires environment variables to be set)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 ### Option 3: Azure Cloud Deployment
