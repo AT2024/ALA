@@ -1,0 +1,63 @@
+name: Development Deployment
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+          
+      - name: Run Backend Tests
+        run: |
+          cd backend
+          npm test
+          
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Run Frontend Tests
+        run: |
+          cd frontend
+          npm test
+        
+  deploy:
+    name: Deploy to Development
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          
+      - name: Deploy to Development Server
+        run: |
+          # Add server to known hosts
+          ssh-keyscan -H ${{ secrets.DEV_SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          # Deploy to server
+          ssh ${{ secrets.DEV_SERVER_USER }}@${{ secrets.DEV_SERVER_IP }} "cd ${{ secrets.DEV_PROJECT_PATH }} && \
+          git pull && \
+          docker-compose -f docker-compose.dev.yml down && \
+          docker-compose -f docker-compose.dev.yml build && \
+          docker-compose -f docker-compose.dev.yml up -d"

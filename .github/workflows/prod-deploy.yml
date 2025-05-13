@@ -1,0 +1,94 @@
+name: Production Deployment
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+          
+      - name: Run Backend Tests
+        run: |
+          cd backend
+          npm test
+          
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+          
+      - name: Run Frontend Tests
+        run: |
+          cd frontend
+          npm test
+  
+  approve:
+    name: Manual Approval
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manual Approval for Production Deployment
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: amitaik
+          minimum-approvals: 1
+          issue-title: "Deploying to Production"
+          issue-body: "Please approve the deployment to production"
+          exclude-workflow-initiator-as-approver: false
+      
+  deploy:
+    name: Deploy to Production
+    needs: approve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          
+      - name: Create Tag
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          VERSION=$(date '+%Y.%m.%d.%H%M')
+          git tag -a "v$VERSION" -m "Production release v$VERSION"
+          git push origin "v$VERSION"
+          
+      - name: Deploy to Production Server
+        run: |
+          # Add server to known hosts
+          ssh-keyscan -H ${{ secrets.PROD_SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          # Backup database before deployment
+          ssh ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_IP }} \
+            "cd ${{ secrets.PROD_PROJECT_PATH }} && \
+             docker-compose -f docker-compose.prod.yml exec -T db pg_dump -U postgres -d ala_db > backup_\$(date +%Y%m%d_%H%M%S).sql"
+          
+          # Deploy to server
+          ssh ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_IP }} \
+            "cd ${{ secrets.PROD_PROJECT_PATH }} && \
+             git fetch --all && \
+             git checkout main && \
+             git pull && \
+             docker-compose -f docker-compose.prod.yml down && \
+             docker-compose -f docker-compose.prod.yml build && \
+             docker-compose -f docker-compose.prod.yml up -d"
