@@ -1,215 +1,200 @@
 # Accountability Log Application (ALA)
 
-This is an improved implementation of the Accountability Log Application, designed for tracking treatment data, applicator usage, and seed management.
+A comprehensive application for tracking medical treatments, applicator usage, and seed management with a focus on reliability and user experience.
 
-## Project Structure
+## 📁 Project Structure
 
-The application is organized into separate frontend and backend components for better maintainability:
+```
+ala-improved/
+├── .env.docker
+├── .gitignore
+├── azure/
+│   ├── azure-deploy.sh
+│   ├── deploy.ps1
+│   └── README.md
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── src/
+│   │   ├── config/
+│   │   │   └── database.ts
+│   │   ├── controllers/
+│   │   │   └── authController.ts
+│   │   ├── middleware/
+│   │   │   ├── authMiddleware.ts
+│   │   │   ├── errorMiddleware.ts
+│   │   │   └── notFoundMiddleware.ts
+│   │   ├── models/
+│   │   │   ├── Applicator.ts
+│   │   │   ├── index.ts
+│   │   │   ├── Treatment.ts
+│   │   │   └── User.ts
+│   │   ├── routes/
+│   │   │   ├── adminRoutes.ts
+│   │   │   ├── applicatorRoutes.ts
+│   │   │   ├── authRoutes.ts
+│   │   │   └── treatmentRoutes.ts
+│   │   ├── utils/
+│   │   │   └── logger.ts
+│   │   ├── seedUser.js
+│   │   ├── seedUser.ts
+│   │   └── server.ts
+│   └── tsconfig.json
+├── debug.bat
+├── debug.sh
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
+├── docker-compose.yml
+├── docs/
+│   └── IMPROVEMENTS.md
+├── frontend/
+│   ├── Dockerfile
+│   ├── Dockerfile.dev
+│   ├── index.html
+│   ├── nginx.conf
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   │   ├── FileExplorer.tsx
+│   │   │   ├── Layout.tsx
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── context/
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── TreatmentContext.tsx
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   ├── pages/
+│   │   │   ├── Admin/
+│   │   │   │   └── Dashboard.tsx
+│   │   │   ├── Auth/
+│   │   │   │   ├── LoginPage.tsx
+│   │   │   │   └── VerificationPage.tsx
+│   │   │   ├── Treatment/
+│   │   │   │   ├── ApplicatorInformation.tsx
+│   │   │   │   ├── ScanQRCode.tsx
+│   │   │   │   ├── SeedRemoval.tsx
+│   │   │   │   ├── TreatmentSelection.tsx
+│   │   │   │   └── UseList.tsx
+│   │   │   └── ProjectDocPage.tsx
+│   │   └── services/
+│   │       ├── api.ts
+│   │       ├── authService.ts
+│   │       ├── priorityService.ts
+│   │       └── treatmentService.ts
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+├── README.md
+├── restart.bat
+└── scripts/
+    └── debug.js
+```
 
-- `frontend/` - React-based user interface built with Vite, TypeScript and Tailwind CSS
-- `backend/` - Node.js Express API server with PostgreSQL database
-- `docs/` - Project documentation
-- `azure/` - Azure deployment configuration and scripts
+## 🚀 Features
 
-## Features
-
-- **Authentication**: Secure verification code-based login via SMS or email
-- **Treatment Management**: Select, track and document treatments
+- **Secure Authentication**: Verification code-based login via SMS/email
+- **Treatment Management**: Track and document medical treatments
 - **Barcode Scanning**: Scan applicator barcodes with validation
 - **Offline Support**: Continue working without network connectivity
 - **Reporting**: Generate treatment reports in CSV/PDF formats
 - **Admin Dashboard**: Monitor system usage and manage configurations
+- **Priority Integration**: Seamless connection to the Priority system
 
-## Running the Application
+## 🛠️ Technology Stack
 
-You can run the application either locally with Node.js, using Docker, or deploy to Azure cloud.
+### Backend
+- Node.js with Express
+- TypeScript
+- Sequelize ORM
+- PostgreSQL
+- JWT authentication
+- Winston for logging
 
-### Option 1: Local Development Setup
+### Frontend
+- React 18
+- TypeScript
+- Tailwind CSS
+- Vite
+- Context API for state management
+- React Router for navigation
 
-#### Prerequisites
+### DevOps
+- Docker & Docker Compose
+- Azure Container Registry
+- Azure App Service
+- Azure Database for PostgreSQL
 
-- Node.js 18.x or later
-- PostgreSQL 15.x or later
-- npm package manager
+## 🏃‍♂️ Getting Started
 
-#### Installation & Setup
-
-1. Clone the repository:
-
-```bash
-git clone <repository-url>
-cd ala-improved
-```
-
-2. Install dependencies for both frontend and backend:
-
-```bash
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
-```
-
-3. Set up environment variables:
+### Development Mode
 
 ```bash
-# Backend environment setup
-cd backend
-cp .env.example .env
-# Edit .env with your database credentials and other settings
+# Clone the repository
+git clone https://github.com/AT2024/ALA.git
+cd ALA
 
-# Frontend environment setup
-cd ../frontend
-cp .env.development.example .env.development
-# Edit .env.development with your API URL and other settings
+# Start the development environment
+docker-compose -f docker-compose.dev.yml up -d
+
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:5000
+# Documentation: http://localhost:3000/docs
 ```
 
-4. Set up the database:
+### Production Mode
 
 ```bash
-# Create PostgreSQL database
-createdb ala_db
-
-# Run database migrations (using the backend application)
-cd backend
-npm run dev
+# Start the production environment
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-5. Start the development servers:
+### Debugging
 
 ```bash
-# Start backend server
-cd backend
-npm run dev
+# Run the debug script
+./debug.bat  # Windows
+./debug.sh   # Linux/Mac
 
-# In a new terminal, start frontend server
-cd frontend
-npm run dev
+# Restart containers
+./restart.bat
 ```
 
-### Option 2: Docker Setup (Recommended)
+## 📝 Recent Updates
 
-#### Prerequisites
+- Fixed API path inconsistencies in authentication service
+- Enhanced Priority system integration
+- Added comprehensive debugging tools
+- Improved error handling and TypeScript type safety
+- Added project documentation with visual file explorer
 
-- Docker and Docker Compose installed
-- Git
+## 🌟 Integration with Priority
 
-#### Running with Docker
+The application integrates with the Priority system using the following endpoints:
+- `/PHONEBOOK` - For contact information
+- `/ORDERS` - For treatment data
 
-1. Clone the repository:
+Position code '99' grants access to all treatment sites, while other codes restrict users to their assigned sites.
 
-```bash
-git clone <repository-url>
-cd ala-improved
-```
+## 🧪 Debugging Tools
 
-2. Start the application using our interactive launcher:
+The application includes several debugging utilities:
+- `debug.bat`/`debug.sh` - Test connectivity to backend and Priority APIs
+- `scripts/debug.js` - Detailed diagnostic script
+- `restart.bat` - Restart Docker containers
+- Project documentation page at `/docs`
 
-```bash
-# On Windows
-run-docker-app.bat
-```
+## 📚 Documentation
 
-This will present you with two options:
-- **Development Mode**: For local development with hot-reloading and debugging capabilities
-- **Production Mode**: For testing the production configuration locally
+Access the built-in documentation by navigating to `/docs` in the running application. The documentation includes:
+- File structure visualization
+- Recent changes
+- Running instructions
+- Debugging tips
 
-The launcher will:
-- Build the appropriate Docker images for your selected environment
-- Start PostgreSQL database with proper configuration
-- Set up networking between containers
-- Configure environment variables based on your selection
-- Expose the application on http://localhost
-
-3. To stop the application:
-
-```bash
-# On Windows
-stop-docker-app.bat
-
-# On Linux/macOS
-docker-compose down
-```
-
-#### Environment Configuration
-
-Our Docker setup includes three configuration files:
-
-1. **docker-compose.yml**: Base configuration shared between environments
-2. **docker-compose.dev.yml**: Development-specific settings with source code mounting for hot-reloading
-3. **docker-compose.prod.yml**: Production-ready configuration with security and performance optimizations
-
-For advanced users who prefer the command line:
-
-```bash
-# Development mode
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
-
-# Production mode (requires environment variables to be set)
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-```
-
-### Option 3: Azure Cloud Deployment
-
-For deploying to Azure cloud, follow the instructions in the [Azure Deployment Guide](azure/README.md).
-
-## Development
-
-### Branching Strategy
-
-This project uses a structured branching strategy:
-
-- `main` - Production-ready code
-- `ui-development` - UI/frontend development branch
-- `backend-development` - Backend API development branch
-- `integration` - For integrating UI and backend changes before production
-
-For feature development:
-- UI features: Create branches from `ui-development` with format `ui/feature-name`
-- Backend features: Create branches from `backend-development` with format `backend/feature-name`
-
-### Building for Production
-
-```bash
-# Build backend
-cd backend
-npm run build
-
-# Build frontend
-cd frontend
-npm run build
-```
-
-## Technology Stack
-
-- **Frontend**:
-  - React 18
-  - TypeScript
-  - Tailwind CSS
-  - Vite
-  - Zustand for state management
-  - React Router for navigation
-  - Axios for API requests
-
-- **Backend**:
-  - Node.js with Express
-  - TypeScript
-  - Sequelize ORM
-  - PostgreSQL
-  - JWT authentication
-  - Winston for logging
-
-- **DevOps**:
-  - Docker and Docker Compose
-  - Azure Container Registry
-  - Azure App Service
-  - Azure Database for PostgreSQL
-  - ESLint and Prettier for code quality
-  - Jest for testing
-
-## License
+## 📄 License
 
 Proprietary - All rights reserved
