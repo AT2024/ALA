@@ -28,7 +28,44 @@ app.use(morgan('dev'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
+  res.status(200).json({
+    status: 'ok',
+    message: 'Server is running',
+    version: '0.1.0',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
+
+// Debug endpoint to check API routes
+app.get('/api/routes', (req, res) => {
+  const routes: Array<{path: string, methods: string[]}> = [];
+  
+  // Get registered routes
+  app._router.stack.forEach((middleware: any) => {
+    if(middleware.route){ // Routes registered directly on the app
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if(middleware.name === 'router'){ // Router middleware
+      middleware.handle.stack.forEach((handler: any) => {
+        if(handler.route){
+          const path = handler.route.path;
+          const methods = Object.keys(handler.route.methods);
+          routes.push({ path: middleware.regexp.toString() + path, methods });
+        }
+      });
+    }
+  });
+  
+  res.status(200).json({
+    routes,
+    authRoutes: '/api/auth/*',
+    treatmentRoutes: '/api/treatments/*',
+    applicatorRoutes: '/api/applicators/*',
+    adminRoutes: '/api/admin/*'
+  });
 });
 
 // Routes

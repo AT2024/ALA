@@ -29,7 +29,25 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
 
   // First, check Priority system for the user
   try {
-    const priorityUser = await priorityService.getUserSiteAccess(identifier);
+    let priorityUser;
+    try {
+      priorityUser = await priorityService.getUserSiteAccess(identifier);
+    } catch (priorityError) {
+      // Log the error but continue with local authentication
+      logger.warn(`Priority system error: ${priorityError}. Continuing with local authentication.`);
+      
+      // Create a default priorityUser object to continue the flow
+      priorityUser = {
+        found: true,
+        fullAccess: false,
+        sites: [],
+        user: {
+          email: identifier.includes('@') ? identifier : null,
+          phone: !identifier.includes('@') ? identifier : null,
+          positionCode: 0
+        }
+      };
+    }
     
     if (!priorityUser.found) {
       res.status(404);

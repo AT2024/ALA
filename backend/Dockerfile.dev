@@ -1,18 +1,22 @@
-FROM node:18-alpine
+FROM node:20.13-alpine
 
 WORKDIR /usr/src/app
 
-# Copy package files
+# Copy package.json and package-lock.json first for better caching
 COPY package*.json ./
 
-# Install ALL dependencies (including dev dependencies)
-RUN npm install
+# Install ALL dependencies including development dependencies
+RUN npm install 
+RUN npm install -g nodemon
 
-# Copy application code
+# Copy the rest of the code
 COPY . .
 
-# Expose the port
+# Expose the application port
 EXPOSE 5000
 
-# Command to run in development mode
+# Set environment variables
+ENV NODE_ENV=development
+
+# Run the development server
 CMD ["npm", "run", "dev"]

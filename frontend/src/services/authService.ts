@@ -14,12 +14,14 @@ export interface AuthResponse {
 export const authService = {
   // Request verification code via SMS or email
   async requestVerificationCode(identifier: string): Promise<void> {
-    await api.post('/auth/request-code', { identifier });
+    // Always use the full API path for dev safety
+    await api.post('/api/auth/request-code', { identifier });
   },
 
   // Verify the code and get authentication token
   async verifyCode(identifier: string, code: string): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/verify', {
+    // Always use the full API path for dev safety
+    const response = await api.post<AuthResponse>('/api/auth/verify', {
       identifier,
       code,
     });
@@ -29,7 +31,7 @@ export const authService = {
   // Validate token with the backend
   async validateToken(token: string): Promise<boolean> {
     try {
-      const response = await api.post('/auth/validate-token', {}, {
+      const response = await api.post('/api/auth/validate-token', {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.status === 200;
@@ -40,6 +42,6 @@ export const authService = {
 
   // Request a resend of the verification code
   async resendVerificationCode(identifier: string): Promise<void> {
-    await api.post('/auth/resend-code', { identifier });
+    await api.post('/api/auth/resend-code', { identifier });
   }
 };
