@@ -46,7 +46,7 @@ export const priorityService = {
       if (isEmail) {
         filterQuery = `EMAIL eq '${identifier}'`;
       } else {
-        filterQuery = `PHONE eq '${identifier}'`;
+        filterQuery = `PHONE eq ${Number(identifier)}`;
       }
       const response = await priorityApi.get('/PHONEBOOK', {
         params: {
@@ -60,29 +60,6 @@ export const priorityService = {
             response.data
           )}`
         );
-        // Fallback: try searching by EMAIL if identifier is a number and not found by PHONE
-        if (!isEmail && !isNaN(Number(identifier))) {
-          const fallbackEmail = `${identifier}@alphatau.com`;
-          const fallbackResponse = await priorityApi.get('/PHONEBOOK', {
-            params: {
-              $filter: `EMAIL eq '${fallbackEmail}'`,
-              $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE',
-            },
-          });
-          if (fallbackResponse.data.value.length > 0) {
-            const user = fallbackResponse.data.value[0];
-            return {
-              found: true,
-              fullAccess: user.POSITIONCODE === 99,
-              sites: [user.CUSTNAME],
-              user: {
-                email: user.EMAIL,
-                phone: user.PHONE,
-                positionCode: user.POSITIONCODE,
-              },
-            };
-          }
-        }
         return { found: false, sites: [] };
       }
       const user = response.data.value[0];

@@ -35,7 +35,7 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
     } catch (priorityError) {
       // Log the error but continue with local authentication
       logger.warn(`Priority system error: ${priorityError}. Continuing with local authentication.`);
-      
+
       // Create a default priorityUser object to continue the flow
       priorityUser = {
         found: true,
@@ -44,121 +44,112 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
         user: {
           email: identifier.includes('@') ? identifier : null,
           phone: !identifier.includes('@') ? identifier : null,
-          positionCode: 0
-        }
+          positionCode: 0,
+        },
       };
     }
-    
+
     if (!priorityUser.found) {
       res.status(404);
       throw new Error('User not found in Priority system');
     }
-    
+
     // Make sure priorityUser.user exists before using it
     if (!priorityUser.user) {
       res.status(500);
       throw new Error('Invalid user data from Priority system');
     }
-    
+
     // Check if the user exists in our database - use multiple ways to lookup
     const isEmail = identifier.includes('@');
     let user;
-    
+
     // Try finding by the provided identifier first
     if (isEmail) {
       user = await User.findOne({ where: { email: identifier } });
     } else {
       user = await User.findOne({ where: { phoneNumber: identifier } });
     }
-    
+
     // Use optional chaining and nullish coalescing for safe property access
     const userName = priorityUser.user?.email || priorityUser.user?.phone || 'Unknown Name';
     const userEmail = priorityUser.user?.email || null;
     const userPhone = priorityUser.user?.phone || identifier; // Use provided identifier if no phone found
     const userPositionCode = priorityUser.user?.positionCode;
-    
+
     try {
       // If not found by identifier but we have email from Priority, try finding by that email
       if (!user && userEmail) {
         user = await User.findOne({ where: { email: userEmail } });
       }
-      
+
       // If still no user, create a new one
       if (!user) {
         // Create new user, but ensure we're not making duplicates
         const [newUser, created] = await User.findOrCreate({
           where: {
-            [Op.or]: [
-              { email: userEmail },
-              { phoneNumber: userPhone }
-            ]
+            [Op.or]: [{ email: userEmail }, { phoneNumber: userPhone }],
           },
           defaults: {
             name: userName,
             email: userEmail,
             phoneNumber: userPhone,
             role: priorityUser.fullAccess ? 'alphatau' : 'hospital',
-            metadata: { 
+            metadata: {
               sites: priorityUser.sites,
-              positionCode: userPositionCode
-            }
-          }
+              positionCode: userPositionCode,
+            },
+          },
         });
-        
+
         user = newUser;
-        
+
         if (!created) {
           // If the user existed but was found via findOrCreate, update their data
-          user.metadata = { 
+          user.metadata = {
             sites: priorityUser.sites,
-            positionCode: userPositionCode
+            positionCode: userPositionCode,
           };
-          
+
           // Update email or phone if they were null before
           if (userEmail && !user.email) user.email = userEmail;
           if (userPhone && !user.phoneNumber) user.phoneNumber = userPhone;
-          
+
           await user.save();
         }
       } else {
         // Update existing user with latest site permissions and data
-        user.metadata = { 
+        user.metadata = {
           sites: priorityUser.sites,
-          positionCode: userPositionCode
+          positionCode: userPositionCode,
         };
-        
+
         // Update email or phone if they were null before
         if (userEmail && !user.email) user.email = userEmail;
         if (userPhone && !user.phoneNumber) user.phoneNumber = userPhone;
-        
+
         await user.save();
       }
     } catch (error: any) {
       // Special handling for database constraint errors
       if (error.name === 'SequelizeUniqueConstraintError') {
         logger.warn(`Attempted to create duplicate user with identifier: ${identifier}`);
-        
+
         // Try harder to find the existing user
         if (userEmail) {
-          user = await User.findOne({ 
-            where: { 
-              [Op.or]: [
-                { email: userEmail },
-                { email: identifier }
-              ]
-            } 
+          user = await User.findOne({
+            where: {
+              [Op.or]: [{ email: userEmail }, { email: identifier }],
+            },
           });
         } else if (userPhone) {
-          user = await User.findOne({ 
-            where: { 
-              [Op.or]: [
-                { phoneNumber: userPhone },
-                { phoneNumber: identifier }
-              ]
-            } 
+          user = await User.findOne({
+            where: {
+              [Op.or]: [{ phoneNumber: userPhone }, { phoneNumber: identifier }],
+            },
           });
         }
-        
+
         if (!user) {
           logger.error('Could not find existing user after uniqueness error');
           throw new Error('Authentication error - please contact support');
@@ -168,14 +159,14 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
         throw error;
       }
     }
-    
+
     // Generate verification code
     const verificationCode = await user.generateVerificationCode();
-    
+
     // In a real app, send the code via SMS or email
     // For demo purposes, we'll just log it
     logger.info(`Verification code for ${identifier}: ${verificationCode}`);
-    
+
     res.status(200).json({
       success: true,
       message: 'Verification code sent',
@@ -200,7 +191,7 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
 
   // Check if the identifier is an email or phone number
   const isEmail = identifier.includes('@');
-  
+
   // Find the user by email or phone number
   let user;
   if (isEmail) {
@@ -223,7 +214,7 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
       // In a real app, notify admin
       logger.warn(`User ${identifier} exceeded verification attempts limit`);
     }
-    
+
     res.status(401);
     throw new Error('Invalid verification code');
   }
@@ -258,7 +249,7 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
 
   // Check if the identifier is an email or phone number
   const isEmail = identifier.includes('@');
-  
+
   // Find the user by email or phone number
   let user;
   if (isEmail) {
