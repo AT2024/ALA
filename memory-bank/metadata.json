@@ -1,0 +1,15 @@
+{
+  "project_name": "Accountability Log Application (ALA)",
+  "version": "0.1.0",
+  "files": [
+    "projectContext.md",
+    "activeContext.md",
+    "progress.md",
+    "decisionLog.md",
+    ".clinerules"
+  ],
+  "created_at": "2025-05-18T16:50:00Z",
+  "last_updated": "2025-05-18T16:50:00Z",
+  "author": "AlphaTau Development Team",
+  "template_version": "1.0.0"
+}
