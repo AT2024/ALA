@@ -1,15 +1,42 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
 const LoginPage = () => {
   const { login, error, clearError, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
   const [identifierType, setIdentifierType] = useState('email');
-
+  const [successMessage, setSuccessMessage] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
+    setLocalError(null);
+    
+    if (!identifier) {
+      setLocalError(`Please enter a valid ${identifierType === 'email' ? 'email address' : 'phone number'}`);
+      return;
+    }
+    
     if (identifier) {
-      await login(identifier);
+      try {
+        const result = await login(identifier);
+        
+        // If login was successful, show success message and redirect to verification page
+        if (result && result.success) {
+          setSuccessMessage(`Verification code sent to ${identifier}. Use code 123456 for verification.`);
+          
+          // Add a slight delay before navigating to give user time to see the message
+          setTimeout(() => {
+            navigate('/verify');
+          }, 1500);
+        }
+      } catch (err: any) {
+        console.error("Login error:", err);
+        setLocalError(err.message || 'Failed to process login. Please try again.');
+      }
     }
   };
 
@@ -28,9 +55,15 @@ const LoginPage = () => {
           <p className="mt-2 text-gray-600">
             Log in with your email or phone number
           </p>
+          
+          {successMessage && (
+            <div className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
+              {successMessage}
+            </div>
+          )}
         </div>
 
-        {error && (
+        {(error || localError) && (
           <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-700">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -43,12 +76,15 @@ const LoginPage = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p>{error}</p>
+                <p>{error || localError}</p>
               </div>
               <div className="ml-auto pl-3">
                 <div className="-mx-1.5 -my-1.5">
                   <button
-                    onClick={clearError}
+                    onClick={() => {
+                      clearError();
+                      setLocalError(null);
+                    }}
                     className="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none"
                   >
                     <span className="sr-only">Dismiss</span>
@@ -111,6 +147,11 @@ const LoginPage = () => {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
               />
             </div>
+            {identifierType === 'email' && (
+              <p className="mt-1 text-xs text-gray-500">
+                Your email will be validated against the Priority system records.
+              </p>
+            )}
           </div>
 
           <div>
@@ -136,7 +177,7 @@ const LoginPage = () => {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Sending Code...
+                  {identifierType === 'email' ? 'Validating Email...' : 'Sending Code...'}
                 </>
               ) : (
                 'Send Verification Code'

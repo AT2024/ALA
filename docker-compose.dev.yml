@@ -38,7 +38,8 @@ services:
     container_name: ala-frontend-dev
     restart: unless-stopped
     environment:
-      - VITE_API_URL=http://localhost:5000/api
+      # Use direct backend service name inside docker network
+      - VITE_API_URL=http://api:5000/api
     ports:
       - "3000:3000"
     depends_on:

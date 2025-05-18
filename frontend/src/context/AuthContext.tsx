@@ -8,6 +8,9 @@ interface User {
   phoneNumber: string;
   role: 'hospital' | 'alphatau' | 'admin';
   name: string;
+  positionCode?: string;
+  custName?: string;
+  sites?: string[];
 }
 
 interface AuthContextType {
@@ -15,7 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (identifier: string) => Promise<void>;
+  login: (identifier: string) => Promise<{success: boolean; message?: string} | undefined>;
   verify: (code: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -64,11 +67,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     
     try {
-      await authService.requestVerificationCode(identifier);
+      const result = await authService.requestVerificationCode(identifier);
+      
+      if (!result.success) {
+        setError(result.message || 'Login failed. Please try again.');
+        return { success: false, message: result.message };
+      }
+      
+      // Store the identifier for verification
       setLoginIdentifier(identifier);
-      navigate('/verify');
+      sessionStorage.setItem('loginIdentifier', identifier);
+      
+      // Store user data if provided (for session persistence)
+      if (result.userData) {
+        sessionStorage.setItem('priorityUserData', JSON.stringify(result.userData));
+      }
+      
+      return { success: true, message: 'Verification code sent successfully' };
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      const errorMessage = err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    sessionStorage.removeItem('priorityUserData');
     navigate('/login');
   };
 

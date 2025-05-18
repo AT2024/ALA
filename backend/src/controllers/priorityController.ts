@@ -1,0 +1,171 @@
+import { Request, Response } from 'express';
+import asyncHandler from 'express-async-handler';
+import logger from '../utils/logger';
+import priorityService from '../services/priorityService';
+
+// @desc    Validate user email against Priority PHONEBOOK
+// @route   POST /api/proxy/priority/validate-email
+// @access  Public
+export const validateUserEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    res.status(400);
+    throw new Error('Email is required');
+  }
+  
+  try {
+    logger.info(`Validating email: ${email}`);
+    
+    // Check the email with Priority
+    const priorityUserAccess = await priorityService.getUserSiteAccess(email);
+    
+    if (!priorityUserAccess.found) {
+      logger.info(`Email ${email} not found in Priority system`);
+      res.status(404).json({
+        isValid: false,
+        error: 'Email not found in the system'
+      });
+      return;
+    }
+    
+    logger.info(`Email ${email} found in Priority system`);
+    res.status(200).json({
+      isValid: true,
+      userData: {
+        name: priorityUserAccess.user?.email || 'User',
+        email: priorityUserAccess.user?.email || email,
+        phoneNumber: priorityUserAccess.user?.phone || '',
+        positionCode: priorityUserAccess.user?.positionCode || '',
+        custName: priorityUserAccess.sites[0] || '',
+      }
+    });
+  } catch (error: any) {
+    logger.error(`Error validating email: ${error.message}`);
+    res.status(500).json({
+      isValid: false,
+      error: `Error: ${error.message}`
+    });
+  }
+});
+
+// @desc    Debug Priority API connection
+// @route   GET /api/proxy/priority/debug
+// @access  Private
+export const debugPriorityConnection = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // Use real connection test
+    const result = await priorityService.debugPriorityConnection();
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    logger.error(`Debug error: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get treatments from Priority system
+// @route   GET /api/proxy/priority/treatments
+// @access  Private
+export const getTreatments = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // Extract parameters from request query
+    const { type, subjectId, site, date } = req.query;
+    
+    // Get user sites from request user metadata
+    const userSites = req.user?.metadata?.sites || [];
+    
+    // Get treatments from Priority for user's sites
+    const treatments = await priorityService.getTreatmentsForSites(
+      userSites, 
+      {
+        type: type as string,
+        subjectId: subjectId as string,
+        site: site as string,
+        date: date as string
+      }
+    );
+    
+    res.status(200).json(treatments);
+  } catch (error: any) {
+    logger.error(`Error fetching treatments: ${error.message}`);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get all contacts from Priority PHONEBOOK
+// @route   GET /api/proxy/priority/contacts
+// @access  Private
+export const getContacts = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // Get contacts directly from Priority
+    const contacts = await priorityService.getContacts();
+    
+    res.status(200).json(contacts);
+  } catch (error: any) {
+    logger.error(`Error fetching contacts: ${error.message}`);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get orders for a specific CUSTNAME (site)
+// @route   GET /api/proxy/priority/orders
+// @access  Private
+export const getOrdersForSite = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { custName } = req.query;
+    
+    if (!custName) {
+      res.status(400).json({ 
+        error: 'custName parameter is required'
+      });
+      return;
+    }
+    
+    // Get orders for the specified site
+    const orders = await priorityService.getOrdersForSite(custName as string);
+    
+    res.status(200).json(orders);
+  } catch (error: any) {
+    logger.error(`Error fetching orders: ${error.message}`);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get allowed sites for user based on POSITIONCODE and CUSTNAME
+// @route   GET /api/proxy/priority/allowed-sites
+// @access  Private
+export const getAllowedSitesForUser = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { userPositionCode, userCustName } = req.query;
+    
+    if (!userPositionCode || !userCustName) {
+      res.status(400).json({ 
+        error: 'userPositionCode and userCustName parameters are required'
+      });
+      return;
+    }
+    
+    // Get allowed sites for the user
+    const sites = await priorityService.getAllowedSitesForUser(
+      userPositionCode as string,
+      userCustName as string
+    );
+    
+    res.status(200).json(sites);
+  } catch (error: any) {
+    logger.error(`Error fetching allowed sites: ${error.message}`);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});

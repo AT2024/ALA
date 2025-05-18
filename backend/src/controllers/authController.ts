@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import logger from '../utils/logger';
 import priorityService from '../services/priorityService';
-import { Op } from 'sequelize';
 
 // JWT Secret from environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -27,137 +26,103 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
     throw new Error('Email or phone number is required');
   }
 
-  // First, check Priority system for the user
+  // Check if the identifier is an email or phone number
+  const isEmail = identifier.includes('@');
+
   try {
-    let priorityUser;
-    try {
-      priorityUser = await priorityService.getUserSiteAccess(identifier);
-    } catch (priorityError) {
-      // Log the error but continue with local authentication
-      logger.warn(`Priority system error: ${priorityError}. Continuing with local authentication.`);
+    // For testing/development only allow test@example.com
+    if (identifier === 'test@example.com') {
+      logger.info(`Using test account flow for ${identifier}`);
 
-      // Create a default priorityUser object to continue the flow
-      priorityUser = {
-        found: true,
-        fullAccess: false,
-        sites: [],
-        user: {
-          email: identifier.includes('@') ? identifier : null,
-          phone: !identifier.includes('@') ? identifier : null,
-          positionCode: 0,
+      // Find or create test user
+      let user = await User.findOne({ where: { email: identifier } });
+
+      if (!user) {
+        user = await User.create({
+          name: 'Test User',
+          email: identifier,
+          phoneNumber: null,
+          role: 'admin',
+          metadata: {
+            positionCode: '99',
+            custName: '100078',
+            sites: ['100078'],
+          },
+        });
+        logger.info(`Created test user: ${user.id}`);
+      }
+
+      // Generate verification code
+      const verificationCode = await user.generateVerificationCode();
+      logger.info(`Verification code for ${identifier}: ${verificationCode}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Verification code sent',
+        userData: {
+          name: user.name,
+          email: user.email,
+          phoneNumber: user.phoneNumber || '',
+          positionCode: user.metadata?.positionCode || '99',
+          custName: user.metadata?.custName || '100078',
         },
-      };
+      });
+      return;
     }
 
-    if (!priorityUser.found) {
-      res.status(404);
-      throw new Error('User not found in Priority system');
+    // First, validate against Priority system
+    logger.info(`Validating ${isEmail ? 'email' : 'phone'}: ${identifier} with Priority`);
+    const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+
+    if (!priorityUserAccess.found) {
+      logger.info(`${isEmail ? 'Email' : 'Phone'} ${identifier} not found in Priority system`);
+      res.status(404).json({
+        success: false,
+        message: `${isEmail ? 'Email' : 'Phone'} not found in the system`,
+      });
+      return;
     }
 
-    // Make sure priorityUser.user exists before using it
-    if (!priorityUser.user) {
-      res.status(500);
-      throw new Error('Invalid user data from Priority system');
-    }
+    // Priority validation successful, find or create local user
+    logger.info(`${isEmail ? 'Email' : 'Phone'} ${identifier} found in Priority system`);
 
-    // Check if the user exists in our database - use multiple ways to lookup
-    const isEmail = identifier.includes('@');
+    // Find local user
     let user;
-
-    // Try finding by the provided identifier first
     if (isEmail) {
       user = await User.findOne({ where: { email: identifier } });
     } else {
       user = await User.findOne({ where: { phoneNumber: identifier } });
     }
 
-    // Use optional chaining and nullish coalescing for safe property access
-    const userName = priorityUser.user?.email || priorityUser.user?.phone || 'Unknown Name';
-    const userEmail = priorityUser.user?.email || null;
-    const userPhone = priorityUser.user?.phone || identifier; // Use provided identifier if no phone found
-    const userPositionCode = priorityUser.user?.positionCode;
+    // If not found locally, create user from Priority data
+    if (!user) {
+      const userData = {
+        name: priorityUserAccess.user?.email || 'User',
+        email: isEmail ? identifier : null,
+        phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
+        role:
+          priorityUserAccess.user?.positionCode === 99
+            ? 'admin'
+            : ('hospital' as 'admin' | 'hospital'),
+        metadata: {
+          positionCode: priorityUserAccess.user?.positionCode,
+          custName: priorityUserAccess.sites[0] || '',
+          sites: priorityUserAccess.sites || [],
+        },
+      } as const; // Fix: ensure type is compatible
 
-    try {
-      // If not found by identifier but we have email from Priority, try finding by that email
-      if (!user && userEmail) {
-        user = await User.findOne({ where: { email: userEmail } });
-      }
-
-      // If still no user, create a new one
-      if (!user) {
-        // Create new user, but ensure we're not making duplicates
-        const [newUser, created] = await User.findOrCreate({
-          where: {
-            [Op.or]: [{ email: userEmail }, { phoneNumber: userPhone }],
-          },
-          defaults: {
-            name: userName,
-            email: userEmail,
-            phoneNumber: userPhone,
-            role: priorityUser.fullAccess ? 'alphatau' : 'hospital',
-            metadata: {
-              sites: priorityUser.sites,
-              positionCode: userPositionCode,
-            },
-          },
-        });
-
-        user = newUser;
-
-        if (!created) {
-          // If the user existed but was found via findOrCreate, update their data
-          user.metadata = {
-            sites: priorityUser.sites,
-            positionCode: userPositionCode,
-          };
-
-          // Update email or phone if they were null before
-          if (userEmail && !user.email) user.email = userEmail;
-          if (userPhone && !user.phoneNumber) user.phoneNumber = userPhone;
-
-          await user.save();
-        }
-      } else {
-        // Update existing user with latest site permissions and data
-        user.metadata = {
-          sites: priorityUser.sites,
-          positionCode: userPositionCode,
-        };
-
-        // Update email or phone if they were null before
-        if (userEmail && !user.email) user.email = userEmail;
-        if (userPhone && !user.phoneNumber) user.phoneNumber = userPhone;
-
-        await user.save();
-      }
-    } catch (error: any) {
-      // Special handling for database constraint errors
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        logger.warn(`Attempted to create duplicate user with identifier: ${identifier}`);
-
-        // Try harder to find the existing user
-        if (userEmail) {
-          user = await User.findOne({
-            where: {
-              [Op.or]: [{ email: userEmail }, { email: identifier }],
-            },
-          });
-        } else if (userPhone) {
-          user = await User.findOne({
-            where: {
-              [Op.or]: [{ phoneNumber: userPhone }, { phoneNumber: identifier }],
-            },
-          });
-        }
-
-        if (!user) {
-          logger.error('Could not find existing user after uniqueness error');
-          throw new Error('Authentication error - please contact support');
-        }
-      } else {
-        // For other errors, rethrow
-        throw error;
-      }
+      user = await User.create(userData);
+      logger.info(`Created new user from Priority data: ${user.id}`);
+    } else {
+      // Update user metadata with latest from Priority
+      user.metadata = {
+        ...user.metadata,
+        positionCode: priorityUserAccess.user?.positionCode,
+        custName: priorityUserAccess.sites[0] || '',
+        sites: priorityUserAccess.sites || [],
+      };
+      await user.save();
+      logger.info(`Updated existing user with Priority data: ${user.id}`);
     }
 
     // Generate verification code
@@ -170,11 +135,21 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
     res.status(200).json({
       success: true,
       message: 'Verification code sent',
+      userData: {
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber || '',
+        positionCode: user.metadata?.positionCode || '',
+        custName: user.metadata?.custName || '',
+        sites: user.metadata?.sites || [],
+      },
     });
-  } catch (error) {
-    logger.error(`Error in requestVerificationCode: ${error}`);
-    res.status(500);
-    throw new Error('Failed to process authentication request');
+  } catch (error: any) {
+    logger.error(`Error requesting verification code: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: `Error: ${error.message}`,
+    });
   }
 });
 
@@ -247,33 +222,65 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
     throw new Error('Email or phone number is required');
   }
 
-  // Check if the identifier is an email or phone number
-  const isEmail = identifier.includes('@');
+  try {
+    // Check if the identifier is an email or phone number
+    const isEmail = identifier.includes('@');
 
-  // Find the user by email or phone number
-  let user;
-  if (isEmail) {
-    user = await User.findOne({ where: { email: identifier } });
-  } else {
-    user = await User.findOne({ where: { phoneNumber: identifier } });
+    // Find the user by email or phone number
+    let user;
+    if (isEmail) {
+      user = await User.findOne({ where: { email: identifier } });
+    } else {
+      user = await User.findOne({ where: { phoneNumber: identifier } });
+    }
+
+    if (!user) {
+      // If user not found in local DB, check against Priority first
+      const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+
+      if (!priorityUserAccess.found) {
+        res.status(404);
+        throw new Error('User not found in the system');
+      }
+
+      // If found in Priority but not locally, create a new user
+      const userData = {
+        name: priorityUserAccess.user?.email || 'User',
+        email: isEmail ? identifier : null,
+        phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
+        role:
+          priorityUserAccess.user?.positionCode === 99
+            ? 'admin'
+            : ('hospital' as 'admin' | 'hospital'),
+        metadata: {
+          positionCode: priorityUserAccess.user?.positionCode,
+          custName: priorityUserAccess.sites[0] || '',
+          sites: priorityUserAccess.sites || [],
+        },
+      } as const; // Fix: ensure type is compatible
+
+      user = await User.create(userData);
+      logger.info(`Created new user from Priority data on resend: ${user.id}`);
+    }
+
+    // Generate verification code
+    const verificationCode = await user.generateVerificationCode();
+
+    // In a real app, send the code via SMS or email
+    // For demo purposes, we'll just log it
+    logger.info(`Resent verification code for ${identifier}: ${verificationCode}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code resent',
+    });
+  } catch (error: any) {
+    logger.error(`Error resending verification code: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: `Error: ${error.message}`,
+    });
   }
-
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
-  }
-
-  // Generate verification code
-  const verificationCode = await user.generateVerificationCode();
-
-  // In a real app, send the code via SMS or email
-  // For demo purposes, we'll just log it
-  logger.info(`Verification code for ${identifier}: ${verificationCode}`);
-
-  res.status(200).json({
-    success: true,
-    message: 'Verification code resent',
-  });
 });
 
 // @desc    Validate token

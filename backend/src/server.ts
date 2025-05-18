@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes';
 import treatmentRoutes from './routes/treatmentRoutes';
 import applicatorRoutes from './routes/applicatorRoutes';
 import adminRoutes from './routes/adminRoutes';
+import priorityRoutes from './routes/priorityRoutes';
 import { initializeDatabase } from './config/database';
 import logger from './utils/logger';
 
@@ -26,6 +27,9 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
+// Track database connection status
+let isDatabaseConnected = false;
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -33,7 +37,8 @@ app.get('/api/health', (req, res) => {
     message: 'Server is running',
     version: '0.1.0',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
+    env: process.env.NODE_ENV,
+    databaseConnected: isDatabaseConnected
   });
 });
 
@@ -64,7 +69,8 @@ app.get('/api/routes', (req, res) => {
     authRoutes: '/api/auth/*',
     treatmentRoutes: '/api/treatments/*',
     applicatorRoutes: '/api/applicators/*',
-    adminRoutes: '/api/admin/*'
+    adminRoutes: '/api/admin/*',
+    priorityRoutes: '/api/proxy/priority/*'
   });
 });
 
@@ -73,6 +79,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/treatments', treatmentRoutes);
 app.use('/api/applicators', applicatorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/proxy/priority', priorityRoutes);
 
 // 404 handler
 app.use(notFound);
@@ -83,10 +90,32 @@ app.use(errorHandler);
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await initializeDatabase();
-    app.listen(PORT, () => {
+    // Start server regardless of database connection
+    const server = app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
     });
+    
+    // Try to connect to database, but don't crash if it fails
+    try {
+      isDatabaseConnected = await initializeDatabase();
+      if (!isDatabaseConnected) {
+        logger.warn('Server started without database connection. Some features may not work.');
+        
+        // Schedule periodic retry attempts
+        setInterval(async () => {
+          logger.info('Attempting to reconnect to database...');
+          isDatabaseConnected = await initializeDatabase(3, 1000);
+          if (isDatabaseConnected) {
+            logger.info('Successfully reconnected to database!');
+          }
+        }, 30000); // Retry every 30 seconds
+      }
+    } catch (dbError) {
+      logger.error(`Database initialization error: ${dbError}`);
+      logger.warn('Server started without database connection. Some features may not work.');
+    }
+    
+    return server;
   } catch (error) {
     logger.error(`Failed to start server: ${error}`);
     process.exit(1);

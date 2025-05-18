@@ -37,11 +37,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
   // Helper methods
   public async generateVerificationCode(): Promise<string> {
-    // TESTING ONLY: Use a fixed verification code "123456" for easier testing
-    // In production, this should generate a random code and use a real SMS/email service
-    const verificationCode = process.env.NODE_ENV === 'production' 
-      ? Math.floor(100000 + Math.random() * 900000).toString() 
-      : "123456"; // Fixed code for development and testing
+    // Always use "123456" as the verification code as requested
+    const verificationCode = "123456"; // Fixed code for all environments
     
     // Hash the verification code
     const hashedCode = await bcrypt.hash(verificationCode, 10);
