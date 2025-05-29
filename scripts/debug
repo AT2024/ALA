@@ -1,0 +1,6 @@
+#!/bin/bash
+# ALA Debug Tool - Unix Wrapper
+# Calls the unified Node.js debug tool
+
+echo "Starting ALA Debug Tool..."
+node "$(dirname "$0")/debug-unified.js" "$@"

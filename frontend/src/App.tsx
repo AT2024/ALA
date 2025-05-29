@@ -11,7 +11,8 @@ import ApplicatorInformation from '@/pages/Treatment/ApplicatorInformation';
 import UseList from '@/pages/Treatment/UseList';
 import SeedRemoval from '@/pages/Treatment/SeedRemoval';
 import Dashboard from '@/pages/Admin/Dashboard';
-import ProjectDocPage from '@/pages/ProjectDocPage'; // Import the new page
+import ProjectDocPage from '@/pages/ProjectDocPage';
+import ProcedureTypePage from '@/pages/Procedure/ProcedureTypePage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/docs" element={<ProjectDocPage />} /> {/* New docs page - accessible without login */}
             
             <Route element={<ProtectedRoute />}>
+              <Route path="/procedure-type" element={<ProcedureTypePage />} />
               <Route path="/treatment/select" element={<TreatmentSelection />} />
               <Route path="/treatment/scan" element={<ScanQRCode />} />
               <Route path="/treatment/applicator" element={<ApplicatorInformation />} />

@@ -33,3 +33,14 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+# Backup files
+*.bak
+*-backup/
+
+# Generated/temporary files
+repomix-output.txt
+*.repomix
+
+# Memory bank internal repos
+memory-bank/memory-bank/

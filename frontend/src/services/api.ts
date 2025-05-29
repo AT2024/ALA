@@ -21,8 +21,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Add longer timeout for development
-  timeout: 10000
+  // Add longer timeout for Priority API calls
+  timeout: 30000
 });
 
 // Add request interceptor to include auth token
@@ -69,7 +69,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // Handle network errors and server down scenarios
-    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
       console.error('Network error or server down:', error.message);
       throw new Error('Cannot connect to server. Please check if the server is running.');
     }

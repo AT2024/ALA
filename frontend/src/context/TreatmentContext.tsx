@@ -26,6 +26,8 @@ interface TreatmentContextType {
   currentTreatment: Treatment | null;
   applicators: Applicator[];
   currentApplicator: Applicator | null;
+  procedureType: 'insertion' | 'removal' | null;
+  setProcedureType: (type: 'insertion' | 'removal') => void;
   setTreatment: (treatment: Treatment) => void;
   addApplicator: (applicator: Applicator) => void;
   updateApplicator: (id: string, data: Partial<Applicator>) => void;
@@ -42,6 +44,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const [currentTreatment, setCurrentTreatment] = useState<Treatment | null>(null);
   const [applicators, setApplicators] = useState<Applicator[]>([]);
   const [currentApplicator, setCurrentApplicator] = useState<Applicator | null>(null);
+  const [procedureType, setProcedureType] = useState<'insertion' | 'removal' | null>(null);
 
   const setTreatment = (treatment: Treatment) => {
     setCurrentTreatment(treatment);
@@ -69,6 +72,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setCurrentTreatment(null);
     setApplicators([]);
     setCurrentApplicator(null);
+    setProcedureType(null);
   };
 
   // Calculate totals for removal treatment
@@ -83,6 +87,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         currentTreatment,
         applicators,
         currentApplicator,
+        procedureType,
+        setProcedureType,
         setTreatment,
         addApplicator,
         updateApplicator,

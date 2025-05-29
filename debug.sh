@@ -19,7 +19,7 @@ if ! npm list axios --json &> /dev/null; then
   npm install axios --no-save
 fi
 
-// Run the debug script
+# Run the debug script
 echo "Starting debug checks..."
 node scripts/debug.js
 
