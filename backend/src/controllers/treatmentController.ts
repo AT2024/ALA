@@ -70,8 +70,57 @@ export const completeTreatment = asyncHandler(async (req: Request, res: Response
     throw new Error('Not authorized to complete this treatment');
   }
   
+  // Update treatment status in Priority system first
+  const statusResult = await applicatorService.updateTreatmentStatusInPriority(
+    req.params.id, 
+    treatment.type === 'removal' ? 'Removed' : 'Performed'
+  );
+  
+  if (!statusResult.success) {
+    res.status(500);
+    throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+  }
+  
+  // Complete treatment locally
   const completedTreatment = await treatmentService.completeTreatment(req.params.id, req.user.id);
-  res.status(200).json(completedTreatment);
+  
+  res.status(200).json({
+    ...completedTreatment,
+    priorityStatus: statusResult.message
+  });
+});
+
+// @desc    Update treatment status in Priority
+// @route   PATCH /api/treatments/:id/status
+// @access  Private
+export const updateTreatmentStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { status } = req.body;
+  
+  if (!['Performed', 'Removed'].includes(status)) {
+    res.status(400);
+    throw new Error('Status must be either "Performed" or "Removed"');
+  }
+  
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+  
+  // Check if user has access to update this treatment
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to update this treatment');
+  }
+  
+  // Update treatment status in Priority system
+  const statusResult = await applicatorService.updateTreatmentStatusInPriority(
+    req.params.id, 
+    status
+  );
+  
+  if (!statusResult.success) {
+    res.status(500);
+    throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+  }
+  
+  res.status(200).json(statusResult);
 });
 
 // @desc    Get applicators for a treatment
@@ -102,6 +151,7 @@ export const addApplicator = asyncHandler(async (req: Request, res: Response) =>
     throw new Error('Not authorized to modify this treatment');
   }
   
+  // Use the Priority-integrated applicator service
   const applicator = await applicatorService.addApplicator(req.params.id, req.body, req.user.id);
   res.status(201).json(applicator);
 });

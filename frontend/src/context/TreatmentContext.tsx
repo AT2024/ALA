@@ -7,14 +7,20 @@ interface Treatment {
   site: string;
   date: string;
   isComplete: boolean;
+  email?: string;
+  seedQuantity?: number;
+  activityPerSeed?: number;
+  surgeon?: string;
 }
 
 interface Applicator {
   id: string;
   serialNumber: string;
+  applicatorType?: string;
   seedQuantity: number;
   usageType: 'full' | 'faulty' | 'none';
   insertionTime: string;
+  insertedSeedsQty?: number;
   comments?: string;
   image?: string;
   isRemoved?: boolean;

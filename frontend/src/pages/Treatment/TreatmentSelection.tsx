@@ -1,389 +1,461 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, addDays, subDays } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
-import { treatmentService, Treatment } from '@/services/treatmentService';
 import { useAuth } from '@/context/AuthContext';
-import { priorityService } from '@/services/priorityService';
+
+// Priority system integration - no more mock data needed
+// Sites, patients, and surgeons will be fetched from Priority system
+
+interface PriorityPatient {
+  id: string;
+  seedQty: number;
+  activityPerSeed: number;
+  ordName?: string;
+  reference?: string;
+}
+
+interface PrioritySite {
+  custName: string;
+  custDes: string;
+}
 
 const TreatmentSelection = () => {
-  const { setTreatment } = useTreatment();
+  const { setTreatment, procedureType } = useTreatment();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [surgeons, setSurgeons] = useState<string[]>([]);
-  const [sites, setSites] = useState<string[]>([]);
-
-  const [treatmentType, setTreatmentType] = useState<'insertion' | 'removal'>('insertion');
-  const [searchParams, setSearchParams] = useState({
-    subjectId: '',
-    site: user?.custName || '',
-    date: format(new Date(), 'yyyy-MM-dd'),
-    seedQuantity: '',
+  const [formData, setFormData] = useState({
+    email: user?.email || '',
+    site: '',
+    date: format(new Date(), 'dd.MMM.yyyy'),
+    patientId: '',
+    seedQty: '',
     activityPerSeed: '',
-    surgeon: '',
+    surgeon: ''
   });
 
-  // Fetch initial data
+  const [availablePatients, setAvailablePatients] = useState<PriorityPatient[]>([]);
+  const [availableSites, setAvailableSites] = useState<PrioritySite[]>([]);
+  const [availableSurgeons, setAvailableSurgeons] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sitesLoading, setSitesLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load available sites and set default site based on user
   useEffect(() => {
-    fetchTreatments();
-
-    // Fetch surgeons and sites if user has access
-    if (user) {
-      fetchSurgeonsAndSites();
-    }
-  }, [treatmentType, user]);
-
-  const fetchSurgeonsAndSites = async () => {
-    try {
-      // Get contacts from Priority system
-      const contacts = await priorityService.getContacts();
-
-      // Extract unique surgeons from contacts
-      const surgeonsList = contacts
-        .filter((contact) => contact.POSITIONCODE === '20') // Assuming 20 is the position code for surgeons
-        .map((contact) => contact.NAME);
-
-      setSurgeons([...new Set(surgeonsList)]);
-
-      // Get sites user has access to
-      if (user?.positionCode === '99') {
-        // Admin sees all sites
-        const allSites = contacts.map((contact) => contact.CUSTDES).filter((site) => site); // Filter out empty values
-
-        setSites([...new Set(allSites)]);
-      } else if (user?.sites) {
-        // Regular user sees only assigned sites
-        setSites(user.sites);
+    const loadUserSites = async () => {
+      if (!user) return;
+      
+      setSitesLoading(true);
+      try {
+        // For ATM users (fullAccess), fetch all sites
+        // For site users, use their assigned site
+        if (user.fullAccess && user.sites && user.sites.length > 0) {
+          // Convert user.sites to PrioritySite format
+          const userSites: PrioritySite[] = user.sites.map(site => ({
+            custName: site,
+            custDes: site // Use site name as description for now
+          }));
+          setAvailableSites(userSites);
+        } else if (user.custName) {
+          // Site users have access to their own site only
+          setAvailableSites([{
+            custName: user.custName,
+            custDes: user.custName
+          }]);
+          setFormData(prev => ({ ...prev, site: user.custName || '' }));
+        }
+        
+        // Load surgeons from Priority (for now use mock data)
+        // TODO: Implement Priority surgeon fetching
+        setAvailableSurgeons([
+          'Dr. Smith, John',
+          'Dr. Johnson, Sarah', 
+          'Dr. Williams, Michael',
+          'Dr. Brown, Emily',
+          'Dr. Davis, Robert'
+        ]);
+      } catch (err) {
+        console.error('Error loading user sites:', err);
+        setError('Failed to load available sites');
+      } finally {
+        setSitesLoading(false);
       }
-    } catch (err: any) {
-      console.error('Error fetching surgeons and sites:', err);
-    }
-  };
+    };
+    
+    loadUserSites();
+  }, [user]);
 
-  const fetchTreatments = async () => {
+  // Fetch patients when site and date change
+  useEffect(() => {
+    if (formData.site && formData.date) {
+      fetchPatientsForSiteAndDate();
+    }
+  }, [formData.site, formData.date]);
+
+  const fetchPatientsForSiteAndDate = async () => {
     setLoading(true);
     setError(null);
-
+    
     try {
-      // Filter parameters
-      const params = {
-        type: treatmentType,
-        ...searchParams,
-      };
-
-      // Only include non-empty params
-      const filteredParams = Object.entries(params).reduce(
-        (acc, [key, value]) => {
-          if (value) {
-            if (key === 'type') {
-              acc[key] = value as 'insertion' | 'removal';
-            } else {
-              acc[key] = value;
-            }
-          }
-          return acc;
+      console.log(`Fetching patients for site: ${formData.site}, date: ${formData.date}`);
+      
+      // Convert date format from DD.MMM.YYYY to YYYY-MM-DD for Priority API
+      const dateForApi = convertDateForPriority(formData.date);
+      
+      // Call Priority service to get orders for the site and date
+      const response = await fetch('/api/priority/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        {} as Record<string, any>
-      );
-
-      const data = await treatmentService.getTreatments(filteredParams);
-      setTreatments(data);
+        body: JSON.stringify({
+          site: formData.site,
+          date: dateForApi,
+          procedureType: procedureType
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch patients: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform Priority data to our patient format
+      const patients: PriorityPatient[] = data.orders?.map((order: any) => ({
+        id: order.DETAILS || order.REFERENCE || `PAT-${order.ORDNAME}`,
+        seedQty: parseInt(order.SBD_SEEDQTY) || 0,
+        activityPerSeed: parseFloat(order.SBD_PREFACTIV) || 0,
+        ordName: order.ORDNAME,
+        reference: order.REFERENCE
+      })) || [];
+      
+      console.log(`Found ${patients.length} patients for site ${formData.site}`);
+      setAvailablePatients(patients);
+      
+      // If no patients found, show helpful message
+      if (patients.length === 0) {
+        setError(`No scheduled procedures found for ${formData.site} on ${formData.date}`);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch treatments');
+      console.error('Error fetching patients:', err);
+      setError(err.message || 'Failed to fetch patients for selected site and date');
+      setAvailablePatients([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchTreatments();
+  const handleDateChange = (direction: 'yesterday' | 'today' | 'tomorrow') => {
+    const currentDate = new Date();
+    let newDate: Date;
+    
+    switch (direction) {
+      case 'yesterday':
+        newDate = subDays(currentDate, 1);
+        break;
+      case 'tomorrow':
+        newDate = addDays(currentDate, 1);
+        break;
+      default:
+        newDate = currentDate;
+    }
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      date: format(newDate, 'dd.MMM.yyyy'),
+      patientId: '', // Reset patient selection when date changes
+      seedQty: '',
+      activityPerSeed: ''
+    }));
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const date = e.target.value;
-    setSearchParams({ ...searchParams, date });
+  const handlePatientSelection = (patientId: string) => {
+    const selectedPatient = availablePatients.find(p => p.id === patientId);
+    
+    if (selectedPatient) {
+      console.log('Selected patient:', selectedPatient);
+      setFormData(prev => ({
+        ...prev,
+        patientId: selectedPatient.id,
+        seedQty: selectedPatient.seedQty.toString(),
+        activityPerSeed: selectedPatient.activityPerSeed.toString()
+      }));
+    }
   };
-
-  const handleSelectTreatment = (treatment: Treatment) => {
-    setTreatment(treatment);
-    if (treatment.type === 'insertion') {
-      navigate('/treatment/scan');
-    } else {
-      navigate('/treatment/removal');
+  
+  // Helper function to convert date format for Priority API
+  const convertDateForPriority = (dateStr: string): string => {
+    try {
+      // Convert from DD.MMM.YYYY to YYYY-MM-DD
+      const [day, month, year] = dateStr.split('.');
+      const monthMap: { [key: string]: string } = {
+        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+      };
+      
+      const monthNum = monthMap[month] || '01';
+      return `${year}-${monthNum}-${day.padStart(2, '0')}`;
+    } catch (error) {
+      console.error('Error converting date:', error);
+      return new Date().toISOString().split('T')[0]; // fallback to today
     }
   };
 
-  const handleCreateTreatment = async () => {
-    if (!searchParams.site || !searchParams.date || !searchParams.subjectId) {
-      setError('Site, Date, and Patient ID are required to create a new treatment');
+  const handleSubmit = () => {
+    // Validation
+    if (!formData.email || !formData.site || !formData.patientId || !formData.surgeon) {
+      setError('Please fill in all required fields (Email, Site, Patient ID, Surgeon)');
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    // Create treatment object
+    const treatment = {
+      id: `treatment-${Date.now()}`,
+      type: procedureType as 'insertion' | 'removal',
+      subjectId: formData.patientId,
+      site: formData.site,
+      date: formData.date,
+      isComplete: false,
+      email: formData.email,
+      seedQuantity: parseInt(formData.seedQty) || 0,
+      activityPerSeed: parseFloat(formData.activityPerSeed) || 0,
+      surgeon: formData.surgeon
+    };
 
-    try {
-      // Replace this block with the correct method to create a treatment.
-      // If you have a function to create a treatment, import and use it here.
-      // For now, we'll throw an error to indicate this needs implementation.
-      throw new Error('Treatment creation is not implemented. Please implement createTreatment in treatmentService.');
-    } catch (err: any) {
-      setError(err.message || 'Failed to create treatment');
-    } finally {
-      setLoading(false);
-    }
+    setTreatment(treatment);
+    
+    // Navigate to Treatment Documentation screen
+    navigate('/treatment/scan');
   };
 
   return (
-    <Layout title='Treatment Selection'>
-      <div className='space-y-6'>
-        <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <h2 className='mb-4 text-lg font-medium'>Select Treatment Type</h2>
-          <div className='flex space-x-4'>
-            <button
-              onClick={() => setTreatmentType('insertion')}
-              className={`flex-1 rounded-md px-4 py-2 ${
-                treatmentType === 'insertion'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}>
-              Insertion
-            </button>
-            <button
-              onClick={() => setTreatmentType('removal')}
-              className={`flex-1 rounded-md px-4 py-2 ${
-                treatmentType === 'removal'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}>
-              Removal
-            </button>
-          </div>
+    <Layout title="Treatment Selection" showBackButton={true}>
+      <div className="space-y-6">
+        {/* Header showing procedure type */}
+        <div className="rounded-lg border bg-blue-50 p-4">
+          <h2 className="text-lg font-medium text-blue-900">
+            {procedureType === 'insertion' ? 'Treatment Insertion' : 'Treatment Removal'} Setup
+          </h2>
+          <p className="text-sm text-blue-700">
+            Please fill in the treatment details below
+          </p>
         </div>
 
-        <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <h2 className='mb-4 text-lg font-medium'>Search Treatments</h2>
-          <form onSubmit={handleSearch} className='space-y-4'>
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-              <div>
-                <label htmlFor='site' className='block text-sm font-medium text-gray-700'>
-                  Treatment Site *
-                </label>
-                <select
-                  id='site'
-                  value={searchParams.site}
-                  onChange={(e) => setSearchParams({ ...searchParams, site: e.target.value })}
-                  className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'
-                  required>
-                  <option value=''>Select Site</option>
-                  {sites.map((site, index) => (
-                    <option key={index} value={site}>
-                      {site}
-                    </option>
-                  ))}
-                </select>
-              </div>
+        {error && (
+          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+            {error}
+          </div>
+        )}
+        <div className="rounded-lg border bg-white p-6 shadow-sm">
+          <form className="space-y-6">
+            {/* Email Field */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                E-mail *
+              </label>
+              <input
+                type="email"
+                id="email"
+                maxLength={32}
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                required
+              />
+            </div>
 
-              <div>
-                <label htmlFor='date' className='block text-sm font-medium text-gray-700'>
-                  Date *
-                </label>
-                <input
-                  type='date'
-                  id='date'
-                  value={searchParams.date}
-                  onChange={handleDateChange}
-                  className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'
+            {/* Site Field */}
+            <div>
+              <label htmlFor="site" className="block text-sm font-medium text-gray-700 mb-2">
+                Site *
+              </label>
+              {sitesLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  <span className="text-sm text-gray-500">Loading sites...</span>
+                </div>
+              ) : user?.fullAccess ? (
+                // ATM users: choose from scrolling list of all sites
+                <select
+                  id="site"
+                  value={formData.site}
+                  onChange={(e) => setFormData(prev => ({ ...prev, site: e.target.value }))}
+                  className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
                   required
-                />
-              </div>
-
-              <div>
-                <label htmlFor='subjectId' className='block text-sm font-medium text-gray-700'>
-                  Patient ID *
-                </label>
-                <input
-                  type='text'
-                  id='subjectId'
-                  value={searchParams.subjectId}
-                  onChange={(e) => setSearchParams({ ...searchParams, subjectId: e.target.value })}
-                  className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'
-                />
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-              <div>
-                <label htmlFor='seedQuantity' className='block text-sm font-medium text-gray-700'>
-                  Seed Quantity
-                </label>
-                <input
-                  type='number'
-                  id='seedQuantity'
-                  value={searchParams.seedQuantity}
-                  onChange={(e) =>
-                    setSearchParams({ ...searchParams, seedQuantity: e.target.value })
-                  }
-                  className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor='activityPerSeed'
-                  className='block text-sm font-medium text-gray-700'>
-                  Activity Per Seed (µCi)
-                </label>
-                <input
-                  type='number'
-                  id='activityPerSeed'
-                  value={searchParams.activityPerSeed}
-                  onChange={(e) =>
-                    setSearchParams({ ...searchParams, activityPerSeed: e.target.value })
-                  }
-                  className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'
-                />
-              </div>
-
-              <div>
-                <label htmlFor='surgeon' className='block text-sm font-medium text-gray-700'>
-                  Surgeon
-                </label>
-                <select
-                  id='surgeon'
-                  value={searchParams.surgeon}
-                  onChange={(e) => setSearchParams({ ...searchParams, surgeon: e.target.value })}
-                  className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'>
-                  <option value=''>Select Surgeon</option>
-                  {surgeons.map((surgeon, index) => (
-                    <option key={index} value={surgeon}>
-                      {surgeon}
+                >
+                  <option value="">Select Site</option>
+                  {availableSites.map((site) => (
+                    <option key={site.custName} value={site.custName}>
+                      {site.custDes} ({site.custName})
                     </option>
                   ))}
                 </select>
-              </div>
+              ) : (
+                // Site users: filled automatically from their assigned site (read-only)
+                <input
+                  type="text"
+                  id="site"
+                  value={formData.site}
+                  readOnly
+                  className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                />
+              )}
             </div>
 
-            <div className='flex justify-between'>
-              <button
-                type='button'
-                onClick={handleCreateTreatment}
-                className='rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'>
-                Create New Treatment
-              </button>
+            {/* Date Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDateChange('yesterday')}
+                  className="rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
+                >
+                  Yesterday
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDateChange('today')}
+                  className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90"
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDateChange('tomorrow')}
+                  className="rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
+                >
+                  Tomorrow
+                </button>
+                <input
+                  type="text"
+                  value={formData.date}
+                  readOnly
+                  className="block rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            {/* Patient ID Field */}
+            <div>
+              <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 mb-2">
+                Patient ID *
+              </label>
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  <span className="text-sm text-gray-500">Loading patients...</span>
+                </div>
+              ) : availablePatients.length > 1 ? (
+                <select
+                  id="patientId"
+                  value={formData.patientId}
+                  onChange={(e) => handlePatientSelection(e.target.value)}
+                  className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  required
+                >
+                  <option value="">Select Patient ID</option>
+                  {availablePatients.map((patient) => (
+                    <option key={patient.id} value={patient.id}>
+                      {patient.id}
+                    </option>
+                  ))}
+                </select>
+              ) : availablePatients.length === 1 ? (
+                <input
+                  type="text"
+                  value={availablePatients[0].id}
+                  onClick={() => handlePatientSelection(availablePatients[0].id)}
+                  readOnly
+                  className="block w-full max-w-md cursor-pointer rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                />
+              ) : (
+                <div className="text-sm text-gray-500">
+                  No patients scheduled for selected site and date
+                </div>
+              )}
+            </div>
+            {/* Seed Quantity Field (Read-only) */}
+            <div>
+              <label htmlFor="seedQty" className="block text-sm font-medium text-gray-700 mb-2">
+                Seed Qty.
+              </label>
+              <input
+                type="text"
+                id="seedQty"
+                value={formData.seedQty}
+                readOnly
+                className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                placeholder="Auto-filled after selecting Patient ID"
+              />
+            </div>
 
+            {/* Activity Per Seed Field (Read-only) */}
+            <div>
+              <label htmlFor="activityPerSeed" className="block text-sm font-medium text-gray-700 mb-2">
+                Activity Per Seed (µCi)
+              </label>
+              <input
+                type="text"
+                id="activityPerSeed"
+                value={formData.activityPerSeed}
+                readOnly
+                className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                placeholder="Auto-filled after selecting Patient ID"
+              />
+            </div>
+
+            {/* Surgeon Field */}
+            <div>
+              <label htmlFor="surgeon" className="block text-sm font-medium text-gray-700 mb-2">
+                Surgeon *
+              </label>
+              <select
+                id="surgeon"
+                value={formData.surgeon}
+                onChange={(e) => setFormData(prev => ({ ...prev, surgeon: e.target.value }))}
+                className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                required
+              >
+                <option value="">Select Surgeon</option>
+                {availableSurgeons.map((surgeon) => (
+                  <option key={surgeon} value={surgeon}>
+                    {surgeon}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Continue Button */}
+            <div className="pt-4">
               <button
-                type='submit'
-                className='rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'>
-                Search
+                type="button"
+                onClick={handleSubmit}
+                className="w-full max-w-md rounded-md bg-primary py-3 px-4 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                disabled={!formData.email || !formData.site || !formData.patientId || !formData.surgeon}
+              >
+                Continue
               </button>
             </div>
           </form>
         </div>
 
-        {error && <div className='rounded-md bg-red-50 p-4 text-sm text-red-700'>{error}</div>}
-
-        <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <h2 className='mb-4 text-lg font-medium'>Available Treatments</h2>
-
-          {loading ? (
-            <div className='flex justify-center py-8'>
-              <div className='h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent'></div>
-            </div>
-          ) : treatments.length === 0 ? (
-            <div className='rounded-md bg-blue-50 p-4 text-sm text-blue-700'>
-              No treatments found. Try adjusting your search criteria or create a new treatment
-              using the form above.
-            </div>
-          ) : (
-            <div className='overflow-hidden rounded-lg border'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th
-                      scope='col'
-                      className='px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500'>
-                      Patient ID
-                    </th>
-                    <th
-                      scope='col'
-                      className='px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500'>
-                      Site
-                    </th>
-                    <th
-                      scope='col'
-                      className='px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500'>
-                      Date
-                    </th>
-                    <th
-                      scope='col'
-                      className='px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500'>
-                      Type
-                    </th>
-                    <th
-                      scope='col'
-                      className='px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500'>
-                      Status
-                    </th>
-                    <th
-                      scope='col'
-                      className='px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500'>
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y divide-gray-200 bg-white'>
-                  {treatments.map((treatment) => (
-                    <tr key={treatment.id} className='hover:bg-gray-50'>
-                      <td className='whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900'>
-                        {treatment.subjectId}
-                      </td>
-                      <td className='whitespace-nowrap px-6 py-4 text-sm text-gray-500'>
-                        {treatment.site}
-                      </td>
-                      <td className='whitespace-nowrap px-6 py-4 text-sm text-gray-500'>
-                        {format(new Date(treatment.date), 'MMM d, yyyy')}
-                      </td>
-                      <td className='whitespace-nowrap px-6 py-4 text-sm text-gray-500'>
-                        <span
-                          className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                            treatment.type === 'insertion'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                          {treatment.type === 'insertion' ? 'Insertion' : 'Removal'}
-                        </span>
-                      </td>
-                      <td className='whitespace-nowrap px-6 py-4 text-sm text-gray-500'>
-                        <span
-                          className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                            treatment.isComplete
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                          {treatment.isComplete ? 'Completed' : 'In Progress'}
-                        </span>
-                      </td>
-                      <td className='whitespace-nowrap px-6 py-4 text-right text-sm font-medium'>
-                        <button
-                          onClick={() => handleSelectTreatment(treatment)}
-                          disabled={treatment.isComplete}
-                          className={`text-primary hover:text-primary/80 ${treatment.isComplete ? 'cursor-not-allowed opacity-50' : ''}`}>
-                          {treatment.isComplete ? 'Completed' : 'Select'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Information Panel */}
+        <div className="rounded-lg border bg-gray-50 p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Information</h3>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• Fields marked with * are required</li>
+            <li>• Patient data is loaded from Priority ORDERS table</li>
+            <li>• Seed quantity (SBD_SEEDQTY) and activity (SBD_PREFACTIV) auto-filled</li>
+            <li>• Date format: DD.MMM.YYYY (e.g., 04.Jun.2025)</li>
+            <li>• Sites shown based on your Priority access level (POSITIONCODE)</li>
+          </ul>
         </div>
       </div>
     </Layout>

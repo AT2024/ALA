@@ -13,8 +13,7 @@ interface LayoutProps {
 // Define the treatment flow sequence to enable sequential navigation
 const TREATMENT_FLOW = [
   '/treatment/select',   // Treatment selection
-  '/treatment/scan',     // Scan QR Code
-  '/treatment/applicator', // Applicator information
+  '/treatment/scan',     // Treatment Documentation (scan QR codes)
   '/treatment/list',     // Use list
   '/treatment/removal'   // Seed removal
 ];
@@ -94,7 +93,7 @@ export default function Layout({
             <div className="mb-1 text-xs text-white/70">
               {TREATMENT_FLOW.indexOf(window.location.pathname) !== -1 && (
                 <span>
-                  Step {TREATMENT_FLOW.indexOf(window.location.pathname) + 1}/{TREATMENT_FLOW.length}
+                  Step {TREATMENT_FLOW.indexOf(window.location.pathname) + 1}/{TREATMENT_FLOW.length} - Treatment Flow
                 </span>
               )}
             </div>

@@ -5,7 +5,8 @@ import {
   getTreatments,
   getContacts,
   getOrdersForSite,
-  getAllowedSitesForUser
+  getAllowedSitesForUser,
+  getOrdersForSiteAndDate
 } from '../controllers/priorityController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -19,6 +20,7 @@ router.get('/debug', protect, debugPriorityConnection);
 router.get('/treatments', protect, getTreatments);
 router.get('/contacts', protect, getContacts);
 router.get('/orders', protect, getOrdersForSite);
+router.post('/orders', protect, getOrdersForSiteAndDate);
 router.get('/allowed-sites', protect, getAllowedSitesForUser);
 
 export default router;

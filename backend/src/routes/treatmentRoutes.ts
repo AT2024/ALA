@@ -5,6 +5,7 @@ import {
   createTreatment,
   updateTreatment,
   completeTreatment,
+  updateTreatmentStatus,
   getTreatmentApplicators,
   addApplicator,
   exportTreatment,
@@ -27,6 +28,7 @@ router.route('/:id')
   .put(updateTreatment);
 
 router.post('/:id/complete', completeTreatment);
+router.patch('/:id/status', updateTreatmentStatus);
 router.get('/:id/export', exportTreatment);
 
 // Treatment applicator routes

@@ -97,7 +97,7 @@ az webapp config appsettings set `
   --settings `
   NODE_ENV=production `
   PORT=80 `
-  DATABASE_URL="postgres://$DATABASE_USERNAME:$DATABASE_PASSWORD@$DATABASE_NAME.postgres.database.azure.com:5432/ala_db?sslmode=require" `
+  DATABASE_URL="postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_NAME}.postgres.database.azure.com:5432/ala_db?sslmode=require" `
   JWT_SECRET="your-jwt-secret-key-change-in-production" `
   PRIORITY_URL="https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/"
 

@@ -1,15 +1,11 @@
 {
-  "project_name": "Accountability Log Application (ALA)",
-  "version": "0.1.0",
-  "files": [
-    "projectContext.md",
-    "activeContext.md",
-    "progress.md",
-    "decisionLog.md",
-    ".clinerules"
-  ],
-  "created_at": "2025-05-18T16:50:00Z",
-  "last_updated": "2025-05-18T16:50:00Z",
-  "author": "AlphaTau Development Team",
-  "template_version": "1.0.0"
+  "version": "1.0.0",
+  "last_updated": "2025-06-03T12:00:00Z",
+  "template_version": "1.0.0",
+  "project_info": {
+    "name": "ALA - Accountability Log Application",
+    "description": "Medical treatment tracking application with Priority system integration",
+    "repository": "https://github.com/AT2024/ALA.git",
+    "local_path": "C:\\Users\\amitaik\\Desktop\\ala-improved"
+  }
 }

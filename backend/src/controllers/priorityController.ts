@@ -169,3 +169,77 @@ export const getAllowedSitesForUser = asyncHandler(async (req: Request, res: Res
     });
   }
 });
+
+// @desc    Get orders for a specific site and date (for treatment selection)
+// @route   POST /api/proxy/priority/orders
+// @access  Private
+export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { site, date, procedureType } = req.body;
+    
+    if (!site) {
+      res.status(400).json({ 
+        error: 'Site parameter is required'
+      });
+      return;
+    }
+    
+    logger.info(`Fetching orders for site: ${site}, date: ${date}, procedureType: ${procedureType}`);
+    
+    // Validate user has access to this site
+    const userSites = req.user?.metadata?.sites || [];
+    const userHasFullAccess = req.user?.metadata?.positionCode === 99;
+    
+    if (!userHasFullAccess && !userSites.includes(site)) {
+      res.status(403).json({
+        error: 'Access denied to this site'
+      });
+      return;
+    }
+    
+    // Get orders from Priority for the specified site and date
+    let orders = await priorityService.getOrdersForSite(site);
+    
+    // Filter orders by date if provided
+    if (date) {
+      const targetDate = new Date(date).toISOString().split('T')[0];
+      orders = orders.filter((order: any) => {
+        if (!order.CURDATE && !order.SIBD_DATE) return false;
+        
+        const orderDate = new Date(order.CURDATE || order.SIBD_DATE).toISOString().split('T')[0];
+        return orderDate === targetDate;
+      });
+    }
+    
+    // Filter by procedure type if needed
+    if (procedureType === 'removal') {
+      // For removal procedures, filter orders that are 14+ days old
+      const today = new Date();
+      orders = orders.filter((order: any) => {
+        if (!order.CURDATE && !order.SIBD_DATE) return false;
+        
+        const orderDate = new Date(order.CURDATE || order.SIBD_DATE);
+        const daysSinceInsertion = Math.floor(
+          (today.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return daysSinceInsertion >= 14 && daysSinceInsertion <= 20;
+      });
+    }
+    
+    logger.info(`Found ${orders.length} orders for site ${site}`);
+    
+    res.status(200).json({
+      success: true,
+      orders: orders,
+      site: site,
+      date: date,
+      count: orders.length
+    });
+  } catch (error: any) {
+    logger.error(`Error fetching orders for site and date: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});

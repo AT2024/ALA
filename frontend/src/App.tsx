@@ -6,7 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import LoginPage from '@/pages/Auth/LoginPage';
 import VerificationPage from '@/pages/Auth/VerificationPage';
 import TreatmentSelection from '@/pages/Treatment/TreatmentSelection';
-import ScanQRCode from '@/pages/Treatment/ScanQRCode';
+import TreatmentDocumentation from '@/pages/Treatment/TreatmentDocumentation';
 import ApplicatorInformation from '@/pages/Treatment/ApplicatorInformation';
 import UseList from '@/pages/Treatment/UseList';
 import SeedRemoval from '@/pages/Treatment/SeedRemoval';
@@ -27,7 +27,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/procedure-type" element={<ProcedureTypePage />} />
               <Route path="/treatment/select" element={<TreatmentSelection />} />
-              <Route path="/treatment/scan" element={<ScanQRCode />} />
+              <Route path="/treatment/scan" element={<TreatmentDocumentation />} />
               <Route path="/treatment/applicator" element={<ApplicatorInformation />} />
               <Route path="/treatment/list" element={<UseList />} />
               <Route path="/treatment/removal" element={<SeedRemoval />} />

@@ -202,10 +202,13 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
     user: {
       id: user.id,
       name: user.name,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
+      email: user.email || '',
+      phoneNumber: user.phoneNumber || '',
       role: user.role,
-      metadata: user.metadata,
+      positionCode: user.metadata?.positionCode?.toString() || '',
+      custName: user.metadata?.custName || '',
+      sites: user.metadata?.sites || [],
+      fullAccess: user.metadata?.positionCode === 99
     },
     token,
   });

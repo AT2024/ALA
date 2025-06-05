@@ -11,6 +11,7 @@ interface User {
   positionCode?: string;
   custName?: string;
   sites?: string[];
+  fullAccess?: boolean;
 }
 
 interface AuthContextType {
@@ -78,12 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoginIdentifier(identifier);
       sessionStorage.setItem('loginIdentifier', identifier);
       
-      // Store user data if provided (for session persistence)
+      // Store Priority user data if provided (for session persistence)
       if (result.userData) {
         sessionStorage.setItem('priorityUserData', JSON.stringify(result.userData));
+        console.log('Priority user data stored:', result.userData);
       }
       
-      return { success: true, message: 'Verification code sent successfully' };
+      return { 
+        success: true, 
+        message: result.message || 'Verification code sent successfully' 
+      };
     } catch (err: any) {
       const errorMessage = err.message || 'Login failed. Please try again.';
       setError(errorMessage);
@@ -98,15 +103,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     
     try {
-      const result = await authService.verifyCode(loginIdentifier, code);
+      // Get stored identifier if not in state
+      const identifier = loginIdentifier || sessionStorage.getItem('loginIdentifier') || '';
+      
+      if (!identifier) {
+        throw new Error('No login identifier found. Please start the login process again.');
+      }
+      
+      const result = await authService.verifyCode(identifier, code);
+      
+      // Log successful authentication
+      console.log('Authentication successful for user:', {
+        email: result.user.email,
+        role: result.user.role,
+        positionCode: result.user.positionCode,
+        sites: result.user.sites?.length || 0
+      });
+      
       setUser(result.user);
       
       // Store auth data in localStorage for persistence
       localStorage.setItem('user', JSON.stringify(result.user));
       localStorage.setItem('token', result.token);
       
-      navigate('/treatment/select');
+      // Clear session storage
+      sessionStorage.removeItem('loginIdentifier');
+      sessionStorage.removeItem('priorityUserData');
+      
+      // Navigate based on user role
+      navigate('/procedure-type');
     } catch (err: any) {
+      console.error('Verification error:', err);
       setError(err.message || 'Verification failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -114,10 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    console.log('User logging out');
     setUser(null);
+    setLoginIdentifier('');
+    
+    // Clear all stored data
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    sessionStorage.removeItem('loginIdentifier');
     sessionStorage.removeItem('priorityUserData');
+    
     navigate('/login');
   };
 

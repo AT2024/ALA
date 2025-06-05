@@ -7,15 +7,86 @@ import treatmentService from '../services/treatmentService';
 // @route   POST /api/applicators/validate
 // @access  Private
 export const validateApplicator = asyncHandler(async (req: Request, res: Response) => {
-  const { barcode, treatmentId } = req.body;
+  const { serialNumber, treatmentId, patientId, scannedApplicators = [] } = req.body;
   
-  if (!barcode || !treatmentId) {
+  if (!serialNumber || !treatmentId || !patientId) {
     res.status(400);
-    throw new Error('Barcode and treatmentId are required');
+    throw new Error('Serial number, treatmentId, and patientId are required');
   }
   
-  const validation = await applicatorService.validateApplicator(barcode, treatmentId);
+  const validation = await applicatorService.validateApplicator(
+    serialNumber, 
+    treatmentId, 
+    patientId, 
+    scannedApplicators
+  );
+  
   res.status(200).json(validation);
+});
+
+// @desc    Add an applicator to a treatment
+// @route   POST /api/treatments/:treatmentId/applicators
+// @access  Private
+export const addApplicator = asyncHandler(async (req: Request, res: Response) => {
+  const { treatmentId } = req.params;
+  
+  // Verify the treatment exists and user has access
+  const treatment = await treatmentService.getTreatmentById(treatmentId);
+  
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to modify this treatment');
+  }
+  
+  const applicator = await applicatorService.addApplicator(treatmentId, req.body, req.user.id);
+  
+  res.status(201).json(applicator);
+});
+
+// @desc    Get applicator data by serial number
+// @route   GET /api/applicators/:serialNumber
+// @access  Private
+export const getApplicatorBySerialNumber = asyncHandler(async (req: Request, res: Response) => {
+  const { serialNumber } = req.params;
+  
+  const applicatorData = await applicatorService.getApplicatorFromPriority(serialNumber);
+  
+  if (!applicatorData.found) {
+    res.status(404);
+    throw new Error('Applicator not found in Priority system');
+  }
+  
+  res.status(200).json(applicatorData.data);
+});
+
+// @desc    Update treatment status
+// @route   PATCH /api/treatments/:treatmentId/status
+// @access  Private
+export const updateTreatmentStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { treatmentId } = req.params;
+  const { status } = req.body;
+  
+  if (!['Performed', 'Removed'].includes(status)) {
+    res.status(400);
+    throw new Error('Status must be either "Performed" or "Removed"');
+  }
+  
+  // Verify the treatment exists and user has access
+  const treatment = await treatmentService.getTreatmentById(treatmentId);
+  
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to modify this treatment');
+  }
+  
+  const result = await applicatorService.updateTreatmentStatusInPriority(treatmentId, status);
+  
+  if (!result.success) {
+    res.status(500);
+    throw new Error(result.message || 'Failed to update treatment status');
+  }
+  
+  res.status(200).json(result);
 });
 
 // @desc    Get an applicator by ID

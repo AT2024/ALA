@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
-import { treatmentService, Applicator } from '@/services/treatmentService';
 
 const UseList = () => {
   const navigate = useNavigate();
@@ -11,90 +10,74 @@ const UseList = () => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [exportType, setExportType] = useState<'csv' | 'pdf'>('csv');
-  const [isExporting, setIsExporting] = useState(false);
-  
-  useEffect(() => {
-    if (!currentTreatment) {
-      navigate('/treatment/select');
-      return;
-    }
-    
-    // If no applicators in state, fetch them from the server
-    if (applicators.length === 0) {
-      fetchApplicators();
-    }
-  }, [currentTreatment, applicators.length]);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const fetchApplicators = async () => {
-    if (!currentTreatment) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await treatmentService.getApplicators(currentTreatment.id);
-      // This would normally update the state in the TreatmentContext
-      // But for demo purposes, we're just logging
-      console.log('Fetched applicators:', data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch applicators');
-    } finally {
-      setLoading(false);
+  // Calculate treatment summary data
+  const treatmentSummary = {
+    timeInsertionStarted: applicators.length > 0 
+      ? applicators.reduce((earliest, app) => {
+          const appTime = new Date(app.insertionTime).getTime();
+          const earliestTime = new Date(earliest).getTime();
+          return appTime < earliestTime ? app.insertionTime : earliest;
+        }, applicators[0].insertionTime)
+      : '',
+    totalApplicatorUse: applicators.filter(app => app.usageType === 'full' || app.usageType === 'faulty').length,
+    faultyApplicator: applicators.filter(app => app.usageType === 'faulty').length,
+    notUsedApplicators: applicators.filter(app => app.usageType === 'none').length,
+    totalDartSeedsInserted: applicators.reduce((sum, app) => {
+      if (app.usageType === 'full') return sum + app.seedQuantity;
+      if (app.usageType === 'faulty') return sum + (app.insertedSeedsQty || 0);
+      return sum;
+    }, 0),
+    seedsInsertedBy: currentTreatment?.surgeon || 'Unknown'
+  };
+
+  // Calculate total activity
+  const activityPerSeed = currentTreatment?.activityPerSeed || 0;
+  const totalActivity = treatmentSummary.totalDartSeedsInserted * activityPerSeed;
+
+  const handleEditApplicator = (applicatorSerialNumber: string) => {
+    const applicator = applicators.find(app => app.serialNumber === applicatorSerialNumber);
+    if (applicator) {
+      setCurrentApplicator(applicator);
+      navigate('/treatment/scan'); // Takes to Treatment Documentation screen
     }
   };
 
-  const handleEditApplicator = (applicator: Applicator) => {
-    setCurrentApplicator(applicator);
-    navigate('/treatment/applicator');
-  };
-
-  const handleExport = async () => {
-    if (!currentTreatment) return;
-    
-    setIsExporting(true);
-    
-    try {
-      const blob = await treatmentService.exportTreatment(currentTreatment.id, exportType);
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `treatment-${currentTreatment.id}.${exportType}`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err: any) {
-      setError(err.message || `Failed to export as ${exportType.toUpperCase()}`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleScanMore = () => {
+  const handleNext = () => {
+    // Takes to Treatment Documentation screen for inserting another applicator
     navigate('/treatment/scan');
   };
 
-  const handleComplete = async () => {
-    if (!currentTreatment) return;
-    
+  const handleFinalize = async () => {
+    if (applicators.length === 0) {
+      setError('Please add at least one applicator before finalizing');
+      return;
+    }
+
     setLoading(true);
-    
+    setError(null);
+
     try {
-      await treatmentService.completeTreatment(currentTreatment.id);
-      navigate('/treatment/select');
+      // TODO: Update ORDSTATUSDES= "Performed" FROM ORDERS WHERE Details=Patient ID
+      // This would be implemented with the Priority system integration
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSuccess('Process completed successfully!');
+      
+      // Navigate back to procedure selection after a brief delay
+      setTimeout(() => {
+        navigate('/procedure-type');
+      }, 2000);
+      
     } catch (err: any) {
-      setError(err.message || 'Failed to complete treatment');
+      setError(err.message || 'Failed to finalize treatment');
     } finally {
       setLoading(false);
     }
   };
-
   if (!currentTreatment) {
     return (
       <Layout title="Use List" showBackButton>
@@ -106,13 +89,14 @@ const UseList = () => {
   }
 
   return (
-    <Layout title="Use List" showBackButton backPath="/treatment/select">
+    <Layout title="Use List" showBackButton backPath="/treatment/scan">
       <div className="space-y-6">
+        {/* Treatment Information */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div>
-              <p className="text-sm text-gray-500">Subject ID</p>
+              <p className="text-sm text-gray-500">Patient ID</p>
               <p className="font-medium">{currentTreatment.subjectId}</p>
             </div>
             <div>
@@ -125,44 +109,28 @@ const UseList = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500">Date</p>
-              <p className="font-medium">{new Date(currentTreatment.date).toLocaleDateString()}</p>
+              <p className="font-medium">{currentTreatment.date}</p>
             </div>
           </div>
         </div>
 
+        {/* Messages */}
         {error && (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
             {error}
           </div>
         )}
 
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-medium">Applicators</h2>
-            <div className="flex items-center space-x-2">
-              <select
-                value={exportType}
-                onChange={(e) => setExportType(e.target.value as 'csv' | 'pdf')}
-                className="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-primary focus:outline-none focus:ring-primary"
-              >
-                <option value="csv">CSV</option>
-                <option value="pdf">PDF</option>
-              </select>
-              <button
-                onClick={handleExport}
-                disabled={isExporting || applicators.length === 0}
-                className="rounded-md bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground hover:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 disabled:opacity-50"
-              >
-                {isExporting ? 'Exporting...' : 'Export'}
-              </button>
-            </div>
+        {success && (
+          <div className="rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
+            {success}
           </div>
+        )}
+        {/* Applicators List */}
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h2 className="mb-4 text-lg font-medium">Applicators List</h2>
 
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-            </div>
-          ) : applicators.length === 0 ? (
+          {applicators.length === 0 ? (
             <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-700">
               No applicators added yet. Start by scanning an applicator.
             </div>
@@ -171,34 +139,49 @@ const UseList = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Serial Number
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Seed Quantity
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Applicator Type
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Usage Type
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Seeds Qty.
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Insertion Time
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Using Time
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Using Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Inserted Seeds Qty.
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Comments
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Action
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {applicators.map((applicator) => (
+                  {applicators
+                    .sort((a, b) => b.seedQuantity - a.seedQuantity) // Sort by Seeds Qty as specified
+                    .map((applicator) => (
                     <tr key={applicator.id || applicator.serialNumber} className="hover:bg-gray-50">
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                         {applicator.serialNumber}
+                        {/* TODO: Add asterisk if applicator was intended for another treatment */}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {applicator.applicatorType || 'N/A'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {applicator.seedQuantity}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {format(new Date(applicator.insertionTime), 'dd.MM.yyyy HH:mm')}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
@@ -209,7 +192,7 @@ const UseList = () => {
                             : 'bg-gray-100 text-gray-800'
                         }`}>
                           {applicator.usageType === 'full'
-                            ? 'Full Use'
+                            ? 'Full use'
                             : applicator.usageType === 'faulty'
                             ? 'Faulty'
                             : 'No Use'
@@ -217,18 +200,23 @@ const UseList = () => {
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {format(new Date(applicator.insertionTime), 'MMM d, yyyy HH:mm')}
+                        {applicator.usageType === 'full' 
+                          ? applicator.seedQuantity
+                          : applicator.usageType === 'faulty'
+                          ? (applicator.insertedSeedsQty || 0)
+                          : 0
+                        }
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-32">
                         {applicator.comments ? (
-                          <span className="line-clamp-1">{applicator.comments}</span>
+                          <span className="truncate">{applicator.comments}</span>
                         ) : (
-                          <span className="text-gray-400">No comments</span>
+                          <span className="text-gray-400">-</span>
                         )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                         <button
-                          onClick={() => handleEditApplicator(applicator)}
+                          onClick={() => handleEditApplicator(applicator.serialNumber)}
                           className="text-primary hover:text-primary/80"
                         >
                           Edit
@@ -240,22 +228,79 @@ const UseList = () => {
               </table>
             </div>
           )}
-
-          <div className="mt-6 flex justify-between">
-            <button
-              onClick={handleScanMore}
-              className="rounded-md border border-primary bg-white px-4 py-2 text-sm font-medium text-primary shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              Scan More Applicators
-            </button>
-            <button
-              onClick={handleComplete}
-              disabled={loading || applicators.length === 0}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
-            >
-              {loading ? 'Processing...' : 'Complete Treatment'}
-            </button>
+        </div>
+        {/* Treatment Summary */}
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h2 className="mb-4 text-lg font-medium">Treatment Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Time Insertion Treatment Started</p>
+                <p className="font-medium">
+                  {treatmentSummary.timeInsertionStarted 
+                    ? format(new Date(treatmentSummary.timeInsertionStarted), 'dd.MM.yyyy HH:mm')
+                    : 'N/A'
+                  }
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Applicator Use</p>
+                <p className="font-medium">{treatmentSummary.totalApplicatorUse}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Faulty Applicator</p>
+                <p className="font-medium text-red-600">{treatmentSummary.faultyApplicator}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Not Used Applicators</p>
+                <p className="font-medium text-gray-600">{treatmentSummary.notUsedApplicators}</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Total Dart Seeds Inserted</p>
+                <p className="font-medium text-green-600">{treatmentSummary.totalDartSeedsInserted}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Activity</p>
+                <p className="font-medium text-primary">
+                  {totalActivity.toFixed(2)} µCi
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Seeds Inserted By (Full Name)</p>
+                <p className="font-medium">{treatmentSummary.seedsInsertedBy}</p>
+              </div>
+            </div>
           </div>
+        </div>
+        {/* Action Buttons */}
+        <div className="flex gap-4">
+          <button
+            onClick={handleNext}
+            className="flex-1 rounded-md border border-primary bg-white px-4 py-2 text-sm font-medium text-primary shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            Next
+          </button>
+          <button
+            onClick={handleFinalize}
+            disabled={loading || applicators.length === 0}
+            className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : 'Finalize'}
+          </button>
+        </div>
+
+        {/* Information Panel */}
+        <div className="rounded-lg border bg-gray-50 p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Information</h3>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• Applicators are sorted by Seeds Qty. as specified</li>
+            <li>• Use 'Edit' to modify applicator details</li>
+            <li>• Use 'Next' to add another applicator</li>
+            <li>• Use 'Finalize' to complete the treatment</li>
+            <li>• Total Activity = Total Seeds × Activity Per Seed</li>
+          </ul>
         </div>
       </div>
     </Layout>
