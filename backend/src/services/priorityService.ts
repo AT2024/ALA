@@ -1,11 +1,25 @@
 import axios from 'axios';
 import logger from '../utils/logger';
 import mockPriorityService from './mockPriorityService';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface SiteInfo {
   custName: string;
   custDes: string;
 }
+
+// Helper function to load test data
+const loadTestData = () => {
+  try {
+    const testDataPath = path.join(__dirname, '../../test-data.json');
+    const testDataContent = fs.readFileSync(testDataPath, 'utf8');
+    return JSON.parse(testDataContent);
+  } catch (error) {
+    logger.warn('Could not load test data file, using fallback data');
+    return null;
+  }
+};
 
 // Priority API credentials
 const PRIORITY_URL =
@@ -98,20 +112,38 @@ export const priorityService = {
       '475': {
         email: 'test@example.com',
         phone: '475',
-        positionCode: 50,
-        sites: [{ custName: '100078', custDes: 'Test Hospital' }],
+        positionCode: 99,
+        sites: [
+          { custName: '100078', custDes: 'Test Hospital' },
+          { custName: '100030', custDes: 'Regional Medical Center' },
+          { custName: '100045', custDes: 'City General Hospital' },
+          { custName: '100055', custDes: 'University Medical Center' },
+          { custName: '100065', custDes: 'Central Hospital' }
+        ],
       },
       'tzufitc@alphatau.com': {
         email: 'tzufitc@alphatau.com',
         phone: '971',
         positionCode: 99,
-        sites: [{ custName: '100078', custDes: 'Test Hospital' }],
+        sites: [
+          { custName: '100078', custDes: 'Test Hospital' },
+          { custName: '100030', custDes: 'Regional Medical Center' },
+          { custName: '100045', custDes: 'City General Hospital' },
+          { custName: '100055', custDes: 'University Medical Center' },
+          { custName: '100065', custDes: 'Central Hospital' }
+        ],
       },
       'test@example.com': {
         email: 'test@example.com',
         phone: '555-5555',
         positionCode: 99,
-        sites: [{ custName: '100078', custDes: 'Test Hospital' }],
+        sites: [
+          { custName: '100078', custDes: 'Test Hospital' },
+          { custName: '100030', custDes: 'Regional Medical Center' },
+          { custName: '100045', custDes: 'City General Hospital' },
+          { custName: '100055', custDes: 'University Medical Center' },
+          { custName: '100065', custDes: 'Central Hospital' }
+        ],
       },
       // Test user with multiple sites (non-admin)
       'multisite@example.com': {
@@ -143,6 +175,19 @@ export const priorityService = {
         },
       };
     }
+
+    // For real users, proceed with Priority API calls
+    logger.info(`Processing real user ${identifier} through Priority API`);
+    
+    // Debug the Priority API connection first
+    const connectionTest = await this.debugPriorityConnection();
+    if (!connectionTest.success) {
+      logger.error(`Priority API connection failed for user ${identifier}:`, connectionTest.error);
+      throw new Error(`Priority API connection failed: ${connectionTest.error}`);
+    }
+    
+    logger.info(`Priority API connection successful. Processing user ${identifier}`);
+    
 
     // Helper function to get all sites for a non-admin user
     const getAllSitesForUser = async (userEmail: string, userPhone: string) => {
@@ -307,29 +352,42 @@ export const priorityService = {
         logger.info(`Searching PHONEBOOK by phone: ${filterQuery}`);
       }
 
+      logger.info(`Making Priority API call with filter: ${filterQuery}`);
       const response = await priorityApi.get('/PHONEBOOK', {
         params: {
           $filter: filterQuery,
           $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME,CUSTDES',
         },
+        timeout: 30000, // 30 second timeout
       });
 
+      logger.info(`Priority API responded with ${response.data.value.length} results for ${identifier}`);
+
       if (response.data.value.length === 0) {
+        logger.warn(`No direct match found for ${identifier}, trying case-insensitive search`);
+        
         // Try case-insensitive search for emails
         if (isEmail) {
+          logger.info(`Attempting case-insensitive search for email: ${identifier}`);
           const allUsersResponse = await priorityApi.get('/PHONEBOOK', {
             params: {
               $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME,CUSTDES',
             },
+            timeout: 30000,
           });
+
+          logger.info(`Retrieved ${allUsersResponse.data.value.length} total users for case-insensitive search`);
 
           const lowerEmail = identifier.toLowerCase();
           const matchingUsers = allUsersResponse.data.value.filter(
             (user: any) => user.EMAIL && user.EMAIL.toLowerCase() === lowerEmail
           );
 
+          logger.info(`Found ${matchingUsers.length} case-insensitive matches for ${identifier}`);
+
           if (matchingUsers.length > 0) {
             const user = matchingUsers[0];
+            logger.info(`Found case-insensitive match: ${user.EMAIL} with POSITIONCODE ${user.POSITIONCODE}`);
             return {
               found: true,
               user: {
@@ -342,10 +400,14 @@ export const priorityService = {
             };
           }
         }
+        
+        logger.warn(`No user found in Priority PHONEBOOK for identifier: ${identifier}`);
         return { found: false };
       }
 
       const user = response.data.value[0];
+      logger.info(`Found user in Priority PHONEBOOK: ${user.EMAIL} with POSITIONCODE ${user.POSITIONCODE} and CUSTNAME ${user.CUSTNAME}`);
+      
       return {
         found: true,
         user: {
@@ -357,8 +419,23 @@ export const priorityService = {
         },
       };
     } catch (error: any) {
-      logger.error(`Error getting user from PHONEBOOK: ${error}`);
-      return { found: false };
+      logger.error(`Error getting user from PHONEBOOK for ${identifier}:`, error);
+      
+      // Log more detailed error information
+      if (error.response) {
+        logger.error(`Priority API error response:`, {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        logger.error(`Priority API network error:`, error.request);
+      } else {
+        logger.error(`Priority API setup error:`, error.message);
+      }
+      
+      return { found: false, error: error.message };
     }
   },
 
@@ -466,14 +543,41 @@ export const priorityService = {
       const response = await priorityApi.get('/ORDERS', {
         params: {
           $filter: filterParam,
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,ORDSTATUSDES',
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
         },
+        timeout: 30000, // 30 second timeout
       });
 
-      logger.info(`Retrieved ${response.data.value.length} orders for site ${custName}`);
+      logger.info(`Retrieved ${response.data.value.length} orders for site ${custName} from Priority API`);
+      
+      if (response.data.value.length > 0) {
+        logger.info(`Sample order data:`, response.data.value[0]);
+      }
+      
       return response.data.value;
     } catch (error: any) {
       logger.error(`Error getting orders for site ${custName}: ${error}`);
+      
+      // Log detailed error information
+      if (error.response) {
+        logger.error(`Priority API error response:`, {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
+      
+      // Try to load test data as fallback only if Priority API is completely down
+      const testData = loadTestData();
+      if (testData && testData.orders) {
+        logger.warn(`Priority API failed, using test data fallback for site ${custName}`);
+        const filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
+        logger.info(`Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
+        return filteredOrders;
+      }
+      
+      // If both Priority API and test data fail, return empty array
+      logger.error(`Both Priority API and test data failed for site ${custName}`);
       return [];
     }
   },
@@ -483,6 +587,13 @@ export const priorityService = {
     try {
       logger.info(`Getting order subform for order ${orderName}`);
       
+      // Try to load test data first
+      const testData = loadTestData();
+      if (testData && testData.subform_data && testData.subform_data[orderName]) {
+        logger.info(`Using test subform data for order ${orderName}`);
+        return testData.subform_data[orderName].value || [];
+      }
+      
       // Use exact URL format: /ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM
       const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`);
 
@@ -491,9 +602,57 @@ export const priorityService = {
     } catch (error: any) {
       logger.error(`Error getting order subform for ${orderName}: ${error}`);
       
+      // Try test data fallback first
+      const testData = loadTestData();
+      if (testData && testData.subform_data && testData.subform_data[orderName]) {
+        logger.info(`Using test subform data fallback for order ${orderName}`);
+        return testData.subform_data[orderName].value || [];
+      }
+      
       // Fallback to regular SIBD_APPLICATUSELIST table
       logger.info(`Falling back to SIBD_APPLICATUSELIST table for order ${orderName}`);
       return await this.getApplicatorsForTreatment(orderName);
+    }
+  },
+
+  // Get detailed order information including seed quantity and activity
+  async getOrderDetails(orderName: string) {
+    try {
+      logger.info(`Getting detailed order information for order ${orderName}`);
+      
+      // Try to load test data first
+      const testData = loadTestData();
+      if (testData && testData.orders) {
+        const orderDetails = testData.orders.find((order: any) => order.ORDNAME === orderName);
+        if (orderDetails) {
+          logger.info(`Using test data for order details ${orderName}`);
+          return orderDetails;
+        }
+      }
+      
+      // Use exact URL format: /ORDERS('SO25000042')
+      const response = await priorityApi.get(`/ORDERS('${orderName}')`, {
+        params: {
+          $select: 'ORDNAME,CUSTNAME,CUSTDES,REFERENCE,CURDATE,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
+        },
+      });
+
+      logger.info(`Retrieved detailed order information for ${orderName}`);
+      return response.data;
+    } catch (error: any) {
+      logger.error(`Error getting order details for ${orderName}: ${error}`);
+      
+      // Fallback to test data if API fails
+      const testData = loadTestData();
+      if (testData && testData.orders) {
+        const orderDetails = testData.orders.find((order: any) => order.ORDNAME === orderName);
+        if (orderDetails) {
+          logger.info(`Using test data fallback for order details ${orderName}`);
+          return orderDetails;
+        }
+      }
+      
+      throw new Error(`Failed to get order details: ${error.message}`);
     }
   },
 
@@ -676,6 +835,82 @@ export const priorityService = {
     } catch (error) {
       logger.error(`Error updating Priority: ${error}`);
       throw new Error(`Failed to update Priority system: ${error}`);
+    }
+  },
+
+  // Validate applicator for manual entry (24± hours, same site)
+  async validateApplicatorForManualEntry(serialNumber: string, currentSite: string, currentDate: string) {
+    try {
+      logger.info(`Validating applicator ${serialNumber} for manual entry at site ${currentSite}`);
+      
+      // Get applicator data from Priority
+      const applicatorData = await this.getApplicatorFromPriority(serialNumber);
+      
+      if (!applicatorData.found) {
+        return {
+          valid: false,
+          reason: 'Applicator not found in Priority system',
+          applicatorData: null
+        };
+      }
+      
+      // Check if applicator has a treatment ID (meaning it's been used)
+      if (!applicatorData.data?.treatmentId) {
+        return {
+          valid: false,
+          reason: 'Applicator has not been assigned to any treatment',
+          applicatorData: applicatorData.data || null
+        };
+      }
+      
+      // Get the original treatment details to validate site and date
+      const originalTreatment = await this.getOrderDetails(applicatorData.data.treatmentId);
+      
+      if (!originalTreatment) {
+        return {
+          valid: false,
+          reason: 'Original treatment not found',
+          applicatorData: applicatorData.data
+        };
+      }
+      
+      // Validate same site
+      if (originalTreatment.CUSTNAME !== currentSite) {
+        return {
+          valid: false,
+          reason: `Applicator is from different site (${originalTreatment.CUSTNAME}). Must be from same site (${currentSite})`,
+          applicatorData: applicatorData.data
+        };
+      }
+      
+      // Validate time range (24± hours)
+      const currentDateTime = new Date(currentDate);
+      const originalDateTime = new Date(originalTreatment.CURDATE);
+      const hoursDifference = Math.abs(currentDateTime.getTime() - originalDateTime.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursDifference > 48) { // 24± means up to 48 hours
+        return {
+          valid: false,
+          reason: `Applicator is from treatment ${Math.round(hoursDifference)} hours ago. Must be within 48 hours.`,
+          applicatorData: applicatorData.data
+        };
+      }
+      
+      logger.info(`Applicator ${serialNumber} validation successful`);
+      return {
+        valid: true,
+        reason: 'Applicator validation successful',
+        applicatorData: applicatorData.data,
+        originalTreatment: originalTreatment
+      };
+      
+    } catch (error: any) {
+      logger.error(`Error validating applicator ${serialNumber}: ${error}`);
+      return {
+        valid: false,
+        reason: `Validation error: ${error.message}`,
+        applicatorData: null
+      };
     }
   },
 

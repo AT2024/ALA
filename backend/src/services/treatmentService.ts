@@ -61,24 +61,38 @@ export const treatmentService = {
         order: [['date', 'DESC']],
       });
       
-      // For removal treatments, apply the 14-20 day window rule
+      // For removal treatments, apply the 14-20 day window rule only if we have insertion treatments
       if (params.type === 'removal') {
         const today = new Date();
+        logger.info(`Applying removal treatment filter for ${dbTreatments.length} treatments`);
+        
         const filteredDbTreatments = dbTreatments.filter(treatment => {
+          // Only apply the rule if this is actually a removal treatment
+          if (treatment.type !== 'removal') {
+            return true; // Allow insertion treatments to pass through
+          }
+          
           const insertionTreatment = dbTreatments.find(t => 
             t.type === 'insertion' && 
             t.subjectId === treatment.subjectId && 
             t.site === treatment.site
           );
           
-          if (!insertionTreatment) return false;
+          if (!insertionTreatment) {
+            logger.debug(`No insertion treatment found for removal treatment ${treatment.id}`);
+            return false;
+          }
           
           const insertionDate = new Date(insertionTreatment.date);
           const daysSinceInsertion = Math.floor((today.getTime() - insertionDate.getTime()) / (1000 * 60 * 60 * 24));
           
-          return daysSinceInsertion >= 14 && daysSinceInsertion <= 20;
+          const isInWindow = daysSinceInsertion >= 14 && daysSinceInsertion <= 20;
+          logger.debug(`Treatment ${treatment.id}: ${daysSinceInsertion} days since insertion, in window: ${isInWindow}`);
+          
+          return isInWindow;
         });
         
+        logger.info(`Removal filter: ${dbTreatments.length} -> ${filteredDbTreatments.length} treatments`);
         return filteredDbTreatments;
       }
       

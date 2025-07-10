@@ -203,12 +203,26 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
     // Filter orders by date if provided
     if (date) {
       const targetDate = new Date(date).toISOString().split('T')[0];
+      logger.info(`Filtering orders by target date: ${targetDate}`);
+      
+      const beforeFilter = orders.length;
       orders = orders.filter((order: any) => {
-        if (!order.CURDATE && !order.SIBD_DATE) return false;
+        if (!order.CURDATE && !order.SIBD_DATE) {
+          logger.debug(`Order ${order.ORDNAME || 'unknown'} has no date field`);
+          return false;
+        }
         
         const orderDate = new Date(order.CURDATE || order.SIBD_DATE).toISOString().split('T')[0];
-        return orderDate === targetDate;
+        const matches = orderDate === targetDate;
+        
+        if (!matches) {
+          logger.debug(`Order ${order.ORDNAME || 'unknown'} date ${orderDate} does not match target ${targetDate}`);
+        }
+        
+        return matches;
       });
+      
+      logger.info(`Date filtering: ${beforeFilter} orders -> ${orders.length} orders for date ${targetDate}`);
     }
     
     // Filter by procedure type if needed
@@ -273,6 +287,79 @@ export const getOrderSubform = asyncHandler(async (req: Request, res: Response) 
     });
   } catch (error: any) {
     logger.error(`Error fetching order subform: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get detailed order information including seed quantity and activity
+// @route   GET /api/proxy/priority/orders/:orderId/details
+// @access  Private
+export const getOrderDetails = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!orderId) {
+      res.status(400).json({ 
+        error: 'Order ID is required'
+      });
+      return;
+    }
+    
+    logger.info(`Fetching detailed order information for: ${orderId}`);
+    
+    // Get detailed order information from Priority
+    const orderDetails = await priorityService.getOrderDetails(orderId);
+    
+    logger.info(`Retrieved detailed order information for ${orderId}`);
+    
+    res.status(200).json({
+      success: true,
+      orderId: orderId,
+      data: orderDetails
+    });
+  } catch (error: any) {
+    logger.error(`Error fetching order details: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// @desc    Validate applicator for manual entry
+// @route   POST /api/proxy/priority/validate-applicator
+// @access  Private
+export const validateApplicator = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { serialNumber, currentSite, currentDate } = req.body;
+    
+    if (!serialNumber || !currentSite || !currentDate) {
+      res.status(400).json({ 
+        error: 'Serial number, current site, and current date are required'
+      });
+      return;
+    }
+    
+    logger.info(`Validating applicator: ${serialNumber} for site: ${currentSite}`);
+    
+    // Validate applicator using Priority service
+    const validationResult = await priorityService.validateApplicatorForManualEntry(
+      serialNumber, 
+      currentSite, 
+      currentDate
+    );
+    
+    logger.info(`Applicator validation result for ${serialNumber}: ${validationResult.valid ? 'VALID' : 'INVALID'}`);
+    
+    res.status(200).json({
+      success: true,
+      validation: validationResult
+    });
+  } catch (error: any) {
+    logger.error(`Error validating applicator: ${error.message}`);
     res.status(500).json({
       success: false,
       error: error.message

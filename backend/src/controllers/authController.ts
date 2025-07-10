@@ -72,7 +72,18 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
 
     // First, validate against Priority system
     logger.info(`Validating ${isEmail ? 'email' : 'phone'}: ${identifier} with Priority`);
-    const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+    
+    let priorityUserAccess;
+    try {
+      priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+    } catch (priorityError: any) {
+      logger.error(`Priority system error for ${identifier}:`, priorityError);
+      res.status(500).json({
+        success: false,
+        message: `Priority system error: ${priorityError.message}`,
+      });
+      return;
+    }
 
     if (!priorityUserAccess.found) {
       logger.info(`${isEmail ? 'Email' : 'Phone'} ${identifier} not found in Priority system`);
