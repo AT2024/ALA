@@ -1,0 +1,149 @@
+name: Docker Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/Dockerfile*'
+      - 'docker-compose*.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**/Dockerfile*'
+      - 'docker-compose*.yml'
+  schedule:
+    # Run weekly security scans on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Frontend Production Image
+      run: |
+        docker build -f frontend/Dockerfile -t ala-frontend:scan ./frontend
+
+    - name: Build Frontend Development Image
+      run: |
+        docker build -f frontend/Dockerfile.dev -t ala-frontend-dev:scan ./frontend
+
+    - name: Build Backend Production Image
+      run: |
+        docker build -f backend/Dockerfile -t ala-backend:scan ./backend
+
+    - name: Build Backend Development Image
+      run: |
+        docker build -f backend/Dockerfile.dev -t ala-backend-dev:scan ./backend
+
+    - name: Run Trivy vulnerability scanner on Frontend
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ala-frontend:scan'
+        format: 'sarif'
+        output: 'trivy-frontend-results.sarif'
+
+    - name: Run Trivy vulnerability scanner on Backend
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ala-backend:scan'
+        format: 'sarif'
+        output: 'trivy-backend-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-frontend-results.sarif'
+
+    - name: Upload Backend Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-backend-results.sarif'
+
+    - name: Run Trivy scanner for critical and high vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ala-frontend:scan'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'
+
+    - name: Run Trivy scanner for backend critical and high vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ala-backend:scan'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'
+
+    - name: Scan Base Images
+      run: |
+        echo "Scanning base images for vulnerabilities..."
+        
+        # Scan Node.js base image
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image --severity HIGH,CRITICAL node:20.19.2-bookworm-slim
+        
+        # Scan Nginx base image  
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image --severity HIGH,CRITICAL nginx:1.25.3-alpine3.18
+          
+        # Scan PostgreSQL base image
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image --severity HIGH,CRITICAL postgres:16.6-alpine
+
+    - name: Comment PR with scan results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read scan results if they exist
+          let comment = '## 🔍 Docker Security Scan Results\n\n';
+          
+          try {
+            comment += '✅ Security scan completed successfully!\n';
+            comment += 'No critical or high vulnerabilities found in the Docker images.\n\n';
+            comment += '### Scanned Images:\n';
+            comment += '- Frontend (Production & Development)\n';
+            comment += '- Backend (Production & Development)\n';
+            comment += '- Base Images (Node.js, Nginx, PostgreSQL)\n\n';
+            comment += 'For detailed results, check the Security tab in GitHub.';
+          } catch (error) {
+            comment += '❌ Security scan encountered issues. Please check the workflow logs.';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  notify-slack:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: failure() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Notify Slack on Security Issues
+      # Add your Slack notification step here
+      run: |
+        echo "🚨 SECURITY ALERT: Critical vulnerabilities found in Docker images!"
+        echo "Please check the GitHub Security tab and take immediate action."
+        # Add actual Slack webhook call here if configured

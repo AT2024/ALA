@@ -106,7 +106,7 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
             : ('hospital' as 'admin' | 'hospital'),
         metadata: {
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: priorityUserAccess.sites[0] || '',
+          custName: priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || '',
           sites: priorityUserAccess.sites || [],
         },
       } as const; // Fix: ensure type is compatible
@@ -118,7 +118,7 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
       user.metadata = {
         ...user.metadata,
         positionCode: priorityUserAccess.user?.positionCode,
-        custName: priorityUserAccess.sites[0] || '',
+        custName: priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || '',
         sites: priorityUserAccess.sites || [],
       };
       await user.save();
@@ -257,7 +257,7 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
             : ('hospital' as 'admin' | 'hospital'),
         metadata: {
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: priorityUserAccess.sites[0] || '',
+          custName: priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || '',
           sites: priorityUserAccess.sites || [],
         },
       } as const; // Fix: ensure type is compatible
@@ -303,4 +303,63 @@ export const validateToken = asyncHandler(async (req: Request, res: Response) =>
       metadata: req.user.metadata,
     },
   });
+});
+
+// @desc    Debug user site access
+// @route   GET /api/auth/debug-sites/:identifier
+// @access  Public (for testing)
+export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Response) => {
+  const { identifier } = req.params;
+
+  if (!identifier) {
+    res.status(400).json({
+      success: false,
+      message: 'User identifier is required',
+    });
+    return;
+  }
+
+  try {
+    logger.info(`[DEBUG] Testing site access for identifier: ${identifier}`);
+    
+    // First test basic Priority connection
+    const connectionTest = await priorityService.debugPriorityConnection();
+    
+    if (!connectionTest.success) {
+      res.status(500).json({
+        success: false,
+        message: 'Priority connection failed',
+        connectionError: connectionTest.error,
+        details: connectionTest.details,
+      });
+      return;
+    }
+    
+    const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Debug site access check completed',
+      connectionTest: {
+        success: connectionTest.success,
+        phonebookCount: connectionTest.phonebookCount,
+      },
+      data: {
+        identifier: identifier,
+        found: priorityUserAccess.found,
+        fullAccess: priorityUserAccess.fullAccess,
+        sites: priorityUserAccess.sites || [],
+        siteCount: priorityUserAccess.sites ? priorityUserAccess.sites.length : 0,
+        user: priorityUserAccess.user || null,
+      },
+    });
+  } catch (error: any) {
+    logger.error(`[DEBUG] Error testing site access: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: 'Debug test failed',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
 });

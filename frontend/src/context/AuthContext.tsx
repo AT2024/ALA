@@ -10,7 +10,7 @@ interface User {
   name: string;
   positionCode?: string;
   custName?: string;
-  sites?: string[];
+  sites?: Array<{ custName: string; custDes: string }> | string[];
   fullAccess?: boolean;
 }
 

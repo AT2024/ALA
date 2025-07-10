@@ -2,6 +2,11 @@ import axios from 'axios';
 import logger from '../utils/logger';
 import mockPriorityService from './mockPriorityService';
 
+interface SiteInfo {
+  custName: string;
+  custDes: string;
+}
+
 // Priority API credentials
 const PRIORITY_URL =
   process.env.PRIORITY_URL ||
@@ -87,26 +92,37 @@ export const priorityService = {
         email: string;
         phone: string;
         positionCode: number;
-        sites: string[];
+        sites: SiteInfo[];
       }
     > = {
       '475': {
         email: 'test@example.com',
         phone: '475',
         positionCode: 50,
-        sites: ['100078'],
+        sites: [{ custName: '100078', custDes: 'Test Hospital' }],
       },
       'tzufitc@alphatau.com': {
         email: 'tzufitc@alphatau.com',
         phone: '971',
         positionCode: 99,
-        sites: ['100078'],
+        sites: [{ custName: '100078', custDes: 'Test Hospital' }],
       },
       'test@example.com': {
         email: 'test@example.com',
         phone: '555-5555',
         positionCode: 99,
-        sites: ['100078'],
+        sites: [{ custName: '100078', custDes: 'Test Hospital' }],
+      },
+      // Test user with multiple sites (non-admin)
+      'multisite@example.com': {
+        email: 'multisite@example.com',
+        phone: '123456789',
+        positionCode: 50,
+        sites: [
+          { custName: '100078', custDes: 'Test Hospital' },
+          { custName: '100030', custDes: 'Regional Medical Center' },
+          { custName: '100045', custDes: 'City General Hospital' }
+        ],
       },
     };
 
@@ -128,165 +144,112 @@ export const priorityService = {
       };
     }
 
-    try {
-      // Search by email or phone
-      const isEmail = identifier.includes('@');
-      let filterQuery = '';
-
-      if (isEmail) {
-        // For email searches, use case-insensitive comparison if possible
-        // Note: Some OData services support 'tolower' function for case-insensitive comparisons
-        // Try using exact match first as a fallback
-        filterQuery = `EMAIL eq '${identifier}'`;
-        logger.info(`Searching for email with filter: ${filterQuery}`);
-      } else {
-        // For phone searches
-        // First try to convert to number if possible (clean phone number)
-        let phoneNumber = identifier.replace(/\D/g, '');
-        if (phoneNumber) {
-          filterQuery = `PHONE eq ${phoneNumber}`;
-        } else {
-          // If conversion fails, use the original string
-          filterQuery = `PHONE eq '${identifier}'`;
-        }
-        logger.info(`Searching for phone with filter: ${filterQuery}`);
-      }
-
-      // First try to get specific user with filter
-      logger.info(`Making request to Priority PHONEBOOK with filter: ${filterQuery}`);
-      const response = await priorityApi.get('/PHONEBOOK', {
-        params: {
-          $filter: filterQuery,
-          $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME',
-        },
-      });
-
-      logger.info(
-        `Priority PHONEBOOK response received: ${response.data.value.length} records found`
-      );
-
-      if (response.data.value.length === 0) {
-        // If not found with exact match and it's an email, try a more flexible search
-        if (isEmail) {
-          logger.info(`No exact match found for email ${identifier}, trying to get all users...`);
-          // Get all users and then filter client-side (if OData doesn't support case-insensitive search)
-          const allUsersResponse = await priorityApi.get('/PHONEBOOK', {
-            params: {
-              $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME',
-            },
-          });
-
-          // Filter manually for case-insensitive email match
-          const lowerEmail = identifier.toLowerCase();
-          const matchingUsers = allUsersResponse.data.value.filter(
-            (user: any) => user.EMAIL && user.EMAIL.toLowerCase() === lowerEmail
-          );
-
-          if (matchingUsers.length > 0) {
-            logger.info(`Found a case-insensitive match for email ${identifier}`);
-            const user = matchingUsers[0];
-
-            // Always convert positionCode to a number to avoid type mismatches
-            const positionCode = parseInt(user.POSITIONCODE, 10) || 0;
-
-            // Check if user has full access (Alpha Tau employee)
-            if (positionCode === 99) {
-              // Fetch all sites for admin users
-              const sitesResponse = await priorityApi.get('/PHONEBOOK', {
-                params: {
-                  $select: 'CUSTNAME',
-                  $orderby: 'CUSTNAME',
-                },
-              });
-
-              // Extract unique sites
-              const uniqueSites = [
-                ...new Set(sitesResponse.data.value.map((item: any) => item.CUSTNAME)),
-              ];
-
-              return {
-                found: true,
-                fullAccess: true,
-                sites: uniqueSites,
-                user: {
-                  email: user.EMAIL,
-                  phone: user.PHONE,
-                  name: user.NAME,
-                  positionCode: positionCode,
-                },
-              };
-            } else {
-              // Non-admin users only have access to their associated site
-              return {
-                found: true,
-                fullAccess: false,
-                sites: [user.CUSTNAME],
-                user: {
-                  email: user.EMAIL,
-                  phone: user.PHONE,
-                  name: user.NAME,
-                  positionCode: positionCode,
-                },
-              };
-            }
+    // Helper function to get all sites for a non-admin user
+    const getAllSitesForUser = async (userEmail: string, userPhone: string) => {
+      try {
+        logger.info(`Getting all sites for user - email: ${userEmail}, phone: ${userPhone}`);
+        
+        // Query all PHONEBOOK records for this user by email or phone
+        let allUserRecords = [];
+        
+        // Only query by email if we have a valid email
+        if (userEmail && userEmail.includes('@')) {
+          try {
+            const emailResponse = await priorityApi.get('/PHONEBOOK', {
+              params: {
+                $filter: `EMAIL eq '${userEmail}'`,
+                $select: 'CUSTNAME,CUSTDES,POSITIONCODE,EMAIL,PHONE,NAME',
+              },
+            });
+            allUserRecords.push(...emailResponse.data.value);
+            logger.info(`Found ${emailResponse.data.value.length} records by email`);
+          } catch (emailError) {
+            logger.warn(`Error querying by email: ${emailError}`);
+            // Continue with phone query
           }
         }
-
-        // If we still don't have a match
-        logger.warn(
-          `[Priority] No user found for identifier '${identifier}'. Full response: ${JSON.stringify(
-            response.data
-          )}`
+        
+        // Only query by phone if we have a valid phone and didn't already find records
+        if (userPhone && allUserRecords.length === 0) {
+          try {
+            // Clean phone number for query
+            const phoneNumber = userPhone.toString().replace(/\D/g, '');
+            if (phoneNumber) {
+              const phoneResponse = await priorityApi.get('/PHONEBOOK', {
+                params: {
+                  $filter: `PHONE eq ${phoneNumber}`,
+                  $select: 'CUSTNAME,CUSTDES,POSITIONCODE,EMAIL,PHONE,NAME',
+                },
+              });
+              allUserRecords.push(...phoneResponse.data.value);
+              logger.info(`Found ${phoneResponse.data.value.length} records by phone`);
+            }
+          } catch (phoneError) {
+            logger.warn(`Error querying by phone: ${phoneError}`);
+            // Continue anyway
+          }
+        }
+        
+        // Remove duplicates based on CUSTNAME
+        const uniqueRecords = allUserRecords.filter((record, index, self) => 
+          index === self.findIndex(r => r.CUSTNAME === record.CUSTNAME)
         );
+        
+        // Extract all unique sites (CUSTNAME values)
+        const userSites = uniqueRecords.map(record => record.CUSTNAME).filter(Boolean);
+        
+        logger.info(`Found ${userSites.length} unique sites for user: ${userSites.join(', ')}`);
+        
+        return {
+          sites: userSites,
+          records: uniqueRecords
+        };
+      } catch (error) {
+        logger.error(`Error in getAllSitesForUser: ${error}`);
+        // Return empty result on error, will fall back to original logic
+        return {
+          sites: [],
+          records: []
+        };
+      }
+    };
+
+    try {
+      // STEP 1: Query PHONEBOOK API to get user data
+      logger.info(`Step 1: Querying PHONEBOOK API for identifier: ${identifier}`);
+      const phonebookUser = await this.getUserFromPhonebook(identifier);
+      
+      if (!phonebookUser.found) {
+        logger.warn(`User not found in PHONEBOOK: ${identifier}`);
         return { found: false, sites: [] };
       }
 
-      const user = response.data.value[0];
-      logger.info(`Found user in Priority: ${JSON.stringify(user)}`);
-
-      // Always convert positionCode to a number to avoid type mismatches
-      const positionCode = parseInt(user.POSITIONCODE, 10) || 0;
-
-      // Check if user has full access (Alpha Tau employee)
-      if (positionCode === 99) {
-        // Return all sites (fetch them all)
-        const sitesResponse = await priorityApi.get('/PHONEBOOK', {
-          params: {
-            $select: 'CUSTNAME',
-            $orderby: 'CUSTNAME',
-          },
-        });
-
-        // Extract unique sites
-        const uniqueSites = [
-          ...new Set(sitesResponse.data.value.map((item: any) => item.CUSTNAME)),
-        ];
-
+      // STEP 2: Check POSITIONCODE = 99 for Alpha Tau employees
+      logger.info(`Step 2: Checking POSITIONCODE for user: ${phonebookUser.user?.positionCode}`);
+      if (phonebookUser.user?.positionCode === 99) {
+        logger.info(`User is Alpha Tau employee (POSITIONCODE=99) - granting full access`);
+        
+        // Get all available sites for admin users
+        const allSites = await this.getAllSites();
+        
         return {
           found: true,
           fullAccess: true,
-          sites: uniqueSites,
-          user: {
-            email: user.EMAIL,
-            phone: user.PHONE,
-            name: user.NAME,
-            positionCode: positionCode,
-          },
-        };
-      } else {
-        // Return only the site the user is associated with
-        return {
-          found: true,
-          fullAccess: false,
-          sites: [user.CUSTNAME],
-          user: {
-            email: user.EMAIL,
-            phone: user.PHONE,
-            name: user.NAME,
-            positionCode: positionCode,
-          },
+          sites: allSites,
+          user: phonebookUser.user,
         };
       }
+
+      // STEP 3: Extract CUSTNAME from user record for site filtering
+      logger.info(`Step 3: Extracting CUSTNAME values for non-admin user`);
+      const userSites = await this.getUserSites(phonebookUser.user?.email || '', phonebookUser.user?.phone || '');
+      
+      return {
+        found: true,
+        fullAccess: false,
+        sites: userSites,
+        user: phonebookUser.user,
+      };
     } catch (error: any) {
       logger.error(`Error getting user site access: ${error}`);
 
@@ -321,6 +284,216 @@ export const priorityService = {
       }
 
       throw new Error(`Failed to get user site access: ${error.message || error}`);
+    }
+  },
+
+  // STEP 1: Get user from PHONEBOOK API
+  async getUserFromPhonebook(identifier: string) {
+    try {
+      const isEmail = identifier.includes('@');
+      let filterQuery = '';
+
+      if (isEmail) {
+        filterQuery = `EMAIL eq '${identifier}'`;
+        logger.info(`Searching PHONEBOOK by email: ${filterQuery}`);
+      } else {
+        // Clean phone number for query
+        const phoneNumber = identifier.replace(/\D/g, '');
+        if (phoneNumber) {
+          filterQuery = `PHONE eq ${phoneNumber}`;
+        } else {
+          filterQuery = `PHONE eq '${identifier}'`;
+        }
+        logger.info(`Searching PHONEBOOK by phone: ${filterQuery}`);
+      }
+
+      const response = await priorityApi.get('/PHONEBOOK', {
+        params: {
+          $filter: filterQuery,
+          $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME,CUSTDES',
+        },
+      });
+
+      if (response.data.value.length === 0) {
+        // Try case-insensitive search for emails
+        if (isEmail) {
+          const allUsersResponse = await priorityApi.get('/PHONEBOOK', {
+            params: {
+              $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME,CUSTDES',
+            },
+          });
+
+          const lowerEmail = identifier.toLowerCase();
+          const matchingUsers = allUsersResponse.data.value.filter(
+            (user: any) => user.EMAIL && user.EMAIL.toLowerCase() === lowerEmail
+          );
+
+          if (matchingUsers.length > 0) {
+            const user = matchingUsers[0];
+            return {
+              found: true,
+              user: {
+                email: user.EMAIL,
+                phone: user.PHONE,
+                name: user.NAME,
+                positionCode: parseInt(user.POSITIONCODE, 10) || 0,
+                custName: user.CUSTNAME,
+              },
+            };
+          }
+        }
+        return { found: false };
+      }
+
+      const user = response.data.value[0];
+      return {
+        found: true,
+        user: {
+          email: user.EMAIL,
+          phone: user.PHONE,
+          name: user.NAME,
+          positionCode: parseInt(user.POSITIONCODE, 10) || 0,
+          custName: user.CUSTNAME,
+        },
+      };
+    } catch (error: any) {
+      logger.error(`Error getting user from PHONEBOOK: ${error}`);
+      return { found: false };
+    }
+  },
+
+  // STEP 2: Get all sites for Alpha Tau employees (POSITIONCODE=99)
+  async getAllSites() {
+    try {
+      logger.info('Fetching all sites for Alpha Tau employee');
+      const sitesResponse = await priorityApi.get('/PHONEBOOK', {
+        params: {
+          $select: 'CUSTNAME,CUSTDES',
+          $orderby: 'CUSTNAME',
+        },
+      });
+
+      // Extract unique sites with descriptions
+      const uniqueSites = sitesResponse.data.value.reduce((acc: SiteInfo[], item: any) => {
+        if (item.CUSTNAME && !acc.find((site: SiteInfo) => site.custName === item.CUSTNAME)) {
+          acc.push({
+            custName: item.CUSTNAME,
+            custDes: item.CUSTDES || item.CUSTNAME
+          });
+        }
+        return acc;
+      }, [] as SiteInfo[]);
+
+      logger.info(`Retrieved ${uniqueSites.length} unique sites`);
+      return uniqueSites;
+    } catch (error: any) {
+      logger.error(`Error getting all sites: ${error}`);
+      return [];
+    }
+  },
+
+  // STEP 3: Get sites for specific user based on CUSTNAME
+  async getUserSites(userEmail: string, userPhone: string) {
+    try {
+      logger.info(`Getting sites for user - email: ${userEmail}, phone: ${userPhone}`);
+      
+      const allUserRecords = [];
+      
+      // Query by email if available
+      if (userEmail && userEmail.includes('@')) {
+        try {
+          const emailResponse = await priorityApi.get('/PHONEBOOK', {
+            params: {
+              $filter: `EMAIL eq '${userEmail}'`,
+              $select: 'CUSTNAME,CUSTDES',
+            },
+          });
+          allUserRecords.push(...emailResponse.data.value);
+          logger.info(`Found ${emailResponse.data.value.length} records by email`);
+        } catch (emailError) {
+          logger.warn(`Error querying by email: ${emailError}`);
+        }
+      }
+      
+      // Query by phone if no email results
+      if (userPhone && allUserRecords.length === 0) {
+        try {
+          const phoneNumber = userPhone.toString().replace(/\D/g, '');
+          if (phoneNumber) {
+            const phoneResponse = await priorityApi.get('/PHONEBOOK', {
+              params: {
+                $filter: `PHONE eq ${phoneNumber}`,
+                $select: 'CUSTNAME,CUSTDES',
+              },
+            });
+            allUserRecords.push(...phoneResponse.data.value);
+            logger.info(`Found ${phoneResponse.data.value.length} records by phone`);
+          }
+        } catch (phoneError) {
+          logger.warn(`Error querying by phone: ${phoneError}`);
+        }
+      }
+      
+      // Return both CUSTNAME and CUSTDES for site display
+      const uniqueSites = allUserRecords.reduce((acc: SiteInfo[], record: any) => {
+        if (record.CUSTNAME && !acc.find((site: SiteInfo) => site.custName === record.CUSTNAME)) {
+          acc.push({
+            custName: record.CUSTNAME,
+            custDes: record.CUSTDES || record.CUSTNAME
+          });
+        }
+        return acc;
+      }, [] as SiteInfo[]);
+      
+      logger.info(`Found ${uniqueSites.length} unique sites for user: ${uniqueSites.map((s: SiteInfo) => s.custName).join(', ')}`);
+      return uniqueSites;
+    } catch (error: any) {
+      logger.error(`Error getting user sites: ${error}`);
+      return [];
+    }
+  },
+
+  // Get orders for site using exact Priority API format
+  async getOrdersForSiteWithFilter(custName: string) {
+    try {
+      logger.info(`Getting orders for site ${custName} using Priority API format`);
+      
+      // Use exact URL format as described: /ORDERS?$filter=CUSTNAME eq %27100030%27
+      // The %27 represents URL encoded single quotes
+      const filterParam = `CUSTNAME eq '${custName}'`;
+      logger.info(`Using filter: ${filterParam}`);
+      
+      const response = await priorityApi.get('/ORDERS', {
+        params: {
+          $filter: filterParam,
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,ORDSTATUSDES',
+        },
+      });
+
+      logger.info(`Retrieved ${response.data.value.length} orders for site ${custName}`);
+      return response.data.value;
+    } catch (error: any) {
+      logger.error(`Error getting orders for site ${custName}: ${error}`);
+      return [];
+    }
+  },
+
+  // Get order details using SIBD_APPLICATUSELIST_SUBFORM endpoint
+  async getOrderSubform(orderName: string) {
+    try {
+      logger.info(`Getting order subform for order ${orderName}`);
+      
+      // Use exact URL format: /ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM
+      const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`);
+
+      logger.info(`Retrieved subform data for order ${orderName}`);
+      return response.data.value || [];
+    } catch (error: any) {
+      logger.error(`Error getting order subform for ${orderName}: ${error}`);
+      
+      // Fallback to regular SIBD_APPLICATUSELIST table
+      logger.info(`Falling back to SIBD_APPLICATUSELIST table for order ${orderName}`);
+      return await this.getApplicatorsForTreatment(orderName);
     }
   },
 

@@ -4,6 +4,7 @@ import {
   verifyCode,
   resendVerificationCode,
   validateToken,
+  debugUserSiteAccess,
 } from '../controllers/authController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -13,6 +14,9 @@ const router = express.Router();
 router.post('/request-code', requestVerificationCode);
 router.post('/verify', verifyCode);
 router.post('/resend-code', resendVerificationCode);
+
+// Debug route (for testing multi-site access)
+router.get('/debug-sites/:identifier', debugUserSiteAccess);
 
 // Protected routes
 router.post('/validate-token', protect, validateToken);

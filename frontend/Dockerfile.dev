@@ -1,21 +1,38 @@
-FROM node:20.13-alpine
+FROM node:20.19.2-bookworm
 
 WORKDIR /usr/src/app
+
+# Install security updates
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd --gid 1001 --system nodejs && \
+    useradd --uid 1001 --system --gid nodejs --shell /bin/bash nodejs
 
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
 # Install ALL dependencies including development dependencies
-RUN npm install
+RUN npm install && npm cache clean --force
 
 # Copy the rest of the code
 COPY . .
+
+# Change ownership to nodejs user
+RUN chown -R nodejs:nodejs /usr/src/app
+USER nodejs
 
 # Expose the development port
 EXPOSE 3000
 
 # Set environment variables
 ENV NODE_ENV=development
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
 # Command to run the development server
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

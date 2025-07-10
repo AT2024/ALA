@@ -42,7 +42,7 @@ services:
 
   # PostgreSQL Database
   db:
-    image: postgres:15-alpine
+    image: postgres:16.6-alpine
     container_name: ala-db-prod
     restart: unless-stopped
     environment:
@@ -55,6 +55,12 @@ services:
       - ala-network
     volumes:
       - postgres-data-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   ala-network:

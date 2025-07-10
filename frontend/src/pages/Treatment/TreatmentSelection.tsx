@@ -4,6 +4,7 @@ import { format, addDays, subDays } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { useAuth } from '@/context/AuthContext';
+import { priorityService } from '@/services/priorityService';
 
 // Priority system integration - no more mock data needed
 // Sites, patients, and surgeons will be fetched from Priority system
@@ -54,10 +55,20 @@ const TreatmentSelection = () => {
         // For site users, use their assigned site
         if (user.fullAccess && user.sites && user.sites.length > 0) {
           // Convert user.sites to PrioritySite format
-          const userSites: PrioritySite[] = user.sites.map(site => ({
-            custName: site,
-            custDes: site // Use site name as description for now
-          }));
+          const userSites: PrioritySite[] = user.sites.map(site => {
+            // Handle both old format (string) and new format (site object)
+            if (typeof site === 'string') {
+              return {
+                custName: site,
+                custDes: site // Fallback for old format
+              };
+            } else {
+              return {
+                custName: site.custName,
+                custDes: site.custDes
+              };
+            }
+          });
           setAvailableSites(userSites);
         } else if (user.custName) {
           // Site users have access to their own site only
@@ -106,24 +117,11 @@ const TreatmentSelection = () => {
       const dateForApi = convertDateForPriority(formData.date);
       
       // Call Priority service to get orders for the site and date
-      const response = await fetch('/api/priority/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          site: formData.site,
-          date: dateForApi,
-          procedureType: procedureType
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch patients: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await priorityService.getOrdersForSiteAndDate(
+        formData.site, 
+        dateForApi, 
+        procedureType || undefined
+      );
       
       // Transform Priority data to our patient format
       const patients: PriorityPatient[] = data.orders?.map((order: any) => ({

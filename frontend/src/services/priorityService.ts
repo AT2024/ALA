@@ -9,7 +9,7 @@ export const priorityService = {
       // Use our backend as a proxy to Priority
       const response = await api.get('/proxy/priority/debug');
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Priority API connection test failed:', error);
       return {
         success: false,
@@ -64,6 +64,22 @@ export const priorityService = {
     const response = await api.get('/proxy/priority/allowed-sites', {
       params: { userPositionCode, userCustName }
     });
+    return response.data;
+  },
+
+  // Get orders for a specific site and date (for treatment selection)
+  async getOrdersForSiteAndDate(site: string, date: string, procedureType?: string): Promise<any> {
+    const response = await api.post('/proxy/priority/orders', {
+      site,
+      date,
+      procedureType
+    });
+    return response.data;
+  },
+
+  // Get order details using SIBD_APPLICATUSELIST_SUBFORM
+  async getOrderSubform(orderId: string): Promise<any> {
+    const response = await api.get(`/proxy/priority/orders/${orderId}/subform`);
     return response.data;
   },
 };

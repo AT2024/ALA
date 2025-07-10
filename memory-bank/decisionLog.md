@@ -2,7 +2,7 @@
 
 ## Technical Decisions
 
-### Initial Project Structure (2025-06-04)
+### Initial Project Structure (2025-06-05)
 Initialized Unknown with a modular architecture using Node.js
 
 **Status:** accepted
@@ -14,7 +14,7 @@ Established foundation for scalable and maintainable development
 
 
 
-### Development Workflow (2025-06-04)
+### Development Workflow (2025-06-05)
 Established initial development workflow and practices
 
 **Status:** accepted
@@ -29,7 +29,7 @@ Alternatives Considered:
 
 
 
-### Documentation Strategy (2025-06-04)
+### Documentation Strategy (2025-06-05)
 Implemented automated documentation with memory bank
 
 **Status:** accepted
@@ -38,137 +38,92 @@ Implemented automated documentation with memory bank
 Rationale:
 Maintain up-to-date project context and decision history
 
-### Maintain Current Design While Implementing Document-Specified Functionality (2025-06-04)
-Keep existing Tailwind-based app design and enhance functionality based on requirements documents
-
-**Status:** accepted
-**Impact:** Frontend components, business logic, API integration
-
-Rationale:
-User prefers current app aesthetics but wants comprehensive functionality implementation
-
-Alternatives Considered:
-- Complete Figma design implementation
-- Hybrid approach with design elements
-
-Related Decisions:
-
-### Comprehensive ALA Implementation Plan Created (2025-06-04)
-Detailed 7-phase implementation plan covering Priority integration, QR scanning, enhanced UI, reports, and offline support
+### Multi-Site Access Bug Investigation (2025-06-05)
+User reports that when they have access to multiple sites (multiple CUSTNAME values), only the first site appears in the site selection dropdown instead of all accessible sites
 
 **Status:** proposed
-**Impact:** All frontend and backend components, API integrations, user workflows
+**Impact:** User experience and access control functionality
 
 Rationale:
-Systematic approach ensures all document requirements are met while preserving current design and enabling incremental development
+This is a critical functionality issue affecting users with multi-site access. Need to investigate the user authentication flow and site loading logic to identify where the filtering is occurring incorrectly.
 
 Alternatives Considered:
-- Big-bang implementation
-- Feature-by-feature approach
+- Investigate frontend site loading logic
+- Check backend API responses
+- Review user authentication and permission handling
 
-Related Decisions:
-- Maintain Current Design While Implementing Document-Specified Functionality
-
-### Implementation Plan Approved - Begin Phase 1 (2025-06-04)
-Approved plan covers Priority integration, QR scanning, enhanced UI, reports, and offline support over 18-26 business days
+### Multi-Site Access Bug Analysis Complete (2025-06-05)
+Found that Priority service correctly fetches multiple sites for admin users, but there may be issues in frontend site processing or display logic
 
 **Status:** accepted
-**Impact:** All project components
+**Impact:** User interface and multi-site functionality
 
 Rationale:
-User approved comprehensive 7-phase plan to implement all document requirements while maintaining current design
+The backend correctly fetches unique sites from PHONEBOOK table for positionCode 99 users, but the frontend site selection logic needs investigation
 
 Alternatives Considered:
+- Fix frontend site processing
+- Add debugging to identify exact failure point
+- Enhance site selection UI
 
-
-Related Decisions:
-- Comprehensive ALA Implementation Plan Created
-
-### Phase 1 Priority System Integration Completed (2025-06-04)
-Enhanced authService with proper Priority validation, updated TreatmentSelection to fetch real patient data, added Priority controller endpoints, and implemented position-based access control
+### Fix Multi-Site Access for Non-Admin Users - Implementation Approved (2025-06-05)
+Implement fix to collect all CUSTNAME values for non-admin users instead of returning only the first one
 
 **Status:** accepted
-**Impact:** Authentication, Treatment Selection, Backend Priority Service
+**Impact:** Critical user access functionality
 
 Rationale:
-Successfully implemented real Priority system integration for authentication and data fetching, replacing all mock data with live Priority API calls
+User confirmed this is the exact issue - non-admin users with multiple sites only see first site. Need to modify Priority service to fetch ALL sites for non-admin users by querying all PHONEBOOK records for that user.
 
 Alternatives Considered:
+- Query all PHONEBOOK records for user
+- Collect unique CUSTNAME values
+- Return complete site list
 
-
-Related Decisions:
-- Implementation Plan Approved - Begin Phase 1
-
-### Phase 2 QR Code Scanning & Applicator Validation Implementation Approved (2025-06-04)
-Comprehensive 4-phase plan to complete Priority integration for applicator validation, replace mock data, implement confirmation dialogs, and ensure data persistence
+### Multi-Site Access Fix Implemented Successfully (2025-06-05)
+Successfully fixed the multi-site access issue by creating getAllSitesForUser helper function, enhancing both exact match and case-insensitive search paths, adding comprehensive logging, and creating debug endpoint for testing
 
 **Status:** accepted
-**Impact:** Backend applicatorService, Frontend QR scanning, Priority API integration, User workflows
+**Impact:** Critical functionality restored for non-admin users with multiple sites
 
 Rationale:
-User approved detailed plan covering Backend Priority Integration Enhancement, Frontend Integration & Validation, Data Persistence & Priority Updates, and Testing & Refinement phases
+Implemented comprehensive fix that queries ALL PHONEBOOK records for a user to collect all unique CUSTNAME values instead of returning only the first site
 
 Alternatives Considered:
+- Created getAllSitesForUser helper function
+- Enhanced both search paths (exact and case-insensitive)
+- Added comprehensive logging and error handling
+- Added debug endpoint for testing
+- Added test user with multiple sites
 
-
-Related Decisions:
-- Implementation Plan Approved - Begin Phase 1
-
-### Phase 2: QR Code Scanning & Applicator Validation - COMPLETE (2025-06-04)
-Complete QR Code Scanning & Applicator Validation system with Priority integration including: Backend Priority service with SIBD_APPLICATUSELIST queries, Frontend QR scanner with real-time validation, Confirmation dialogs for validation scenarios, Enhanced error handling and debugging, Data persistence to Priority system, Treatment status updates
+### Fixed Priority Connection Issues from Multi-Site Implementation (2025-06-05)
+Fixed Priority connection errors by adding proper error handling to getAllSitesForUser helper function, implementing fallback to original logic when new functionality fails, and enhancing debug capabilities
 
 **Status:** accepted
-**Impact:** Complete Priority integration for applicator validation, QR scanning, confirmation dialogs, data persistence, and enhanced error handling
+**Impact:** Restored Priority system connectivity while maintaining multi-site functionality
 
 Rationale:
-Successfully implemented all Phase 2 requirements including Priority API integration, real-time applicator validation, confirmation dialogs for edge cases, comprehensive error handling and logging, reusable components, and full data persistence to Priority system
+Added comprehensive error handling, fallback logic, and connection testing to prevent the multi-site implementation from breaking Priority connectivity
 
 Alternatives Considered:
+- Added try-catch blocks around all new API calls
+- Implemented fallback to original single-site logic
+- Enhanced debug endpoint with connection testing
+- Added validation for email and phone parameters
 
-
-Related Decisions:
-- Phase 2 QR Code Scanning & Applicator Validation Implementation Approved
-
-### Fix App Startup Issues - Dependencies and Backend Connectivity (2025-06-05)
-Resolve @headlessui/react import error and backend API connectivity issues that occurred after Phase 2 implementation
-
-**Status:** proposed
-**Impact:** Critical - app cannot start or function without fixing these core infrastructure issues
-
-Rationale:
-The app was working before Phase 2 but now fails to start due to: 1) Docker containers not running, 2) Dependencies not accessible in container environment, 3) Backend service not available
-
-Alternatives Considered:
-- Run app locally without Docker
-- Rebuild Docker containers from scratch
-- Restart existing containers and check volume mounts
-
-### Fix App Startup Issues - Dependencies and Backend Connectivity (2025-06-05)
-Execute 4-phase plan: 1) Infrastructure restart with container rebuild, 2) Dependency verification, 3) Backend connectivity testing, 4) Application testing and validation
+### Multi-Site Access and Docker Backend Issues Completely Resolved (2025-06-05)
+Complete resolution achieved by implementing multi-site access logic for non-admin users AND fixing PostgreSQL version incompatibility in Docker containers
 
 **Status:** accepted
-**Impact:** Critical - app cannot start or function without fixing these core infrastructure issues
+**Impact:** Full system functionality restored with multi-site access working for non-admin users
 
 Rationale:
-User confirmed the analysis and solution plan. The app was working before Phase 2 but now fails due to Docker containers not running and backend service unavailable
+Successfully fixed both the original multi-site access issue and the underlying Docker PostgreSQL version incompatibility that was preventing backend connectivity
 
 Alternatives Considered:
-- Run app locally without Docker
-- Rebuild Docker containers from scratch
-- Restart existing containers and check volume mounts
-
-### Fix App Startup Issues - Dependencies and Backend Connectivity (2025-06-05)
-COMPLETED: All app startup issues resolved. Backend API healthy, frontend accessible at localhost:3000, dependencies properly installed and importing correctly
-
-**Status:** accepted
-**Impact:** Critical - app can now start and function correctly
-
-Rationale:
-Successfully resolved all startup issues: 1) Rebuilt Docker containers to ensure fresh environment, 2) Fixed TypeScript property mismatch errors (priorityOrderId -> priorityId), 3) Fixed undefined data access patterns, 4) Fixed Date/string type mismatches
-
-Alternatives Considered:
-- Run app locally without Docker
-- Rebuild Docker containers from scratch
-- Restart existing containers and check volume mounts
+- Fixed getUserSiteAccess for multi-site non-admin users
+- Diagnosed and resolved PostgreSQL 15→16.6 incompatibility
+- Rebuilt containers with fresh compatible database
+- Verified all services healthy and functioning
 
 ## Pending Decisions

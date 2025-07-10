@@ -197,8 +197,8 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
       return;
     }
     
-    // Get orders from Priority for the specified site and date
-    let orders = await priorityService.getOrdersForSite(site);
+    // Get orders from Priority for the specified site using exact CUSTNAME filtering
+    let orders = await priorityService.getOrdersForSiteWithFilter(site);
     
     // Filter orders by date if provided
     if (date) {
@@ -237,6 +237,42 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
     });
   } catch (error: any) {
     logger.error(`Error fetching orders for site and date: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get order details using SIBD_APPLICATUSELIST_SUBFORM
+// @route   GET /api/proxy/priority/orders/:orderId/subform
+// @access  Private
+export const getOrderSubform = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!orderId) {
+      res.status(400).json({ 
+        error: 'Order ID is required'
+      });
+      return;
+    }
+    
+    logger.info(`Fetching subform data for order: ${orderId}`);
+    
+    // Get subform data from Priority
+    const subformData = await priorityService.getOrderSubform(orderId);
+    
+    logger.info(`Retrieved ${subformData.length} subform records for order ${orderId}`);
+    
+    res.status(200).json({
+      success: true,
+      orderId: orderId,
+      data: subformData,
+      count: subformData.length
+    });
+  } catch (error: any) {
+    logger.error(`Error fetching order subform: ${error.message}`);
     res.status(500).json({
       success: false,
       error: error.message

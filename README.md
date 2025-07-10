@@ -103,6 +103,43 @@ ala-improved/
 - **Admin Dashboard**: Monitor system usage and manage configurations
 - **Priority Integration**: Seamless connection to the Priority system
 
+## 🔒 Security
+
+### Security Features
+- **Secure Base Images**: Using latest LTS Node.js and security-hardened Alpine/Debian images
+- **Non-Root Execution**: All containers run with non-privileged users (UID/GID: 1001)
+- **Vulnerability Scanning**: Automated security scanning with Trivy
+- **Security Updates**: Automatic security patches applied during builds
+- **Health Checks**: Comprehensive health monitoring for all services
+
+### Security Scanning
+Run security scans on Docker images:
+
+```bash
+# Windows
+scripts\security-scan.bat
+
+# Linux/Mac
+scripts/security-scan.sh
+
+# Manual scan with Trivy
+trivy image ala-frontend-prod
+trivy image ala-api-prod
+```
+
+### Security Versions
+- **Node.js**: `20.19.2-bookworm-slim` (Latest LTS with security patches)
+- **Nginx**: `1.25.3-alpine3.18` (Security-hardened Alpine)
+- **PostgreSQL**: `16.6-alpine` (Latest stable with security updates)
+
+### CI/CD Security
+- Automated vulnerability scanning on every PR
+- Security results uploaded to GitHub Security tab
+- Weekly scheduled security audits
+- Notifications for critical vulnerabilities
+
+For detailed security guidelines, see [`docs/SECURITY.md`](docs/SECURITY.md).
+
 ## 🛠️ Technology Stack
 
 ### Backend
