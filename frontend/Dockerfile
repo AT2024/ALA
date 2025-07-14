@@ -1,72 +1,136 @@
-# Build stage
-FROM node:20.19.2-bookworm-slim AS build
+# =================================================================
+# ALA Frontend - Unified Multi-Stage Dockerfile
+# =================================================================
+# Supports development and production builds through build stages
+# Usage:
+#   Development: docker build --target development .
+#   Production:  docker build --target production . (default)
 
-WORKDIR /usr/src/app
+# =================================================================
+# BASE STAGE - Common Node.js setup
+# =================================================================
+FROM node:20.19.2-alpine AS base
 
 # Install security updates and necessary packages
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    ca-certificates \
+    wget \
+    dumb-init && \
+    rm -rf /var/cache/apk/*
 
 # Create non-root user for security
-RUN groupadd --gid 1001 --system nodejs && \
-    useradd --uid 1001 --system --gid nodejs --shell /bin/bash nodejs
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S -D -H -u 1001 -h /usr/src/app -s /bin/sh -G nodejs -g nodejs nodejs
 
-# Copy package.json and package-lock.json
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy package files for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# =================================================================
+# DEVELOPMENT STAGE - Vite dev server with HMR
+# =================================================================
+FROM base AS development
 
-# Copy the rest of the code
+# Install ALL dependencies (including dev dependencies)
+RUN npm install && npm cache clean --force
+
+# Copy source code
 COPY . .
 
 # Change ownership to nodejs user
 RUN chown -R nodejs:nodejs /usr/src/app
+
+# Switch to non-root user
 USER nodejs
 
-# Build the application
+# Expose development port
+EXPOSE 3000
+
+# Set environment variables
+ENV NODE_ENV=development
+
+# Add development health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Run Vite development server with HMR
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# =================================================================
+# BUILD STAGE - Compile and build assets
+# =================================================================
+FROM base AS build
+
+# Install ALL dependencies needed for build
+RUN npm install && npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Change ownership to nodejs user
+RUN chown -R nodejs:nodejs /usr/src/app
+
+# Switch to non-root user for build
+USER nodejs
+
+# Build the application for production
 RUN npm run build
 
-# Production stage - Use secure nginx base
-FROM nginx:1.25.3-alpine3.18
-
-# Production stage - Use secure nginx base
-FROM nginx:1.25.3-alpine3.18
+# =================================================================
+# PRODUCTION STAGE - Nginx with optimized assets
+# =================================================================
+FROM nginx:1.27.3-alpine AS production
 
 # Install security updates
 RUN apk update && apk upgrade && \
-    apk add --no-cache ca-certificates && \
+    apk add --no-cache \
+    ca-certificates \
+    wget && \
     rm -rf /var/cache/apk/*
 
 # Create non-root user for nginx
 RUN addgroup -g 1001 -S nginx-app && \
     adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-app -g nginx-app nginx-app
 
-# Copy built assets from the build stage
+# Copy built assets from build stage
 COPY --from=build --chown=nginx-app:nginx-app /usr/src/app/dist /usr/share/nginx/html
 
-# Copy custom nginx config
-COPY --chown=nginx-app:nginx-app nginx.conf /etc/nginx/templates/default.conf.template
+# Copy nginx configuration
+COPY --chown=nginx-app:nginx-app nginx.conf /etc/nginx/conf.d/default.conf
 
-# Set proper permissions
-RUN chmod -R 755 /usr/share/nginx/html && \
-    chown -R nginx-app:nginx-app /usr/share/nginx/html
+# Create necessary directories and set permissions
+RUN mkdir -p /var/cache/nginx/client_temp && \
+    mkdir -p /var/cache/nginx/proxy_temp && \
+    mkdir -p /var/cache/nginx/fastcgi_temp && \
+    mkdir -p /var/cache/nginx/uwsgi_temp && \
+    mkdir -p /var/cache/nginx/scgi_temp && \
+    chown -R nginx-app:nginx-app /var/cache/nginx && \
+    chown -R nginx-app:nginx-app /usr/share/nginx/html && \
+    chown -R nginx-app:nginx-app /etc/nginx/conf.d && \
+    chmod -R 755 /usr/share/nginx/html
 
-# Use non-root user
+# Create nginx.pid file directory
+RUN mkdir -p /var/run/nginx && \
+    chown -R nginx-app:nginx-app /var/run/nginx
+
+# Switch to non-root user
 USER nginx-app
 
-# Expose port 80
+# Expose HTTP port
 EXPOSE 80
 
-# Use environment variables in nginx config
-ENV NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx/templates
-ENV NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+# Environment variables for production
+ENV NODE_ENV=production
 
-# Add healthcheck
+# Add production health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

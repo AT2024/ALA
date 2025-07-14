@@ -15,8 +15,18 @@ build/
 logs/
 *.log
 
-# dotenv environment variables
-.env*
+# dotenv environment variables (local overrides only)
+.env.local
+.env.*.local
+.env.local.*
+
+# Environment file backups
+.env.backup.*
+environments/.env.backup.*
+
+# Sensitive environment files (if any)
+.env.secrets
+.env.production.local
 
 # Docker
 *.pid

@@ -735,8 +735,13 @@ export const priorityService = {
       return response.data.value;
     } catch (error) {
       logger.error(`Error getting contacts: ${error}`);
-      // Return mock data in case of error
-      return mockPriorityService.getMockContacts();
+      // Return mock data in case of error (development only)
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('Using mock contacts data as fallback in development mode');
+        return mockPriorityService.getMockContacts();
+      }
+      // In production, throw error instead of returning mock data
+      throw new Error(`Priority API error: ${error}`);
     }
   },
 
@@ -751,8 +756,13 @@ export const priorityService = {
       return response.data.value;
     } catch (error) {
       logger.error(`Error getting orders for site: ${error}`);
-      // Return mock data in case of error
-      return mockPriorityService.getMockOrders(custName);
+      // Return mock data in case of error (development only)
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn(`Using mock orders data as fallback in development mode for site: ${custName}`);
+        return mockPriorityService.getMockOrders(custName);
+      }
+      // In production, throw error instead of returning mock data
+      throw new Error(`Priority API error: ${error}`);
     }
   },
 

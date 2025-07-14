@@ -10,7 +10,26 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "env:setup": "node ../scripts/setup.js setup",
+    "env:validate": "node ../scripts/setup.js validate",
+    "env:switch": "node ../scripts/setup.js switch",
+    "workflow:feature": "node ../scripts/git-workflow.js feature",
+    "workflow:hotfix": "node ../scripts/git-workflow.js hotfix",
+    "workflow:release": "node ../scripts/git-workflow.js release",
+    "security:scan": "node ../scripts/security-scan.js",
+    "debug": "node ../scripts/debug-unified.js",
+    "docker:dev": "docker-compose up -d",
+    "docker:dev:build": "docker-compose up -d --build",
+    "docker:prod": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "docker:prod:build": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build",
+    "docker:stop": "docker-compose down",
+    "docker:clean": "docker-compose down -v --remove-orphans",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:frontend": "docker-compose logs -f frontend"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
@@ -32,6 +51,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
     "@testing-library/user-event": "^14.5.2",

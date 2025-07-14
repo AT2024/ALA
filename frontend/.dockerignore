@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+dist
+build
+
+# Runtime logs
+logs
+*.log
+
+# Environment files
+.env*
+!.env.example
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# Test coverage
+coverage
+
+# Temporary files
+.tmp
+.temp
+
+# Vite cache
+.vite
+
+# README and docs
+README.md
+*.md
+!package.json
+!package-lock.json

@@ -7,7 +7,9 @@ import {
   getOrdersForSite,
   getAllowedSitesForUser,
   getOrdersForSiteAndDate,
-  getOrderSubform
+  getOrderSubform,
+  getOrderDetails,
+  validateApplicator
 } from '../controllers/priorityController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -23,6 +25,8 @@ router.get('/contacts', protect, getContacts);
 router.get('/orders', protect, getOrdersForSite);
 router.post('/orders', protect, getOrdersForSiteAndDate);
 router.get('/orders/:orderId/subform', protect, getOrderSubform);
+router.get('/orders/:orderId/details', protect, getOrderDetails);
+router.post('/validate-applicator', protect, validateApplicator);
 router.get('/allowed-sites', protect, getAllowedSitesForUser);
 
 export default router;

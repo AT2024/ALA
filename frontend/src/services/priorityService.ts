@@ -82,4 +82,20 @@ export const priorityService = {
     const response = await api.get(`/proxy/priority/orders/${orderId}/subform`);
     return response.data;
   },
+
+  // Get detailed order information including seed quantity and activity
+  async getOrderDetails(orderId: string): Promise<any> {
+    const response = await api.get(`/proxy/priority/orders/${orderId}/details`);
+    return response.data;
+  },
+
+  // Validate applicator for manual entry
+  async validateApplicator(serialNumber: string, currentSite: string, currentDate: string): Promise<any> {
+    const response = await api.post('/proxy/priority/validate-applicator', {
+      serialNumber,
+      currentSite,
+      currentDate
+    });
+    return response.data;
+  },
 };

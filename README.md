@@ -88,9 +88,8 @@ ala-improved/
 │   ├── tsconfig.node.json
 │   └── vite.config.ts
 ├── README.md
-├── restart.bat
 └── scripts/
-    └── debug.js
+    └── debug-unified.js
 ```
 
 ## 🚀 Features
@@ -192,12 +191,14 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Debugging
 
 ```bash
-# Run the debug script
-./debug.bat  # Windows
-./debug.sh   # Linux/Mac
+# Run the unified debug tool
+node scripts/debug-unified.js
 
-# Restart containers
-./restart.bat
+# Or run with specific commands
+node scripts/debug-unified.js health    # Health check
+node scripts/debug-unified.js start     # Start development
+node scripts/debug-unified.js stop      # Stop development
+node scripts/debug-unified.js restart   # Restart development
 ```
 
 ## 📝 Recent Updates
@@ -219,9 +220,10 @@ Position code '99' grants access to all treatment sites, while other codes restr
 ## 🧪 Debugging Tools
 
 The application includes several debugging utilities:
-- `debug.bat`/`debug.sh` - Test connectivity to backend and Priority APIs
-- `scripts/debug.js` - Detailed diagnostic script
-- `restart.bat` - Restart Docker containers
+- `scripts/debug-unified.js` - Comprehensive debug tool with interactive menu
+- Test connectivity to backend and Priority APIs
+- System diagnostics and health checks
+- Container management (start/stop/restart)
 - Project documentation page at `/docs`
 
 ## 📚 Documentation
