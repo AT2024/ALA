@@ -28,6 +28,21 @@ interface Applicator {
   removalImage?: string;
 }
 
+interface ProgressStats {
+  totalApplicators: number;
+  usedApplicators: number;
+  totalSeeds: number;
+  insertedSeeds: number;
+  completionPercentage: number;
+  usageTypeDistribution: {
+    full: number;
+    faulty: number;
+    none: number;
+  };
+  seedsRemaining: number;
+  applicatorsRemaining: number;
+}
+
 interface TreatmentContextType {
   currentTreatment: Treatment | null;
   applicators: Applicator[];
@@ -42,6 +57,10 @@ interface TreatmentContextType {
   clearTreatment: () => void;
   totalSeeds: number;
   removedSeeds: number;
+  progressStats: ProgressStats;
+  getApplicatorProgress: () => { used: number; total: number };
+  getSeedProgress: () => { inserted: number; total: number };
+  getUsageTypeDistribution: () => { full: number; faulty: number; none: number };
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
@@ -81,11 +100,47 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setProcedureType(null);
   };
 
+  // Progress calculation methods
+  const getApplicatorProgress = () => {
+    const used = applicators.length;
+    const total = currentTreatment?.seedQuantity ? Math.ceil(currentTreatment.seedQuantity / 25) : used; // Estimate based on 25 seeds per applicator
+    return { used, total };
+  };
+
+  const getSeedProgress = () => {
+    const inserted = applicators.reduce((sum, app) => sum + (app.insertedSeedsQty || 0), 0);
+    const total = currentTreatment?.seedQuantity || inserted;
+    return { inserted, total };
+  };
+
+  const getUsageTypeDistribution = () => {
+    const distribution = { full: 0, faulty: 0, none: 0 };
+    applicators.forEach(app => {
+      if (app.usageType === 'full') distribution.full++;
+      else if (app.usageType === 'faulty') distribution.faulty++;
+      else if (app.usageType === 'none') distribution.none++;
+    });
+    return distribution;
+  };
+
   // Calculate totals for removal treatment
   const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
   const removedSeeds = applicators.reduce((sum, app) => 
     app.isRemoved ? sum + app.seedQuantity : sum, 0
   );
+
+  // Comprehensive progress statistics
+  const progressStats: ProgressStats = {
+    totalApplicators: currentTreatment?.seedQuantity ? Math.ceil(currentTreatment.seedQuantity / 25) : applicators.length,
+    usedApplicators: applicators.length,
+    totalSeeds: currentTreatment?.seedQuantity || getSeedProgress().inserted,
+    insertedSeeds: getSeedProgress().inserted,
+    completionPercentage: currentTreatment?.seedQuantity ? 
+      Math.round((getSeedProgress().inserted / currentTreatment.seedQuantity) * 100) : 0,
+    usageTypeDistribution: getUsageTypeDistribution(),
+    seedsRemaining: Math.max(0, (currentTreatment?.seedQuantity || 0) - getSeedProgress().inserted),
+    applicatorsRemaining: Math.max(0, (currentTreatment?.seedQuantity ? Math.ceil(currentTreatment.seedQuantity / 25) : 0) - applicators.length)
+  };
 
   return (
     <TreatmentContext.Provider
@@ -102,7 +157,11 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         removeApplicator,
         clearTreatment,
         totalSeeds,
-        removedSeeds
+        removedSeeds,
+        progressStats,
+        getApplicatorProgress,
+        getSeedProgress,
+        getUsageTypeDistribution
       }}
     >
       {children}

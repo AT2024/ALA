@@ -98,4 +98,22 @@ export const priorityService = {
     });
     return response.data;
   },
+
+  // Get available applicators for a treatment
+  async getAvailableApplicators(site: string, currentDate: string): Promise<any> {
+    const response = await api.get('/proxy/priority/applicators/available', {
+      params: { site, currentDate }
+    });
+    return response.data;
+  },
+
+  // Search applicators by name with fuzzy matching
+  async searchApplicators(query: string, site: string, currentDate: string): Promise<any> {
+    const response = await api.post('/proxy/priority/applicators/search', {
+      query,
+      site,
+      currentDate
+    });
+    return response.data;
+  },
 };

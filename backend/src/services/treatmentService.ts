@@ -213,7 +213,7 @@ export const treatmentService = {
         throw new Error('Cannot update a completed treatment');
       }
       
-      // Validate time window
+      // Validate time window (with special handling for "No Use" applicators)
       const timeWindowValidation = await this.validateTreatmentTimeWindow(id);
       if (!timeWindowValidation.valid) {
         throw new Error(timeWindowValidation.message);
@@ -302,7 +302,7 @@ export const treatmentService = {
   },
   
   // Specific method for time window validation
-  async validateTreatmentTimeWindow(treatmentId: string) {
+  async validateTreatmentTimeWindow(treatmentId: string, applicatorId?: string) {
     try {
       const treatment = await Treatment.findByPk(treatmentId);
       
@@ -313,6 +313,17 @@ export const treatmentService = {
       const today = new Date();
       const treatmentDate = new Date(treatment.date);
       const daysSinceTreatment = Math.floor((today.getTime() - treatmentDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Special rule for "No Use" applicators - allow future editing
+      if (applicatorId) {
+        const applicator = await Applicator.findByPk(applicatorId);
+        if (applicator && applicator.usageType === 'none') {
+          return {
+            valid: true,
+            message: 'No Use applicators can be edited in the future'
+          };
+        }
+      }
       
       // Standard window is 21 days (14 days + 7-day extension)
       if (daysSinceTreatment > 21) {

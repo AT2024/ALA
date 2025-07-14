@@ -21,6 +21,11 @@ const loadTestData = () => {
   }
 };
 
+// Helper function to check if we should use test data for development
+const shouldUseTestData = (identifier: string): boolean => {
+  return process.env.NODE_ENV === 'development' && identifier === 'test@example.com';
+};
+
 // Priority API credentials
 const PRIORITY_URL =
   process.env.PRIORITY_URL ||
@@ -98,6 +103,27 @@ export const priorityService = {
   async getUserSiteAccess(identifier: string) {
     // Always treat identifier as string
     identifier = String(identifier).trim();
+
+    // Special handling for test@example.com in development mode
+    if (shouldUseTestData(identifier)) {
+      logger.info(`Using test data for development user: ${identifier}`);
+      const testData = loadTestData();
+      if (testData && testData.sites) {
+        return {
+          found: true,
+          fullAccess: true, // Grant full access for testing
+          sites: testData.sites.map((site: any) => ({
+            custName: site.custName,
+            custDes: site.custDes
+          })),
+          user: {
+            email: identifier,
+            phone: '555-TEST',
+            positionCode: 99,
+          },
+        };
+      }
+    }
 
     // For testing/development, add more test accounts for easier testing
     const testAccounts: Record<
@@ -531,9 +557,20 @@ export const priorityService = {
   },
 
   // Get orders for site using exact Priority API format
-  async getOrdersForSiteWithFilter(custName: string) {
+  async getOrdersForSiteWithFilter(custName: string, userId?: string) {
     try {
       logger.info(`Getting orders for site ${custName} using Priority API format`);
+      
+      // For development mode with test@example.com, use test data first
+      if (userId && shouldUseTestData(userId)) {
+        logger.info(`Development mode: Using test data for user ${userId} at site ${custName}`);
+        const testData = loadTestData();
+        if (testData && testData.orders) {
+          const filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
+          logger.info(`Retrieved ${filteredOrders.length} orders for site ${custName} from test data`);
+          return filteredOrders;
+        }
+      }
       
       // Use exact URL format as described: /ORDERS?$filter=CUSTNAME eq %27100030%27
       // The %27 represents URL encoded single quotes
@@ -583,11 +620,21 @@ export const priorityService = {
   },
 
   // Get order details using SIBD_APPLICATUSELIST_SUBFORM endpoint
-  async getOrderSubform(orderName: string) {
+  async getOrderSubform(orderName: string, userId?: string) {
     try {
       logger.info(`Getting order subform for order ${orderName}`);
       
-      // Try to load test data first
+      // For development mode with test@example.com, prioritize test data
+      if (userId && shouldUseTestData(userId)) {
+        logger.info(`Development mode: Using test subform data for user ${userId} and order ${orderName}`);
+        const testData = loadTestData();
+        if (testData && testData.subform_data && testData.subform_data[orderName]) {
+          logger.info(`Using test subform data for order ${orderName}`);
+          return testData.subform_data[orderName].value || [];
+        }
+      }
+      
+      // Try to load test data first (for fallback scenarios)
       const testData = loadTestData();
       if (testData && testData.subform_data && testData.subform_data[orderName]) {
         logger.info(`Using test subform data for order ${orderName}`);
@@ -611,7 +658,7 @@ export const priorityService = {
       
       // Fallback to regular SIBD_APPLICATUSELIST table
       logger.info(`Falling back to SIBD_APPLICATUSELIST table for order ${orderName}`);
-      return await this.getApplicatorsForTreatment(orderName);
+      return await this.getApplicatorsForTreatment(orderName, userId);
     }
   },
 
@@ -1063,9 +1110,30 @@ export const priorityService = {
   /**
    * Get applicators for a specific treatment from Priority
    */
-  async getApplicatorsForTreatment(treatmentId: string) {
+  async getApplicatorsForTreatment(treatmentId: string, userId?: string) {
     try {
       logger.info(`Fetching applicators for treatment ${treatmentId}`);
+      
+      // Check if we should use test data for development
+      if (userId && shouldUseTestData(userId)) {
+        const testData = loadTestData();
+        if (testData && testData.subform_data && testData.subform_data[treatmentId]) {
+          logger.info(`Using test data for applicators in treatment ${treatmentId}`);
+          const testApplicators = testData.subform_data[treatmentId].value;
+          
+          return testApplicators.map((item: any) => ({
+            serialNumber: item.SERNUM,
+            applicatorType: item.PARTDES,
+            seedQuantity: item.INTDATA2,
+            treatmentId: item.ORDNAME,
+            patientId: treatmentId,
+            usageType: item.USINGTYPE,
+            usageTime: item.INSERTIONDATE,
+            insertedSeeds: item.INSERTEDSEEDSQTY || 0,
+            comments: item.INSERTIONCOMMENTS || ''
+          }));
+        }
+      }
       
       const response = await priorityApi.get('/SIBD_APPLICATUSELIST', {
         params: {
@@ -1161,6 +1229,218 @@ export const priorityService = {
       
       throw new Error(`Failed to update applicator in Priority: ${error.message}`);
     }
+  },
+
+  /**
+   * Get available applicators for a treatment from same site within date range
+   * Used for applicator dropdown selection
+   */
+  async getAvailableApplicatorsForTreatment(site: string, currentDate: string, userId?: string) {
+    try {
+      logger.info(`Fetching available applicators for site ${site} around date ${currentDate}`);
+      
+      // Calculate date range (day before and day after)
+      // Handle various date formats that might come from the frontend
+      let parsedDate: Date;
+      try {
+        // Try parsing the date directly
+        parsedDate = new Date(currentDate);
+        
+        // If that fails, try parsing different formats
+        if (isNaN(parsedDate.getTime())) {
+          // Try converting DD.MMM.YYYY format (e.g., "14.Jul.2025")
+          const datePattern = /(\d{1,2})\.(\w{3})\.(\d{4})/;
+          const match = currentDate.match(datePattern);
+          if (match) {
+            const [, day, month, year] = match;
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthIndex = monthNames.indexOf(month);
+            if (monthIndex !== -1) {
+              parsedDate = new Date(parseInt(year), monthIndex, parseInt(day));
+            }
+          }
+        }
+        
+        // If still invalid, use current date
+        if (isNaN(parsedDate.getTime())) {
+          logger.warn(`Invalid date format: ${currentDate}, using current date`);
+          parsedDate = new Date();
+        }
+      } catch (error) {
+        logger.warn(`Error parsing date: ${currentDate}, using current date`);
+        parsedDate = new Date();
+      }
+      
+      const dayBefore = new Date(parsedDate);
+      dayBefore.setDate(parsedDate.getDate() - 1);
+      const dayAfter = new Date(parsedDate);
+      dayAfter.setDate(parsedDate.getDate() + 1);
+      
+      const dateFrom = dayBefore.toISOString().split('T')[0];
+      const dateTo = dayAfter.toISOString().split('T')[0];
+      
+      logger.info(`Date range: ${dateFrom} to ${dateTo} (parsed from: ${currentDate})`);
+      
+      // STEP 1: Get orders for the site using the correct Priority API workflow
+      logger.info(`Getting orders for site ${site} using Priority API format`);
+      const orders = await this.getOrdersForSiteWithFilter(site, userId);
+      
+      if (orders.length === 0) {
+        logger.info(`No orders found for site ${site}`);
+        return [];
+      }
+      
+      logger.info(`Found ${orders.length} orders for site ${site}`);
+      
+      // STEP 2: Filter orders by date range if needed
+      const filteredOrders = orders.filter((order: any) => {
+        if (!order.CURDATE) return false;
+        
+        const orderDate = new Date(order.CURDATE).toISOString().split('T')[0];
+        return orderDate >= dateFrom && orderDate <= dateTo;
+      });
+      
+      logger.info(`Found ${filteredOrders.length} orders within date range ${dateFrom} to ${dateTo}`);
+      
+      // STEP 3: Get subform data (applicators) for each order
+      const allApplicators = [];
+      for (const order of filteredOrders) {
+        try {
+          logger.info(`Getting subform data for order ${order.ORDNAME}`);
+          const subformData = await this.getOrderSubform(order.ORDNAME, userId);
+          
+          if (subformData && subformData.length > 0) {
+            // Transform subform data to applicator format
+            const applicators = subformData.map((item: any) => ({
+              serialNumber: item.SERNUM,
+              applicatorType: item.PARTDES || 'Unknown Applicator',
+              seedQuantity: item.INTDATA2 || 0,
+              treatmentId: item.ORDNAME || order.ORDNAME,
+              patientId: order.REFERENCE || 'Unknown Patient',
+              usageType: item.USINGTYPE || null,
+              usageTime: item.INSERTIONDATE || null,
+              insertedSeeds: item.INSERTEDSEEDSQTY || 0,
+              comments: item.INSERTIONCOMMENTS || ''
+            }));
+            
+            allApplicators.push(...applicators);
+            logger.info(`Added ${applicators.length} applicators from order ${order.ORDNAME}`);
+          } else {
+            logger.info(`No subform data found for order ${order.ORDNAME}`);
+          }
+        } catch (subformError: any) {
+          logger.error(`Error getting subform data for order ${order.ORDNAME}: ${subformError.message}`);
+          // Continue with other orders
+        }
+      }
+      
+      logger.info(`Found ${allApplicators.length} total applicators`);
+      
+      // STEP 4: Remove duplicates and return unique applicators
+      const uniqueApplicators = allApplicators.filter((applicator, index, self) => 
+        index === self.findIndex(a => a.serialNumber === applicator.serialNumber)
+      );
+      
+      logger.info(`Returning ${uniqueApplicators.length} unique applicators for site ${site}`);
+      
+      return uniqueApplicators;
+      
+    } catch (error: any) {
+      logger.error(`Error getting available applicators for site ${site}: ${error.message}`);
+      
+      // Enhanced error logging
+      if (error.response) {
+        logger.error(`Priority API error response:`, {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
+      
+      return [];
+    }
+  },
+
+  /**
+   * Search applicators by name with fuzzy matching
+   */
+  async searchApplicatorsByName(query: string, site: string, currentDate: string) {
+    try {
+      logger.info(`Searching applicators by name: "${query}" for site ${site}`);
+      
+      const availableApplicators = await this.getAvailableApplicatorsForTreatment(site, currentDate, query);
+      
+      if (availableApplicators.length === 0) {
+        return { found: false, suggestions: [] };
+      }
+      
+      // Simple fuzzy matching implementation
+      const normalizedQuery = query.toLowerCase().trim();
+      
+      // Exact match first
+      const exactMatch = availableApplicators.find(app => 
+        app.serialNumber.toLowerCase() === normalizedQuery
+      );
+      
+      if (exactMatch) {
+        return { found: true, applicator: exactMatch, suggestions: [] };
+      }
+      
+      // Partial matches
+      const partialMatches = availableApplicators.filter(app => 
+        app.serialNumber.toLowerCase().includes(normalizedQuery)
+      );
+      
+      if (partialMatches.length > 0) {
+        return { found: false, suggestions: partialMatches.slice(0, 5) };
+      }
+      
+      // Similar names (simple Levenshtein distance)
+      const similarMatches = availableApplicators.filter(app => {
+        const distance = this.calculateLevenshteinDistance(
+          normalizedQuery, 
+          app.serialNumber.toLowerCase()
+        );
+        return distance <= 2; // Allow 2 character differences
+      });
+      
+      return { found: false, suggestions: similarMatches.slice(0, 5) };
+      
+    } catch (error: any) {
+      logger.error(`Error searching applicators: ${error}`);
+      return { found: false, suggestions: [] };
+    }
+  },
+
+  /**
+   * Simple Levenshtein distance calculation for fuzzy matching
+   */
+  calculateLevenshteinDistance(str1: string, str2: string): number {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
   },
 
   /**

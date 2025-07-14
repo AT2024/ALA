@@ -106,6 +106,13 @@ const TreatmentSelection = () => {
     }
   }, [formData.site, formData.date]);
 
+  // Auto-select patient when only one exists
+  useEffect(() => {
+    if (availablePatients.length === 1 && !formData.patientId) {
+      handlePatientSelection(availablePatients[0].id);
+    }
+  }, [availablePatients, formData.patientId]);
+
   const fetchPatientsForSiteAndDate = async () => {
     setLoading(true);
     setError(null);
@@ -367,13 +374,17 @@ const TreatmentSelection = () => {
                   ))}
                 </select>
               ) : availablePatients.length === 1 ? (
-                <input
-                  type="text"
-                  value={availablePatients[0].id}
-                  onClick={() => handlePatientSelection(availablePatients[0].id)}
-                  readOnly
-                  className="block w-full max-w-md cursor-pointer rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={availablePatients[0].id}
+                    readOnly
+                    className="block w-full max-w-md rounded-md border border-green-300 bg-green-50 px-3 py-2 shadow-sm sm:text-sm"
+                  />
+                  <p className="text-sm text-green-600">
+                    ✓ Patient automatically selected (only one available)
+                  </p>
+                </div>
               ) : (
                 <div className="text-sm text-gray-500">
                   No patients scheduled for selected site and date

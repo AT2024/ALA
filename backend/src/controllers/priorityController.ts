@@ -38,6 +38,7 @@ export const validateUserEmail = asyncHandler(async (req: Request, res: Response
         phoneNumber: priorityUserAccess.user?.phone || '',
         positionCode: priorityUserAccess.user?.positionCode || '',
         custName: priorityUserAccess.sites[0] || '',
+        sites: priorityUserAccess.sites || []
       }
     });
   } catch (error: any) {
@@ -198,7 +199,7 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
     }
     
     // Get orders from Priority for the specified site using exact CUSTNAME filtering
-    let orders = await priorityService.getOrdersForSiteWithFilter(site);
+    let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email);
     
     // Filter orders by date if provided
     if (date) {
@@ -275,7 +276,7 @@ export const getOrderSubform = asyncHandler(async (req: Request, res: Response) 
     logger.info(`Fetching subform data for order: ${orderId}`);
     
     // Get subform data from Priority
-    const subformData = await priorityService.getOrderSubform(orderId);
+    const subformData = await priorityService.getOrderSubform(orderId, req.user?.email);
     
     logger.info(`Retrieved ${subformData.length} subform records for order ${orderId}`);
     
@@ -360,6 +361,116 @@ export const validateApplicator = asyncHandler(async (req: Request, res: Respons
     });
   } catch (error: any) {
     logger.error(`Error validating applicator: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// @desc    Get available applicators for a treatment
+// @route   GET /api/proxy/priority/applicators/available
+// @access  Private
+export const getAvailableApplicators = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { site, currentDate } = req.query;
+    
+    logger.info(`Received request for available applicators - Site: ${site}, Date: ${currentDate}, User: ${req.user?.email}`);
+    
+    if (!site || !currentDate) {
+      logger.error('Missing required parameters: site and currentDate are required');
+      res.status(400).json({ 
+        success: false,
+        error: 'Site and current date are required',
+        receivedParams: { site, currentDate }
+      });
+      return;
+    }
+    
+    // Validate user has access to this site
+    const userSites = req.user?.metadata?.sites || [];
+    const userHasFullAccess = req.user?.metadata?.positionCode === 99;
+    
+    if (!userHasFullAccess && !userSites.includes(site)) {
+      logger.error(`User ${req.user?.email} does not have access to site ${site}. User sites: ${userSites.join(', ')}`);
+      res.status(403).json({
+        success: false,
+        error: `Access denied to site ${site}`,
+        userSites: userSites
+      });
+      return;
+    }
+    
+    logger.info(`User ${req.user?.email} has access to site ${site}. Getting available applicators...`);
+    
+    // Get available applicators from Priority service
+    const applicators = await priorityService.getAvailableApplicatorsForTreatment(
+      site as string, 
+      currentDate as string,
+      req.user?.email
+    );
+    
+    logger.info(`Successfully retrieved ${applicators.length} available applicators for site ${site}`);
+    
+    res.status(200).json({
+      success: true,
+      applicators: applicators,
+      count: applicators.length,
+      site: site,
+      date: currentDate
+    });
+  } catch (error: any) {
+    logger.error(`Error getting available applicators for site ${req.query.site}: ${error.message}`);
+    
+    // Enhanced error logging
+    if (error.response) {
+      logger.error(`Priority API error response:`, {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      site: req.query.site,
+      date: req.query.currentDate
+    });
+  }
+});
+
+// @desc    Search applicators by name with fuzzy matching
+// @route   POST /api/proxy/priority/applicators/search
+// @access  Private
+export const searchApplicators = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { query, site, currentDate } = req.body;
+    
+    if (!query || !site || !currentDate) {
+      res.status(400).json({ 
+        error: 'Query, site, and current date are required'
+      });
+      return;
+    }
+    
+    logger.info(`Searching applicators with query: "${query}" for site: ${site}`);
+    
+    // Search applicators using Priority service
+    const searchResult = await priorityService.searchApplicatorsByName(
+      query, 
+      site, 
+      currentDate
+    );
+    
+    logger.info(`Search result - Found: ${searchResult.found}, Suggestions: ${searchResult.suggestions?.length || 0}`);
+    
+    res.status(200).json({
+      success: true,
+      result: searchResult
+    });
+  } catch (error: any) {
+    logger.error(`Error searching applicators: ${error.message}`);
     res.status(500).json({
       success: false,
       error: error.message

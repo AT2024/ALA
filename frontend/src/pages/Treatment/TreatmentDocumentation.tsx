@@ -6,9 +6,11 @@ import Layout from '@/components/Layout';
 import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
 import { useTreatment } from '@/context/TreatmentContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
+import { priorityService } from '@/services/priorityService';
+import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
-  const { currentTreatment, addApplicator, applicators } = useTreatment();
+  const { currentTreatment, addApplicator, applicators, progressStats } = useTreatment();
   const navigate = useNavigate();
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
@@ -18,6 +20,10 @@ const TreatmentDocumentation = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingValidation, setPendingValidation] = useState<ApplicatorValidationResult | null>(null);
+  const [availableApplicators, setAvailableApplicators] = useState<any[]>([]);
+  const [showApplicatorList, setShowApplicatorList] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -70,16 +76,46 @@ const TreatmentDocumentation = () => {
     };
   }, [currentTreatment, manualEntry]);
 
-  // Handle Using Type change
+  // Load available applicators when treatment is selected
+  useEffect(() => {
+    if (currentTreatment) {
+      loadAvailableApplicators();
+    }
+  }, [currentTreatment]);
+
+  const loadAvailableApplicators = async () => {
+    if (!currentTreatment) return;
+    
+    try {
+      const response = await priorityService.getAvailableApplicators(
+        currentTreatment.site,
+        currentTreatment.date
+      );
+      
+      if (response.success) {
+        setAvailableApplicators(response.applicators);
+        console.log(`Loaded ${response.applicators.length} available applicators`);
+      }
+    } catch (error) {
+      console.error('Error loading available applicators:', error);
+    }
+  };
+
+  // Handle Using Type change with smart auto-fill
   useEffect(() => {
     const seedsQty = parseInt(formData.seedsQty) || 0;
     
     switch (formData.usingType) {
       case 'Full use':
+        // Auto-fill with full seed quantity from Priority PARTS table
         setFormData(prev => ({ ...prev, insertedSeedsQty: seedsQty.toString() }));
         break;
       case 'Faulty':
+        // Allow manual entry (starts at 0)
+        setFormData(prev => ({ ...prev, insertedSeedsQty: '0' }));
+        break;
       case 'No Use':
+        // No seeds inserted
         setFormData(prev => ({ ...prev, insertedSeedsQty: '0' }));
         break;
       default:
@@ -162,18 +198,18 @@ const TreatmentDocumentation = () => {
       return;
     }
 
-    // Fill form with validated applicator data
+    // Fill form with validated applicator data - smart auto-fill
     setFormData({
       serialNumber: applicatorData.serialNumber,
       applicatorType: applicatorData.applicatorType,
       seedsQty: applicatorData.seedQuantity.toString(),
       insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
-      usingType: 'Full use', // Default selection
-      insertedSeedsQty: applicatorData.seedQuantity.toString(), // Auto-filled for Full use
+      usingType: 'Full use', // Smart default selection
+      insertedSeedsQty: applicatorData.seedQuantity.toString(), // Auto-filled from Priority PARTS
       comments: ''
     });
 
-    setSuccess(`Applicator ${applicatorData.serialNumber} validated successfully!`);
+    setSuccess(`Applicator ${applicatorData.serialNumber} validated successfully! Seeds auto-filled for Full use.`);
   };
 
   const handleConfirmValidation = async () => {
@@ -190,11 +226,61 @@ const TreatmentDocumentation = () => {
     setError('Applicator validation cancelled.');
   };
 
-  const handleManualSubmit = (e: React.FormEvent) => {
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.serialNumber) {
-      handleBarcodeScanned(formData.serialNumber);
+      // First try fuzzy search for suggestions
+      await handleSerialNumberSearch(formData.serialNumber);
     }
+  };
+
+  const handleSerialNumberSearch = async (serialNumber: string) => {
+    if (!currentTreatment) return;
+    
+    try {
+      setLoading(true);
+      const response = await priorityService.searchApplicators(
+        serialNumber,
+        currentTreatment.site,
+        currentTreatment.date
+      );
+      
+      if (response.success) {
+        if (response.result.found) {
+          // Exact match found, proceed with validation
+          await handleBarcodeScanned(serialNumber);
+        } else if (response.result.suggestions && response.result.suggestions.length > 0) {
+          // Show suggestions
+          setSearchSuggestions(response.result.suggestions);
+          setShowSuggestions(true);
+          setError('Applicator not found. Did you mean one of these?');
+        } else {
+          // No match, proceed with normal validation
+          await handleBarcodeScanned(serialNumber);
+        }
+      } else {
+        await handleBarcodeScanned(serialNumber);
+      }
+    } catch (error) {
+      console.error('Error searching applicators:', error);
+      await handleBarcodeScanned(serialNumber);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuggestionSelect = (suggestion: any) => {
+    setFormData(prev => ({ ...prev, serialNumber: suggestion.serialNumber }));
+    setShowSuggestions(false);
+    setSearchSuggestions([]);
+    setError(null);
+    handleBarcodeScanned(suggestion.serialNumber);
+  };
+
+  const handleApplicatorSelect = (applicator: any) => {
+    setFormData(prev => ({ ...prev, serialNumber: applicator.serialNumber }));
+    setShowApplicatorList(false);
+    handleBarcodeScanned(applicator.serialNumber);
   };
 
   const adjustTime = (minutes: number) => {
@@ -209,6 +295,12 @@ const TreatmentDocumentation = () => {
   const handleNext = async () => {
     if (!formData.serialNumber || !formData.usingType || !currentTreatment) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    // Validate comment requirement for faulty applicators
+    if (formData.usingType === 'Faulty' && (!formData.comments || formData.comments.trim().length === 0)) {
+      setError('Comments are required for faulty applicators. Please explain why it is faulty.');
       return;
     }
 
@@ -332,33 +424,70 @@ const TreatmentDocumentation = () => {
 
   return (
     <Layout title="Treatment Documentation" showBackButton backPath="/treatment/select">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* Treatment Information */}
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
-          {currentTreatment ? (
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Patient ID</p>
-                <p className="font-medium">{currentTreatment.subjectId}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Site</p>
-                <p className="font-medium">{currentTreatment.site}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Type</p>
-                <p className="font-medium capitalize">{currentTreatment.type}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Applicators Added</p>
-                <p className="font-medium">{applicators.length}</p>
-              </div>
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Treatment Information and Progress */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Treatment Information */}
+            <div className="rounded-lg border bg-white p-4 shadow-sm">
+              <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
+              {currentTreatment ? (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-gray-500">Patient ID</p>
+                    <p className="font-medium">{currentTreatment.subjectId}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Site</p>
+                    <p className="font-medium">{currentTreatment.site}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Type</p>
+                    <p className="font-medium capitalize">{currentTreatment.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Applicators Added</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{applicators.length}</p>
+                      {applicators.length > 0 && (
+                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Seeds Inserted</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{progressStats.insertedSeeds}</p>
+                      {currentTreatment.seedQuantity && (
+                        <span className="text-xs text-gray-400">
+                          / {currentTreatment.seedQuantity}
+                        </span>
+                      )}
+                      {progressStats.completionPercentage > 0 && (
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          progressStats.completionPercentage === 100 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {progressStats.completionPercentage}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p>No treatment selected</p>
+              )}
             </div>
-          ) : (
-            <p>No treatment selected</p>
-          )}
-        </div>
+
+            {/* Progress Tracker */}
+            <ProgressTracker />
+          </div>
+
+          {/* Right Column - Scanner and Form */}
+          <div className="lg:col-span-2 space-y-6">
 
         {/* Scanner/Manual Entry Section */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
@@ -394,31 +523,106 @@ const TreatmentDocumentation = () => {
           )}
 
           {manualEntry ? (
-            <form onSubmit={handleManualSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="serialNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                  Serial Number *
-                </label>
-                <input
-                  type="text"
-                  id="serialNumber"
-                  maxLength={32}
-                  value={formData.serialNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, serialNumber: e.target.value }))}
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                  placeholder="Enter applicator serial number"
-                  autoFocus
+            <div className="space-y-4">
+              {/* Applicator Selection Mode Toggle */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowApplicatorList(!showApplicatorList)}
+                  className={`px-3 py-1 text-sm rounded-md ${showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
-                />
+                >
+                  Choose from List ({availableApplicators.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {setShowApplicatorList(false); setShowSuggestions(false);}}
+                  className={`px-3 py-1 text-sm rounded-md ${!showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                  disabled={loading}
+                >
+                  Manual Entry
+                </button>
               </div>
-              <button
-                type="submit"
-                disabled={loading || !formData.serialNumber}
-                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
-              >
-                {loading ? 'Validating...' : 'Validate Serial Number'}
-              </button>
-            </form>
+
+              {showApplicatorList ? (
+                /* Applicator List View */
+                <div className="border rounded-md max-h-60 overflow-y-auto">
+                  {availableApplicators.length > 0 ? (
+                    <div className="space-y-1 p-2">
+                      {availableApplicators.map((applicator, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleApplicatorSelect(applicator)}
+                          className="w-full text-left p-2 rounded hover:bg-gray-50 border border-gray-200"
+                          disabled={loading}
+                        >
+                          <div className="font-medium">{applicator.serialNumber}</div>
+                          <div className="text-sm text-gray-500">
+                            {applicator.applicatorType} • {applicator.seedQuantity} seeds
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      No applicators found for this treatment
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Manual Entry Form */
+                <form onSubmit={handleManualSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="serialNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                      Serial Number *
+                    </label>
+                    <input
+                      type="text"
+                      id="serialNumber"
+                      maxLength={32}
+                      value={formData.serialNumber}
+                      onChange={(e) => setFormData(prev => ({ ...prev, serialNumber: e.target.value }))}
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                      placeholder="Enter applicator serial number"
+                      autoFocus
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  {/* Search Suggestions */}
+                  {showSuggestions && searchSuggestions.length > 0 && (
+                    <div className="border rounded-md bg-yellow-50">
+                      <div className="p-2 border-b bg-yellow-100 text-sm font-medium">
+                        Did you mean:
+                      </div>
+                      <div className="space-y-1 p-2">
+                        {searchSuggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleSuggestionSelect(suggestion)}
+                            className="w-full text-left p-2 rounded hover:bg-yellow-100 text-sm"
+                            disabled={loading}
+                          >
+                            <div className="font-medium">{suggestion.serialNumber}</div>
+                            <div className="text-gray-600">
+                              {suggestion.applicatorType} • {suggestion.seedQuantity} seeds
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <button
+                    type="submit"
+                    disabled={loading || !formData.serialNumber}
+                    className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                  >
+                    {loading ? 'Validating...' : 'Validate Serial Number'}
+                  </button>
+                </form>
+              )}
+            </div>
           ) : (
             <div>
               <div id="qr-reader" ref={scannerDivRef} className="mx-auto max-w-sm"></div>
@@ -566,7 +770,7 @@ const TreatmentDocumentation = () => {
               {/* Comments */}
               <div className="md:col-span-2">
                 <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-1">
-                  Comments
+                  Comments {formData.usingType === 'Faulty' && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   id="comments"
@@ -574,10 +778,22 @@ const TreatmentDocumentation = () => {
                   rows={2}
                   value={formData.comments}
                   onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                  placeholder="Optional comments..."
+                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm ${
+                    formData.usingType === 'Faulty' ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder={
+                    formData.usingType === 'Faulty' 
+                      ? 'Required: Explain why this applicator is faulty...' 
+                      : 'Optional comments...'
+                  }
                   disabled={loading}
+                  required={formData.usingType === 'Faulty'}
                 />
+                {formData.usingType === 'Faulty' && (
+                  <p className="mt-1 text-sm text-red-600">
+                    Comments are required for faulty applicators to continue.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -585,7 +801,12 @@ const TreatmentDocumentation = () => {
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleNext}
-                disabled={loading || !formData.serialNumber || !formData.usingType}
+                disabled={
+                  loading || 
+                  !formData.serialNumber || 
+                  !formData.usingType || 
+                  (formData.usingType === 'Faulty' && (!formData.comments || formData.comments.trim().length === 0))
+                }
                 className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Next'}
@@ -601,16 +822,18 @@ const TreatmentDocumentation = () => {
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="rounded-lg border bg-gray-50 p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Instructions</h3>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>• Scan or enter the applicator serial number</li>
-            <li>• System validates applicator against Priority database in real-time</li>
-            <li>• Insertion time is automatically set when scanning</li>
-            <li>• For 'Faulty' usage type, specify actual inserted seeds quantity</li>
-            <li>• Use 'Next' to add another applicator or 'Finalize' to complete treatment</li>
-          </ul>
+            {/* Instructions */}
+            <div className="rounded-lg border bg-gray-50 p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Instructions</h3>
+              <ul className="text-xs text-gray-600 space-y-1">
+                <li>• Scan or enter the applicator serial number</li>
+                <li>• System validates applicator against Priority database in real-time</li>
+                <li>• Insertion time is automatically set when scanning</li>
+                <li>• For 'Faulty' usage type, specify actual inserted seeds quantity</li>
+                <li>• Use 'Next' to add another applicator or 'Finalize' to complete treatment</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>
