@@ -93,11 +93,20 @@ const TreatmentDocumentation = () => {
       );
       
       if (response.success) {
-        setAvailableApplicators(response.applicators);
-        console.log(`Loaded ${response.applicators.length} available applicators`);
+        const applicators = response.applicators || [];
+        setAvailableApplicators(applicators);
+        console.log(`Loaded ${applicators.length} available applicators`);
+        
+        if (applicators.length === 0) {
+          console.warn('No applicators available for this treatment');
+        }
+      } else {
+        console.error('Failed to load applicators:', response.message);
+        setError(response.message || 'Failed to load available applicators');
       }
     } catch (error) {
       console.error('Error loading available applicators:', error);
+      setError('Unable to load applicators. Please try refreshing the page.');
     }
   };
 
@@ -194,22 +203,34 @@ const TreatmentDocumentation = () => {
     const applicatorData = validation.applicatorData;
     
     if (!applicatorData) {
+      console.error('No applicator data in validation result:', validation);
       setError('No applicator data received from server.');
+      return;
+    }
+
+    // Use the correct property names from the interface
+    const serialNumber = applicatorData.serialNumber || '';
+    const applicatorType = applicatorData.applicatorType || '';
+    const seedQuantity = applicatorData.seedQuantity || 0;
+
+    if (!serialNumber) {
+      console.error('Missing serial number in applicator data:', applicatorData);
+      setError('Invalid applicator data: missing serial number.');
       return;
     }
 
     // Fill form with validated applicator data - smart auto-fill
     setFormData({
-      serialNumber: applicatorData.serialNumber,
-      applicatorType: applicatorData.applicatorType,
-      seedsQty: applicatorData.seedQuantity.toString(),
+      serialNumber,
+      applicatorType,
+      seedsQty: seedQuantity.toString(),
       insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
       usingType: 'Full use', // Smart default selection
-      insertedSeedsQty: applicatorData.seedQuantity.toString(), // Auto-filled from Priority PARTS
+      insertedSeedsQty: seedQuantity.toString(), // Auto-filled from Priority PARTS
       comments: ''
     });
 
-    setSuccess(`Applicator ${applicatorData.serialNumber} validated successfully! Seeds auto-filled for Full use.`);
+    setSuccess(`Applicator ${serialNumber} validated successfully! Seeds auto-filled for Full use.`);
   };
 
   const handleConfirmValidation = async () => {
@@ -228,9 +249,11 @@ const TreatmentDocumentation = () => {
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.serialNumber) {
+    if (formData.serialNumber.trim()) {
       // First try fuzzy search for suggestions
-      await handleSerialNumberSearch(formData.serialNumber);
+      await handleSerialNumberSearch(formData.serialNumber.trim());
+    } else {
+      setError('Please enter a serial number');
     }
   };
 
@@ -263,6 +286,7 @@ const TreatmentDocumentation = () => {
       }
     } catch (error) {
       console.error('Error searching applicators:', error);
+      setError('Error searching applicators. Proceeding with validation...');
       await handleBarcodeScanned(serialNumber);
     } finally {
       setLoading(false);
@@ -278,9 +302,22 @@ const TreatmentDocumentation = () => {
   };
 
   const handleApplicatorSelect = (applicator: any) => {
-    setFormData(prev => ({ ...prev, serialNumber: applicator.serialNumber }));
     setShowApplicatorList(false);
-    handleBarcodeScanned(applicator.serialNumber);
+    setError(null);
+    setSuccess(null);
+    
+    // Fill form with selected applicator data directly (no validation needed since it's from Priority)
+    setFormData({
+      serialNumber: applicator.serialNumber,
+      applicatorType: applicator.applicatorType || applicator.type || '',
+      seedsQty: applicator.seedQuantity?.toString() || applicator.seedsQty?.toString() || '',
+      insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
+      usingType: 'Full use', // Smart default selection
+      insertedSeedsQty: applicator.seedQuantity?.toString() || applicator.seedsQty?.toString() || '',
+      comments: ''
+    });
+
+    setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Seeds auto-filled for Full use.`);
   };
 
   const adjustTime = (minutes: number) => {
@@ -336,7 +373,7 @@ const TreatmentDocumentation = () => {
 
       // Add applicator to local treatment context
       const applicator = {
-        id: `app-${Date.now()}`,
+        id: crypto.randomUUID(),
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,

@@ -6,15 +6,8 @@ const mockPriorityService = {
   getMockUserByEmail(email: string): any {
     logger.info(`Getting mock user data for email: ${email}`);
     
-    // Demo users for testing
+    // Demo users for testing (excluding test@example.com which uses test-data.json)
     const mockUsers = [
-      {
-        EMAIL: 'test@example.com',
-        NAME: 'Test User',
-        PHONE: '+972501234567',
-        POSITIONCODE: '10',
-        CUSTNAME: '100001'
-      },
       {
         EMAIL: 'admin@example.com',
         NAME: 'Admin User',
@@ -47,14 +40,6 @@ const mockPriorityService = {
     logger.info('Getting mock contacts data');
     
     return [
-      {
-        EMAIL: 'test@example.com',
-        NAME: 'Test User',
-        PHONE: '+972501234567',
-        POSITIONCODE: '10',
-        CUSTNAME: '100001',
-        CUSTDES: 'Hospital A'
-      },
       {
         EMAIL: 'admin@example.com',
         NAME: 'Admin User',

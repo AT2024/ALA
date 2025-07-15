@@ -30,46 +30,6 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
   const isEmail = identifier.includes('@');
 
   try {
-    // For testing/development only allow test@example.com
-    if (identifier === 'test@example.com') {
-      logger.info(`Using test account flow for ${identifier}`);
-
-      // Find or create test user
-      let user = await User.findOne({ where: { email: identifier } });
-
-      if (!user) {
-        user = await User.create({
-          name: 'Test User',
-          email: identifier,
-          phoneNumber: null,
-          role: 'admin',
-          metadata: {
-            positionCode: '99',
-            custName: '100078',
-            sites: ['100078'],
-          },
-        });
-        logger.info(`Created test user: ${user.id}`);
-      }
-
-      // Generate verification code
-      const verificationCode = await user.generateVerificationCode();
-      logger.info(`Verification code for ${identifier}: ${verificationCode}`);
-
-      res.status(200).json({
-        success: true,
-        message: 'Verification code sent',
-        userData: {
-          name: user.name,
-          email: user.email,
-          phoneNumber: user.phoneNumber || '',
-          positionCode: user.metadata?.positionCode || '99',
-          custName: user.metadata?.custName || '100078',
-        },
-      });
-      return;
-    }
-
     // First, validate against Priority system
     logger.info(`Validating ${isEmail ? 'email' : 'phone'}: ${identifier} with Priority`);
     
@@ -117,8 +77,11 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
             : ('hospital' as 'admin' | 'hospital'),
         metadata: {
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || '',
+          custName: priorityUserAccess.user?.positionCode === 99 
+            ? 'ALL_SITES' 
+            : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
           sites: priorityUserAccess.sites || [],
+          fullAccess: priorityUserAccess.fullAccess || false,
         },
       } as const; // Fix: ensure type is compatible
 
@@ -129,8 +92,11 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
       user.metadata = {
         ...user.metadata,
         positionCode: priorityUserAccess.user?.positionCode,
-        custName: priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || '',
+        custName: priorityUserAccess.user?.positionCode === 99 
+          ? 'ALL_SITES' 
+          : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
         sites: priorityUserAccess.sites || [],
+        fullAccess: priorityUserAccess.fullAccess || false,
       };
       await user.save();
       logger.info(`Updated existing user with Priority data: ${user.id}`);
@@ -268,8 +234,11 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
             : ('hospital' as 'admin' | 'hospital'),
         metadata: {
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || '',
+          custName: priorityUserAccess.user?.positionCode === 99 
+            ? 'ALL_SITES' 
+            : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
           sites: priorityUserAccess.sites || [],
+          fullAccess: priorityUserAccess.fullAccess || false,
         },
       } as const; // Fix: ensure type is compatible
 

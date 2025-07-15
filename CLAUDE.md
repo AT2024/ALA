@@ -2,6 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+### **When to Use Gemini CLI Analysis**
+
+Use Gemini CLI commands from `gemini-analysis.md` when Claude Code needs to:
+
+- **Analyze Large Codebases**: When examining entire directories or multiple large files
+- **Implementation Status Checks**: Verify Phase completion status against CLAUDE.md roadmap
+- **Architecture Verification**: Understand service interactions and integration points
+- **Cross-Service Analysis**: Check dependencies between services, routers, and core components
+- **Performance Assessment**: Identify blocking operations and optimization opportunities
+- **Security Auditing**: Verify safety measures and error handling across the system
+- **Integration Testing**: Validate end-to-end workflows and API compatibility
+
 ## Development Commands
 
 ### Running the Application

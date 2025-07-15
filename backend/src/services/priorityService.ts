@@ -9,12 +9,47 @@ interface SiteInfo {
   custDes: string;
 }
 
-// Helper function to load test data
+// Helper function to load test data with dynamic dates
 const loadTestData = () => {
   try {
     const testDataPath = path.join(__dirname, '../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
-    return JSON.parse(testDataContent);
+    const testData = JSON.parse(testDataContent);
+    
+    // Generate dynamic dates
+    const dynamicDates = generateDynamicDates();
+    
+    // Update order dates to be dynamic (ensure even distribution across yesterday, today, tomorrow)
+    if (testData.orders && Array.isArray(testData.orders)) {
+      testData.orders.forEach((order: any, index: number) => {
+        switch (index % 3) {
+          case 0:
+            order.CURDATE = dynamicDates.yesterday;
+            break;
+          case 1:
+            order.CURDATE = dynamicDates.today;
+            break;
+          case 2:
+            order.CURDATE = dynamicDates.tomorrow;
+            break;
+        }
+        logger.info(`Updated order ${order.ORDNAME} (${order.CUSTNAME}) date to: ${order.CURDATE}`);
+      });
+    }
+    
+    logger.info('Test data loaded with dynamic dates:', {
+      yesterday: dynamicDates.yesterdayFormatted,
+      today: dynamicDates.todayFormatted,
+      tomorrow: dynamicDates.tomorrowFormatted,
+      totalOrders: testData.orders ? testData.orders.length : 0,
+      orderDistribution: testData.orders ? {
+        yesterday: testData.orders.filter((o: any, i: number) => i % 3 === 0).length,
+        today: testData.orders.filter((o: any, i: number) => i % 3 === 1).length,
+        tomorrow: testData.orders.filter((o: any, i: number) => i % 3 === 2).length
+      } : null
+    });
+    
+    return testData;
   } catch (error) {
     logger.warn('Could not load test data file, using fallback data');
     return null;
@@ -24,6 +59,25 @@ const loadTestData = () => {
 // Helper function to check if we should use test data for development
 const shouldUseTestData = (identifier: string): boolean => {
   return process.env.NODE_ENV === 'development' && identifier === 'test@example.com';
+};
+
+// Helper function to generate dynamic dates for test data
+const generateDynamicDates = () => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  
+  return {
+    today: today.toISOString(),
+    yesterday: yesterday.toISOString(),
+    tomorrow: tomorrow.toISOString(),
+    // Also provide formatted dates for different use cases
+    todayFormatted: today.toISOString().split('T')[0],
+    yesterdayFormatted: yesterday.toISOString().split('T')[0],
+    tomorrowFormatted: tomorrow.toISOString().split('T')[0]
+  };
 };
 
 // Priority API credentials
@@ -61,8 +115,12 @@ export const priorityService = {
         logger.info('Sample contact data:', phonebookResponse.data.value[0]);
       }
 
-      // Test ORDERS endpoint with a sample customer
-      const ordersResponse = await priorityApi.get(`/ORDERS?$filter=CUSTNAME eq '100078'`, {
+      // Test ORDERS endpoint with a basic query
+      const ordersResponse = await priorityApi.get(`/ORDERS`, {
+        params: {
+          $top: 5, // Just get first 5 orders for testing
+          $select: 'ORDNAME,CUSTNAME,CURDATE'
+        },
         timeout: 10000,
       });
       logger.info('ORDERS endpoint successful');
@@ -109,6 +167,7 @@ export const priorityService = {
       logger.info(`Using test data for development user: ${identifier}`);
       const testData = loadTestData();
       if (testData && testData.sites) {
+        logger.info(`Loaded ${testData.sites.length} sites for test user:`, testData.sites.map((s: any) => s.custName));
         return {
           found: true,
           fullAccess: true, // Grant full access for testing
@@ -122,84 +181,9 @@ export const priorityService = {
             positionCode: 99,
           },
         };
+      } else {
+        logger.warn(`Failed to load test data for user ${identifier}`);
       }
-    }
-
-    // For testing/development, add more test accounts for easier testing
-    const testAccounts: Record<
-      string,
-      {
-        email: string;
-        phone: string;
-        positionCode: number;
-        sites: SiteInfo[];
-      }
-    > = {
-      '475': {
-        email: 'test@example.com',
-        phone: '475',
-        positionCode: 99,
-        sites: [
-          { custName: '100078', custDes: 'Test Hospital' },
-          { custName: '100030', custDes: 'Regional Medical Center' },
-          { custName: '100045', custDes: 'City General Hospital' },
-          { custName: '100055', custDes: 'University Medical Center' },
-          { custName: '100065', custDes: 'Central Hospital' }
-        ],
-      },
-      'tzufitc@alphatau.com': {
-        email: 'tzufitc@alphatau.com',
-        phone: '971',
-        positionCode: 99,
-        sites: [
-          { custName: '100078', custDes: 'Test Hospital' },
-          { custName: '100030', custDes: 'Regional Medical Center' },
-          { custName: '100045', custDes: 'City General Hospital' },
-          { custName: '100055', custDes: 'University Medical Center' },
-          { custName: '100065', custDes: 'Central Hospital' }
-        ],
-      },
-      'test@example.com': {
-        email: 'test@example.com',
-        phone: '555-5555',
-        positionCode: 99,
-        sites: [
-          { custName: '100078', custDes: 'Test Hospital' },
-          { custName: '100030', custDes: 'Regional Medical Center' },
-          { custName: '100045', custDes: 'City General Hospital' },
-          { custName: '100055', custDes: 'University Medical Center' },
-          { custName: '100065', custDes: 'Central Hospital' }
-        ],
-      },
-      // Test user with multiple sites (non-admin)
-      'multisite@example.com': {
-        email: 'multisite@example.com',
-        phone: '123456789',
-        positionCode: 50,
-        sites: [
-          { custName: '100078', custDes: 'Test Hospital' },
-          { custName: '100030', custDes: 'Regional Medical Center' },
-          { custName: '100045', custDes: 'City General Hospital' }
-        ],
-      },
-    };
-
-    // Check if the identifier is one of our test accounts
-    if (identifier in testAccounts || identifier.includes('475')) {
-      const testKey = (
-        identifier in testAccounts ? identifier : '475'
-      ) as keyof typeof testAccounts;
-      logger.info(`Using test data for user ${testKey}`);
-      return {
-        found: true,
-        fullAccess: testAccounts[testKey].positionCode === 99,
-        sites: testAccounts[testKey].sites,
-        user: {
-          email: testAccounts[testKey].email,
-          phone: testAccounts[testKey].phone,
-          positionCode: testAccounts[testKey].positionCode,
-        },
-      };
     }
 
     // For real users, proceed with Priority API calls
@@ -331,20 +315,25 @@ export const priorityService = {
           `Priority API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`
         );
 
-        // If the user is trying one of our test accounts, provide fallback data
-        if (identifier in testAccounts || identifier.includes('475')) {
-          const testKey = identifier in testAccounts ? identifier : '475';
-          logger.info(`Using fallback data for user ${testKey} after API error`);
-          return {
-            found: true,
-            fullAccess: testAccounts[testKey].positionCode === 99,
-            sites: testAccounts[testKey].sites,
-            user: {
-              email: testAccounts[testKey].email,
-              phone: testAccounts[testKey].phone,
-              positionCode: testAccounts[testKey].positionCode,
-            },
-          };
+        // If the user is trying test@example.com, provide fallback data
+        if (identifier === 'test@example.com' || identifier.includes('475')) {
+          logger.info(`Using fallback test data for user ${identifier} after API error`);
+          const testData = loadTestData();
+          if (testData && testData.sites) {
+            return {
+              found: true,
+              fullAccess: true,
+              sites: testData.sites.map((site: any) => ({
+                custName: site.custName,
+                custDes: site.custDes
+              })),
+              user: {
+                email: identifier,
+                phone: '555-TEST',
+                positionCode: 99,
+              },
+            };
+          }
         }
       } else if (error.request) {
         // The request was made but no response was received
@@ -1293,14 +1282,27 @@ export const priorityService = {
       logger.info(`Found ${orders.length} orders for site ${site}`);
       
       // STEP 2: Filter orders by date range if needed
+      logger.info(`Before filtering: ${orders.length} orders found`);
+      orders.forEach((order: any) => {
+        logger.info(`Order ${order.ORDNAME} (${order.CUSTNAME}): date=${order.CURDATE}`);
+      });
+      
       const filteredOrders = orders.filter((order: any) => {
-        if (!order.CURDATE) return false;
+        if (!order.CURDATE) {
+          logger.warn(`Order ${order.ORDNAME} has no CURDATE`);
+          return false;
+        }
         
         const orderDate = new Date(order.CURDATE).toISOString().split('T')[0];
-        return orderDate >= dateFrom && orderDate <= dateTo;
+        const isInRange = orderDate >= dateFrom && orderDate <= dateTo;
+        logger.info(`Order ${order.ORDNAME}: orderDate=${orderDate}, dateFrom=${dateFrom}, dateTo=${dateTo}, inRange=${isInRange}`);
+        return isInRange;
       });
       
       logger.info(`Found ${filteredOrders.length} orders within date range ${dateFrom} to ${dateTo}`);
+      filteredOrders.forEach((order: any) => {
+        logger.info(`Filtered order: ${order.ORDNAME} (${order.CUSTNAME}) - ${order.CURDATE}`);
+      });
       
       // STEP 3: Get subform data (applicators) for each order
       const allApplicators = [];

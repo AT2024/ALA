@@ -221,7 +221,7 @@ const TreatmentSelection = () => {
 
     // Create treatment object
     const treatment = {
-      id: `treatment-${Date.now()}`,
+      id: crypto.randomUUID(),
       type: procedureType as 'insertion' | 'removal',
       subjectId: formData.patientId,
       site: formData.site,
