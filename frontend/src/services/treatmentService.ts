@@ -8,6 +8,14 @@ export interface Treatment {
   site: string;
   date: string;
   isComplete: boolean;
+  email?: string;
+  seedQuantity?: number;
+  activityPerSeed?: number;
+  surgeon?: string;
+  userId?: string;
+  priorityId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Applicator {
@@ -59,6 +67,21 @@ export const treatmentService = {
       
       return [];
     }
+  },
+
+  // Create a new treatment
+  async createTreatment(treatmentData: {
+    type: 'insertion' | 'removal';
+    subjectId: string;
+    site: string;
+    date: string;
+    email?: string;
+    seedQuantity?: number;
+    activityPerSeed?: number;
+    surgeon?: string;
+  }): Promise<Treatment> {
+    const response = await api.post('/treatments', treatmentData);
+    return response.data;
   },
 
   // Get details for a specific treatment

@@ -2,6 +2,12 @@ import { Applicator, Treatment } from '../models';
 import { Op } from 'sequelize';
 import logger from '../utils/logger';
 import priorityService from './priorityService';
+import { 
+  transformPriorityApplicatorData, 
+  validatePriorityDataStructure, 
+  transformToPriorityFormat,
+  PriorityApplicatorData 
+} from '../utils/priorityDataTransformer';
 
 export interface ApplicatorValidationResult {
   isValid: boolean;
@@ -385,14 +391,64 @@ export const applicatorService = {
 
   // Add an applicator to a treatment with validation
   async addApplicator(treatmentId: string, data: any, userId: string) {
+    logger.info(`[APPLICATOR_SERVICE] Starting addApplicator process`, {
+      treatmentId,
+      treatmentIdType: typeof treatmentId,
+      treatmentIdLength: treatmentId?.length,
+      userId,
+      requestData: data
+    });
+
     try {
+      // Validate input parameters
+      if (!treatmentId) {
+        logger.error(`[APPLICATOR_SERVICE] Invalid treatmentId: ${treatmentId}`);
+        throw new Error('Treatment ID is required');
+      }
+
+      if (typeof treatmentId !== 'string') {
+        logger.error(`[APPLICATOR_SERVICE] treatmentId is not a string: ${typeof treatmentId}`, { treatmentId });
+        throw new Error('Treatment ID must be a string');
+      }
+
+      // UUID format validation
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(treatmentId)) {
+        logger.error(`[APPLICATOR_SERVICE] Invalid UUID format for treatmentId: ${treatmentId}`);
+        throw new Error('Treatment ID must be a valid UUID');
+      }
+
+      logger.info(`[APPLICATOR_SERVICE] Searching for treatment in database`, { treatmentId });
+      
       const treatment = await Treatment.findByPk(treatmentId);
       
+      logger.info(`[APPLICATOR_SERVICE] Database query result`, {
+        treatmentId,
+        found: !!treatment,
+        treatmentData: treatment ? {
+          id: treatment.id,
+          type: treatment.type,
+          subjectId: treatment.subjectId,
+          site: treatment.site,
+          isComplete: treatment.isComplete,
+          userId: treatment.userId
+        } : null
+      });
+      
       if (!treatment) {
-        throw new Error('Treatment not found');
+        logger.error(`[APPLICATOR_SERVICE] Treatment not found in database`, {
+          treatmentId,
+          searchedId: treatmentId,
+          databaseError: 'No treatment record found with this ID'
+        });
+        throw new Error(`Treatment not found with ID: ${treatmentId}`);
       }
       
       if (treatment.isComplete) {
+        logger.warn(`[APPLICATOR_SERVICE] Attempt to add applicator to completed treatment`, {
+          treatmentId,
+          isComplete: treatment.isComplete
+        });
         throw new Error('Cannot add applicator to a completed treatment');
       }
       
@@ -438,9 +494,184 @@ export const applicatorService = {
         isRemoved: false,
       });
       
+      logger.info(`[APPLICATOR_SERVICE] Successfully added applicator`, {
+        treatmentId,
+        applicatorId: applicator.id,
+        serialNumber: data.serialNumber,
+        usageType: data.usageType
+      });
+
       return applicator;
-    } catch (error) {
-      logger.error(`Error adding applicator: ${error}`);
+    } catch (error: any) {
+      logger.error(`[APPLICATOR_SERVICE] Error adding applicator`, {
+        treatmentId,
+        userId,
+        requestData: data,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  // Add an applicator to a treatment with transaction support (optimized version)
+  async addApplicatorWithTransaction(treatment: any, data: any, userId: string, transaction: any) {
+    const requestId = `addApplicator_${Math.random().toString(36).substr(2, 9)}`;
+    
+    logger.info(`[APPLICATOR_SERVICE] Starting addApplicatorWithTransaction`, {
+      requestId,
+      treatmentId: treatment?.id,
+      treatmentType: treatment?.type,
+      userId,
+      requestData: data,
+      hasTransaction: !!transaction,
+      dataStructure: {
+        serialNumber: data?.serialNumber,
+        usageType: data?.usageType,
+        insertionTime: data?.insertionTime,
+        seedQuantity: data?.seedQuantity,
+        insertedSeedsQty: data?.insertedSeedsQty,
+        comments: data?.comments,
+        allKeys: Object.keys(data || {}),
+        dataTypes: Object.fromEntries(Object.entries(data || {}).map(([k, v]) => [k, typeof v]))
+      }
+    });
+
+    try {
+      // STEP 1: Validate that treatment object is provided
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 1: Validating treatment object`);
+      if (!treatment || !treatment.id) {
+        logger.error(`[APPLICATOR_SERVICE] [${requestId}] Invalid treatment object provided`, {
+          treatmentObject: treatment,
+          hasTreatment: !!treatment,
+          treatmentId: treatment?.id
+        });
+        throw new Error('Invalid treatment object');
+      }
+
+      if (treatment.isComplete) {
+        logger.warn(`[APPLICATOR_SERVICE] [${requestId}] Attempt to add applicator to completed treatment`, {
+          treatmentId: treatment.id,
+          isComplete: treatment.isComplete
+        });
+        throw new Error('Cannot add applicator to a completed treatment');
+      }
+
+      // STEP 2: Validate Priority data structure
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 2: Validating Priority data structure`);
+      const dataValidation = validatePriorityDataStructure(data, requestId);
+      if (!dataValidation.isValid) {
+        logger.error(`[APPLICATOR_SERVICE] [${requestId}] Priority data structure validation failed`, {
+          issues: dataValidation.issues,
+          rawData: data
+        });
+        throw new Error(`Data validation failed: ${dataValidation.issues.join(', ')}`);
+      }
+
+      // STEP 3: Transform Priority data to our application format
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 3: Transforming Priority data`);
+      const transformationResult = transformPriorityApplicatorData(data as PriorityApplicatorData, requestId);
+      
+      if (!transformationResult.success) {
+        logger.error(`[APPLICATOR_SERVICE] [${requestId}] Priority data transformation failed`, {
+          errors: transformationResult.errors,
+          warnings: transformationResult.warnings,
+          rawData: data
+        });
+        throw new Error(`Data transformation failed: ${transformationResult.errors?.join(', ')}`);
+      }
+
+      const transformedData = transformationResult.data!;
+      
+      // Log transformation warnings
+      if (transformationResult.warnings && transformationResult.warnings.length > 0) {
+        logger.warn(`[APPLICATOR_SERVICE] [${requestId}] Data transformation warnings`, {
+          warnings: transformationResult.warnings,
+          transformedData
+        });
+      }
+
+      logger.info(`[APPLICATOR_SERVICE] [${requestId}] Data transformation successful`, {
+        treatmentId: treatment.id,
+        originalData: data,
+        transformedData,
+        warnings: transformationResult.warnings
+      });
+
+      // STEP 4: Save to Priority system first
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 4: Saving to Priority system`);
+      const priorityData = transformToPriorityFormat(transformedData, requestId);
+
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Priority data structure`, {
+        priorityData,
+        priorityDataTypes: Object.fromEntries(Object.entries(priorityData).map(([k, v]) => [k, typeof v]))
+      });
+
+      const prioritySaveResult = await this.saveApplicatorToPriority(treatment.id, priorityData);
+
+      if (!prioritySaveResult.success) {
+        logger.error(`[APPLICATOR_SERVICE] [${requestId}] Failed to save to Priority system`, {
+          treatmentId: treatment.id,
+          priorityData,
+          transformedData,
+          error: prioritySaveResult.message,
+          priorityResult: prioritySaveResult
+        });
+        throw new Error(`Failed to save to Priority: ${prioritySaveResult.message}`);
+      }
+
+      logger.info(`[APPLICATOR_SERVICE] [${requestId}] Priority save successful, creating local record`, {
+        treatmentId: treatment.id,
+        priorityResult: prioritySaveResult
+      });
+
+      // STEP 5: Create the applicator in local database with transaction
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 5: Creating local database record`);
+      const dbData = {
+        ...transformedData,
+        treatmentId: treatment.id,
+        addedBy: userId,
+        isRemoved: false,
+      };
+
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Database data structure`, {
+        dbData,
+        dbDataTypes: Object.fromEntries(Object.entries(dbData).map(([k, v]) => [k, typeof v])),
+        transactionActive: !!transaction
+      });
+
+      const applicator = await Applicator.create(dbData, { transaction });
+
+      logger.info(`[APPLICATOR_SERVICE] [${requestId}] Successfully added applicator with transaction`, {
+        treatmentId: treatment.id,
+        applicatorId: applicator.id,
+        serialNumber: transformedData.serialNumber,
+        usageType: transformedData.usageType
+      });
+
+      return applicator;
+    } catch (error: any) {
+      logger.error(`[APPLICATOR_SERVICE] [${requestId}] Error in addApplicatorWithTransaction`, {
+        requestId,
+        treatmentId: treatment?.id,
+        userId,
+        requestData: data,
+        error: {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          sqlMessage: error.original?.message,
+          sqlCode: error.original?.code,
+          constraint: error.original?.constraint,
+          detail: error.original?.detail
+        },
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   },

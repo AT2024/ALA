@@ -9,21 +9,27 @@ import {
   getSeedStatus
 } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
+import { validateUUID, validateMultipleUUIDs } from '../middleware/uuidValidationMiddleware';
+import { requestLoggingMiddleware } from '../middleware/requestLoggingMiddleware';
+import { databaseHealthCheck, criticalOperationHealthCheck } from '../middleware/databaseHealthMiddleware';
 
 const router = express.Router();
 
 // Protect all routes
 router.use(protect);
 
+// Add detailed logging for applicator operations
+router.use(requestLoggingMiddleware);
+
 // Applicator routes
-router.post('/validate', validateApplicator);
-router.get('/serial/:serialNumber', getApplicatorBySerialNumber);
-router.get('/:id', getApplicatorById);
-router.get('/treatment/:treatmentId/seed-status', getSeedStatus);
+router.post('/validate', databaseHealthCheck, validateApplicator);
+router.get('/serial/:serialNumber', databaseHealthCheck, getApplicatorBySerialNumber);
+router.get('/:id', validateUUID('id'), databaseHealthCheck, getApplicatorById);
+router.get('/treatment/:treatmentId/seed-status', validateUUID('treatmentId'), databaseHealthCheck, getSeedStatus);
 
 // Treatment routes (for applicator management)
-router.post('/treatments/:treatmentId/applicators', addApplicator);
-router.patch('/treatments/:treatmentId/applicators/:id', updateApplicator);
-router.patch('/treatments/:treatmentId/status', updateTreatmentStatus);
+router.post('/treatments/:treatmentId/applicators', validateUUID('treatmentId'), criticalOperationHealthCheck, addApplicator);
+router.patch('/treatments/:treatmentId/applicators/:id', validateMultipleUUIDs(['treatmentId', 'id']), criticalOperationHealthCheck, updateApplicator);
+router.patch('/treatments/:treatmentId/status', validateUUID('treatmentId'), criticalOperationHealthCheck, updateTreatmentStatus);
 
 export default router;

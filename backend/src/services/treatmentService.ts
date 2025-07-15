@@ -1,5 +1,6 @@
 import { Treatment, Applicator, User } from '../models';
 import { Op } from 'sequelize';
+import sequelize from '../config/database';
 import logger from '../utils/logger';
 import priorityService from './priorityService';
 
@@ -137,9 +138,44 @@ export const treatmentService = {
   },
 
   // Get a single treatment by ID
-  async getTreatmentById(id: string) {
+  async getTreatmentById(id: string, transaction?: any) {
+    const queryId = `getTreatment_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
-      const treatment = await Treatment.findByPk(id, {
+      logger.info(`[TREATMENT_SERVICE] Starting getTreatmentById`, {
+        queryId,
+        treatmentId: id,
+        idType: typeof id,
+        idLength: id?.length,
+        hasTransaction: !!transaction,
+        transactionId: transaction?.id,
+        timestamp: new Date().toISOString()
+      });
+
+      // Validate treatment ID format
+      if (!id || typeof id !== 'string') {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Invalid treatment ID format`, {
+          id,
+          idType: typeof id,
+          idValue: id
+        });
+        throw new Error('Invalid treatment ID format');
+      }
+
+      // Check database connection before query
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Checking database connection`);
+      try {
+        await sequelize.authenticate();
+        logger.debug(`[TREATMENT_SERVICE] [${queryId}] Database connection verified`);
+      } catch (dbError: any) {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Database connection failed`, {
+          error: dbError.message
+        });
+        throw new Error('Database connection unavailable');
+      }
+
+      // Log query parameters
+      const queryOptions = {
         include: [
           {
             model: Applicator,
@@ -151,15 +187,112 @@ export const treatmentService = {
             attributes: ['id', 'name', 'email', 'phoneNumber', 'role'],
           },
         ],
+        transaction, // Include transaction if provided
+      };
+
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Executing database query`, {
+        treatmentId: id,
+        queryOptions: {
+          includeApplicators: true,
+          includeUser: true,
+          hasTransaction: !!transaction,
+          transactionIsolationLevel: transaction?.options?.isolationLevel
+        }
       });
+
+      const startTime = Date.now();
+      const treatment = await Treatment.findByPk(id, queryOptions);
+      const queryDuration = Date.now() - startTime;
+      
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Database query completed`, {
+        treatmentId: id,
+        queryDuration: `${queryDuration}ms`,
+        treatmentFound: !!treatment,
+        treatmentData: treatment ? {
+          id: treatment.id,
+          type: treatment.type,
+          subjectId: treatment.subjectId,
+          site: treatment.site,
+          isComplete: treatment.isComplete,
+          userId: treatment.userId,
+          applicatorsCount: treatment.applicators?.length || 0,
+          createdAt: treatment.createdAt,
+          updatedAt: treatment.updatedAt
+        } : null,
+        hasTransaction: !!transaction,
+        transactionId: transaction?.id
+      });
+
+      // Log performance warning for slow queries
+      if (queryDuration > 1000) {
+        logger.warn(`[TREATMENT_SERVICE] [${queryId}] Slow database query detected`, {
+          treatmentId: id,
+          queryDuration: `${queryDuration}ms`,
+          threshold: '1000ms',
+          recommendation: 'Consider optimizing query or checking database performance'
+        });
+      }
       
       if (!treatment) {
+        // Additional debugging for missing treatment
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Treatment not found in database`, {
+          treatmentId: id,
+          queryDuration: `${queryDuration}ms`,
+          searchedInTransaction: !!transaction,
+          transactionId: transaction?.id,
+          
+          // Let's also check if the ID exists in any form
+          debugInfo: {
+            idFormat: 'UUID expected',
+            idPattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+            timestamp: new Date().toISOString()
+          }
+        });
+        
+        // Perform additional debugging query to check if treatment exists without transaction
+        if (transaction) {
+          try {
+            logger.debug(`[TREATMENT_SERVICE] [${queryId}] Checking treatment existence without transaction`);
+            const treatmentWithoutTransaction = await Treatment.findByPk(id);
+            logger.debug(`[TREATMENT_SERVICE] [${queryId}] Treatment exists without transaction`, {
+              found: !!treatmentWithoutTransaction,
+              possibleTransactionIsolationIssue: !!treatmentWithoutTransaction
+            });
+          } catch (debugError: any) {
+            logger.debug(`[TREATMENT_SERVICE] [${queryId}] Debug query also failed`, {
+              error: debugError.message
+            });
+          }
+        }
+        
         throw new Error('Treatment not found');
       }
       
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Treatment successfully retrieved`, {
+        treatmentId: id,
+        queryDuration: `${queryDuration}ms`,
+        treatmentType: treatment.type,
+        treatmentUserId: treatment.userId
+      });
+      
       return treatment;
-    } catch (error) {
-      logger.error(`Error fetching treatment by ID: ${error}`);
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in getTreatmentById`, {
+        queryId,
+        treatmentId: id,
+        hasTransaction: !!transaction,
+        transactionId: transaction?.id,
+        error: {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          sqlMessage: error.original?.message,
+          sqlCode: error.original?.code,
+          sqlState: error.original?.sqlState
+        },
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   },

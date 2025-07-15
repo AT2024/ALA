@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { useAuth } from '@/context/AuthContext';
 import { priorityService } from '@/services/priorityService';
+import { treatmentService } from '@/services/treatmentService';
 
 // Priority system integration - no more mock data needed
 // Sites, patients, and surgeons will be fetched from Priority system
@@ -42,6 +43,7 @@ const TreatmentSelection = () => {
   const [availableSurgeons, setAvailableSurgeons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load available sites and set default site based on user
@@ -212,31 +214,47 @@ const TreatmentSelection = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validation
     if (!formData.email || !formData.site || !formData.patientId || !formData.surgeon) {
       setError('Please fill in all required fields (Email, Site, Patient ID, Surgeon)');
       return;
     }
 
-    // Create treatment object
-    const treatment = {
-      id: crypto.randomUUID(),
-      type: procedureType as 'insertion' | 'removal',
-      subjectId: formData.patientId,
-      site: formData.site,
-      date: formData.date,
-      isComplete: false,
-      email: formData.email,
-      seedQuantity: parseInt(formData.seedQty) || 0,
-      activityPerSeed: parseFloat(formData.activityPerSeed) || 0,
-      surgeon: formData.surgeon
-    };
+    setIsLoading(true);
+    setError('');
 
-    setTreatment(treatment);
-    
-    // Navigate to Treatment Documentation screen
-    navigate('/treatment/scan');
+    try {
+      // Create treatment in backend database
+      const treatmentData = {
+        type: procedureType as 'insertion' | 'removal',
+        subjectId: formData.patientId,
+        site: formData.site,
+        date: formData.date,
+        email: formData.email,
+        seedQuantity: parseInt(formData.seedQty) || 0,
+        activityPerSeed: parseFloat(formData.activityPerSeed) || 0,
+        surgeon: formData.surgeon
+      };
+
+      console.log('Creating treatment with data:', treatmentData);
+      
+      // Call backend API to create treatment
+      const treatment = await treatmentService.createTreatment(treatmentData);
+      
+      console.log('Treatment created successfully:', treatment);
+      
+      // Set treatment in context with backend-generated ID
+      setTreatment(treatment);
+      
+      // Navigate to Treatment Documentation screen
+      navigate('/treatment/scan');
+    } catch (error: any) {
+      console.error('Error creating treatment:', error);
+      setError(error.response?.data?.message || 'Failed to create treatment. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -446,10 +464,17 @@ const TreatmentSelection = () => {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="w-full max-w-md rounded-md bg-primary py-3 px-4 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
-                disabled={!formData.email || !formData.site || !formData.patientId || !formData.surgeon}
+                className="w-full max-w-md rounded-md bg-primary py-3 px-4 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading || !formData.email || !formData.site || !formData.patientId || !formData.surgeon}
               >
-                Continue
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Creating Treatment...
+                  </div>
+                ) : (
+                  'Continue'
+                )}
               </button>
             </div>
           </form>
