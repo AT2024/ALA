@@ -14,6 +14,38 @@ Use Gemini CLI commands from `gemini-analysis.md` when Claude Code needs to:
 - **Security Auditing**: Verify safety measures and error handling across the system
 - **Integration Testing**: Validate end-to-end workflows and API compatibility
 
+### **When to Use MCP Servers**
+
+Use MCP (Model Context Protocol) servers for specialized tasks. Available globally at `~/mcp-servers-global/`:
+
+- **Context7 MCP**: Official library documentation and design patterns
+  - Use for: API documentation research, framework best practices, coding patterns
+  - Example: "How to implement JWT authentication in Express" or "React Context patterns"
+  
+- **Sequential MCP**: Complex multi-step thinking and problem-solving
+  - Use for: Breaking down complex features, architectural decisions, debugging workflows
+  - Example: Planning multi-phase implementations, troubleshooting complex bugs
+  
+- **Magic MCP**: Modern UI component generation
+  - Use for: Creating React components, Tailwind styling, responsive design
+  - Example: "Generate a medical data table component" or "Create a progress tracker UI"
+  
+- **Playwright MCP**: Browser automation and testing
+  - Use for: E2E testing, UI testing, browser automation scripts
+  - Example: Testing treatment workflows, validating barcode scanner functionality
+
+**MCP Server Management:**
+```bash
+# Start MCP servers globally
+cd ~/mcp-servers-global && docker-compose up -d
+
+# Stop MCP servers  
+cd ~/mcp-servers-global && docker-compose down
+
+# Check MCP status
+docker ps --filter "name=mcp"
+```
+
 ## Development Commands
 
 ### Running the Application
