@@ -107,18 +107,37 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     // Remove from available applicators (using serialNumber for more reliable matching)
     setAvailableApplicators((prev) => prev.filter(app => app.serialNumber !== applicator.serialNumber));
     
-    // Add to processed applicators
-    setProcessedApplicators((prev) => [...prev, applicator]);
+    // Check if applicator already exists in processed applicators (by serial number)
+    setProcessedApplicators((prev) => {
+      const existingIndex = prev.findIndex(app => app.serialNumber === applicator.serialNumber);
+      
+      if (existingIndex !== -1) {
+        // Update existing applicator instead of adding duplicate
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], ...applicator };
+        return updated;
+      } else {
+        // Add new applicator
+        return [...prev, applicator];
+      }
+    });
     
     // If usage type is "none", return to available applicators (will be shown in red)
+    // But only if it's not already there from a previous "no use" process
     if (applicator.usageType === 'none') {
-      const returnedApplicator = { ...applicator, returnedFromNoUse: true };
       setAvailableApplicators((prev) => {
         // Check if already exists to prevent duplicates
-        const exists = prev.some(app => app.serialNumber === returnedApplicator.serialNumber);
+        const exists = prev.some(app => app.serialNumber === applicator.serialNumber);
         if (exists) {
-          return prev;
+          // Update existing entry to ensure it has returnedFromNoUse flag
+          return prev.map(app => 
+            app.serialNumber === applicator.serialNumber 
+              ? { ...app, returnedFromNoUse: true }
+              : app
+          );
         }
+        // Add as new entry with returnedFromNoUse flag
+        const returnedApplicator = { ...applicator, returnedFromNoUse: true };
         return [...prev, returnedApplicator];
       });
     }

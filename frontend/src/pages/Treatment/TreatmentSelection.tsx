@@ -119,6 +119,9 @@ const TreatmentSelection = () => {
     setLoading(true);
     setError(null);
     
+    // Clear previous patient data to prevent accumulation
+    setAvailablePatients([]);
+    
     try {
       console.log(`Fetching patients for site: ${formData.site}, date: ${formData.date}`);
       
@@ -132,20 +135,89 @@ const TreatmentSelection = () => {
         procedureType || undefined
       );
       
+      // Filter orders by date as a frontend validation backup
+      const filteredOrders = data.orders?.filter((order: any) => {
+        if (!order.SIBD_TREATDAY && !order.CURDATE) {
+          console.warn(`Order ${order.ORDNAME} has no date field`);
+          return false;
+        }
+        
+        const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
+        const orderDate = new Date(treatmentDate).toISOString().split('T')[0];
+        const isMatchingDate = orderDate === dateForApi;
+        
+        if (!isMatchingDate) {
+          console.warn(`Frontend filtering: Order ${order.ORDNAME} date ${orderDate} does not match requested ${dateForApi}`);
+        }
+        
+        return isMatchingDate;
+      }) || [];
+      
+      console.log(`Backend returned ${data.orders?.length || 0} orders, frontend filtered to ${filteredOrders.length} orders for date ${dateForApi}`);
+      
       // Transform Priority data to our patient format
-      const patients: PriorityPatient[] = data.orders?.map((order: any) => ({
-        id: order.DETAILS || order.REFERENCE || `PAT-${order.ORDNAME}`,
+      const patients: PriorityPatient[] = filteredOrders.map((order: any) => ({
+        id: order.ORDNAME,
         seedQty: parseInt(order.SBD_SEEDQTY) || 0,
         activityPerSeed: parseFloat(order.SBD_PREFACTIV) || 0,
         ordName: order.ORDNAME,
         reference: order.REFERENCE
-      })) || [];
+      }));
       
-      console.log(`Found ${patients.length} patients for site ${formData.site}`);
-      setAvailablePatients(patients);
+      // Deduplicate patients by REFERENCE (actual patient ID) to prevent duplicate patients
+      // Keep the most recent order for each patient (by ORDNAME)
+      const patientMap = new Map<string, PriorityPatient>();
+      
+      patients.forEach(patient => {
+        const key = patient.reference || patient.ordName || patient.id; // Use reference as key, fallback to ordName or id
+        
+        if (!key) {
+          console.warn('Patient has no valid key for deduplication:', patient);
+          return;
+        }
+        
+        if (!patientMap.has(key)) {
+          patientMap.set(key, patient);
+        } else {
+          // If we already have this patient, keep the one with the higher ORDNAME (more recent)
+          const existing = patientMap.get(key)!;
+          const currentOrderName = patient.ordName || '';
+          const existingOrderName = existing.ordName || '';
+          
+          if (currentOrderName > existingOrderName) {
+            patientMap.set(key, patient);
+          }
+        }
+      });
+      
+      const uniquePatients = Array.from(patientMap.values());
+      
+      console.log(`Found ${patients.length} total orders, ${uniquePatients.length} unique patients for site ${formData.site}`);
+      if (patients.length !== uniquePatients.length) {
+        console.warn(`Deduplication: Removed ${patients.length - uniquePatients.length} duplicate patient entries`);
+        
+        // Log details of what was kept vs removed
+        const keptPatients = uniquePatients.map(up => ({ reference: up.reference, ordName: up.ordName }));
+        const removedPatients = patients.filter(p => !keptPatients.find(kp => kp.reference === p.reference && kp.ordName === p.ordName));
+        
+        console.group('Deduplication Details:');
+        console.log('Kept patients:', keptPatients);
+        console.log('Removed patients:', removedPatients.map(r => ({ reference: r.reference, ordName: r.ordName })));
+        
+        // Show which patients had duplicates
+        const duplicateReferences = [...new Set(removedPatients.map(p => p.reference))];
+        duplicateReferences.forEach(ref => {
+          const allOrdersForPatient = patients.filter(p => p.reference === ref);
+          const keptOrder = keptPatients.find(kp => kp.reference === ref);
+          console.log(`Patient ${ref}: Had ${allOrdersForPatient.length} orders, kept ${keptOrder?.ordName}`);
+        });
+        console.groupEnd();
+      }
+      
+      setAvailablePatients(uniquePatients);
       
       // If no patients found, show helpful message
-      if (patients.length === 0) {
+      if (uniquePatients.length === 0) {
         setError(`No scheduled procedures found for ${formData.site} on ${formData.date}`);
       }
     } catch (err: any) {
@@ -385,8 +457,8 @@ const TreatmentSelection = () => {
                   required
                 >
                   <option value="">Select Patient ID</option>
-                  {availablePatients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
+                  {availablePatients.map((patient, index) => (
+                    <option key={patient.id || `patient-${index}`} value={patient.id}>
                       {patient.id}
                     </option>
                   ))}

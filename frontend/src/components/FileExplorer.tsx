@@ -16,7 +16,7 @@ interface FileNode {
  * Can be used for documentation or development guides
  */
 const FileExplorer: React.FC = () => {
-  const [expandedFolders, setExpandedFolders] = useState({
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     root: true,
     backend: true,
     'backend/src': true,
@@ -99,7 +99,7 @@ const FileExplorer: React.FC = () => {
             )}
           </div>
           
-          {isFolder && isExpanded && renderFiles(file.children, indent + 1)}
+          {isFolder && isExpanded && file.children && renderFiles(file.children, indent + 1)}
         </div>
       );
     });

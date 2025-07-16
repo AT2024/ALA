@@ -1,12 +1,9 @@
-import React from 'react';
 import { useTreatment } from '@/context/TreatmentContext';
 
 const ProgressTracker = () => {
   const { 
     currentTreatment, 
     progressStats, 
-    getApplicatorProgress, 
-    getSeedProgress,
     getActualTotalSeeds,
     getActualInsertedSeeds
   } = useTreatment();
@@ -14,9 +11,6 @@ const ProgressTracker = () => {
   if (!currentTreatment) {
     return null;
   }
-
-  const applicatorProgress = getApplicatorProgress();
-  const seedProgress = getSeedProgress();
   const actualTotalSeeds = getActualTotalSeeds();
   const actualInsertedSeeds = getActualInsertedSeeds();
 

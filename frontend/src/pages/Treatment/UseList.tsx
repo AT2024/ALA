@@ -6,7 +6,7 @@ import { useTreatment } from '@/context/TreatmentContext';
 
 const UseList = () => {
   const navigate = useNavigate();
-  const { currentTreatment, applicators, processedApplicators, setCurrentApplicator } = useTreatment();
+  const { currentTreatment, processedApplicators, setCurrentApplicator } = useTreatment();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
