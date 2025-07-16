@@ -2,7 +2,14 @@ import React from 'react';
 import { useTreatment } from '@/context/TreatmentContext';
 
 const ProgressTracker = () => {
-  const { currentTreatment, progressStats, getApplicatorProgress, getSeedProgress } = useTreatment();
+  const { 
+    currentTreatment, 
+    progressStats, 
+    getApplicatorProgress, 
+    getSeedProgress,
+    getActualTotalSeeds,
+    getActualInsertedSeeds
+  } = useTreatment();
 
   if (!currentTreatment) {
     return null;
@@ -10,6 +17,8 @@ const ProgressTracker = () => {
 
   const applicatorProgress = getApplicatorProgress();
   const seedProgress = getSeedProgress();
+  const actualTotalSeeds = getActualTotalSeeds();
+  const actualInsertedSeeds = getActualInsertedSeeds();
 
   const ProgressBar = ({ current, total, label, color = 'bg-blue-500' }: {
     current: number;
@@ -56,22 +65,36 @@ const ProgressTracker = () => {
       <div className="space-y-6">
         {/* Applicator Progress */}
         <ProgressBar
-          current={applicatorProgress.used}
-          total={applicatorProgress.total}
-          label="Applicators Used"
+          current={progressStats.usedApplicators}
+          total={progressStats.totalApplicators}
+          label="Applicators Processed"
           color="bg-blue-500"
         />
 
-        {/* Seed Progress */}
+        {/* Seed Progress - Now shows actual total seeds */}
         <ProgressBar
-          current={seedProgress.inserted}
-          total={seedProgress.total}
+          current={actualInsertedSeeds}
+          total={actualTotalSeeds}
           label="Seeds Inserted"
           color="bg-green-500"
         />
 
+        {/* Show actual total seeds info */}
+        {actualTotalSeeds > 0 && (
+          <div className="bg-blue-50 rounded-lg p-3">
+            <p className="text-sm text-blue-700">
+              <span className="font-semibold">Total Seeds Available:</span> {actualTotalSeeds} seeds
+              {progressStats.totalApplicators > 0 && (
+                <span className="block text-xs text-blue-600 mt-1">
+                  From {progressStats.totalApplicators} applicators
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+
         {/* Usage Type Distribution */}
-        {applicatorProgress.used > 0 && (
+        {progressStats.usedApplicators > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-700">Usage Type Distribution</h4>
             <div className="grid grid-cols-1 gap-2">
@@ -106,12 +129,12 @@ const ProgressTracker = () => {
               <p className="font-medium text-lg">{progressStats.seedsRemaining}</p>
             </div>
             <div>
-              <p className="text-gray-500">Applicators Left</p>
+              <p className="text-gray-500">Applicators Available</p>
               <p className="font-medium text-lg">{progressStats.applicatorsRemaining}</p>
             </div>
             <div>
-              <p className="text-gray-500">Total Inserted</p>
-              <p className="font-medium text-lg">{progressStats.insertedSeeds}</p>
+              <p className="text-gray-500">Seeds Inserted</p>
+              <p className="font-medium text-lg">{actualInsertedSeeds}</p>
             </div>
           </div>
         </div>
@@ -121,7 +144,8 @@ const ProgressTracker = () => {
           <p>Patient: {currentTreatment.subjectId}</p>
           <p>Type: {currentTreatment.type}</p>
           <p>Site: {currentTreatment.site}</p>
-          <p>Expected Seeds: {currentTreatment.seedQuantity || 'N/A'}</p>
+          <p>Expected Seeds: {actualTotalSeeds || 'N/A'}</p>
+          <p>Actual Total Seeds: {actualInsertedSeeds || 'N/A'}</p>
         </div>
       </div>
     </div>

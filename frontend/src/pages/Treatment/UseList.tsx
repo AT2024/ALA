@@ -6,25 +6,25 @@ import { useTreatment } from '@/context/TreatmentContext';
 
 const UseList = () => {
   const navigate = useNavigate();
-  const { currentTreatment, applicators, setCurrentApplicator } = useTreatment();
+  const { currentTreatment, applicators, processedApplicators, setCurrentApplicator } = useTreatment();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Calculate treatment summary data
+  // Calculate treatment summary data using processed applicators
   const treatmentSummary = {
-    timeInsertionStarted: applicators.length > 0 
-      ? applicators.reduce((earliest, app) => {
+    timeInsertionStarted: processedApplicators.length > 0 
+      ? processedApplicators.reduce((earliest, app) => {
           const appTime = new Date(app.insertionTime).getTime();
           const earliestTime = new Date(earliest).getTime();
           return appTime < earliestTime ? app.insertionTime : earliest;
-        }, applicators[0].insertionTime)
+        }, processedApplicators[0].insertionTime)
       : '',
-    totalApplicatorUse: applicators.filter(app => app.usageType === 'full' || app.usageType === 'faulty').length,
-    faultyApplicator: applicators.filter(app => app.usageType === 'faulty').length,
-    notUsedApplicators: applicators.filter(app => app.usageType === 'none').length,
-    totalDartSeedsInserted: applicators.reduce((sum, app) => {
+    totalApplicatorUse: processedApplicators.filter(app => app.usageType === 'full' || app.usageType === 'faulty').length,
+    faultyApplicator: processedApplicators.filter(app => app.usageType === 'faulty').length,
+    notUsedApplicators: processedApplicators.filter(app => app.usageType === 'none').length,
+    totalDartSeedsInserted: processedApplicators.reduce((sum, app) => {
       if (app.usageType === 'full') return sum + app.seedQuantity;
       if (app.usageType === 'faulty') return sum + (app.insertedSeedsQty || 0);
       return sum;
@@ -37,7 +37,7 @@ const UseList = () => {
   const totalActivity = treatmentSummary.totalDartSeedsInserted * activityPerSeed;
 
   const handleEditApplicator = (applicatorSerialNumber: string) => {
-    const applicator = applicators.find(app => app.serialNumber === applicatorSerialNumber);
+    const applicator = processedApplicators.find(app => app.serialNumber === applicatorSerialNumber);
     if (applicator) {
       setCurrentApplicator(applicator);
       navigate('/treatment/scan'); // Takes to Treatment Documentation screen
@@ -50,8 +50,8 @@ const UseList = () => {
   };
 
   const handleFinalize = async () => {
-    if (applicators.length === 0) {
-      setError('Please add at least one applicator before finalizing');
+    if (processedApplicators.length === 0) {
+      setError('Please process at least one applicator before finalizing');
       return;
     }
 
@@ -126,13 +126,13 @@ const UseList = () => {
             {success}
           </div>
         )}
-        {/* Applicators List */}
+        {/* Processed Applicators List */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Applicators List</h2>
+          <h2 className="mb-4 text-lg font-medium">Processed Applicators</h2>
 
-          {applicators.length === 0 ? (
+          {processedApplicators.length === 0 ? (
             <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-700">
-              No applicators added yet. Start by scanning an applicator.
+              No applicators processed yet. Start by scanning and processing an applicator.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -166,7 +166,7 @@ const UseList = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {applicators
+                  {processedApplicators
                     .sort((a, b) => b.seedQuantity - a.seedQuantity) // Sort by Seeds Qty as specified
                     .map((applicator) => (
                     <tr key={applicator.id || applicator.serialNumber} className="hover:bg-gray-50">
@@ -284,7 +284,7 @@ const UseList = () => {
           </button>
           <button
             onClick={handleFinalize}
-            disabled={loading || applicators.length === 0}
+            disabled={loading || processedApplicators.length === 0}
             className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
           >
             {loading ? 'Processing...' : 'Finalize'}
@@ -295,9 +295,10 @@ const UseList = () => {
         <div className="rounded-lg border bg-gray-50 p-4">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Information</h3>
           <ul className="text-xs text-gray-600 space-y-1">
+            <li>• Only processed applicators are shown in the list</li>
             <li>• Applicators are sorted by Seeds Qty. as specified</li>
-            <li>• Use 'Edit' to modify applicator details</li>
-            <li>• Use 'Next' to add another applicator</li>
+            <li>• Use 'Edit' to modify processed applicator details</li>
+            <li>• Use 'Next' to scan and process another applicator</li>
             <li>• Use 'Finalize' to complete the treatment</li>
             <li>• Total Activity = Total Seeds × Activity Per Seed</li>
           </ul>

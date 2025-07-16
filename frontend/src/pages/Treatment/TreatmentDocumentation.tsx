@@ -10,7 +10,7 @@ import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
-  const { currentTreatment, addApplicator, applicators, progressStats } = useTreatment();
+  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, addAvailableApplicator } = useTreatment();
   const navigate = useNavigate();
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
@@ -20,7 +20,7 @@ const TreatmentDocumentation = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingValidation, setPendingValidation] = useState<ApplicatorValidationResult | null>(null);
-  const [availableApplicators, setAvailableApplicators] = useState<any[]>([]);
+  const [loadedApplicators, setLoadedApplicators] = useState<any[]>([]);
   const [showApplicatorList, setShowApplicatorList] = useState(false);
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -94,7 +94,22 @@ const TreatmentDocumentation = () => {
       
       if (response.success) {
         const applicators = response.applicators || [];
-        setAvailableApplicators(applicators);
+        
+        // Add each applicator to the context
+        applicators.forEach(applicator => {
+          addAvailableApplicator({
+            id: applicator.serialNumber || crypto.randomUUID(),
+            serialNumber: applicator.serialNumber,
+            applicatorType: applicator.applicatorType || applicator.type || '',
+            seedQuantity: applicator.seedQuantity || 0,
+            usageType: 'full' as const,
+            insertionTime: '',
+            insertedSeedsQty: 0,
+            comments: ''
+          });
+        });
+        
+        setLoadedApplicators(applicators);
         console.log(`Loaded ${applicators.length} available applicators`);
         
         if (applicators.length === 0) {
@@ -309,15 +324,16 @@ const TreatmentDocumentation = () => {
     // Fill form with selected applicator data directly (no validation needed since it's from Priority)
     setFormData({
       serialNumber: applicator.serialNumber,
-      applicatorType: applicator.applicatorType || applicator.type || '',
-      seedsQty: applicator.seedQuantity?.toString() || applicator.seedsQty?.toString() || '',
+      applicatorType: applicator.applicatorType || '',
+      seedsQty: applicator.seedQuantity?.toString() || '',
       insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
-      usingType: 'Full use', // Smart default selection
-      insertedSeedsQty: applicator.seedQuantity?.toString() || applicator.seedsQty?.toString() || '',
+      usingType: applicator.returnedFromNoUse ? 'No Use' : 'Full use', // Smart default selection
+      insertedSeedsQty: applicator.returnedFromNoUse ? '0' : applicator.seedQuantity?.toString() || '',
       comments: ''
     });
 
-    setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Seeds auto-filled for Full use.`);
+    const usageType = applicator.returnedFromNoUse ? 'No Use' : 'Full use';
+    setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Seeds auto-filled for ${usageType}.`);
   };
 
   const adjustTime = (minutes: number) => {
@@ -327,6 +343,20 @@ const TreatmentDocumentation = () => {
       ...prev, 
       insertionTime: format(newTime, 'dd.MM.yyyy HH:mm') 
     }));
+  };
+
+  // Map form usage type values to interface values
+  const mapUsageType = (formUsageType: string): 'full' | 'faulty' | 'none' => {
+    switch (formUsageType) {
+      case 'Full use':
+        return 'full';
+      case 'Faulty':
+        return 'faulty';
+      case 'No Use':
+        return 'none';
+      default:
+        return 'full'; // Default fallback
+    }
   };
 
   const handleNext = async () => {
@@ -377,14 +407,14 @@ const TreatmentDocumentation = () => {
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
-        usageType: formData.usingType as 'full' | 'faulty' | 'none',
+        usageType: mapUsageType(formData.usingType),
         insertionTime: formData.insertionTime,
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
         comments: formData.comments
       };
 
-      console.log('Adding applicator to local context:', applicator);
-      addApplicator(applicator);
+      console.log('Processing applicator in context:', applicator);
+      processApplicator(applicator);
       setScannedApplicators(prev => [...prev, formData.serialNumber]);
 
       // Clear form for next applicator
@@ -398,7 +428,17 @@ const TreatmentDocumentation = () => {
         comments: ''
       });
 
-      setSuccess('Applicator data saved to Priority system! Ready for next applicator.');
+      // Enhanced success message with progress information
+      const totalSeeds = progressStats.totalSeeds;
+      const insertedSeeds = progressStats.insertedSeeds;
+      const remainingApplicators = progressStats.applicatorsRemaining;
+      const completionPercentage = progressStats.completionPercentage;
+      
+      setSuccess(
+        `Applicator data saved to Priority system! ` +
+        `Progress: ${insertedSeeds}/${totalSeeds} seeds (${completionPercentage}%) - ` +
+        `${remainingApplicators} applicators remaining.`
+      );
       setError(null);
       console.log('Applicator successfully added and form cleared');
     } catch (error: any) {
@@ -493,26 +533,6 @@ const TreatmentDocumentation = () => {
                       )}
                     </div>
                   </div>
-                  <div>
-                    <p className="text-gray-500">Seeds Inserted</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{progressStats.insertedSeeds}</p>
-                      {currentTreatment.seedQuantity && (
-                        <span className="text-xs text-gray-400">
-                          / {currentTreatment.seedQuantity}
-                        </span>
-                      )}
-                      {progressStats.completionPercentage > 0 && (
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          progressStats.completionPercentage === 100 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {progressStats.completionPercentage}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
                 </div>
               ) : (
                 <p>No treatment selected</p>
@@ -586,19 +606,29 @@ const TreatmentDocumentation = () => {
                 <div className="border rounded-md max-h-60 overflow-y-auto">
                   {availableApplicators.length > 0 ? (
                     <div className="space-y-1 p-2">
-                      {availableApplicators.map((applicator, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleApplicatorSelect(applicator)}
-                          className="w-full text-left p-2 rounded hover:bg-gray-50 border border-gray-200"
-                          disabled={loading}
-                        >
-                          <div className="font-medium">{applicator.serialNumber}</div>
-                          <div className="text-sm text-gray-500">
-                            {applicator.applicatorType} • {applicator.seedQuantity} seeds
-                          </div>
-                        </button>
-                      ))}
+                      {availableApplicators.map((applicator, index) => {
+                        const isNoUseReturned = applicator.returnedFromNoUse;
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => handleApplicatorSelect(applicator)}
+                            className={`w-full text-left p-2 rounded hover:bg-gray-50 border ${
+                              isNoUseReturned 
+                                ? 'border-red-300 bg-red-50 hover:bg-red-100' 
+                                : 'border-gray-200'
+                            }`}
+                            disabled={loading}
+                          >
+                            <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                              {applicator.serialNumber}
+                              {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                            </div>
+                            <div className={`text-sm ${isNoUseReturned ? 'text-red-600' : 'text-gray-500'}`}>
+                              {applicator.applicatorType} • {applicator.seedQuantity} seeds
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="p-4 text-center text-gray-500">
@@ -633,19 +663,29 @@ const TreatmentDocumentation = () => {
                         Did you mean:
                       </div>
                       <div className="space-y-1 p-2">
-                        {searchSuggestions.map((suggestion, index) => (
-                          <button
-                            key={index}
-                            onClick={() => handleSuggestionSelect(suggestion)}
-                            className="w-full text-left p-2 rounded hover:bg-yellow-100 text-sm"
-                            disabled={loading}
-                          >
-                            <div className="font-medium">{suggestion.serialNumber}</div>
-                            <div className="text-gray-600">
-                              {suggestion.applicatorType} • {suggestion.seedQuantity} seeds
-                            </div>
-                          </button>
-                        ))}
+                        {searchSuggestions.map((suggestion, index) => {
+                          const isNoUseReturned = suggestion.returnedFromNoUse;
+                          return (
+                            <button
+                              key={index}
+                              onClick={() => handleSuggestionSelect(suggestion)}
+                              className={`w-full text-left p-2 rounded text-sm ${
+                                isNoUseReturned 
+                                  ? 'hover:bg-red-100 bg-red-50' 
+                                  : 'hover:bg-yellow-100'
+                              }`}
+                              disabled={loading}
+                            >
+                              <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                                {suggestion.serialNumber}
+                                {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                              </div>
+                              <div className={`${isNoUseReturned ? 'text-red-600' : 'text-gray-600'}`}>
+                                {suggestion.applicatorType} • {suggestion.seedQuantity} seeds
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
