@@ -208,12 +208,12 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
       
       const beforeFilter = orders.length;
       orders = orders.filter((order: any) => {
-        if (!order.CURDATE && !order.SIBD_DATE) {
+        if (!order.CURDATE && !order.SIBD_TREATDAY) {
           logger.debug(`Order ${order.ORDNAME || 'unknown'} has no date field`);
           return false;
         }
         
-        const orderDate = new Date(order.CURDATE || order.SIBD_DATE).toISOString().split('T')[0];
+        const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
         const matches = orderDate === targetDate;
         
         if (!matches) {
@@ -231,9 +231,9 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
       // For removal procedures, filter orders that are 14+ days old
       const today = new Date();
       orders = orders.filter((order: any) => {
-        if (!order.CURDATE && !order.SIBD_DATE) return false;
+        if (!order.CURDATE && !order.SIBD_TREATDAY) return false;
         
-        const orderDate = new Date(order.CURDATE || order.SIBD_DATE);
+        const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE);
         const daysSinceInsertion = Math.floor(
           (today.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24)
         );

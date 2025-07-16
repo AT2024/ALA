@@ -1,6 +1,5 @@
 import axios from 'axios';
 import logger from '../utils/logger';
-import mockPriorityService from './mockPriorityService';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -24,16 +23,19 @@ const loadTestData = () => {
       testData.orders.forEach((order: any, index: number) => {
         switch (index % 3) {
           case 0:
+            order.SIBD_TREATDAY = dynamicDates.yesterday;
             order.CURDATE = dynamicDates.yesterday;
             break;
           case 1:
+            order.SIBD_TREATDAY = dynamicDates.today;
             order.CURDATE = dynamicDates.today;
             break;
           case 2:
+            order.SIBD_TREATDAY = dynamicDates.tomorrow;
             order.CURDATE = dynamicDates.tomorrow;
             break;
         }
-        logger.info(`Updated order ${order.ORDNAME} (${order.CUSTNAME}) date to: ${order.CURDATE}`);
+        logger.info(`Updated order ${order.ORDNAME} (${order.CUSTNAME}) treatment date to: ${order.SIBD_TREATDAY}`);
       });
     }
     
@@ -569,7 +571,7 @@ export const priorityService = {
       const response = await priorityApi.get('/ORDERS', {
         params: {
           $filter: filterParam,
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
         },
         timeout: 30000, // 30 second timeout
       });
@@ -774,7 +776,18 @@ export const priorityService = {
       // Return mock data in case of error (development only)
       if (process.env.NODE_ENV === 'development') {
         logger.warn('Using mock contacts data as fallback in development mode');
-        return mockPriorityService.getMockContacts();
+        const testData = loadTestData();
+        if (testData && testData.sites) {
+          return testData.sites.map((site: any) => ({
+            EMAIL: 'test@example.com',
+            NAME: 'Test User',
+            PHONE: '555-TEST',
+            POSITIONCODE: '99',
+            CUSTNAME: site.custName,
+            CUSTDES: site.custDes
+          }));
+        }
+        return [];
       }
       // In production, throw error instead of returning mock data
       throw new Error(`Priority API error: ${error}`);
@@ -795,7 +808,12 @@ export const priorityService = {
       // Return mock data in case of error (development only)
       if (process.env.NODE_ENV === 'development') {
         logger.warn(`Using mock orders data as fallback in development mode for site: ${custName}`);
-        return mockPriorityService.getMockOrders(custName);
+        const testData = loadTestData();
+        if (testData && testData.orders) {
+          const filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
+          return filteredOrders;
+        }
+        return [];
       }
       // In production, throw error instead of returning mock data
       throw new Error(`Priority API error: ${error}`);
@@ -1074,12 +1092,12 @@ export const priorityService = {
     try {
       logger.info(`Fetching treatments for site ${site} from ${dateFrom} to ${dateTo}`);
       
-      const dateFilter = `CUSTNAME eq '${site}' and CURDATE ge datetime'${dateFrom}T00:00:00' and CURDATE le datetime'${dateTo}T23:59:59'`;
+      const dateFilter = `CUSTNAME eq '${site}' and SIBD_TREATDAY ge datetime'${dateFrom}T00:00:00' and SIBD_TREATDAY le datetime'${dateTo}T23:59:59'`;
       
       const response = await priorityApi.get('/ORDERS', {
         params: {
           $filter: dateFilter,
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE',
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,SIBD_TREATDAY',
         },
       });
       
@@ -1087,7 +1105,7 @@ export const priorityService = {
         id: order.ORDNAME,
         site: order.CUSTNAME,
         patientId: order.REFERENCE,
-        date: order.CURDATE
+        date: order.SIBD_TREATDAY
       }));
       
     } catch (error: any) {
@@ -1284,24 +1302,27 @@ export const priorityService = {
       // STEP 2: Filter orders by date range if needed
       logger.info(`Before filtering: ${orders.length} orders found`);
       orders.forEach((order: any) => {
-        logger.info(`Order ${order.ORDNAME} (${order.CUSTNAME}): date=${order.CURDATE}`);
+        logger.info(`Order ${order.ORDNAME} (${order.CUSTNAME}): treatmentDate=${order.SIBD_TREATDAY}, orderDate=${order.CURDATE}`);
       });
       
       const filteredOrders = orders.filter((order: any) => {
-        if (!order.CURDATE) {
-          logger.warn(`Order ${order.ORDNAME} has no CURDATE`);
+        // Use SIBD_TREATDAY as primary date field, fallback to CURDATE if needed
+        const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
+        if (!treatmentDate) {
+          logger.warn(`Order ${order.ORDNAME} has no SIBD_TREATDAY or CURDATE`);
           return false;
         }
         
-        const orderDate = new Date(order.CURDATE).toISOString().split('T')[0];
+        const orderDate = new Date(treatmentDate).toISOString().split('T')[0];
         const isInRange = orderDate >= dateFrom && orderDate <= dateTo;
-        logger.info(`Order ${order.ORDNAME}: orderDate=${orderDate}, dateFrom=${dateFrom}, dateTo=${dateTo}, inRange=${isInRange}`);
+        logger.info(`Order ${order.ORDNAME}: treatmentDate=${orderDate}, dateFrom=${dateFrom}, dateTo=${dateTo}, inRange=${isInRange}`);
         return isInRange;
       });
       
       logger.info(`Found ${filteredOrders.length} orders within date range ${dateFrom} to ${dateTo}`);
       filteredOrders.forEach((order: any) => {
-        logger.info(`Filtered order: ${order.ORDNAME} (${order.CUSTNAME}) - ${order.CURDATE}`);
+        const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
+        logger.info(`Filtered order: ${order.ORDNAME} (${order.CUSTNAME}) - treatment: ${order.SIBD_TREATDAY}, order: ${order.CURDATE}`);
       });
       
       // STEP 3: Get subform data (applicators) for each order
