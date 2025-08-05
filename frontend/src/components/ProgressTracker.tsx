@@ -5,7 +5,8 @@ const ProgressTracker = () => {
     currentTreatment, 
     progressStats, 
     getActualTotalSeeds,
-    getActualInsertedSeeds
+    getActualInsertedSeeds,
+    getApplicatorTypeBreakdown
   } = useTreatment();
 
   if (!currentTreatment) {
@@ -49,6 +50,16 @@ const ProgressTracker = () => {
     <div className="flex items-center gap-2">
       <div className={`w-3 h-3 rounded-full ${color}`} />
       <span className="text-sm text-gray-700">{type}: {count}</span>
+    </div>
+  );
+
+  const ApplicatorTypeIndicator = ({ seedCount, count }: {
+    seedCount: number;
+    count: number;
+  }) => (
+    <div className="flex items-center gap-2">
+      <div className="w-3 h-3 rounded-full bg-purple-400" />
+      <span className="text-sm text-gray-700">Applicator {seedCount} seeds: {count}</span>
     </div>
   );
 
@@ -107,6 +118,22 @@ const ProgressTracker = () => {
                 count={progressStats.usageTypeDistribution.none}
                 color="bg-red-400"
               />
+            </div>
+          </div>
+        )}
+
+        {/* Applicator Type Breakdown */}
+        {getApplicatorTypeBreakdown().length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-700">Available Applicators by Type</h4>
+            <div className="grid grid-cols-1 gap-2">
+              {getApplicatorTypeBreakdown().map(({ seedCount, count }) => (
+                <ApplicatorTypeIndicator 
+                  key={seedCount}
+                  seedCount={seedCount}
+                  count={count}
+                />
+              ))}
             </div>
           </div>
         )}

@@ -68,6 +68,7 @@ interface TreatmentContextType {
   getUsageTypeDistribution: () => { full: number; faulty: number; none: number };
   getActualTotalSeeds: () => number;
   getActualInsertedSeeds: () => number;
+  getApplicatorTypeBreakdown: () => { seedCount: number; count: number }[];
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
@@ -207,6 +208,22 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     }, 0);
   };
 
+  const getApplicatorTypeBreakdown = () => {
+    // Group available applicators by seed quantity, excluding returned "no use" applicators
+    const breakdown: { [seedCount: number]: number } = {};
+    
+    availableApplicators
+      .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
+      .forEach(app => {
+        breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
+      });
+    
+    // Convert to sorted array (highest seed count first)
+    return Object.entries(breakdown)
+      .map(([seedCount, count]) => ({ seedCount: parseInt(seedCount), count }))
+      .sort((a, b) => b.seedCount - a.seedCount);
+  };
+
   // Calculate totals for removal treatment
   const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
   const removedSeeds = applicators.reduce((sum, app) => 
@@ -254,7 +271,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         getSeedProgress,
         getUsageTypeDistribution,
         getActualTotalSeeds,
-        getActualInsertedSeeds
+        getActualInsertedSeeds,
+        getApplicatorTypeBreakdown
       }}
     >
       {children}
