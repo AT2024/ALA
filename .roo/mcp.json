@@ -1,3 +1,26 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "context7": {
+      "command": "docker",
+      "args": ["exec", "-i", "context7-mcp", "npx", "@upstash/context7-mcp"],
+      "env": {}
+    },
+    "sequential": {
+      "command": "docker",
+      "args": ["exec", "-i", "sequential-mcp", "npx", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {
+        "DISABLE_THOUGHT_LOGGING": "false"
+      }
+    },
+    "magic": {
+      "command": "docker",
+      "args": ["exec", "-i", "magic-mcp", "npx", "@21st-dev/magic"],
+      "env": {}
+    },
+    "playwright": {
+      "command": "docker",
+      "args": ["exec", "-i", "playwright-mcp", "npx", "@playwright/mcp"],
+      "env": {}
+    }
+  }
 }

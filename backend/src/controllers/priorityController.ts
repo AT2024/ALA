@@ -477,3 +477,4 @@ export const searchApplicators = asyncHandler(async (req: Request, res: Response
     });
   }
 });
+

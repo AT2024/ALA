@@ -4,7 +4,8 @@
       "Bash(rm:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
-      "Bash(docker-compose:*)"
+      "Bash(docker-compose:*)",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "deny": []
   }

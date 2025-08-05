@@ -20,10 +20,10 @@ const TreatmentDocumentation = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingValidation, setPendingValidation] = useState<ApplicatorValidationResult | null>(null);
-  const [loadedApplicators, setLoadedApplicators] = useState<any[]>([]);
   const [showApplicatorList, setShowApplicatorList] = useState(false);
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [aSuffixQuery, setASuffixQuery] = useState('');
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -96,7 +96,7 @@ const TreatmentDocumentation = () => {
         const applicators = response.applicators || [];
         
         // Add each applicator to the context
-        applicators.forEach(applicator => {
+        applicators.forEach((applicator: any) => {
           addAvailableApplicator({
             id: applicator.serialNumber || crypto.randomUUID(),
             serialNumber: applicator.serialNumber,
@@ -109,7 +109,6 @@ const TreatmentDocumentation = () => {
           });
         });
         
-        setLoadedApplicators(applicators);
         console.log(`Loaded ${applicators.length} available applicators`);
         
         if (applicators.length === 0) {
@@ -315,6 +314,7 @@ const TreatmentDocumentation = () => {
     setError(null);
     handleBarcodeScanned(suggestion.serialNumber);
   };
+
 
   const handleApplicatorSelect = (applicator: any) => {
     setShowApplicatorList(false);
@@ -582,10 +582,10 @@ const TreatmentDocumentation = () => {
           {manualEntry ? (
             <div className="space-y-4">
               {/* Applicator Selection Mode Toggle */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => setShowApplicatorList(!showApplicatorList)}
+                  onClick={() => {setShowApplicatorList(true); setShowSuggestions(false); setASuffixQuery('');}}
                   className={`px-3 py-1 text-sm rounded-md ${showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
                 >
@@ -593,7 +593,7 @@ const TreatmentDocumentation = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {setShowApplicatorList(false); setShowSuggestions(false);}}
+                  onClick={() => {setShowApplicatorList(false); setShowSuggestions(false); setASuffixQuery('');}}
                   className={`px-3 py-1 text-sm rounded-md ${!showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
                 >
@@ -602,39 +602,92 @@ const TreatmentDocumentation = () => {
               </div>
 
               {showApplicatorList ? (
-                /* Applicator List View */
-                <div className="border rounded-md max-h-60 overflow-y-auto">
-                  {availableApplicators.length > 0 ? (
-                    <div className="space-y-1 p-2">
-                      {availableApplicators.map((applicator, index) => {
-                        const isNoUseReturned = applicator.returnedFromNoUse;
-                        return (
-                          <button
-                            key={index}
-                            onClick={() => handleApplicatorSelect(applicator)}
-                            className={`w-full text-left p-2 rounded hover:bg-gray-50 border ${
-                              isNoUseReturned 
-                                ? 'border-red-300 bg-red-50 hover:bg-red-100' 
-                                : 'border-gray-200'
-                            }`}
-                            disabled={loading}
-                          >
-                            <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
-                              {applicator.serialNumber}
-                              {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
-                            </div>
-                            <div className={`text-sm ${isNoUseReturned ? 'text-red-600' : 'text-gray-500'}`}>
-                              {applicator.applicatorType} • {applicator.seedQuantity} seeds
-                            </div>
-                          </button>
-                        );
-                      })}
+                /* Applicator List View with A-Suffix Search */
+                <div className="space-y-4">
+                  {/* A-Suffix Filter */}
+                  <div>
+                    <label htmlFor="aSuffixFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                      Filter by A-Number (optional)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        id="aSuffixFilter"
+                        maxLength={10}
+                        value={aSuffixQuery}
+                        onChange={(e) => setASuffixQuery(e.target.value)}
+                        className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                        placeholder="Enter number (e.g., 1, 2, 10) to filter by -A suffix"
+                        disabled={loading}
+                      />
+                      {aSuffixQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setASuffixQuery('')}
+                          className="rounded-md bg-gray-100 px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+                        >
+                          Clear
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      No applicators found for this treatment
-                    </div>
-                  )}
+                    {aSuffixQuery && (
+                      <p className="mt-1 text-xs text-blue-600">
+                        Showing applicators ending with "-A{aSuffixQuery}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Applicator List */}
+                  <div className="border rounded-md max-h-60 overflow-y-auto">
+                    {(() => {
+                      // Filter applicators by A-suffix if query is provided
+                      const filteredApplicators = aSuffixQuery.trim() 
+                        ? availableApplicators.filter(app => 
+                            app.serialNumber?.toUpperCase().endsWith(`-A${aSuffixQuery.trim().toUpperCase()}`)
+                          )
+                        : availableApplicators;
+
+                      return filteredApplicators.length > 0 ? (
+                        <div className="space-y-1 p-2">
+                          {aSuffixQuery && (
+                            <div className="p-2 border-b bg-blue-50 text-sm font-medium text-blue-800">
+                              {filteredApplicators.length} applicator(s) {aSuffixQuery ? `ending with "-A${aSuffixQuery}"` : 'available'}
+                            </div>
+                          )}
+                          {filteredApplicators.map((applicator, index) => {
+                            const isNoUseReturned = applicator.returnedFromNoUse;
+                            return (
+                              <button
+                                key={index}
+                                onClick={() => handleApplicatorSelect(applicator)}
+                                className={`w-full text-left p-2 rounded hover:bg-gray-50 border ${
+                                  isNoUseReturned 
+                                    ? 'border-red-300 bg-red-50 hover:bg-red-100' 
+                                    : 'border-gray-200'
+                                }`}
+                                disabled={loading}
+                              >
+                                <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                                  {applicator.serialNumber}
+                                  {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                                </div>
+                                <div className={`text-sm ${isNoUseReturned ? 'text-red-600' : 'text-gray-500'}`}>
+                                  {applicator.applicatorType} • {applicator.seedQuantity} seeds
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-4 text-center text-gray-500">
+                          {aSuffixQuery 
+                            ? `No applicators found ending with "-A${aSuffixQuery}"` 
+                            : 'No applicators found for this treatment'
+                          }
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               ) : (
                 /* Manual Entry Form */

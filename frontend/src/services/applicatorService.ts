@@ -102,7 +102,7 @@ export const applicatorService = {
     try {
       console.log('Saving applicator data:', applicatorData);
       
-      const response = await api.post(`/treatments/${treatmentId}/applicators`, {
+      await api.post(`/treatments/${treatmentId}/applicators`, {
         serialNumber: applicatorData.serialNumber,
         applicatorType: applicatorData.applicatorType,
         seedQuantity: applicatorData.seedQuantity,
@@ -174,7 +174,7 @@ export const applicatorService = {
     status: 'Performed' | 'Removed'
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await api.patch(`/treatments/${treatmentId}/status`, {
+      await api.patch(`/treatments/${treatmentId}/status`, {
         status
       });
       
