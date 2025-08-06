@@ -54,3 +54,13 @@ repomix-output.txt
 
 # Memory bank internal repos
 memory-bank/memory-bank/
+
+# GitHub CLI installation files
+gh_*.tar.gz
+gh_*/
+
+# Downloaded binaries and tools
+*.tar.gz
+*.zip
+bin/
+tools/

@@ -11,5 +11,6 @@
   },
   "keywords": ["docker", "ala", "accountability", "application"],
   "author": "",
-  "license": "ISC"
+  "license": "UNLICENSED",
+  "private": true
 }

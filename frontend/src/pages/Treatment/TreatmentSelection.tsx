@@ -253,6 +253,14 @@ const TreatmentSelection = () => {
     }));
   };
 
+  // Helper function to check if selected date matches a specific day
+  const isDateActive = (direction: 'yesterday' | 'today' | 'tomorrow') => {
+    const today = new Date();
+    const compareDate = direction === 'yesterday' ? subDays(today, 1) : 
+                       direction === 'tomorrow' ? addDays(today, 1) : today;
+    return formData.date === format(compareDate, 'dd.MMM.yyyy');
+  };
+
   const handlePatientSelection = (patientId: string) => {
     const selectedPatient = availablePatients.find(p => p.id === patientId);
     
@@ -412,21 +420,21 @@ const TreatmentSelection = () => {
                 <button
                   type="button"
                   onClick={() => handleDateChange('yesterday')}
-                  className="rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
+                  className={`rounded-md px-3 py-2 text-sm ${isDateActive('yesterday') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
                 >
                   Yesterday
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDateChange('today')}
-                  className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90"
+                  className={`rounded-md px-3 py-2 text-sm ${isDateActive('today') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
                 >
                   Today
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDateChange('tomorrow')}
-                  className="rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
+                  className={`rounded-md px-3 py-2 text-sm ${isDateActive('tomorrow') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
                 >
                   Tomorrow
                 </button>
