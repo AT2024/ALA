@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
+import { priorityService } from '@/services/priorityService';
 
 interface User {
   id: string;
@@ -48,9 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (valid) {
             setUser(JSON.parse(storedUser));
           } else {
-            // Token invalid, remove from storage
+            // Token invalid, remove from storage and clear cache
             localStorage.removeItem('user');
             localStorage.removeItem('token');
+            try {
+              priorityService.clearCache();
+              console.log('Cleared Priority cache due to invalid token');
+            } catch (error) {
+              console.warn('Error clearing Priority cache on invalid token:', error);
+            }
           }
         }
       } catch (err) {
@@ -141,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    console.log('User logging out');
+    console.log('User logging out - clearing all data');
     setUser(null);
     setLoginIdentifier('');
     
@@ -150,6 +157,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     sessionStorage.removeItem('loginIdentifier');
     sessionStorage.removeItem('priorityUserData');
+    
+    // Clear Priority service cache to prevent data leakage between users
+    try {
+      priorityService.clearCache();
+      console.log('Priority cache cleared successfully');
+    } catch (error) {
+      console.warn('Error clearing Priority cache:', error);
+    }
     
     navigate('/login');
   };

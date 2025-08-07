@@ -7,6 +7,31 @@ import { useAuth } from '@/context/AuthContext';
 import { priorityService } from '@/services/priorityService';
 import { treatmentService } from '@/services/treatmentService';
 
+// Development debugging utility
+const debugPatientData = (context: string, data: any) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.group(`🔍 Patient Data Debug - ${context}`);
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Data:', data);
+    console.groupEnd();
+  }
+};
+
+// Development state monitor
+const debugComponentState = (formData: any, availablePatients: any[], loading: boolean, error: string | null) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.group('📊 Component State Monitor');
+    console.log('Form Data:', formData);
+    console.log('Available Patients:', availablePatients);
+    console.log('Loading:', loading);
+    console.log('Error:', error);
+    console.log('Cache Keys in localStorage:', 
+      Object.keys(localStorage).filter(key => key.includes('cached'))
+    );
+    console.groupEnd();
+  }
+};
+
 // Priority system integration - no more mock data needed
 // Sites, patients, and surgeons will be fetched from Priority system
 
@@ -103,9 +128,17 @@ const TreatmentSelection = () => {
 
   // Fetch patients when site and date change
   useEffect(() => {
+    // Create AbortController for this request
+    const abortController = new AbortController();
+    
     if (formData.site && formData.date) {
-      fetchPatientsForSiteAndDate();
+      fetchPatientsForSiteAndDate(abortController.signal);
     }
+    
+    // Cleanup function to abort request if component unmounts or dependencies change
+    return () => {
+      abortController.abort();
+    };
   }, [formData.site, formData.date]);
 
   // Auto-select patient when only one exists
@@ -115,18 +148,44 @@ const TreatmentSelection = () => {
     }
   }, [availablePatients, formData.patientId]);
 
-  const fetchPatientsForSiteAndDate = async () => {
+  // Cleanup effect to clear state when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log('TreatmentSelection component unmounting - clearing patient data');
+      setAvailablePatients([]);
+      setError(null);
+    };
+  }, []);
+
+  const fetchPatientsForSiteAndDate = async (signal?: AbortSignal) => {
+    // Early return if request was cancelled
+    if (signal?.aborted) {
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
-    // Clear previous patient data to prevent accumulation
+    // Clear previous patient data and form selections to prevent accumulation
     setAvailablePatients([]);
+    setFormData(prev => ({ 
+      ...prev, 
+      patientId: '',
+      seedQty: '',
+      activityPerSeed: ''
+    }));
     
     try {
       console.log(`Fetching patients for site: ${formData.site}, date: ${formData.date}`);
+      debugPatientData('Fetch Start', { site: formData.site, date: formData.date, procedureType });
       
       // Convert date format from DD.MMM.YYYY to YYYY-MM-DD for Priority API
       const dateForApi = convertDateForPriority(formData.date);
+      
+      // Early return if request was cancelled before API call
+      if (signal?.aborted) {
+        return;
+      }
       
       // Call Priority service to get orders for the site and date
       const data = await priorityService.getOrdersForSiteAndDate(
@@ -135,97 +194,171 @@ const TreatmentSelection = () => {
         procedureType || undefined
       );
       
-      // Filter orders by date as a frontend validation backup
-      const filteredOrders = data.orders?.filter((order: any) => {
-        if (!order.SIBD_TREATDAY && !order.CURDATE) {
-          console.warn(`Order ${order.ORDNAME} has no date field`);
-          return false;
+      debugPatientData('API Response', data);
+      
+      // Check if request was cancelled after API call
+      if (signal?.aborted) {
+        return;
+      }
+      
+      // Backend now handles all date filtering for consistency
+      // No frontend filtering needed to prevent duplicate filtering issues
+      const filteredOrders = data.orders || [];
+      
+      console.log(`Backend returned ${filteredOrders.length} orders for site ${formData.site} on date ${dateForApi}`);
+      
+      // Transform Priority data to our patient format with validation
+      const patients: PriorityPatient[] = filteredOrders
+        .filter((order: any) => {
+          // Validate required fields
+          if (!order.ORDNAME) {
+            console.warn('Skipping order with missing ORDNAME:', order);
+            return false;
+          }
+          return true;
+        })
+        .map((order: any) => ({
+          id: order.ORDNAME,
+          seedQty: parseInt(order.SBD_SEEDQTY) || 0,
+          activityPerSeed: parseFloat(order.SBD_PREFACTIV) || 0,
+          ordName: order.ORDNAME,
+          reference: order.REFERENCE || null
+        }));
+      
+      // Helper function to follow reference chain and find root order
+      const findRootOrder = (orderName: string, visited = new Set<string>()): PriorityPatient | null => {
+        // Prevent infinite loops with circular references
+        if (visited.has(orderName)) {
+          console.warn(`🔄 Circular reference detected for order: ${orderName}`);
+          return null;
+        }
+        visited.add(orderName);
+        
+        // Find the current order
+        const currentOrder = patients.find(p => p.ordName === orderName);
+        if (!currentOrder) {
+          console.warn(`❌ Order not found in dataset: ${orderName}`);
+          return null;
         }
         
-        const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
-        const orderDate = new Date(treatmentDate).toISOString().split('T')[0];
-        const isMatchingDate = orderDate === dateForApi;
+        console.log(`🔍 Checking order: ${orderName} | Seeds: ${currentOrder.seedQty} | Reference: ${currentOrder.reference || 'None'}`);
         
-        if (!isMatchingDate) {
-          console.warn(`Frontend filtering: Order ${order.ORDNAME} date ${orderDate} does not match requested ${dateForApi}`);
+        // If this order has no reference, it's a root order
+        if (!currentOrder.reference) {
+          console.log(`🌳 Root order found: ${orderName} | Seeds: ${currentOrder.seedQty}`);
+          return currentOrder;
         }
         
-        return isMatchingDate;
-      }) || [];
+        // Follow the reference chain
+        console.log(`⬆️ Following reference: ${orderName} -> ${currentOrder.reference}`);
+        return findRootOrder(currentOrder.reference, visited);
+      };
       
-      console.log(`Backend returned ${data.orders?.length || 0} orders, frontend filtered to ${filteredOrders.length} orders for date ${dateForApi}`);
+      // Reference chain validation: only include orders with valid root orders
+      const validPatients: PriorityPatient[] = [];
+      const seenOrderNames = new Set<string>();
       
-      // Transform Priority data to our patient format
-      const patients: PriorityPatient[] = filteredOrders.map((order: any) => ({
-        id: order.ORDNAME,
-        seedQty: parseInt(order.SBD_SEEDQTY) || 0,
-        activityPerSeed: parseFloat(order.SBD_PREFACTIV) || 0,
-        ordName: order.ORDNAME,
-        reference: order.REFERENCE
-      }));
-      
-      // Deduplicate patients by REFERENCE (actual patient ID) to prevent duplicate patients
-      // Keep the most recent order for each patient (by ORDNAME)
-      const patientMap = new Map<string, PriorityPatient>();
+      console.group(`🔗 Reference Chain Validation for ${patients.length} orders`);
       
       patients.forEach(patient => {
-        const key = patient.reference || patient.ordName || patient.id; // Use reference as key, fallback to ordName or id
+        const orderName = patient.ordName || patient.id;
         
-        if (!key) {
-          console.warn('Patient has no valid key for deduplication:', patient);
+        console.group(`🔍 Processing order: ${orderName}`);
+        
+        // Skip if we've already processed this exact ORDNAME
+        if (seenOrderNames.has(orderName)) {
+          console.warn(`⚠️ Duplicate ORDNAME skipped: ${orderName}`);
+          console.groupEnd();
+          return;
+        }
+        seenOrderNames.add(orderName);
+        
+        // Follow reference chain to find root order
+        const rootOrder = findRootOrder(orderName);
+        
+        if (!rootOrder) {
+          console.log(`❌ FILTERED OUT: ${orderName} - No valid root order found`);
+          console.groupEnd();
           return;
         }
         
-        if (!patientMap.has(key)) {
-          patientMap.set(key, patient);
-        } else {
-          // If we already have this patient, keep the one with the higher ORDNAME (more recent)
-          const existing = patientMap.get(key)!;
-          const currentOrderName = patient.ordName || '';
-          const existingOrderName = existing.ordName || '';
-          
-          if (currentOrderName > existingOrderName) {
-            patientMap.set(key, patient);
-          }
+        // Check if root order has seeds
+        if (rootOrder.seedQty <= 0) {
+          console.log(`❌ FILTERED OUT: ${orderName} - Root order ${rootOrder.ordName} has no seeds (${rootOrder.seedQty})`);
+          console.groupEnd();
+          return;
         }
+        
+        // If current order has 0 seeds but references a valid root, it's still invalid
+        if (patient.seedQty <= 0 && patient.reference) {
+          console.log(`❌ FILTERED OUT: ${orderName} - Order has 0 seeds and references another order (not a root)`);
+          console.groupEnd();
+          return;
+        }
+        
+        console.log(`✅ VALID: ${orderName} - Root: ${rootOrder.ordName} with ${rootOrder.seedQty} seeds`);
+        validPatients.push(patient);
+        console.groupEnd();
       });
       
-      const uniquePatients = Array.from(patientMap.values());
+      console.groupEnd();
       
-      console.log(`Found ${patients.length} total orders, ${uniquePatients.length} unique patients for site ${formData.site}`);
-      if (patients.length !== uniquePatients.length) {
-        console.warn(`Deduplication: Removed ${patients.length - uniquePatients.length} duplicate patient entries`);
-        
-        // Log details of what was kept vs removed
-        const keptPatients = uniquePatients.map(up => ({ reference: up.reference, ordName: up.ordName }));
-        const removedPatients = patients.filter(p => !keptPatients.find(kp => kp.reference === p.reference && kp.ordName === p.ordName));
-        
-        console.group('Deduplication Details:');
-        console.log('Kept patients:', keptPatients);
-        console.log('Removed patients:', removedPatients.map(r => ({ reference: r.reference, ordName: r.ordName })));
-        
-        // Show which patients had duplicates
-        const duplicateReferences = [...new Set(removedPatients.map(p => p.reference))];
-        duplicateReferences.forEach(ref => {
-          const allOrdersForPatient = patients.filter(p => p.reference === ref);
-          const keptOrder = keptPatients.find(kp => kp.reference === ref);
-          console.log(`Patient ${ref}: Had ${allOrdersForPatient.length} orders, kept ${keptOrder?.ordName}`);
-        });
-        console.groupEnd();
+      // Sort patients by ORDNAME for consistent ordering
+      const uniquePatients = validPatients.sort((a, b) => (a.ordName || '').localeCompare(b.ordName || ''));
+      
+      console.log(`🔗 Reference Chain Validation Summary for site ${formData.site}:`);
+      console.log(`- Total orders processed: ${patients.length}`);
+      console.log(`- Valid patients (with valid root orders): ${uniquePatients.length}`);
+      console.log(`- Invalid orders filtered out: ${patients.length - uniquePatients.length}`);
+      
+      // Log final patient list for debugging
+      console.group('✅ Final Valid Patient List:');
+      uniquePatients.forEach((patient, index) => {
+        console.log(`${index + 1}. Patient ID: ${patient.ordName} | Reference: ${patient.reference || 'ROOT'} | Seeds: ${patient.seedQty} | Activity: ${patient.activityPerSeed}`);
+      });
+      console.groupEnd();
+      
+      // Final check for cancelled request before setting state
+      if (signal?.aborted) {
+        return;
       }
       
       setAvailablePatients(uniquePatients);
       
+      debugPatientData('Final Patient List Set', uniquePatients);
+      
       // If no patients found, show helpful message
       if (uniquePatients.length === 0) {
         setError(`No scheduled procedures found for ${formData.site} on ${formData.date}`);
+      } else {
+        console.log(`Successfully loaded ${uniquePatients.length} unique patients for ${formData.site} on ${formData.date}`);
       }
+      
+      // Debug component state in development
+      debugComponentState(formData, uniquePatients, false, null);
     } catch (err: any) {
+      // Don't show error if request was cancelled
+      if (signal?.aborted) {
+        console.log('Patient fetch request was cancelled');
+        return;
+      }
+      
       console.error('Error fetching patients:', err);
       setError(err.message || 'Failed to fetch patients for selected site and date');
       setAvailablePatients([]);
+      
+      // Clear form data on error
+      setFormData(prev => ({ 
+        ...prev, 
+        patientId: '',
+        seedQty: '',
+        activityPerSeed: ''
+      }));
     } finally {
-      setLoading(false);
+      // Only update loading state if request wasn't cancelled
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
@@ -244,10 +377,15 @@ const TreatmentSelection = () => {
         newDate = currentDate;
     }
     
+    console.log(`Date changed to: ${direction} (${format(newDate, 'dd.MMM.yyyy')})`);
+    
+    // Clear all patient-related state when date changes to prevent stale data
+    setAvailablePatients([]);
+    setError(null);
     setFormData(prev => ({ 
       ...prev, 
       date: format(newDate, 'dd.MMM.yyyy'),
-      patientId: '', // Reset patient selection when date changes
+      patientId: '',
       seedQty: '',
       activityPerSeed: ''
     }));
@@ -266,12 +404,17 @@ const TreatmentSelection = () => {
     
     if (selectedPatient) {
       console.log('Selected patient:', selectedPatient);
+      debugPatientData('Patient Selection', selectedPatient);
+      
       setFormData(prev => ({
         ...prev,
         patientId: selectedPatient.id,
         seedQty: selectedPatient.seedQty.toString(),
         activityPerSeed: selectedPatient.activityPerSeed.toString()
       }));
+    } else {
+      console.warn('Patient not found in availablePatients:', patientId);
+      debugPatientData('Patient Selection Failed', { patientId, availablePatients });
     }
   };
   

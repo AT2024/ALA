@@ -1,6 +1,57 @@
 import api from './api';
 import { Treatment } from './treatmentService';
 
+// Cache management for Priority data
+const CACHE_KEYS = {
+  TREATMENTS: 'cached_treatments',
+  ORDERS: 'cached_orders',
+  PATIENT_DATA: 'cached_patient_data'
+} as const;
+
+// Helper function to clear all Priority-related cache
+const clearAllCache = () => {
+  Object.values(CACHE_KEYS).forEach(key => {
+    localStorage.removeItem(key);
+  });
+  console.log('Cleared all Priority data cache');
+};
+
+// Helper function to get cache with expiration check
+const getCachedData = (key: string, maxAgeMs: number = 5 * 60 * 1000): any | null => {
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const age = Date.now() - timestamp;
+    
+    if (age > maxAgeMs) {
+      localStorage.removeItem(key);
+      console.log(`Cache expired for ${key} (age: ${age}ms)`);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.warn(`Error reading cache for ${key}:`, error);
+    localStorage.removeItem(key);
+    return null;
+  }
+};
+
+// Helper function to set cache with timestamp
+const setCachedData = (key: string, data: any) => {
+  try {
+    const cacheEntry = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(key, JSON.stringify(cacheEntry));
+  } catch (error) {
+    console.warn(`Error setting cache for ${key}:`, error);
+  }
+};
+
 // We'll use our backend API as a proxy to the Priority system
 export const priorityService = {
   // Debug function to test Priority API connectivity
@@ -19,6 +70,9 @@ export const priorityService = {
     }
   },
   
+  // Clear all cached data (called on logout or user switch)
+  clearCache: clearAllCache,
+
   // Get treatments from Priority system
   async getTreatments(params: {
     type?: 'insertion' | 'removal';
@@ -27,20 +81,26 @@ export const priorityService = {
     date?: string;
   }): Promise<Treatment[]> {
     try {
+      console.log('Fetching treatments with params:', params);
+      
       // Use our backend as a proxy to Priority
       const response = await api.get('/proxy/priority/treatments', { params });
 
-      // Cache treatments for offline use
-      localStorage.setItem('cached_treatments', JSON.stringify(response.data));
+      // Cache treatments with timestamp for offline use (5 minute expiration)
+      setCachedData(CACHE_KEYS.TREATMENTS, response.data);
+      console.log(`Cached ${response.data.length} treatments`);
 
       return response.data;
     } catch (error) {
       console.error('Error fetching from Priority:', error);
-      // Try to get from cache if available
-      const cachedData = localStorage.getItem('cached_treatments');
+      
+      // Try to get from cache if available and not expired
+      const cachedData = getCachedData(CACHE_KEYS.TREATMENTS);
       if (cachedData) {
-        return JSON.parse(cachedData);
+        console.log(`Using cached treatments (${cachedData.length} items)`);
+        return cachedData;
       }
+      
       throw error;
     }
   },
@@ -69,12 +129,34 @@ export const priorityService = {
 
   // Get orders for a specific site and date (for treatment selection)
   async getOrdersForSiteAndDate(site: string, date: string, procedureType?: string): Promise<any> {
-    const response = await api.post('/proxy/priority/orders', {
-      site,
-      date,
-      procedureType
-    });
-    return response.data;
+    const cacheKey = `${CACHE_KEYS.ORDERS}_${site}_${date}_${procedureType || 'all'}`;
+    
+    try {
+      console.log(`Fetching orders for site: ${site}, date: ${date}, type: ${procedureType || 'all'}`);
+      
+      const response = await api.post('/proxy/priority/orders', {
+        site,
+        date,
+        procedureType
+      });
+      
+      // Cache the response with a shorter expiration (2 minutes for order data)
+      setCachedData(cacheKey, response.data);
+      console.log(`Cached orders for ${site} on ${date}:`, response.data.count || 0, 'orders');
+      
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching orders for ${site} on ${date}:`, error);
+      
+      // Try cached data as fallback (2 minute expiration)
+      const cachedData = getCachedData(cacheKey, 2 * 60 * 1000);
+      if (cachedData) {
+        console.log(`Using cached orders for ${site} on ${date}`);
+        return cachedData;
+      }
+      
+      throw error;
+    }
   },
 
   // Get order details using SIBD_APPLICATUSELIST_SUBFORM

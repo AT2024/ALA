@@ -547,26 +547,54 @@ export const priorityService = {
     }
   },
 
-  // Get orders for site using exact Priority API format
-  async getOrdersForSiteWithFilter(custName: string, userId?: string) {
+  // Get orders for site using exact Priority API format with optional date filtering
+  async getOrdersForSiteWithFilter(custName: string, userId?: string, filterDate?: string) {
     try {
-      logger.info(`Getting orders for site ${custName} using Priority API format`);
+      logger.info(`Getting orders for site ${custName} using Priority API format${filterDate ? ` with date filter: ${filterDate}` : ''}`);
       
       // For development mode with test@example.com, use test data first
       if (userId && shouldUseTestData(userId)) {
-        logger.info(`Development mode: Using test data for user ${userId} at site ${custName}`);
+        logger.info(`🧪 DEVELOPMENT MODE: Using test data for user ${userId} at site ${custName}`);
         const testData = loadTestData();
         if (testData && testData.orders) {
-          const filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
-          logger.info(`Retrieved ${filteredOrders.length} orders for site ${custName} from test data`);
+          let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
+          
+          // Apply date filtering to test data if provided
+          if (filterDate) {
+            const targetDate = new Date(filterDate).toISOString().split('T')[0];
+            filteredOrders = filteredOrders.filter((order: any) => {
+              const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
+              return orderDate === targetDate;
+            });
+            logger.info(`🧪 TEST DATA: Filtered to ${filteredOrders.length} orders matching date ${targetDate}`);
+          }
+          
+          logger.info(`🧪 TEST DATA: Retrieved ${filteredOrders.length} orders for site ${custName} from test data`);
           return filteredOrders;
         }
       }
       
-      // Use exact URL format as described: /ORDERS?$filter=CUSTNAME eq %27100030%27
-      // The %27 represents URL encoded single quotes
-      const filterParam = `CUSTNAME eq '${custName}'`;
-      logger.info(`Using filter: ${filterParam}`);
+      // Build Priority API OData filter with optional date filtering
+      let filterParam = `CUSTNAME eq '${custName}'`;
+      
+      if (filterDate) {
+        // Convert date to Priority API OData datetime format
+        const targetDate = new Date(filterDate);
+        if (!isNaN(targetDate.getTime())) {
+          // Use SIBD_TREATDAY as primary treatment date field
+          const odataDate = targetDate.toISOString().split('T')[0]; // Get YYYY-MM-DD format
+          
+          // Add date filter to the OData query
+          // Filter by SIBD_TREATDAY (treatment date) - this is the correct field for treatment scheduling
+          filterParam += ` and SIBD_TREATDAY ge datetime'${odataDate}T00:00:00' and SIBD_TREATDAY lt datetime'${odataDate}T23:59:59'`;
+          
+          logger.info(`📅 PRIORITY API: Adding date filter for ${odataDate}`);
+        } else {
+          logger.warn(`⚠️ Invalid date format provided: ${filterDate}, proceeding without date filter`);
+        }
+      }
+      
+      logger.info(`🔍 PRIORITY API: Using filter: ${filterParam}`);
       
       const response = await priorityApi.get('/ORDERS', {
         params: {
@@ -576,10 +604,31 @@ export const priorityService = {
         timeout: 30000, // 30 second timeout
       });
 
-      logger.info(`Retrieved ${response.data.value.length} orders for site ${custName} from Priority API`);
+      logger.info(`✅ PRIORITY API: Retrieved ${response.data.value.length} orders for site ${custName} from Priority API`);
+      
+      // Enhanced DEBUG: Log every single order returned by Priority API with clear data source indication
+      logger.info('=== 🔍 PRIORITY API SERVICE LEVEL DEBUG ===');
+      logger.info(`🎯 Data Source: REAL Priority API (not test data)`);
+      logger.info(`🏥 Site: ${custName}`);
+      logger.info(`📅 Date Filter: ${filterDate || 'None'}`);
+      logger.info(`🔍 Filter used: ${filterParam}`);
+      logger.info(`📊 Total orders returned: ${response.data.value.length}`);
+      
+      response.data.value.forEach((order: any, index: number) => {
+        logger.info(`🏥 PRIORITY API ORDER ${index + 1}:`);
+        logger.info(`  📋 ORDNAME: ${order.ORDNAME}`);
+        logger.info(`  🏢 CUSTNAME: ${order.CUSTNAME}`);
+        logger.info(`  🔗 REFERENCE: ${order.REFERENCE}`);
+        logger.info(`  📅 SIBD_TREATDAY: ${order.SIBD_TREATDAY}`);
+        logger.info(`  📅 CURDATE: ${order.CURDATE}`);
+        logger.info(`  🌱 SBD_SEEDQTY: ${order.SBD_SEEDQTY}`);
+        logger.info(`  ⚡ SBD_PREFACTIV: ${order.SBD_PREFACTIV}`);
+        logger.info(`  📄 Full order data:`, JSON.stringify(order, null, 2));
+      });
+      logger.info('=== 🔍 END PRIORITY API SERVICE DEBUG ===');
       
       if (response.data.value.length > 0) {
-        logger.info(`Sample order data:`, response.data.value[0]);
+        logger.info(`📄 Sample order data:`, response.data.value[0]);
       }
       
       return response.data.value;
@@ -598,14 +647,25 @@ export const priorityService = {
       // Try to load test data as fallback only if Priority API is completely down
       const testData = loadTestData();
       if (testData && testData.orders) {
-        logger.warn(`Priority API failed, using test data fallback for site ${custName}`);
-        const filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
-        logger.info(`Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
+        logger.warn(`❌ Priority API failed, using test data fallback for site ${custName}`);
+        let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
+        
+        // Apply date filtering to fallback test data if provided
+        if (filterDate) {
+          const targetDate = new Date(filterDate).toISOString().split('T')[0];
+          filteredOrders = filteredOrders.filter((order: any) => {
+            const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
+            return orderDate === targetDate;
+          });
+          logger.info(`🧪 TEST DATA FALLBACK: Filtered to ${filteredOrders.length} orders matching date ${targetDate}`);
+        }
+        
+        logger.info(`🧪 TEST DATA FALLBACK: Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
         return filteredOrders;
       }
       
       // If both Priority API and test data fail, return empty array
-      logger.error(`Both Priority API and test data failed for site ${custName}`);
+      logger.error(`❌ Both Priority API and test data failed for site ${custName}`);
       return [];
     }
   },
@@ -1288,42 +1348,50 @@ export const priorityService = {
       
       logger.info(`Date range: ${dateFrom} to ${dateTo} (parsed from: ${currentDate})`);
       
-      // STEP 1: Get orders for the site using the correct Priority API workflow
-      logger.info(`Getting orders for site ${site} using Priority API format`);
-      const orders = await this.getOrdersForSiteWithFilter(site, userId);
+      // STEP 1: Get orders for the site using the correct Priority API workflow with date range filtering
+      logger.info(`Getting orders for site ${site} using Priority API format with date range ${dateFrom} to ${dateTo}`);
+      
+      // Get orders for each day in the date range (since Priority API date filtering is precise)
+      const allOrders = [];
+      const currentDateObj = new Date(dateFrom);
+      const endDateObj = new Date(dateTo);
+      
+      while (currentDateObj <= endDateObj) {
+        const dateString = currentDateObj.toISOString().split('T')[0];
+        logger.info(`🔍 Getting orders for ${site} on ${dateString}`);
+        
+        const dayOrders = await this.getOrdersForSiteWithFilter(site, userId, dateString);
+        allOrders.push(...dayOrders);
+        
+        logger.info(`📊 Found ${dayOrders.length} orders for ${site} on ${dateString}`);
+        
+        // Move to next day
+        currentDateObj.setDate(currentDateObj.getDate() + 1);
+      }
+      
+      // Remove duplicates based on ORDNAME
+      const orders = allOrders.filter((order, index, self) => 
+        index === self.findIndex(o => o.ORDNAME === order.ORDNAME)
+      );
       
       if (orders.length === 0) {
-        logger.info(`No orders found for site ${site}`);
+        logger.info(`📭 No orders found for site ${site} in date range ${dateFrom} to ${dateTo}`);
         return [];
       }
       
-      logger.info(`Found ${orders.length} orders for site ${site}`);
+      logger.info(`📊 Found ${orders.length} unique orders for site ${site} in date range`);
       
-      // STEP 2: Filter orders by date range if needed
-      logger.info(`Before filtering: ${orders.length} orders found`);
-      orders.forEach((order: any) => {
-        logger.info(`Order ${order.ORDNAME} (${order.CUSTNAME}): treatmentDate=${order.SIBD_TREATDAY}, orderDate=${order.CURDATE}`);
-      });
-      
-      const filteredOrders = orders.filter((order: any) => {
-        // Use SIBD_TREATDAY as primary date field, fallback to CURDATE if needed
+      // STEP 2: Orders are already filtered by date at API level, just log for debugging
+      logger.info(`📋 Orders already filtered by Priority API date filtering:`);
+      orders.forEach((order: any, index: number) => {
         const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
-        if (!treatmentDate) {
-          logger.warn(`Order ${order.ORDNAME} has no SIBD_TREATDAY or CURDATE`);
-          return false;
-        }
-        
-        const orderDate = new Date(treatmentDate).toISOString().split('T')[0];
-        const isInRange = orderDate >= dateFrom && orderDate <= dateTo;
-        logger.info(`Order ${order.ORDNAME}: treatmentDate=${orderDate}, dateFrom=${dateFrom}, dateTo=${dateTo}, inRange=${isInRange}`);
-        return isInRange;
+        logger.info(`  ${index + 1}. Order ${order.ORDNAME} (${order.CUSTNAME}) - treatment: ${order.SIBD_TREATDAY}, order: ${order.CURDATE}`);
       });
       
-      logger.info(`Found ${filteredOrders.length} orders within date range ${dateFrom} to ${dateTo}`);
-      filteredOrders.forEach((order: any) => {
-        const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
-        logger.info(`Filtered order: ${order.ORDNAME} (${order.CUSTNAME}) - treatment: ${order.SIBD_TREATDAY}, order: ${order.CURDATE}`);
-      });
+      // Use all orders since they're already date-filtered at API level
+      const filteredOrders = orders;
+      
+      logger.info(`✅ Using ${filteredOrders.length} orders (already date-filtered by Priority API)`);
       
       // STEP 3: Get subform data (applicators) for each order
       const allApplicators = [];

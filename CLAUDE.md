@@ -163,3 +163,37 @@ This is a **medical treatment tracking application** with two main components:
 - Automated security scanning with Trivy
 
 The application is designed for medical environments requiring reliability, real-time data validation, and seamless integration with existing Priority systems.
+
+## Priority Database & API Development Rules
+
+### Reference Chain Validation Rules
+- Always validate reference chains before displaying patient lists to users
+- Filter out orders with seedQty = 0 that have reference values pointing to other orders
+- Only show root orders (no reference OR seedQty > 0) as valid patients in treatment selection
+- Detect and handle circular references in order chains to prevent infinite loops
+- Log reference chain traversal process with clear indicators when debugging patient data
+
+### Priority API Query Optimization Rules
+- Always include date filtering in Priority API OData queries, never filter dates in backend memory
+- Use SIBD_TREATDAY as primary date field for treatment scheduling queries
+- Format OData date filters as: `SIBD_TREATDAY ge datetime'YYYY-MM-DDTHH:MM:SS'`
+- Pass date parameters from controller to service layer to enable API-level filtering
+- Log data source clearly with emoji indicators (🧪 test data, 🎯 real API, ❌ fallback)
+
+### Data Source Management Rules
+- Use test data only in development mode with test@example.com user identification
+- Apply same filtering logic to both test data and real Priority API responses
+- Implement graceful fallback from Priority API to test data when API fails
+- Never mix test data with real Priority data without clear logging distinction
+
+### Performance & Debugging Rules
+- Avoid retrieving all historical orders for a site when only current date is needed
+- Run TypeScript compilation check after modifying backend Priority service files
+- Check for duplicate orders by ORDNAME before processing reference chains
+- Log Priority API filter parameters and response counts for debugging efficiency issues
+
+### Common Pitfall Prevention Rules
+- Validate that order counts make business sense before trusting frontend display logic
+- Check reference chain integrity when orders appear to be "made up" by the system
+- Verify data source (test vs real) when investigating unexpected order data
+- Always log the complete OData query being sent to Priority API for troubleshooting

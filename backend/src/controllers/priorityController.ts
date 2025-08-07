@@ -176,16 +176,26 @@ export const getAllowedSitesForUser = asyncHandler(async (req: Request, res: Res
 // @access  Private
 export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Response) => {
   try {
+    // DEBUG: Log that we reached this controller
+    logger.info('🎯 === PRIORITY ORDERS CONTROLLER REACHED - NEW VERSION ===');
+    logger.info(`Timestamp: ${new Date().toISOString()}`);
+    logger.info(`Request Method: ${req.method}`);
+    logger.info(`Request URL: ${req.originalUrl}`);
+    logger.info(`Request Path: ${req.path}`);
+    logger.info(`Request Body:`, req.body);
+    logger.info('=================================');
+    
     const { site, date, procedureType } = req.body;
     
     if (!site) {
+      logger.error('❌ Missing site parameter');
       res.status(400).json({ 
         error: 'Site parameter is required'
       });
       return;
     }
     
-    logger.info(`Fetching orders for site: ${site}, date: ${date}, procedureType: ${procedureType}`);
+    logger.info(`✅ Starting order fetch for site: ${site}, date: ${date}, procedureType: ${procedureType}`);
     
     // Validate user has access to this site
     const userSites = req.user?.metadata?.sites || [];
@@ -198,32 +208,62 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
       return;
     }
     
-    // Get orders from Priority for the specified site using exact CUSTNAME filtering
-    let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email);
+    // Get orders from Priority for the specified site using exact CUSTNAME and date filtering
+    let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email, date);
     
-    // Filter orders by date if provided
-    if (date) {
-      const targetDate = new Date(date).toISOString().split('T')[0];
-      logger.info(`Filtering orders by target date: ${targetDate}`);
+    logger.info(`Retrieved ${orders.length} orders from Priority service for site ${site}`);
+    
+    // DEBUG: Log raw Priority API response
+    logger.info('=== RAW PRIORITY API RESPONSE DEBUG ===');
+    logger.info(`Site: ${site}, Date: ${date}, ProcedureType: ${procedureType}`);
+    logger.info(`Raw orders count: ${orders.length}`);
+    orders.forEach((order: any, index: number) => {
+      logger.info(`RAW ORDER ${index + 1}:`);
+      logger.info(`  ORDNAME: ${order.ORDNAME}`);
+      logger.info(`  CUSTNAME: ${order.CUSTNAME}`);
+      logger.info(`  REFERENCE: ${order.REFERENCE}`);
+      logger.info(`  CURDATE: ${order.CURDATE}`);
+      logger.info(`  SIBD_TREATDAY: ${order.SIBD_TREATDAY}`);
+      logger.info(`  SBD_SEEDQTY: ${order.SBD_SEEDQTY}`);
+      logger.info(`  SBD_PREFACTIV: ${order.SBD_PREFACTIV}`);
+      logger.info(`  Full object:`, JSON.stringify(order, null, 2));
+    });
+    logger.info('=== END RAW PRIORITY API RESPONSE ===');
+    
+    // 🎯 Orders are already filtered by date and site at Priority API level
+    logger.info(`✅ Orders already filtered by Priority API - no additional filtering needed`);
+    
+    // Validate and clean order data (basic validation only)
+    const validOrders = orders.filter((order: any) => {
+      // Check for required fields
+      if (!order.ORDNAME) {
+        logger.warn(`⚠️ Skipping order without ORDNAME:`, order);
+        return false;
+      }
       
-      const beforeFilter = orders.length;
-      orders = orders.filter((order: any) => {
-        if (!order.CURDATE && !order.SIBD_TREATDAY) {
-          logger.debug(`Order ${order.ORDNAME || 'unknown'} has no date field`);
-          return false;
-        }
-        
-        const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
-        const matches = orderDate === targetDate;
-        
-        if (!matches) {
-          logger.debug(`Order ${order.ORDNAME || 'unknown'} date ${orderDate} does not match target ${targetDate}`);
-        }
-        
-        return matches;
+      if (!order.CUSTNAME) {
+        logger.warn(`⚠️ Order ${order.ORDNAME} missing CUSTNAME`);
+        return false;
+      }
+      
+      // Orders already have proper date filtering at API level
+      logger.info(`✅ VALIDATED - Order: ${order.ORDNAME}, Site: ${order.CUSTNAME}, Treatment Date: ${order.SIBD_TREATDAY}`);
+      
+      return true;
+    });
+    
+    logger.info(`📊 VALIDATION SUMMARY: ${validOrders.length} valid orders (removed ${orders.length - validOrders.length} invalid)`);
+    
+    // Use all valid orders since date filtering is already done at Priority API level
+    orders = validOrders;
+    
+    if (orders.length > 0) {
+      logger.info(`✅ PRIORITY API FILTERED ORDERS:`);
+      orders.forEach((order: any) => {
+        logger.info(`  📋 ${order.ORDNAME} | Site: ${order.CUSTNAME} | Treatment: ${order.SIBD_TREATDAY} | Seeds: ${order.SBD_SEEDQTY}`);
       });
-      
-      logger.info(`Date filtering: ${beforeFilter} orders -> ${orders.length} orders for date ${targetDate}`);
+    } else {
+      logger.info(`📭 No orders found for site ${site} on date ${date} (already filtered by Priority API)`);
     }
     
     // Filter by procedure type if needed
@@ -241,15 +281,32 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
       });
     }
     
-    logger.info(`Found ${orders.length} orders for site ${site}`);
+    // Log final results with detailed breakdown
+    logger.info(`Final results for site ${site}:`);
+    logger.info(`- Total orders found: ${orders.length}`);
+    logger.info(`- Date filter applied: ${date || 'None'}`);
+    logger.info(`- Procedure type filter: ${procedureType || 'None'}`);
     
-    res.status(200).json({
+    // Add validation summary to response
+    const response = {
       success: true,
       orders: orders,
       site: site,
       date: date,
-      count: orders.length
-    });
+      count: orders.length,
+      metadata: {
+        totalRetrieved: validOrders.length,
+        afterDateFilter: orders.length,
+        filters: {
+          site,
+          date: date || null,
+          procedureType: procedureType || null
+        }
+      }
+    };
+    
+    logger.info(`Returning ${orders.length} orders for site ${site}`);
+    res.status(200).json(response);
   } catch (error: any) {
     logger.error(`Error fetching orders for site and date: ${error.message}`);
     res.status(500).json({
