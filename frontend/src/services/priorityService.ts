@@ -134,19 +134,44 @@ export const priorityService = {
     try {
       console.log(`Fetching orders for site: ${site}, date: ${date}, type: ${procedureType || 'all'}`);
       
+      // DEBUG: Log the exact API call details
+      console.log('=== API CALL DEBUG ===');
+      console.log('API Base URL:', api.defaults.baseURL);
+      console.log('Request Path:', '/proxy/priority/orders');
+      console.log('Full URL will be:', `${api.defaults.baseURL}/proxy/priority/orders`);
+      console.log('Request Data:', { site, date, procedureType });
+      
       const response = await api.post('/proxy/priority/orders', {
         site,
         date,
         procedureType
       });
       
+      console.log('✅ API call successful, response received');
+      
       // Cache the response with a shorter expiration (2 minutes for order data)
       setCachedData(cacheKey, response.data);
       console.log(`Cached orders for ${site} on ${date}:`, response.data.count || 0, 'orders');
       
       return response.data;
-    } catch (error) {
-      console.error(`Error fetching orders for ${site} on ${date}:`, error);
+    } catch (error: any) {
+      console.error('❌ API call failed');
+      console.error(`Error fetching orders for ${site} on ${date}:`, error.message);
+      
+      // DEBUG: Log detailed error information
+      if (error.response) {
+        console.error('Response Error Details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          url: error.response.config?.url,
+          fullURL: `${error.response.config?.baseURL}${error.response.config?.url}`,
+          data: error.response.data
+        });
+      } else if (error.request) {
+        console.error('Request Error - No Response:', error.request);
+      } else {
+        console.error('Setup Error:', error.message);
+      }
       
       // Try cached data as fallback (2 minute expiration)
       const cachedData = getCachedData(cacheKey, 2 * 60 * 1000);
