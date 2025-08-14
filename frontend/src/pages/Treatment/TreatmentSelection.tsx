@@ -273,6 +273,13 @@ const TreatmentSelection = () => {
         }
         seenOrderNames.add(orderName);
         
+        // Skip patient reference records (PAT-*) - these are just reference data, not selectable patients
+        if (orderName.startsWith('PAT-')) {
+          console.log(`⚠️ Skipping patient reference record: ${orderName}`);
+          console.groupEnd();
+          return;
+        }
+        
         // Follow reference chain to find root order
         const rootOrder = findRootOrder(orderName);
         
@@ -282,21 +289,24 @@ const TreatmentSelection = () => {
           return;
         }
         
-        // Check if root order has seeds
-        if (rootOrder.seedQty <= 0) {
-          console.log(`❌ FILTERED OUT: ${orderName} - Root order ${rootOrder.ordName} has no seeds (${rootOrder.seedQty})`);
+        // Per CLAUDE.md rules: "Only show root orders (no reference OR seedQty > 0)"
+        // This means: show orders that either have no reference OR have seeds > 0
+        // The current order should be evaluated, not what it references
+        
+        if (patient.reference && patient.seedQty <= 0) {
+          // Filter out only orders that BOTH have a reference AND have 0 seeds
+          console.log(`❌ FILTERED OUT: ${orderName} - Order has reference AND 0 seeds (${patient.seedQty})`);
           console.groupEnd();
           return;
         }
         
-        // If current order has 0 seeds but references a valid root, it's still invalid
-        if (patient.seedQty <= 0 && patient.reference) {
-          console.log(`❌ FILTERED OUT: ${orderName} - Order has 0 seeds and references another order (not a root)`);
-          console.groupEnd();
-          return;
+        // If order has seeds > 0, it's valid regardless of having a reference
+        if (patient.seedQty > 0) {
+          console.log(`✅ VALID: ${orderName} - Order has seeds (${patient.seedQty}) - valid regardless of reference`);
+        } else if (!patient.reference) {
+          console.log(`✅ VALID: ${orderName} - Order has no reference (root order)`);
         }
         
-        console.log(`✅ VALID: ${orderName} - Root: ${rootOrder.ordName} with ${rootOrder.seedQty} seeds`);
         validPatients.push(patient);
         console.groupEnd();
       });

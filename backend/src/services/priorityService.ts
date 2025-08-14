@@ -18,43 +18,137 @@ const loadTestData = () => {
     // Generate dynamic dates
     const dynamicDates = generateDynamicDates();
     
-    // Update order dates to be dynamic (ensure even distribution across yesterday, today, tomorrow)
+    // Create expanded orders array with copies for each date to ensure filtering always finds matches
     if (testData.orders && Array.isArray(testData.orders)) {
-      testData.orders.forEach((order: any, index: number) => {
-        switch (index % 3) {
-          case 0:
-            order.SIBD_TREATDAY = dynamicDates.yesterday;
-            order.CURDATE = dynamicDates.yesterday;
-            break;
-          case 1:
-            order.SIBD_TREATDAY = dynamicDates.today;
-            order.CURDATE = dynamicDates.today;
-            break;
-          case 2:
-            order.SIBD_TREATDAY = dynamicDates.tomorrow;
-            order.CURDATE = dynamicDates.tomorrow;
-            break;
-        }
-        logger.info(`Updated order ${order.ORDNAME} (${order.CUSTNAME}) treatment date to: ${order.SIBD_TREATDAY}`);
+      const originalOrders = [...testData.orders];
+      const expandedOrders: any[] = [];
+      
+      // Create three copies of each order - one for each date (yesterday, today, tomorrow)
+      originalOrders.forEach((originalOrder: any) => {
+        // Yesterday copy
+        const yesterdayOrder = { 
+          ...originalOrder, 
+          ORDNAME: `${originalOrder.ORDNAME}_Y`,
+          SIBD_TREATDAY: dynamicDates.yesterday,
+          CURDATE: dynamicDates.yesterday
+        };
+        expandedOrders.push(yesterdayOrder);
+        
+        // Today copy
+        const todayOrder = { 
+          ...originalOrder, 
+          ORDNAME: `${originalOrder.ORDNAME}_T`,
+          SIBD_TREATDAY: dynamicDates.today,
+          CURDATE: dynamicDates.today
+        };
+        expandedOrders.push(todayOrder);
+        
+        // Tomorrow copy
+        const tomorrowOrder = { 
+          ...originalOrder, 
+          ORDNAME: `${originalOrder.ORDNAME}_M`,
+          SIBD_TREATDAY: dynamicDates.tomorrow,
+          CURDATE: dynamicDates.tomorrow
+        };
+        expandedOrders.push(tomorrowOrder);
+      });
+      
+      // Replace the orders array with the expanded version
+      testData.orders = expandedOrders;
+      
+      // Log each expanded order for debugging
+      testData.orders.forEach((order: any) => {
+        logger.info(`Created test order ${order.ORDNAME} (${order.CUSTNAME}) with treatment date: ${order.SIBD_TREATDAY}`);
       });
     }
     
-    logger.info('Test data loaded with dynamic dates:', {
+    const ordersByDate = {
+      yesterday: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.yesterday).length : 0,
+      today: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.today).length : 0,
+      tomorrow: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.tomorrow).length : 0
+    };
+    
+    logger.info('Test data loaded with dynamic dates and expanded orders:', {
       yesterday: dynamicDates.yesterdayFormatted,
       today: dynamicDates.todayFormatted,
       tomorrow: dynamicDates.tomorrowFormatted,
       totalOrders: testData.orders ? testData.orders.length : 0,
-      orderDistribution: testData.orders ? {
-        yesterday: testData.orders.filter((o: any, i: number) => i % 3 === 0).length,
-        today: testData.orders.filter((o: any, i: number) => i % 3 === 1).length,
-        tomorrow: testData.orders.filter((o: any, i: number) => i % 3 === 2).length
-      } : null
+      orderDistribution: ordersByDate
     });
     
     return testData;
   } catch (error) {
     logger.warn('Could not load test data file, using fallback data');
     return null;
+  }
+};
+
+// Helper function to generate test data dynamically for specific date
+const generateTestDataForDate = (requestedDate: string) => {
+  try {
+    const testDataPath = path.join(__dirname, '../../test-data.json');
+    const testDataContent = fs.readFileSync(testDataPath, 'utf8');
+    const baseTestData = JSON.parse(testDataContent);
+    
+    if (!baseTestData.orders || !Array.isArray(baseTestData.orders)) {
+      logger.warn('No orders found in test data');
+      return null;
+    }
+    
+    const targetDate = new Date(requestedDate);
+    if (isNaN(targetDate.getTime())) {
+      logger.warn(`Invalid date provided: ${requestedDate}, falling back to static test data`);
+      return loadTestData();
+    }
+    
+    const targetDateISO = targetDate.toISOString();
+    logger.info(`🧪 DYNAMIC TEST DATA: Generating orders for requested date: ${targetDateISO}`);
+    
+    const dynamicOrders: any[] = [];
+    
+    // Generate main orders with the requested date
+    baseTestData.orders.forEach((originalOrder: any) => {
+      const dynamicOrder = {
+        ...originalOrder,
+        SIBD_TREATDAY: targetDateISO,
+        CURDATE: targetDateISO
+      };
+      dynamicOrders.push(dynamicOrder);
+      
+      // Also create the referenced patient record (if it has a reference)
+      // This prevents frontend reference chain validation from filtering out valid orders
+      if (originalOrder.REFERENCE) {
+        const patientRecord = {
+          ORDNAME: originalOrder.REFERENCE,
+          CUSTNAME: originalOrder.CUSTNAME,
+          CUSTDES: originalOrder.CUSTDES,
+          REFERENCE: null, // Patient records don't have references
+          CURDATE: targetDateISO,
+          SIBD_TREATDAY: targetDateISO,
+          ORDSTATUSDES: "Patient Record",
+          SBD_SEEDQTY: 0, // Patient records have 0 seeds
+          SBD_PREFACTIV: 0,
+          DETAILS: `Patient Record for ${originalOrder.DETAILS}`
+        };
+        dynamicOrders.push(patientRecord);
+      }
+    });
+    
+    logger.info(`🧪 DYNAMIC TEST DATA: Generated ${dynamicOrders.length} orders (including patient records) for ${targetDateISO}`);
+    
+    // Log generated orders for debugging
+    dynamicOrders.forEach((order: any) => {
+      logger.info(`📋 Generated: ${order.ORDNAME} | Site: ${order.CUSTNAME} | Seeds: ${order.SBD_SEEDQTY} | Ref: ${order.REFERENCE || 'None'}`);
+    });
+    
+    return {
+      ...baseTestData,
+      orders: dynamicOrders
+    };
+    
+  } catch (error) {
+    logger.error('Error generating dynamic test data:', error);
+    return loadTestData(); // Fallback to static test data
   }
 };
 
@@ -552,25 +646,46 @@ export const priorityService = {
     try {
       logger.info(`Getting orders for site ${custName} using Priority API format${filterDate ? ` with date filter: ${filterDate}` : ''}`);
       
-      // For development mode with test@example.com, use test data first
+      // For development mode with test@example.com, use dynamic test data first
       if (userId && shouldUseTestData(userId)) {
-        logger.info(`🧪 DEVELOPMENT MODE: Using test data for user ${userId} at site ${custName}`);
-        const testData = loadTestData();
+        logger.info(`🧪 DEVELOPMENT MODE: Using dynamic test data for user ${userId} at site ${custName}${filterDate ? ` with date: ${filterDate}` : ''}`);
+        
+        // Use dynamic test data generation if a specific date is requested
+        let testData;
+        if (filterDate) {
+          testData = generateTestDataForDate(filterDate);
+          logger.info(`🧪 DYNAMIC TEST DATA: Generated data for specific date ${filterDate}`);
+        } else {
+          // Fall back to static test data if no specific date
+          testData = loadTestData();
+          logger.info(`🧪 STATIC TEST DATA: Using pre-generated test data (no date filter)`);
+        }
+        
         if (testData && testData.orders) {
           let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
           
-          // Apply date filtering to test data if provided
+          logger.info(`🧪 TEST DATA: Found ${filteredOrders.length} orders for site ${custName} before date filtering`);
+          
+          // Apply date filtering to test data if provided (for dynamic data this is redundant but ensures consistency)
           if (filterDate) {
             const targetDate = new Date(filterDate).toISOString().split('T')[0];
+            const preFilterCount = filteredOrders.length;
             filteredOrders = filteredOrders.filter((order: any) => {
               const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
               return orderDate === targetDate;
             });
-            logger.info(`🧪 TEST DATA: Filtered to ${filteredOrders.length} orders matching date ${targetDate}`);
+            logger.info(`🧪 TEST DATA: Date filtering reduced orders from ${preFilterCount} to ${filteredOrders.length} for date ${targetDate}`);
           }
           
-          logger.info(`🧪 TEST DATA: Retrieved ${filteredOrders.length} orders for site ${custName} from test data`);
+          // Log detailed test data results
+          logger.info(`🧪 TEST DATA FINAL RESULTS: Retrieved ${filteredOrders.length} orders for site ${custName}`);
+          filteredOrders.forEach((order: any, index: number) => {
+            logger.info(`  📋 TEST ORDER ${index + 1}: ${order.ORDNAME} | Seeds: ${order.SBD_SEEDQTY} | Date: ${order.SIBD_TREATDAY} | Ref: ${order.REFERENCE || 'None'}`);
+          });
+          
           return filteredOrders;
+        } else {
+          logger.warn(`🧪 TEST DATA: Failed to load test data for user ${userId}`);
         }
       }
       
@@ -645,19 +760,27 @@ export const priorityService = {
       }
       
       // Try to load test data as fallback only if Priority API is completely down
-      const testData = loadTestData();
+      let testData;
+      if (filterDate) {
+        testData = generateTestDataForDate(filterDate);
+        logger.warn(`❌ Priority API failed, using dynamic test data fallback for site ${custName} with date ${filterDate}`);
+      } else {
+        testData = loadTestData();
+        logger.warn(`❌ Priority API failed, using static test data fallback for site ${custName}`);
+      }
+      
       if (testData && testData.orders) {
-        logger.warn(`❌ Priority API failed, using test data fallback for site ${custName}`);
         let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
         
-        // Apply date filtering to fallback test data if provided
+        // Apply date filtering to fallback test data if provided (redundant for dynamic data but ensures consistency)
         if (filterDate) {
           const targetDate = new Date(filterDate).toISOString().split('T')[0];
+          const preFilterCount = filteredOrders.length;
           filteredOrders = filteredOrders.filter((order: any) => {
             const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
             return orderDate === targetDate;
           });
-          logger.info(`🧪 TEST DATA FALLBACK: Filtered to ${filteredOrders.length} orders matching date ${targetDate}`);
+          logger.info(`🧪 TEST DATA FALLBACK: Date filtering reduced orders from ${preFilterCount} to ${filteredOrders.length} for date ${targetDate}`);
         }
         
         logger.info(`🧪 TEST DATA FALLBACK: Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
@@ -679,17 +802,34 @@ export const priorityService = {
       if (userId && shouldUseTestData(userId)) {
         logger.info(`Development mode: Using test subform data for user ${userId} and order ${orderName}`);
         const testData = loadTestData();
-        if (testData && testData.subform_data && testData.subform_data[orderName]) {
-          logger.info(`Using test subform data for order ${orderName}`);
-          return testData.subform_data[orderName].value || [];
+        if (testData && testData.subform_data) {
+          // Handle expanded order names (SO25000010_Y, SO25000010_T, SO25000010_M)
+          // Extract the base order name by removing the suffix
+          const baseOrderName = orderName.replace(/_(Y|T|M)$/, '');
+          
+          if (testData.subform_data[baseOrderName]) {
+            logger.info(`Using test subform data for base order ${baseOrderName} (requested: ${orderName})`);
+            return testData.subform_data[baseOrderName].value || [];
+          } else if (testData.subform_data[orderName]) {
+            logger.info(`Using test subform data for exact order ${orderName}`);
+            return testData.subform_data[orderName].value || [];
+          }
         }
       }
       
       // Try to load test data first (for fallback scenarios)
       const testData = loadTestData();
-      if (testData && testData.subform_data && testData.subform_data[orderName]) {
-        logger.info(`Using test subform data for order ${orderName}`);
-        return testData.subform_data[orderName].value || [];
+      if (testData && testData.subform_data) {
+        // Handle expanded order names for fallback as well
+        const baseOrderName = orderName.replace(/_(Y|T|M)$/, '');
+        
+        if (testData.subform_data[baseOrderName]) {
+          logger.info(`Using test subform data for base order ${baseOrderName} (requested: ${orderName})`);
+          return testData.subform_data[baseOrderName].value || [];
+        } else if (testData.subform_data[orderName]) {
+          logger.info(`Using test subform data for exact order ${orderName}`);
+          return testData.subform_data[orderName].value || [];
+        }
       }
       
       // Use exact URL format: /ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM
@@ -702,9 +842,17 @@ export const priorityService = {
       
       // Try test data fallback first
       const testData = loadTestData();
-      if (testData && testData.subform_data && testData.subform_data[orderName]) {
-        logger.info(`Using test subform data fallback for order ${orderName}`);
-        return testData.subform_data[orderName].value || [];
+      if (testData && testData.subform_data) {
+        // Handle expanded order names for error fallback as well
+        const baseOrderName = orderName.replace(/_(Y|T|M)$/, '');
+        
+        if (testData.subform_data[baseOrderName]) {
+          logger.info(`Using test subform data fallback for base order ${baseOrderName} (requested: ${orderName})`);
+          return testData.subform_data[baseOrderName].value || [];
+        } else if (testData.subform_data[orderName]) {
+          logger.info(`Using test subform data fallback for exact order ${orderName}`);
+          return testData.subform_data[orderName].value || [];
+        }
       }
       
       // Fallback to regular SIBD_APPLICATUSELIST table
