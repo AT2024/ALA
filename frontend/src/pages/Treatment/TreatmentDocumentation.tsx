@@ -654,7 +654,9 @@ const TreatmentDocumentation = () => {
                               {filteredApplicators.length} applicator(s) {aSuffixQuery ? `ending with "-A${aSuffixQuery}"` : 'available'}
                             </div>
                           )}
-                          {filteredApplicators.map((applicator, index) => {
+                          {filteredApplicators
+                            .sort((a, b) => b.seedQuantity - a.seedQuantity)
+                            .map((applicator, index) => {
                             const isNoUseReturned = applicator.returnedFromNoUse;
                             return (
                               <button
