@@ -10,7 +10,7 @@ import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
-  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, addAvailableApplicator } = useTreatment();
+  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, addAvailableApplicator, applicatorsLoaded, setApplicatorsLoaded } = useTreatment();
   const navigate = useNavigate();
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
@@ -76,15 +76,15 @@ const TreatmentDocumentation = () => {
     };
   }, [currentTreatment, manualEntry]);
 
-  // Load available applicators when treatment is selected
+  // Load available applicators when treatment is selected (only once per treatment)
   useEffect(() => {
-    if (currentTreatment) {
+    if (currentTreatment && !applicatorsLoaded) {
       loadAvailableApplicators();
     }
-  }, [currentTreatment]);
+  }, [currentTreatment, applicatorsLoaded]);
 
   const loadAvailableApplicators = async () => {
-    if (!currentTreatment) return;
+    if (!currentTreatment || applicatorsLoaded) return;
     
     try {
       const response = await priorityService.getAvailableApplicators(
@@ -110,6 +110,9 @@ const TreatmentDocumentation = () => {
         });
         
         console.log(`Loaded ${applicators.length} available applicators`);
+        
+        // Mark applicators as loaded to prevent duplicate loading
+        setApplicatorsLoaded(true);
         
         if (applicators.length === 0) {
           console.warn('No applicators available for this treatment');
@@ -942,6 +945,13 @@ const TreatmentDocumentation = () => {
                 className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Next'}
+              </button>
+              <button
+                onClick={() => navigate('/treatment/list')}
+                disabled={loading}
+                className="flex-1 rounded-md border border-primary bg-white px-4 py-2 text-sm font-medium text-primary shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+              >
+                View Summary
               </button>
               <button
                 onClick={handleFinalize}

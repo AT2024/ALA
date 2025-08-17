@@ -51,6 +51,7 @@ interface TreatmentContextType {
   processedApplicators: Applicator[];
   currentApplicator: Applicator | null;
   procedureType: 'insertion' | 'removal' | null;
+  applicatorsLoaded: boolean;
   setProcedureType: (type: 'insertion' | 'removal') => void;
   setTreatment: (treatment: Treatment) => void;
   addApplicator: (applicator: Applicator) => void;
@@ -60,6 +61,7 @@ interface TreatmentContextType {
   setCurrentApplicator: (applicator: Applicator | null) => void;
   removeApplicator: (id: string) => void;
   clearTreatment: () => void;
+  setApplicatorsLoaded: (loaded: boolean) => void;
   totalSeeds: number;
   removedSeeds: number;
   progressStats: ProgressStats;
@@ -80,6 +82,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const [processedApplicators, setProcessedApplicators] = useState<Applicator[]>([]);
   const [currentApplicator, setCurrentApplicator] = useState<Applicator | null>(null);
   const [procedureType, setProcedureType] = useState<'insertion' | 'removal' | null>(null);
+  const [applicatorsLoaded, setApplicatorsLoaded] = useState<boolean>(false);
 
   const setTreatment = (treatment: Treatment) => {
     setCurrentTreatment(treatment);
@@ -87,6 +90,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setApplicators([]);
     setAvailableApplicators([]);
     setProcessedApplicators([]);
+    setApplicatorsLoaded(false);
   };
 
   const addApplicator = (applicator: Applicator) => {
@@ -161,6 +165,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setProcessedApplicators([]);
     setCurrentApplicator(null);
     setProcedureType(null);
+    setApplicatorsLoaded(false);
   };
 
   // Progress calculation methods
@@ -255,6 +260,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         processedApplicators,
         currentApplicator,
         procedureType,
+        applicatorsLoaded,
         setProcedureType,
         setTreatment,
         addApplicator,
@@ -264,6 +270,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         setCurrentApplicator,
         removeApplicator,
         clearTreatment,
+        setApplicatorsLoaded,
         totalSeeds,
         removedSeeds,
         progressStats,

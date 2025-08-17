@@ -39,12 +39,13 @@ const UseList = () => {
     const applicator = processedApplicators.find(app => app.serialNumber === applicatorSerialNumber);
     if (applicator) {
       setCurrentApplicator(applicator);
-      navigate('/treatment/scan'); // Takes to Treatment Documentation screen
+      navigate('/treatment/scan'); // Navigate back to Treatment Documentation with state preserved
     }
   };
 
   const handleNext = () => {
-    // Takes to Treatment Documentation screen for inserting another applicator
+    // Navigate back to Treatment Documentation screen for inserting another applicator
+    // State is preserved through TreatmentContext
     navigate('/treatment/scan');
   };
 
@@ -294,9 +295,10 @@ const UseList = () => {
             <li>• Only processed applicators are shown in the list</li>
             <li>• Applicators are sorted by Seeds Qty. as specified</li>
             <li>• Use 'Edit' to modify processed applicator details</li>
-            <li>• Use 'Next' to scan and process another applicator</li>
-            <li>• Use 'Finalize' to complete the treatment</li>
+            <li>• Use 'Next' to return to scanning and add more applicators</li>
+            <li>• Use 'Finalize' to complete the treatment and update Priority status</li>
             <li>• Total Activity = Total Seeds × Activity Per Seed</li>
+            <li>• Navigation preserves all treatment data and progress</li>
           </ul>
         </div>
       </div>
