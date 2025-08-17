@@ -181,7 +181,7 @@ const UseList = () => {
                         {applicator.seedQuantity}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {format(new Date(applicator.insertionTime), 'dd.MM.yyyy HH:mm')}
+                        {applicator.insertionTime}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
@@ -237,10 +237,7 @@ const UseList = () => {
               <div>
                 <p className="text-sm text-gray-500">Time Insertion Treatment Started</p>
                 <p className="font-medium">
-                  {treatmentSummary.timeInsertionStarted 
-                    ? format(new Date(treatmentSummary.timeInsertionStarted), 'dd.MM.yyyy HH:mm')
-                    : 'N/A'
-                  }
+                  {treatmentSummary.timeInsertionStarted || 'N/A'}
                 </p>
               </div>
               <div>
