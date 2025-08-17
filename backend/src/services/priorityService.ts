@@ -23,7 +23,7 @@ const loadTestData = () => {
       const originalOrders = [...testData.orders];
       const expandedOrders: any[] = [];
       
-      // Create three copies of each order - one for each date (yesterday, today, tomorrow)
+      // Create multiple copies of each order for different time periods
       originalOrders.forEach((originalOrder: any) => {
         // Yesterday copy
         const yesterdayOrder = { 
@@ -51,6 +51,26 @@ const loadTestData = () => {
           CURDATE: dynamicDates.tomorrow
         };
         expandedOrders.push(tomorrowOrder);
+        
+        // Add orders from 15 days ago (for removal testing)
+        const removalOrder = { 
+          ...originalOrder, 
+          ORDNAME: `${originalOrder.ORDNAME}_R15`,
+          SIBD_TREATDAY: dynamicDates.removalReady,
+          CURDATE: dynamicDates.removalReady,
+          ORDSTATUSDES: 'Performed' // Mark as completed insertion, ready for removal
+        };
+        expandedOrders.push(removalOrder);
+        
+        // Add orders from 18 days ago (also for removal testing)
+        const removalOrder2 = { 
+          ...originalOrder, 
+          ORDNAME: `${originalOrder.ORDNAME}_R18`,
+          SIBD_TREATDAY: dynamicDates.removalReady2,
+          CURDATE: dynamicDates.removalReady2,
+          ORDSTATUSDES: 'Performed' // Mark as completed insertion, ready for removal
+        };
+        expandedOrders.push(removalOrder2);
       });
       
       // Replace the orders array with the expanded version
@@ -65,13 +85,17 @@ const loadTestData = () => {
     const ordersByDate = {
       yesterday: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.yesterday).length : 0,
       today: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.today).length : 0,
-      tomorrow: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.tomorrow).length : 0
+      tomorrow: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.tomorrow).length : 0,
+      removalReady: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.removalReady).length : 0,
+      removalReady2: testData.orders ? testData.orders.filter((o: any) => o.SIBD_TREATDAY === dynamicDates.removalReady2).length : 0
     };
     
     logger.info('Test data loaded with dynamic dates and expanded orders:', {
       yesterday: dynamicDates.yesterdayFormatted,
       today: dynamicDates.todayFormatted,
       tomorrow: dynamicDates.tomorrowFormatted,
+      removalReady: dynamicDates.removalReadyFormatted,
+      removalReady2: dynamicDates.removalReady2Formatted,
       totalOrders: testData.orders ? testData.orders.length : 0,
       orderDistribution: ordersByDate
     });
@@ -84,7 +108,7 @@ const loadTestData = () => {
 };
 
 // Helper function to generate test data dynamically for specific date
-const generateTestDataForDate = (requestedDate: string) => {
+const generateTestDataForDate = (requestedDate: string, treatmentType?: string) => {
   try {
     const testDataPath = path.join(__dirname, '../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
@@ -101,17 +125,29 @@ const generateTestDataForDate = (requestedDate: string) => {
       return loadTestData();
     }
     
-    const targetDateISO = targetDate.toISOString();
-    logger.info(`🧪 DYNAMIC TEST DATA: Generating orders for requested date: ${targetDateISO}`);
+    // For removal treatments, generate orders from 14-20 days ago (insertion dates)
+    // For other treatments, use the requested date
+    let treatmentDate = new Date(targetDate);
+    if (treatmentType === 'removal') {
+      // Generate insertion treatments from 14-20 days ago to be eligible for removal today
+      const daysBack = 15 + Math.floor(Math.random() * 6); // Random between 15-20 days
+      treatmentDate.setDate(targetDate.getDate() - daysBack);
+      logger.info(`🧪 REMOVAL TREATMENT: Generating insertion orders from ${daysBack} days ago: ${treatmentDate.toISOString()}`);
+    }
+    
+    const treatmentDateISO = treatmentDate.toISOString();
+    logger.info(`🧪 DYNAMIC TEST DATA: Generating orders for treatment date: ${treatmentDateISO}${treatmentType ? ` (type: ${treatmentType})` : ''}`);
     
     const dynamicOrders: any[] = [];
     
-    // Generate main orders with the requested date
+    // Generate main orders with the treatment date
     baseTestData.orders.forEach((originalOrder: any) => {
       const dynamicOrder = {
         ...originalOrder,
-        SIBD_TREATDAY: targetDateISO,
-        CURDATE: targetDateISO
+        SIBD_TREATDAY: treatmentDateISO,
+        CURDATE: treatmentDateISO,
+        // For removal treatments, mark them as "Performed" (completed insertion)
+        ORDSTATUSDES: treatmentType === 'removal' ? 'Performed' : originalOrder.ORDSTATUSDES
       };
       dynamicOrders.push(dynamicOrder);
       
@@ -123,8 +159,8 @@ const generateTestDataForDate = (requestedDate: string) => {
           CUSTNAME: originalOrder.CUSTNAME,
           CUSTDES: originalOrder.CUSTDES,
           REFERENCE: null, // Patient records don't have references
-          CURDATE: targetDateISO,
-          SIBD_TREATDAY: targetDateISO,
+          CURDATE: treatmentDateISO,
+          SIBD_TREATDAY: treatmentDateISO,
           ORDSTATUSDES: "Patient Record",
           SBD_SEEDQTY: 0, // Patient records have 0 seeds
           SBD_PREFACTIV: 0,
@@ -134,11 +170,11 @@ const generateTestDataForDate = (requestedDate: string) => {
       }
     });
     
-    logger.info(`🧪 DYNAMIC TEST DATA: Generated ${dynamicOrders.length} orders (including patient records) for ${targetDateISO}`);
+    logger.info(`🧪 DYNAMIC TEST DATA: Generated ${dynamicOrders.length} orders (including patient records) for ${treatmentDateISO}`);
     
     // Log generated orders for debugging
     dynamicOrders.forEach((order: any) => {
-      logger.info(`📋 Generated: ${order.ORDNAME} | Site: ${order.CUSTNAME} | Seeds: ${order.SBD_SEEDQTY} | Ref: ${order.REFERENCE || 'None'}`);
+      logger.info(`📋 Generated: ${order.ORDNAME} | Site: ${order.CUSTNAME} | Seeds: ${order.SBD_SEEDQTY} | Ref: ${order.REFERENCE || 'None'} | Status: ${order.ORDSTATUSDES}`);
     });
     
     return {
@@ -165,14 +201,24 @@ const generateDynamicDates = () => {
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
   
+  // Add dates for removal testing (15 and 18 days ago)
+  const removalReady = new Date(today);
+  removalReady.setDate(today.getDate() - 15);
+  const removalReady2 = new Date(today);
+  removalReady2.setDate(today.getDate() - 18);
+  
   return {
     today: today.toISOString(),
     yesterday: yesterday.toISOString(),
     tomorrow: tomorrow.toISOString(),
+    removalReady: removalReady.toISOString(),
+    removalReady2: removalReady2.toISOString(),
     // Also provide formatted dates for different use cases
     todayFormatted: today.toISOString().split('T')[0],
     yesterdayFormatted: yesterday.toISOString().split('T')[0],
-    tomorrowFormatted: tomorrow.toISOString().split('T')[0]
+    tomorrowFormatted: tomorrow.toISOString().split('T')[0],
+    removalReadyFormatted: removalReady.toISOString().split('T')[0],
+    removalReady2Formatted: removalReady2.toISOString().split('T')[0]
   };
 };
 
@@ -642,7 +688,7 @@ export const priorityService = {
   },
 
   // Get orders for site using exact Priority API format with optional date filtering
-  async getOrdersForSiteWithFilter(custName: string, userId?: string, filterDate?: string) {
+  async getOrdersForSiteWithFilter(custName: string, userId?: string, filterDate?: string, procedureType?: string) {
     try {
       logger.info(`Getting orders for site ${custName} using Priority API format${filterDate ? ` with date filter: ${filterDate}` : ''}`);
       
@@ -653,8 +699,8 @@ export const priorityService = {
         // Use dynamic test data generation if a specific date is requested
         let testData;
         if (filterDate) {
-          testData = generateTestDataForDate(filterDate);
-          logger.info(`🧪 DYNAMIC TEST DATA: Generated data for specific date ${filterDate}`);
+          testData = generateTestDataForDate(filterDate, procedureType);
+          logger.info(`🧪 DYNAMIC TEST DATA: Generated data for specific date ${filterDate} with procedure type ${procedureType}`);
         } else {
           // Fall back to static test data if no specific date
           testData = loadTestData();
@@ -666,8 +712,9 @@ export const priorityService = {
           
           logger.info(`🧪 TEST DATA: Found ${filteredOrders.length} orders for site ${custName} before date filtering`);
           
-          // Apply date filtering to test data if provided (for dynamic data this is redundant but ensures consistency)
-          if (filterDate) {
+          // Apply date filtering to test data if provided 
+          // BUT skip date filtering for removal treatments since dynamic data already has correct dates
+          if (filterDate && procedureType !== 'removal') {
             const targetDate = new Date(filterDate).toISOString().split('T')[0];
             const preFilterCount = filteredOrders.length;
             filteredOrders = filteredOrders.filter((order: any) => {
@@ -675,6 +722,8 @@ export const priorityService = {
               return orderDate === targetDate;
             });
             logger.info(`🧪 TEST DATA: Date filtering reduced orders from ${preFilterCount} to ${filteredOrders.length} for date ${targetDate}`);
+          } else if (procedureType === 'removal') {
+            logger.info(`🧪 TEST DATA: Skipping additional date filtering for removal treatment (dates already correct from dynamic generation)`);
           }
           
           // Log detailed test data results
@@ -762,8 +811,8 @@ export const priorityService = {
       // Try to load test data as fallback only if Priority API is completely down
       let testData;
       if (filterDate) {
-        testData = generateTestDataForDate(filterDate);
-        logger.warn(`❌ Priority API failed, using dynamic test data fallback for site ${custName} with date ${filterDate}`);
+        testData = generateTestDataForDate(filterDate, procedureType);
+        logger.warn(`❌ Priority API failed, using dynamic test data fallback for site ${custName} with date ${filterDate} and procedure type ${procedureType}`);
       } else {
         testData = loadTestData();
         logger.warn(`❌ Priority API failed, using static test data fallback for site ${custName}`);
@@ -772,8 +821,9 @@ export const priorityService = {
       if (testData && testData.orders) {
         let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
         
-        // Apply date filtering to fallback test data if provided (redundant for dynamic data but ensures consistency)
-        if (filterDate) {
+        // Apply date filtering to fallback test data if provided 
+        // BUT skip date filtering for removal treatments since dynamic data already has correct dates
+        if (filterDate && procedureType !== 'removal') {
           const targetDate = new Date(filterDate).toISOString().split('T')[0];
           const preFilterCount = filteredOrders.length;
           filteredOrders = filteredOrders.filter((order: any) => {
@@ -781,6 +831,8 @@ export const priorityService = {
             return orderDate === targetDate;
           });
           logger.info(`🧪 TEST DATA FALLBACK: Date filtering reduced orders from ${preFilterCount} to ${filteredOrders.length} for date ${targetDate}`);
+        } else if (procedureType === 'removal') {
+          logger.info(`🧪 TEST DATA FALLBACK: Skipping additional date filtering for removal treatment (dates already correct from dynamic generation)`);
         }
         
         logger.info(`🧪 TEST DATA FALLBACK: Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
@@ -1508,7 +1560,7 @@ export const priorityService = {
         const dateString = currentDateObj.toISOString().split('T')[0];
         logger.info(`🔍 Getting orders for ${site} on ${dateString}`);
         
-        const dayOrders = await this.getOrdersForSiteWithFilter(site, userId, dateString);
+        const dayOrders = await this.getOrdersForSiteWithFilter(site, userId, dateString, undefined);
         allOrders.push(...dayOrders);
         
         logger.info(`📊 Found ${dayOrders.length} orders for ${site} on ${dateString}`);

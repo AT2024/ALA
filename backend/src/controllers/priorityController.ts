@@ -209,7 +209,7 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
     }
     
     // Get orders from Priority for the specified site using exact CUSTNAME and date filtering
-    let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email, date);
+    let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email, date, procedureType);
     
     logger.info(`Retrieved ${orders.length} orders from Priority service for site ${site}`);
     
