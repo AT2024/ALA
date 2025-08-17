@@ -10,13 +10,8 @@ interface LayoutProps {
   showLogout?: boolean;
 }
 
-// Define the treatment flow sequence to enable sequential navigation
-const TREATMENT_FLOW = [
-  '/treatment/select',   // Treatment selection
-  '/treatment/scan',     // Treatment Documentation (scan QR codes)
-  '/treatment/list',     // Use list
-  '/treatment/removal'   // Seed removal
-];
+// Pages where Next button should be hidden (end pages)
+const END_PAGES = ['/treatment/list', '/treatment/removal'];
 
 export default function Layout({ 
   children, 
@@ -37,22 +32,37 @@ export default function Layout({
   };
   
   // Helper function to navigate through the treatment flow
-  const navigateSequential = (direction: 'next' | 'prev') => {
+  const navigateSequential = (direction: 'next') => {
     const currentPath = window.location.pathname;
-    const currentIndex = TREATMENT_FLOW.indexOf(currentPath);
     
-    if (currentIndex !== -1) {
-      // If we're in the treatment flow
-      const newIndex = direction === 'next' 
-        ? Math.min(currentIndex + 1, TREATMENT_FLOW.length - 1)
-        : Math.max(currentIndex - 1, 0);
-      
-      if (newIndex !== currentIndex) {
-        navigate(TREATMENT_FLOW[newIndex]);
+    // Only handle 'next' direction - 'prev' removed per user request
+    if (direction === 'next') {
+      // Smart navigation based on current page and procedure type
+      switch (currentPath) {
+        case '/procedure-type':
+          navigate('/treatment/select');
+          break;
+        case '/treatment/select':
+          // Check if there's a Proceed button we can click instead
+          const proceedButton = document.querySelector('button[type="button"]:not([disabled])') as HTMLButtonElement;
+          if (proceedButton && proceedButton.textContent?.includes('Proceed')) {
+            proceedButton.click();
+          } else {
+            console.warn('Next: Treatment form not complete - please fill all required fields');
+          }
+          break;
+        case '/treatment/scan':
+          navigate('/treatment/list');
+          break;
+        case '/treatment/removal':
+        case '/treatment/list':
+          // End pages - Next button should be hidden
+          console.warn('Next button should not be visible on end pages');
+          break;
+        default:
+          // Fallback to browser history for other pages
+          navigate(1);
       }
-    } else {
-      // If we're not in the treatment flow, use browser history
-      navigate(direction === 'next' ? 1 : -1);
     }
   };
 
@@ -91,56 +101,36 @@ export default function Layout({
           <div className="flex flex-col items-center">
             {/* Flow position indicator */}
             <div className="mb-1 text-xs text-white/70">
-              {TREATMENT_FLOW.indexOf(window.location.pathname) !== -1 && (
-                <span>
-                  Step {TREATMENT_FLOW.indexOf(window.location.pathname) + 1}/{TREATMENT_FLOW.length} - Treatment Flow
-                </span>
+              {!END_PAGES.includes(window.location.pathname) && (
+                <span>Treatment Flow - Navigation</span>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigateSequential('prev')}
-                className="flex items-center justify-center rounded-md bg-primary-foreground/10 px-3 py-2 text-sm font-medium hover:bg-primary-foreground/20"
-                title="Previous screen (for debugging)"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-1"
+            {/* Only show Next button if not on end pages */}
+            {!END_PAGES.includes(window.location.pathname) && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => navigateSequential('next')}
+                  className="flex items-center justify-center rounded-md bg-primary-foreground/10 px-3 py-2 text-sm font-medium hover:bg-primary-foreground/20"
+                  title="Next screen (for debugging)"
                 >
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
-                Prev
-              </button>
-              <button
-                onClick={() => navigateSequential('next')}
-                className="flex items-center justify-center rounded-md bg-primary-foreground/10 px-3 py-2 text-sm font-medium hover:bg-primary-foreground/20"
-                title="Next screen (for debugging)"
-              >
-                Next
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="ml-1"
-                >
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </button>
-            </div>
+                  Next
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="ml-1"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
           
           {/* Right section - User info and logout */}

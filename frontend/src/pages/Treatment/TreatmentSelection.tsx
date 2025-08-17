@@ -307,7 +307,20 @@ const TreatmentSelection = () => {
           console.log(`✅ VALID: ${orderName} - Order has no reference (root order)`);
         }
         
-        validPatients.push(patient);
+        // Create a patient object with correct seed quantities from root order
+        const patientWithCorrectSeeds = {
+          ...patient,
+          // Use root order's seed quantity and activity if different from current patient
+          seedQty: rootOrder.seedQty || patient.seedQty,
+          activityPerSeed: rootOrder.activityPerSeed || patient.activityPerSeed
+        };
+        
+        // Log if we're updating seed quantities from root order
+        if (rootOrder.seedQty !== patient.seedQty || rootOrder.activityPerSeed !== patient.activityPerSeed) {
+          console.log(`🔄 Updated ${orderName} seeds from ${patient.seedQty} to ${rootOrder.seedQty}, activity from ${patient.activityPerSeed} to ${rootOrder.activityPerSeed} (from root order ${rootOrder.ordName})`);
+        }
+        
+        validPatients.push(patientWithCorrectSeeds);
         console.groupEnd();
       });
       
@@ -416,11 +429,50 @@ const TreatmentSelection = () => {
       console.log('Selected patient:', selectedPatient);
       debugPatientData('Patient Selection', selectedPatient);
       
+      // Helper function to follow reference chain and find root order (same as in fetchPatientsForSiteAndDate)
+      const findRootOrderForSeedQty = (orderName: string, allPatients: PriorityPatient[], visited = new Set<string>()): PriorityPatient | null => {
+        // Prevent infinite loops with circular references
+        if (visited.has(orderName)) {
+          console.warn(`🔄 Circular reference detected for order: ${orderName}`);
+          return null;
+        }
+        visited.add(orderName);
+        
+        // Find the current order
+        const currentOrder = allPatients.find(p => p.ordName === orderName || p.id === orderName);
+        if (!currentOrder) {
+          console.warn(`❌ Order not found in dataset: ${orderName}`);
+          return null;
+        }
+        
+        console.log(`🔍 Resolving seed qty for order: ${orderName} | Seeds: ${currentOrder.seedQty} | Reference: ${currentOrder.reference || 'None'}`);
+        
+        // If this order has no reference, it's a root order
+        if (!currentOrder.reference) {
+          console.log(`🌳 Root order found for seed quantity: ${orderName} | Seeds: ${currentOrder.seedQty}`);
+          return currentOrder;
+        }
+        
+        // Follow the reference chain
+        console.log(`⬆️ Following reference for seed qty: ${orderName} -> ${currentOrder.reference}`);
+        return findRootOrderForSeedQty(currentOrder.reference, allPatients, visited);
+      };
+      
+      // Find the root order to get the correct seed quantity and activity
+      const rootOrder = findRootOrderForSeedQty(selectedPatient.ordName || selectedPatient.id, availablePatients);
+      
+      // Use seed quantity and activity from root order if available, otherwise use selected patient's data
+      const seedQty = rootOrder ? rootOrder.seedQty : selectedPatient.seedQty;
+      const activityPerSeed = rootOrder ? rootOrder.activityPerSeed : selectedPatient.activityPerSeed;
+      
+      console.log(`🌱 Using seed quantity: ${seedQty} (from ${rootOrder ? 'root order ' + rootOrder.ordName : 'selected patient ' + selectedPatient.id})`);
+      console.log(`⚡ Using activity per seed: ${activityPerSeed} (from ${rootOrder ? 'root order ' + rootOrder.ordName : 'selected patient ' + selectedPatient.id})`);
+      
       setFormData(prev => ({
         ...prev,
         patientId: selectedPatient.id,
-        seedQty: selectedPatient.seedQty.toString(),
-        activityPerSeed: selectedPatient.activityPerSeed.toString()
+        seedQty: seedQty.toString(),
+        activityPerSeed: activityPerSeed.toString()
       }));
     } else {
       console.warn('Patient not found in availablePatients:', patientId);
@@ -495,7 +547,11 @@ const TreatmentSelection = () => {
   };
 
   return (
-    <Layout title="Treatment Selection" showBackButton={true}>
+    <Layout 
+      title={procedureType === 'removal' ? 'Removal Selection' : 'Treatment Selection'} 
+      showBackButton={true} 
+      backPath="/procedure-type"
+    >
       <div className="space-y-6">
         {/* Header showing procedure type */}
         <div className="rounded-lg border bg-blue-50 p-4">

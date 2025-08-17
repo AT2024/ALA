@@ -20,7 +20,7 @@ const SeedRemoval = () => {
     }
 
     if (currentTreatment.type !== 'removal') {
-      navigate('/treatment/select');
+      navigate('/procedure-type');
       return;
     }
 
@@ -134,7 +134,7 @@ const SeedRemoval = () => {
   }
 
   return (
-    <Layout title='Seed Removal' showBackButton backPath='/treatment/select'>
+    <Layout title='Seed Removal' showBackButton backPath='/procedure-type'>
       <div className='space-y-6'>
         <div className='rounded-lg border bg-white p-4 shadow-sm'>
           <h2 className='mb-4 text-lg font-medium'>Treatment Information</h2>

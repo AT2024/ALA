@@ -34,7 +34,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 20,
+      "SBD_SEEDQTY": 8,
       "SBD_PREFACTIV": 2.8,
       "DETAILS": "Patient Main-015"
     },
@@ -46,7 +46,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 15,
+      "SBD_SEEDQTY": 11,
       "SBD_PREFACTIV": 2.5,
       "DETAILS": "Patient Alpha-001"
     },
@@ -70,7 +70,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 20,
+      "SBD_SEEDQTY": 7,
       "SBD_PREFACTIV": 2.0,
       "DETAILS": "Patient Gamma-003"
     },
@@ -82,7 +82,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 18,
+      "SBD_SEEDQTY": 6,
       "SBD_PREFACTIV": 2.2,
       "DETAILS": "Patient Delta-004"
     },
@@ -94,7 +94,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 25,
+      "SBD_SEEDQTY": 9,
       "SBD_PREFACTIV": 1.8,
       "DETAILS": "Patient Epsilon-005"
     },
@@ -106,7 +106,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 22,
+      "SBD_SEEDQTY": 3,
       "SBD_PREFACTIV": 2.3,
       "DETAILS": "Patient Test-016"
     },
@@ -118,7 +118,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 8,
+      "SBD_SEEDQTY": 2,
       "SBD_PREFACTIV": 3.2,
       "DETAILS": "Patient Main-043"
     },
@@ -130,7 +130,7 @@
       "CURDATE": "2025-07-10T00:00:00Z",
       "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
-      "SBD_SEEDQTY": 10,
+      "SBD_SEEDQTY": 6,
       "SBD_PREFACTIV": 2.1,
       "DETAILS": "Patient Gamma-042"
     }

@@ -4,6 +4,25 @@ import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 
+// Helper function to safely format dates
+const safeFormatDate = (dateValue: string | Date | null | undefined, formatString: string = 'dd.MM.yyyy HH:mm'): string => {
+  if (!dateValue) return 'N/A';
+  
+  try {
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    
+    return format(date, formatString);
+  } catch (error) {
+    console.warn('Error formatting date:', dateValue, error);
+    return 'N/A';
+  }
+};
+
 const UseList = () => {
   const navigate = useNavigate();
   const { currentTreatment, processedApplicators, setCurrentApplicator } = useTreatment();
@@ -181,7 +200,7 @@ const UseList = () => {
                         {applicator.seedQuantity}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {format(new Date(applicator.insertionTime), 'dd.MM.yyyy HH:mm')}
+                        {safeFormatDate(applicator.insertionTime)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
@@ -237,10 +256,7 @@ const UseList = () => {
               <div>
                 <p className="text-sm text-gray-500">Time Insertion Treatment Started</p>
                 <p className="font-medium">
-                  {treatmentSummary.timeInsertionStarted 
-                    ? format(new Date(treatmentSummary.timeInsertionStarted), 'dd.MM.yyyy HH:mm')
-                    : 'N/A'
-                  }
+                  {safeFormatDate(treatmentSummary.timeInsertionStarted)}
                 </p>
               </div>
               <div>
