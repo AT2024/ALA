@@ -51,9 +51,20 @@ const UseList = () => {
     seedsInsertedBy: currentTreatment?.surgeon || 'Unknown'
   };
 
-  // Calculate total activity
-  const activityPerSeed = currentTreatment?.activityPerSeed || 0;
-  const totalActivity = treatmentSummary.totalDartSeedsInserted * activityPerSeed;
+  // Calculate total activity by summing activity from each processed applicator
+  const totalActivity = processedApplicators.reduce((sum, app) => {
+    const activityPerSeed = currentTreatment?.activityPerSeed || 0;
+    let insertedSeeds = 0;
+    
+    if (app.usageType === 'full') {
+      insertedSeeds = app.seedQuantity;
+    } else if (app.usageType === 'faulty') {
+      insertedSeeds = app.insertedSeedsQty || 0;
+    }
+    // 'none' usage type contributes 0 activity
+    
+    return sum + (insertedSeeds * activityPerSeed);
+  }, 0);
 
   const handleEditApplicator = (applicatorSerialNumber: string) => {
     const applicator = processedApplicators.find(app => app.serialNumber === applicatorSerialNumber);
@@ -64,7 +75,8 @@ const UseList = () => {
   };
 
   const handleNext = () => {
-    // Takes to Treatment Documentation screen for inserting another applicator
+    // Clear any editing state and take to Treatment Documentation screen for inserting another applicator
+    setCurrentApplicator(null);
     navigate('/treatment/scan');
   };
 

@@ -46,15 +46,16 @@ interface ProgressStats {
 
 interface TreatmentContextType {
   currentTreatment: Treatment | null;
-  applicators: Applicator[];
   availableApplicators: Applicator[];
   processedApplicators: Applicator[];
   currentApplicator: Applicator | null;
   procedureType: 'insertion' | 'removal' | null;
+  loadingApplicators: boolean;
   setProcedureType: (type: 'insertion' | 'removal') => void;
   setTreatment: (treatment: Treatment) => void;
-  addApplicator: (applicator: Applicator) => void;
   addAvailableApplicator: (applicator: Applicator) => void;
+  setBulkAvailableApplicators: (applicators: Applicator[]) => void;
+  setLoadingApplicators: (loading: boolean) => void;
   processApplicator: (applicator: Applicator) => void;
   updateApplicator: (id: string, data: Partial<Applicator>) => void;
   setCurrentApplicator: (applicator: Applicator | null) => void;
@@ -75,104 +76,130 @@ const TreatmentContext = createContext<TreatmentContextType | undefined>(undefin
 
 export function TreatmentProvider({ children }: { children: ReactNode }) {
   const [currentTreatment, setCurrentTreatment] = useState<Treatment | null>(null);
-  const [applicators, setApplicators] = useState<Applicator[]>([]);
   const [availableApplicators, setAvailableApplicators] = useState<Applicator[]>([]);
   const [processedApplicators, setProcessedApplicators] = useState<Applicator[]>([]);
   const [currentApplicator, setCurrentApplicator] = useState<Applicator | null>(null);
   const [procedureType, setProcedureType] = useState<'insertion' | 'removal' | null>(null);
+  const [loadingApplicators, setLoadingApplicators] = useState<boolean>(false);
 
   const setTreatment = (treatment: Treatment) => {
     setCurrentTreatment(treatment);
     // Clear applicators when changing treatments (for all treatment types)
-    setApplicators([]);
     setAvailableApplicators([]);
     setProcessedApplicators([]);
   };
 
-  const addApplicator = (applicator: Applicator) => {
-    setApplicators((prev) => [...prev, applicator]);
-  };
 
   const addAvailableApplicator = (applicator: Applicator) => {
-    setAvailableApplicators((prev) => {
-      // Check for duplicates by serialNumber
-      const exists = prev.some(app => app.serialNumber === applicator.serialNumber);
-      if (exists) {
-        return prev; // Don't add duplicates
-      }
-      return [...prev, applicator];
-    });
+    // Check for duplicates in BOTH availableApplicators AND processedApplicators
+    const existsInAvailable = availableApplicators.some(app => app.serialNumber === applicator.serialNumber);
+    const existsInProcessed = processedApplicators.some(app => app.serialNumber === applicator.serialNumber);
+    
+    if (existsInAvailable || existsInProcessed) {
+      // Don't add duplicates - applicator already exists in either array
+      console.log(`Applicator ${applicator.serialNumber} already exists, skipping add`);
+      return;
+    }
+    
+    setAvailableApplicators((prev) => [...prev, applicator]);
+  };
+
+  const setBulkAvailableApplicators = (applicators: Applicator[]) => {
+    // Atomic bulk loading to prevent race conditions and duplicates
+    // Filter out any applicators that already exist in processedApplicators
+    const processedSerialNumbers = processedApplicators.map(app => app.serialNumber);
+    const filteredApplicators = applicators.filter(app => 
+      !processedSerialNumbers.includes(app.serialNumber)
+    );
+    
+    console.log(`Setting ${filteredApplicators.length} available applicators (filtered from ${applicators.length} total)`);
+    
+    // Set the entire array atomically - this eliminates race conditions
+    setAvailableApplicators(filteredApplicators);
   };
 
   const processApplicator = (applicator: Applicator) => {
-    // Remove from available applicators (using serialNumber for more reliable matching)
-    setAvailableApplicators((prev) => prev.filter(app => app.serialNumber !== applicator.serialNumber));
-    
     // Check if applicator already exists in processed applicators (by serial number)
-    setProcessedApplicators((prev) => {
-      const existingIndex = prev.findIndex(app => app.serialNumber === applicator.serialNumber);
-      
-      if (existingIndex !== -1) {
-        // Update existing applicator instead of adding duplicate
-        const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...applicator };
-        return updated;
-      } else {
-        // Add new applicator
-        return [...prev, applicator];
-      }
-    });
+    const existingProcessedIndex = processedApplicators.findIndex(app => app.serialNumber === applicator.serialNumber);
     
-    // If usage type is "none", return to available applicators (will be shown in red)
-    // But only if it's not already there from a previous "no use" process
-    if (applicator.usageType === 'none') {
-      setAvailableApplicators((prev) => {
-        // Check if already exists to prevent duplicates
-        const exists = prev.some(app => app.serialNumber === applicator.serialNumber);
-        if (exists) {
-          // Update existing entry to ensure it has returnedFromNoUse flag
-          return prev.map(app => 
-            app.serialNumber === applicator.serialNumber 
-              ? { ...app, returnedFromNoUse: true }
-              : app
-          );
-        }
-        // Add as new entry with returnedFromNoUse flag
-        const returnedApplicator = { ...applicator, returnedFromNoUse: true };
-        return [...prev, returnedApplicator];
+    if (existingProcessedIndex !== -1) {
+      // Update existing processed applicator (editing scenario)
+      setProcessedApplicators((prev) => {
+        const updated = [...prev];
+        updated[existingProcessedIndex] = { ...updated[existingProcessedIndex], ...applicator };
+        return updated;
       });
+      
+      // Don't remove from available applicators when updating existing processed applicator
+      // Handle "no use" return scenario for updates
+      if (applicator.usageType === 'none') {
+        setAvailableApplicators((prev) => {
+          const exists = prev.some(app => app.serialNumber === applicator.serialNumber);
+          if (!exists) {
+            // Add back to available with returnedFromNoUse flag
+            const returnedApplicator = { ...applicator, returnedFromNoUse: true };
+            return [...prev, returnedApplicator];
+          } else {
+            // Update existing entry with returnedFromNoUse flag
+            return prev.map(app => 
+              app.serialNumber === applicator.serialNumber 
+                ? { ...app, returnedFromNoUse: true }
+                : app
+            );
+          }
+        });
+      } else {
+        // For non-"no use" updates, remove from available if it was previously returned
+        setAvailableApplicators((prev) => prev.filter(app => app.serialNumber !== applicator.serialNumber));
+      }
+    } else {
+      // New applicator being processed
+      // Remove from available applicators first
+      setAvailableApplicators((prev) => prev.filter(app => app.serialNumber !== applicator.serialNumber));
+      
+      // Add to processed applicators
+      setProcessedApplicators((prev) => [...prev, applicator]);
+      
+      // If usage type is "none", return to available applicators (will be shown in red)
+      if (applicator.usageType === 'none') {
+        setAvailableApplicators((prev) => {
+          // Add as new entry with returnedFromNoUse flag
+          const returnedApplicator = { ...applicator, returnedFromNoUse: true };
+          return [...prev, returnedApplicator];
+        });
+      }
     }
   };
 
   const updateApplicator = (id: string, data: Partial<Applicator>) => {
-    setApplicators((prev) => 
+    setProcessedApplicators((prev) => 
       prev.map((app) => app.id === id ? { ...app, ...data } : app)
     );
   };
 
   const removeApplicator = (id: string) => {
-    setApplicators((prev) => prev.filter((app) => app.id !== id));
+    setProcessedApplicators((prev) => prev.filter((app) => app.id !== id));
   };
 
   const clearTreatment = () => {
     setCurrentTreatment(null);
-    setApplicators([]);
     setAvailableApplicators([]);
     setProcessedApplicators([]);
     setCurrentApplicator(null);
     setProcedureType(null);
+    setLoadingApplicators(false);
   };
 
   // Progress calculation methods
   const getApplicatorProgress = () => {
-    const used = applicators.length;
-    const total = currentTreatment?.seedQuantity ? Math.ceil(currentTreatment.seedQuantity / 25) : used; // Estimate based on 25 seeds per applicator
+    const used = processedApplicators.length;
+    const total = availableApplicators.filter(app => !app.returnedFromNoUse).length + processedApplicators.length;
     return { used, total };
   };
 
   const getSeedProgress = () => {
-    const inserted = applicators.reduce((sum, app) => sum + (app.insertedSeedsQty || 0), 0);
-    const total = currentTreatment?.seedQuantity || inserted;
+    const inserted = getActualInsertedSeeds();
+    const total = getActualTotalSeeds();
     return { inserted, total };
   };
 
@@ -186,17 +213,29 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     return distribution;
   };
 
-  // New functions for actual seed calculations
+  // Fixed functions for actual seed calculations - no double counting with defensive safeguards
   const getActualTotalSeeds = () => {
-    // Calculate total seeds from available applicators + processed applicators
-    // But don't double count "no use" applicators that are returned to available
+    // Get processed serial numbers for defensive filtering
+    const processedSerialNumbers = processedApplicators.map(app => app.serialNumber);
+    
+    // Calculate available seeds, excluding "no use" returns AND any that exist in processed (defensive)
     const availableSeeds = availableApplicators
       .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
+      .filter(app => !processedSerialNumbers.includes(app.serialNumber)) // DEFENSIVE: Exclude any that are also processed
       .reduce((sum, app) => sum + app.seedQuantity, 0);
     
-    const processedSeeds = processedApplicators.reduce((sum, app) => sum + app.seedQuantity, 0);
+    // Calculate processed seeds
+    const originalProcessedSeeds = processedApplicators.reduce((sum, app) => sum + app.seedQuantity, 0);
     
-    return availableSeeds + processedSeeds;
+    // Log warning if defensive filter caught any double counting
+    const duplicateCount = availableApplicators.filter(app => 
+      !app.returnedFromNoUse && processedSerialNumbers.includes(app.serialNumber)
+    ).length;
+    if (duplicateCount > 0) {
+      console.warn(`⚠️  Defensive filter caught ${duplicateCount} applicators in both available and processed arrays`);
+    }
+    
+    return availableSeeds + originalProcessedSeeds;
   };
 
   const getActualInsertedSeeds = () => {
@@ -209,11 +248,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const getApplicatorTypeBreakdown = () => {
-    // Group available applicators by seed quantity, excluding returned "no use" applicators
+    // Group available applicators by seed quantity, excluding returned "no use" applicators and processed applicators
     const breakdown: { [seedCount: number]: number } = {};
+    const processedSerialNumbers = processedApplicators.map(app => app.serialNumber);
     
     availableApplicators
       .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
+      .filter(app => !processedSerialNumbers.includes(app.serialNumber)) // DEFENSIVE: Exclude processed applicators
       .forEach(app => {
         breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
       });
@@ -224,9 +265,9 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => b.seedCount - a.seedCount);
   };
 
-  // Calculate totals for removal treatment
-  const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
-  const removedSeeds = applicators.reduce((sum, app) => 
+  // Calculate totals for removal treatment using processed applicators
+  const totalSeeds = processedApplicators.reduce((sum, app) => sum + app.seedQuantity, 0);
+  const removedSeeds = processedApplicators.reduce((sum, app) => 
     app.isRemoved ? sum + app.seedQuantity : sum, 0
   );
 
@@ -250,15 +291,16 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     <TreatmentContext.Provider
       value={{
         currentTreatment,
-        applicators,
         availableApplicators,
         processedApplicators,
         currentApplicator,
         procedureType,
+        loadingApplicators,
         setProcedureType,
         setTreatment,
-        addApplicator,
         addAvailableApplicator,
+        setBulkAvailableApplicators,
+        setLoadingApplicators,
         processApplicator,
         updateApplicator,
         setCurrentApplicator,

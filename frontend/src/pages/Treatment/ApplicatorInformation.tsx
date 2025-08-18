@@ -7,7 +7,7 @@ import { treatmentService } from '@/services/treatmentService';
 
 const ApplicatorInformation = () => {
   const navigate = useNavigate();
-  const { currentTreatment, currentApplicator, addApplicator, updateApplicator } = useTreatment();
+  const { currentTreatment, currentApplicator, processApplicator, updateApplicator } = useTreatment();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ const ApplicatorInformation = () => {
           currentTreatment.id,
           applicatorData
         );
-        addApplicator(newApplicator);
+        processApplicator(newApplicator);
       }
 
       // Navigate to the use list

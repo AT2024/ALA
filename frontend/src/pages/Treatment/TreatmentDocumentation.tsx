@@ -10,7 +10,7 @@ import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
-  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, addAvailableApplicator } = useTreatment();
+  const { currentTreatment, processApplicator, progressStats, availableApplicators, setBulkAvailableApplicators, currentApplicator, setCurrentApplicator, processedApplicators, loadingApplicators, setLoadingApplicators } = useTreatment();
   const navigate = useNavigate();
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
@@ -37,6 +37,24 @@ const TreatmentDocumentation = () => {
 
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
+
+  // Handle editing existing applicator
+  useEffect(() => {
+    if (currentApplicator) {
+      // Fill form with existing applicator data for editing
+      setFormData({
+        serialNumber: currentApplicator.serialNumber,
+        applicatorType: currentApplicator.applicatorType || '',
+        seedsQty: currentApplicator.seedQuantity.toString(),
+        insertionTime: currentApplicator.insertionTime,
+        usingType: currentApplicator.usageType === 'full' ? 'Full use' : 
+                   currentApplicator.usageType === 'faulty' ? 'Faulty' : 'No Use',
+        insertedSeedsQty: (currentApplicator.insertedSeedsQty || 0).toString(),
+        comments: currentApplicator.comments || ''
+      });
+      setManualEntry(true); // Switch to manual mode for editing
+    }
+  }, [currentApplicator]);
 
   useEffect(() => {
     if (!currentTreatment) {
@@ -76,42 +94,52 @@ const TreatmentDocumentation = () => {
     };
   }, [currentTreatment, manualEntry]);
 
-  // Load available applicators when treatment is selected
+  // Load available applicators when treatment is selected (only if not already loaded)
   useEffect(() => {
-    if (currentTreatment) {
+    if (currentTreatment && (availableApplicators.length === 0 && processedApplicators.length === 0) && !loadingApplicators) {
+      console.log('Loading available applicators for first time or new treatment');
       loadAvailableApplicators();
+    } else if (currentTreatment && loadingApplicators) {
+      console.log('Skipping applicator load - already loading (StrictMode protection)');
+    } else if (currentTreatment) {
+      console.log(`Skipping applicator load - already have ${availableApplicators.length} available and ${processedApplicators.length} processed`);
     }
-  }, [currentTreatment]);
+  }, [currentTreatment, availableApplicators.length, processedApplicators.length, loadingApplicators]);
 
   const loadAvailableApplicators = async () => {
-    if (!currentTreatment) return;
+    if (!currentTreatment || loadingApplicators) return;
+    
+    // Set loading flag to prevent concurrent executions (StrictMode protection)
+    setLoadingApplicators(true);
     
     try {
+      console.log('🔄 Starting bulk load of available applicators...');
       const response = await priorityService.getAvailableApplicators(
         currentTreatment.site,
         currentTreatment.date
       );
       
       if (response.success) {
-        const applicators = response.applicators || [];
+        const apiApplicators = response.applicators || [];
         
-        // Add each applicator to the context
-        applicators.forEach((applicator: any) => {
-          addAvailableApplicator({
-            id: applicator.serialNumber || crypto.randomUUID(),
-            serialNumber: applicator.serialNumber,
-            applicatorType: applicator.applicatorType || applicator.type || '',
-            seedQuantity: applicator.seedQuantity || 0,
-            usageType: 'full' as const,
-            insertionTime: '',
-            insertedSeedsQty: 0,
-            comments: ''
-          });
-        });
+        // Transform API applicators to our format
+        const formattedApplicators = apiApplicators.map((applicator: any) => ({
+          id: applicator.serialNumber || crypto.randomUUID(),
+          serialNumber: applicator.serialNumber,
+          applicatorType: applicator.applicatorType || applicator.type || '',
+          seedQuantity: applicator.seedQuantity || 0,
+          usageType: 'full' as const,
+          insertionTime: '',
+          insertedSeedsQty: 0,
+          comments: ''
+        }));
         
-        console.log(`Loaded ${applicators.length} available applicators`);
+        // Bulk set all applicators atomically (this filters against processedApplicators internally)
+        setBulkAvailableApplicators(formattedApplicators);
         
-        if (applicators.length === 0) {
+        console.log(`✅ Bulk loaded ${formattedApplicators.length} available applicators`);
+        
+        if (formattedApplicators.length === 0) {
           console.warn('No applicators available for this treatment');
         }
       } else {
@@ -121,6 +149,9 @@ const TreatmentDocumentation = () => {
     } catch (error) {
       console.error('Error loading available applicators:', error);
       setError('Unable to load applicators. Please try refreshing the page.');
+    } finally {
+      // Always clear loading flag
+      setLoadingApplicators(false);
     }
   };
 
@@ -401,9 +432,9 @@ const TreatmentDocumentation = () => {
         return;
       }
 
-      // Add applicator to local treatment context
+      // Add or update applicator in local treatment context
       const applicator = {
-        id: crypto.randomUUID(),
+        id: currentApplicator?.id || crypto.randomUUID(), // Use existing ID if editing
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
@@ -413,11 +444,16 @@ const TreatmentDocumentation = () => {
         comments: formData.comments
       };
 
-      console.log('Processing applicator in context:', applicator);
+      console.log(currentApplicator ? 'Updating existing applicator in context:' : 'Processing new applicator in context:', applicator);
       processApplicator(applicator);
-      setScannedApplicators(prev => [...prev, formData.serialNumber]);
+      
+      // Only add to scanned list if it's a new applicator
+      if (!currentApplicator) {
+        setScannedApplicators(prev => [...prev, formData.serialNumber]);
+      }
 
-      // Clear form for next applicator
+      // Clear form and editing state for next applicator
+      setCurrentApplicator(null); // Clear editing mode
       setFormData({
         serialNumber: '',
         applicatorType: '',
@@ -434,8 +470,9 @@ const TreatmentDocumentation = () => {
       const remainingApplicators = progressStats.applicatorsRemaining;
       const completionPercentage = progressStats.completionPercentage;
       
+      const actionText = currentApplicator ? 'updated' : 'saved';
       setSuccess(
-        `Applicator data saved to Priority system! ` +
+        `Applicator data ${actionText} in Priority system! ` +
         `Progress: ${insertedSeeds}/${totalSeeds} seeds (${completionPercentage}%) - ` +
         `${remainingApplicators} applicators remaining.`
       );
@@ -455,7 +492,7 @@ const TreatmentDocumentation = () => {
   };
 
   const handleFinalize = async () => {
-    if (applicators.length === 0) {
+    if (processedApplicators.length === 0) {
       setError('Please add at least one applicator before finalizing');
       return;
     }
@@ -523,10 +560,10 @@ const TreatmentDocumentation = () => {
                     <p className="font-medium capitalize">{currentTreatment.type}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Applicators Added</p>
+                    <p className="text-gray-500">Applicators Processed</p>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">{applicators.length}</p>
-                      {applicators.length > 0 && (
+                      <p className="font-medium">{processedApplicators.length}</p>
+                      {processedApplicators.length > 0 && (
                         <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
                           Active
                         </span>
@@ -640,12 +677,15 @@ const TreatmentDocumentation = () => {
                   {/* Applicator List */}
                   <div className="border rounded-md max-h-60 overflow-y-auto">
                     {(() => {
-                      // Filter applicators by A-suffix if query is provided
-                      const filteredApplicators = aSuffixQuery.trim() 
-                        ? availableApplicators.filter(app => 
-                            app.serialNumber?.toUpperCase().endsWith(`-A${aSuffixQuery.trim().toUpperCase()}`)
-                          )
-                        : availableApplicators;
+                      // Filter applicators by A-suffix if query is provided, and exclude already processed ones
+                      const processedSerialNumbers = processedApplicators.map(app => app.serialNumber);
+                      const filteredApplicators = availableApplicators
+                        .filter(app => !processedSerialNumbers.includes(app.serialNumber)) // Exclude processed applicators
+                        .filter(app => 
+                          aSuffixQuery.trim() 
+                            ? app.serialNumber?.toUpperCase().endsWith(`-A${aSuffixQuery.trim().toUpperCase()}`)
+                            : true
+                        );
 
                       return filteredApplicators.length > 0 ? (
                         <div className="space-y-1 p-2">
@@ -945,7 +985,7 @@ const TreatmentDocumentation = () => {
               </button>
               <button
                 onClick={handleFinalize}
-                disabled={loading || applicators.length === 0}
+                disabled={loading || processedApplicators.length === 0}
                 className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? 'Processing...' : 'Finalize / Use List'}

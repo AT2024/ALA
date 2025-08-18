@@ -6,7 +6,7 @@ import { treatmentService, Applicator } from '@/services/treatmentService';
 
 const SeedRemoval = () => {
   const navigate = useNavigate();
-  const { currentTreatment, applicators, updateApplicator, totalSeeds, removedSeeds } =
+  const { currentTreatment, processedApplicators, updateApplicator, totalSeeds, removedSeeds } =
     useTreatment();
 
   const [loading, setLoading] = useState(false);
@@ -25,10 +25,10 @@ const SeedRemoval = () => {
     }
 
     // If no applicators in state, fetch them from the server
-    if (applicators.length === 0) {
+    if (processedApplicators.length === 0) {
       fetchApplicators();
     }
-  }, [currentTreatment, applicators.length]);
+  }, [currentTreatment, processedApplicators.length]);
 
   const fetchApplicators = async () => {
     if (!currentTreatment) return;
@@ -174,13 +174,13 @@ const SeedRemoval = () => {
             <div className='flex justify-center py-8'>
               <div className='h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent'></div>
             </div>
-          ) : applicators.length === 0 ? (
+          ) : processedApplicators.length === 0 ? (
             <div className='rounded-md bg-yellow-50 p-4 text-sm text-yellow-700'>
               No applicators found for this treatment.
             </div>
           ) : (
             <div className='space-y-4'>
-              {applicators.map((applicator) => (
+              {processedApplicators.map((applicator: any) => (
                 <div
                   key={applicator.id}
                   className={`rounded-lg border p-4 ${
