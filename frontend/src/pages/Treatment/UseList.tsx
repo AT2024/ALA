@@ -52,7 +52,7 @@ const UseList = () => {
   };
 
   // Calculate total activity by summing activity from each processed applicator
-  const totalActivity = processedApplicators.reduce((sum, app) => {
+  const totalActivity = processedApplicators.reduce((sum, app, index) => {
     const activityPerSeed = currentTreatment?.activityPerSeed || 0;
     let insertedSeeds = 0;
     
@@ -63,8 +63,35 @@ const UseList = () => {
     }
     // 'none' usage type contributes 0 activity
     
-    return sum + (insertedSeeds * activityPerSeed);
+    const applicatorActivity = insertedSeeds * activityPerSeed;
+    
+    // Debug logging for activity calculation
+    console.log(`📊 Applicator ${index + 1} (${app.serialNumber}): ${insertedSeeds} seeds × ${activityPerSeed} µCi = ${applicatorActivity.toFixed(2)} µCi [Usage: ${app.usageType}]`);
+    
+    return sum + applicatorActivity;
   }, 0);
+
+  // Debug logging for total activity calculation
+  console.log(`🔍 Activity Calculation Debug:`, {
+    treatmentActivityPerSeed: currentTreatment?.activityPerSeed,
+    processedApplicatorsCount: processedApplicators.length,
+    totalSeedsUsed: processedApplicators.reduce((sum, app) => {
+      if (app.usageType === 'full') return sum + app.seedQuantity;
+      if (app.usageType === 'faulty') return sum + (app.insertedSeedsQty || 0);
+      return sum;
+    }, 0),
+    calculatedTotalActivity: totalActivity.toFixed(2) + ' µCi'
+  });
+
+  if (currentTreatment?.activityPerSeed === 0 || !currentTreatment?.activityPerSeed) {
+    console.warn('⚠️ Activity Per Seed is 0 or missing - check SBD_PREFACTIV in Priority system');
+  }
+
+  if (totalActivity > 0) {
+    console.log(`✅ Total Activity: ${totalActivity.toFixed(2)} µCi (calculated from ${processedApplicators.length} applicators)`);
+  } else if (processedApplicators.length > 0) {
+    console.error('❌ Total Activity is 0 despite having processed applicators - activity data missing!');
+  }
 
   const handleEditApplicator = (applicatorSerialNumber: string) => {
     const applicator = processedApplicators.find(app => app.serialNumber === applicatorSerialNumber);
@@ -291,9 +318,21 @@ const UseList = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Activity</p>
-                <p className="font-medium text-primary">
-                  {totalActivity.toFixed(2)} µCi
-                </p>
+                <div className="flex flex-col">
+                  <p className={`font-medium ${totalActivity > 0 ? 'text-primary' : 'text-red-600'}`}>
+                    {totalActivity.toFixed(2)} µCi
+                  </p>
+                  {(currentTreatment?.activityPerSeed === 0 || !currentTreatment?.activityPerSeed) && processedApplicators.length > 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      ⚠️ Activity data missing
+                    </p>
+                  )}
+                  {totalActivity > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {currentTreatment?.activityPerSeed?.toFixed(2)} µCi/seed
+                    </p>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Seeds Inserted By (Full Name)</p>

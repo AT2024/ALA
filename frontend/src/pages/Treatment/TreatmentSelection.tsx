@@ -217,13 +217,29 @@ const TreatmentSelection = () => {
           }
           return true;
         })
-        .map((order: any) => ({
-          id: order.ORDNAME,
-          seedQty: parseInt(order.SBD_SEEDQTY) || 0,
-          activityPerSeed: parseFloat(order.SBD_PREFACTIV) || 0,
-          ordName: order.ORDNAME,
-          reference: order.REFERENCE || null
-        }));
+        .map((order: any) => {
+          const seedQty = parseInt(order.SBD_SEEDQTY) || 0;
+          const activityPerSeed = parseFloat(order.SBD_PREFACTIV) || 0;
+          
+          // Debug logging for Priority activity data
+          if (activityPerSeed === 0) {
+            console.warn(`⚠️ SBD_PREFACTIV is 0 or invalid for order ${order.ORDNAME}:`, {
+              rawSBD_PREFACTIV: order.SBD_PREFACTIV,
+              parsedValue: activityPerSeed,
+              orderData: order
+            });
+          } else {
+            console.log(`✅ Activity data found for ${order.ORDNAME}: ${activityPerSeed} µCi/seed (from SBD_PREFACTIV: ${order.SBD_PREFACTIV})`);
+          }
+          
+          return {
+            id: order.ORDNAME,
+            seedQty,
+            activityPerSeed,
+            ordName: order.ORDNAME,
+            reference: order.REFERENCE || null
+          };
+        });
       
       // Helper function to follow reference chain and find root order
       const findRootOrder = (orderName: string, visited = new Set<string>()): PriorityPatient | null => {
@@ -522,12 +538,33 @@ const TreatmentSelection = () => {
         surgeon: formData.surgeon
       };
 
+      // Debug logging for activity data flow
+      console.log('🔄 Creating treatment with activity data:', {
+        formDataActivityPerSeed: formData.activityPerSeed,
+        parsedActivityPerSeed: parseFloat(formData.activityPerSeed) || 0,
+        treatmentDataActivityPerSeed: treatmentData.activityPerSeed
+      });
+      
+      if (treatmentData.activityPerSeed === 0 || !treatmentData.activityPerSeed) {
+        console.error('❌ Treatment being created with 0 or missing activity per seed! This will cause total activity calculation to be 0.');
+      }
+      
       console.log('Creating treatment with data:', treatmentData);
       
       // Call backend API to create treatment
       const treatment = await treatmentService.createTreatment(treatmentData);
       
       console.log('Treatment created successfully:', treatment);
+      
+      // Verify activity data preserved in created treatment
+      if (treatment.activityPerSeed !== treatmentData.activityPerSeed) {
+        console.warn('⚠️ Activity per seed changed during treatment creation!', {
+          sent: treatmentData.activityPerSeed,
+          received: treatment.activityPerSeed
+        });
+      } else if (treatment.activityPerSeed > 0) {
+        console.log(`✅ Activity data preserved: ${treatment.activityPerSeed} µCi/seed`);
+      }
       
       // Set treatment in context with backend-generated ID
       setTreatment(treatment);
