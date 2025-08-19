@@ -9,7 +9,7 @@
 # =================================================================
 # BASE STAGE - Common Node.js setup
 # =================================================================
-FROM node:20.19.2-alpine AS base
+FROM node:20.20.0-alpine AS base
 
 # Install security updates and necessary packages
 RUN apk update && apk upgrade && \
@@ -85,7 +85,7 @@ RUN npm run build
 # =================================================================
 # PRODUCTION STAGE - Nginx with optimized assets
 # =================================================================
-FROM nginx:1.27.3-alpine AS production
+FROM nginx:1.27.5-alpine AS production
 
 # Install security updates
 RUN apk update && apk upgrade && \
