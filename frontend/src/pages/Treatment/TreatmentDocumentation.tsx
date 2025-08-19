@@ -29,7 +29,7 @@ const TreatmentDocumentation = () => {
     serialNumber: '',
     applicatorType: '',
     seedsQty: '',
-    insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
+    insertionTime: new Date().toISOString(),
     usingType: '',
     insertedSeedsQty: '',
     comments: ''
@@ -103,7 +103,7 @@ const TreatmentDocumentation = () => {
             applicatorType: applicator.applicatorType || applicator.type || '',
             seedQuantity: applicator.seedQuantity || 0,
             usageType: 'full' as const,
-            insertionTime: '',
+            insertionTime: new Date().toISOString(),
             insertedSeedsQty: 0,
             comments: ''
           });
@@ -238,7 +238,7 @@ const TreatmentDocumentation = () => {
       serialNumber,
       applicatorType,
       seedsQty: seedQuantity.toString(),
-      insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
+      insertionTime: new Date().toISOString(),
       usingType: 'Full use', // Smart default selection
       insertedSeedsQty: seedQuantity.toString(), // Auto-filled from Priority PARTS
       comments: ''
@@ -326,7 +326,7 @@ const TreatmentDocumentation = () => {
       serialNumber: applicator.serialNumber,
       applicatorType: applicator.applicatorType || '',
       seedsQty: applicator.seedQuantity?.toString() || '',
-      insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
+      insertionTime: new Date().toISOString(),
       usingType: applicator.returnedFromNoUse ? 'No Use' : 'Full use', // Smart default selection
       insertedSeedsQty: applicator.returnedFromNoUse ? '0' : applicator.seedQuantity?.toString() || '',
       comments: ''
@@ -341,7 +341,7 @@ const TreatmentDocumentation = () => {
     const newTime = minutes > 0 ? addMinutes(currentTime, minutes) : subMinutes(currentTime, Math.abs(minutes));
     setFormData(prev => ({ 
       ...prev, 
-      insertionTime: format(newTime, 'dd.MM.yyyy HH:mm') 
+      insertionTime: newTime.toISOString() 
     }));
   };
 
@@ -422,7 +422,7 @@ const TreatmentDocumentation = () => {
         serialNumber: '',
         applicatorType: '',
         seedsQty: '',
-        insertionTime: format(new Date(), 'dd.MM.yyyy HH:mm'),
+        insertionTime: new Date().toISOString(),
         usingType: '',
         insertedSeedsQty: '',
         comments: ''
@@ -838,7 +838,7 @@ const TreatmentDocumentation = () => {
                   </button>
                   <input
                     type="text"
-                    value={formData.insertionTime}
+                    value={format(new Date(formData.insertionTime), 'dd.MM.yyyy HH:mm')}
                     readOnly
                     className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                   />

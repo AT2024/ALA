@@ -181,7 +181,10 @@ const UseList = () => {
                         {applicator.seedQuantity}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {format(new Date(applicator.insertionTime), 'dd.MM.yyyy HH:mm')}
+                        {applicator.insertionTime && !isNaN(new Date(applicator.insertionTime).getTime()) 
+                          ? format(new Date(applicator.insertionTime), 'dd.MM.yyyy HH:mm')
+                          : 'N/A'
+                        }
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
@@ -237,7 +240,7 @@ const UseList = () => {
               <div>
                 <p className="text-sm text-gray-500">Time Insertion Treatment Started</p>
                 <p className="font-medium">
-                  {treatmentSummary.timeInsertionStarted 
+                  {treatmentSummary.timeInsertionStarted && !isNaN(new Date(treatmentSummary.timeInsertionStarted).getTime())
                     ? format(new Date(treatmentSummary.timeInsertionStarted), 'dd.MM.yyyy HH:mm')
                     : 'N/A'
                   }

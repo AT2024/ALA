@@ -16,7 +16,7 @@ const ApplicatorInformation = () => {
     currentApplicator?.usageType || 'full'
   );
   const [insertionTime, setInsertionTime] = useState<string>(
-    currentApplicator
+    currentApplicator && currentApplicator.insertionTime && !isNaN(new Date(currentApplicator.insertionTime).getTime())
       ? format(new Date(currentApplicator.insertionTime), "yyyy-MM-dd'T'HH:mm")
       : format(new Date(), "yyyy-MM-dd'T'HH:mm")
   );
