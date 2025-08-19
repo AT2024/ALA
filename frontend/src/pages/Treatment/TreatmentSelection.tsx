@@ -480,12 +480,8 @@ const TreatmentSelection = () => {
       // Set treatment in context with backend-generated ID
       setTreatment(treatment);
       
-      // Navigate to appropriate screen based on procedure type
-      if (procedureType === 'removal') {
-        navigate('/treatment/removal');
-      } else {
-        navigate('/treatment/scan');
-      }
+      // Navigate to Treatment Documentation screen
+      navigate('/treatment/scan');
     } catch (error: any) {
       console.error('Error creating treatment:', error);
       setError(error.response?.data?.message || 'Failed to create treatment. Please try again.');
