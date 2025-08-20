@@ -190,8 +190,12 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const getActualTotalSeeds = () => {
     // Calculate total seeds from available applicators + processed applicators
     // But don't double count "no use" applicators that are returned to available
+    // Also exclude already processed applicators from available count to prevent double counting
+    const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
+    
     const availableSeeds = availableApplicators
       .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
+      .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
       .reduce((sum, app) => sum + app.seedQuantity, 0);
     
     const processedSeeds = processedApplicators.reduce((sum, app) => sum + app.seedQuantity, 0);
@@ -210,10 +214,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
 
   const getApplicatorTypeBreakdown = () => {
     // Group available applicators by seed quantity, excluding returned "no use" applicators
+    // Also exclude already processed applicators to prevent double counting
+    const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
     const breakdown: { [seedCount: number]: number } = {};
     
     availableApplicators
       .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
+      .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
       .forEach(app => {
         breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
       });
@@ -234,8 +241,14 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const actualTotalSeeds = getActualTotalSeeds();
   const actualInsertedSeeds = getActualInsertedSeeds();
   
+  // Calculate available applicators excluding already processed ones
+  const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
+  const actualAvailableApplicators = availableApplicators
+    .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
+    .filter(app => !processedSerialNumbers.has(app.serialNumber)); // Exclude already processed applicators
+  
   const progressStats: ProgressStats = {
-    totalApplicators: availableApplicators.filter(app => !app.returnedFromNoUse).length + processedApplicators.length,
+    totalApplicators: actualAvailableApplicators.length + processedApplicators.length,
     usedApplicators: processedApplicators.length,
     totalSeeds: actualTotalSeeds,
     insertedSeeds: actualInsertedSeeds,
@@ -243,7 +256,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
       Math.round((actualInsertedSeeds / actualTotalSeeds) * 100) : 0,
     usageTypeDistribution: getUsageTypeDistribution(),
     seedsRemaining: Math.max(0, actualTotalSeeds - actualInsertedSeeds),
-    applicatorsRemaining: availableApplicators.length
+    applicatorsRemaining: actualAvailableApplicators.length
   };
 
   return (

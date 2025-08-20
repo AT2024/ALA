@@ -10,7 +10,7 @@ import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
-  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, addAvailableApplicator } = useTreatment();
+  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, processedApplicators, addAvailableApplicator } = useTreatment();
   const navigate = useNavigate();
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
@@ -589,7 +589,7 @@ const TreatmentDocumentation = () => {
                   className={`px-3 py-1 text-sm rounded-md ${showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
                 >
-                  Choose from List ({availableApplicators.length})
+                  Choose from List ({availableApplicators.filter(app => !new Set(processedApplicators.map(p => p.serialNumber)).has(app.serialNumber)).length})
                 </button>
                 <button
                   type="button"
@@ -640,12 +640,18 @@ const TreatmentDocumentation = () => {
                   {/* Applicator List */}
                   <div className="border rounded-md max-h-60 overflow-y-auto">
                     {(() => {
-                      // Filter applicators by A-suffix if query is provided
+                      // Filter out already processed applicators first
+                      const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
+                      const actuallyAvailableApplicators = availableApplicators.filter(app => 
+                        !processedSerialNumbers.has(app.serialNumber)
+                      );
+                      
+                      // Then filter by A-suffix if query is provided
                       const filteredApplicators = aSuffixQuery.trim() 
-                        ? availableApplicators.filter(app => 
+                        ? actuallyAvailableApplicators.filter(app => 
                             app.serialNumber?.toUpperCase().endsWith(`-A${aSuffixQuery.trim().toUpperCase()}`)
                           )
-                        : availableApplicators;
+                        : actuallyAvailableApplicators;
 
                       return filteredApplicators.length > 0 ? (
                         <div className="space-y-1 p-2">
