@@ -27,6 +27,7 @@ interface Applicator {
   removalComments?: string;
   removalImage?: string;
   returnedFromNoUse?: boolean;
+  patientId?: string;
 }
 
 interface ProgressStats {
@@ -196,6 +197,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     const availableSeeds = availableApplicators
       .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
       .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
+      .filter(app => app.patientId === currentTreatment?.subjectId) // Only include current patient's applicators
       .reduce((sum, app) => sum + app.seedQuantity, 0);
     
     const processedSeeds = processedApplicators.reduce((sum, app) => sum + app.seedQuantity, 0);
@@ -221,6 +223,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     availableApplicators
       .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
       .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
+      .filter(app => app.patientId === currentTreatment?.subjectId) // Only include current patient's applicators
       .forEach(app => {
         breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
       });
@@ -245,7 +248,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
   const actualAvailableApplicators = availableApplicators
     .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
-    .filter(app => !processedSerialNumbers.has(app.serialNumber)); // Exclude already processed applicators
+    .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
+    .filter(app => app.patientId === currentTreatment?.subjectId); // Only include current patient's applicators
   
   const progressStats: ProgressStats = {
     totalApplicators: actualAvailableApplicators.length + processedApplicators.length,

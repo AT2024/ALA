@@ -40,6 +40,13 @@ const TreatmentDocumentation = () => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
+  // Calculate patient-specific filtered applicators (reusable across UI elements)
+  const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
+  const patientFilteredApplicators = availableApplicators.filter(app => 
+    !processedSerialNumbers.has(app.serialNumber) &&
+    app.patientId === currentTreatment?.subjectId
+  );
+
   useEffect(() => {
     if (!currentTreatment) {
       navigate('/treatment/select');
@@ -107,7 +114,8 @@ const TreatmentDocumentation = () => {
             usageType: 'full' as const,
             insertionTime: new Date().toISOString(),
             insertedSeedsQty: 0,
-            comments: ''
+            comments: '',
+            patientId: applicator.patientId
           });
         });
         
@@ -594,7 +602,7 @@ const TreatmentDocumentation = () => {
                   className={`px-3 py-1 text-sm rounded-md ${showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
                 >
-                  Choose from List ({availableApplicators.filter(app => !new Set(processedApplicators.map(p => p.serialNumber)).has(app.serialNumber)).length})
+                  Choose from List ({patientFilteredApplicators.length})
                 </button>
                 <button
                   type="button"
@@ -645,11 +653,8 @@ const TreatmentDocumentation = () => {
                   {/* Applicator List */}
                   <div className="border rounded-md max-h-60 overflow-y-auto">
                     {(() => {
-                      // Filter out already processed applicators first
-                      const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
-                      const actuallyAvailableApplicators = availableApplicators.filter(app => 
-                        !processedSerialNumbers.has(app.serialNumber)
-                      );
+                      // Use the pre-filtered patient-specific applicators
+                      const actuallyAvailableApplicators = patientFilteredApplicators;
                       
                       // Then filter by A-suffix if query is provided
                       const filteredApplicators = aSuffixQuery.trim() 

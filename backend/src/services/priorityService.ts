@@ -1332,7 +1332,7 @@ export const priorityService = {
       return response.data.value.map((order: any) => ({
         id: order.ORDNAME,
         site: order.CUSTNAME,
-        patientId: order.REFERENCE,
+        patientId: order.ORDNAME,
         date: order.SIBD_TREATDAY
       }));
       
@@ -1388,7 +1388,7 @@ export const priorityService = {
           applicatorType: partDetails.partDes,
           seedQuantity: partDetails.seedQuantity,
           treatmentId: item.ORDNAME,
-          patientId: item.REFERENCE,
+          patientId: item.ORDNAME,
           usageType: item.ALPH_USETYPE,
           usageTime: item.ALPH_USETIME,
           insertedSeeds: item.ALPH_INSERTED || 0,
@@ -1575,7 +1575,7 @@ export const priorityService = {
               applicatorType: item.PARTDES || 'Unknown Applicator',
               seedQuantity: item.INTDATA2 || 0,
               treatmentId: item.ORDNAME || order.ORDNAME,
-              patientId: order.REFERENCE || 'Unknown Patient',
+              patientId: order.ORDNAME || 'Unknown Patient',
               usageType: item.USINGTYPE || null,
               usageTime: item.INSERTIONDATE || null,
               insertedSeeds: item.INSERTEDSEEDSQTY || 0,
