@@ -13,10 +13,14 @@ interface TreatmentAttributes {
   userId: string; // User who created/owns the treatment
   completedBy: string | null; // User who completed the treatment
   completedAt: Date | null; // When the treatment was completed
+  email?: string; // User's email for the treatment
+  seedQuantity?: number; // Number of seeds for the treatment
+  activityPerSeed?: number; // Activity per seed
+  surgeon?: string; // Surgeon performing the treatment
 }
 
 // For creating a new treatment
-interface TreatmentCreationAttributes extends Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt'> {}
+interface TreatmentCreationAttributes extends Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon'> {}
 
 class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> implements TreatmentAttributes {
   public id!: string;
@@ -29,6 +33,10 @@ class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> 
   public userId!: string;
   public completedBy!: string | null;
   public completedAt!: Date | null;
+  public email?: string;
+  public seedQuantity?: number;
+  public activityPerSeed?: number;
+  public surgeon?: string;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -88,6 +96,22 @@ Treatment.init(
     },
     completedAt: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    seedQuantity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    activityPerSeed: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    surgeon: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
   },
