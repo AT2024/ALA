@@ -5,12 +5,14 @@ import { format, addMinutes, subMinutes } from 'date-fns';
 import Layout from '@/components/Layout';
 import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
 import { useTreatment } from '@/context/TreatmentContext';
+import { useAuth } from '@/context/AuthContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
   const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, processedApplicators, addAvailableApplicator } = useTreatment();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
@@ -516,7 +518,10 @@ const TreatmentDocumentation = () => {
                   </div>
                   <div>
                     <p className="text-gray-500">Site</p>
-                    <p className="font-medium">{currentTreatment.site}</p>
+                    <p className="font-medium">{(() => {
+                      const currentSite = user?.sites?.find(site => site.custName === currentTreatment.site);
+                      return currentSite ? `${currentSite.custDes} (${currentSite.custName})` : currentTreatment.site;
+                    })()}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Type</p>
