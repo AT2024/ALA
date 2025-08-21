@@ -60,8 +60,13 @@ export default function Layout({
     <div className="flex min-h-screen flex-col">
       <header className="bg-primary p-4 text-white shadow-md">
         <div className="container mx-auto flex items-center justify-between">
-          {/* Left section - Title with back button */}
-          <div className="flex items-center gap-2">
+          {/* Left section - Logo, title with back button */}
+          <div className="flex items-center gap-3">
+            <img 
+              src="/alphataulogo.png" 
+              alt="AlphaTau Medical" 
+              className="h-8 w-auto"
+            />
             {showBackButton && (
               <button
                 onClick={handleBack}

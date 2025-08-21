@@ -45,8 +45,8 @@ const LoginPage = () => {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <img 
-            src="/logo.png" 
-            alt="AlphaTau Logo" 
+            src="/alphataulogo.png" 
+            alt="AlphaTau Medical" 
             className="mx-auto mb-4 h-16 w-auto"
           />
           <h1 className="text-2xl font-bold text-gray-900">
