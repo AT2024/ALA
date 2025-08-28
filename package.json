@@ -9,8 +9,16 @@
     "dev": "node run.js",
     "docker": "node run.js"
   },
-  "keywords": ["docker", "ala", "accountability", "application"],
+  "keywords": [
+    "docker",
+    "ala",
+    "accountability",
+    "application"
+  ],
   "author": "",
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "puppeteer": "^24.17.0"
+  }
 }

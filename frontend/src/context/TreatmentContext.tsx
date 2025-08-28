@@ -70,6 +70,7 @@ interface TreatmentContextType {
   getActualTotalSeeds: () => number;
   getActualInsertedSeeds: () => number;
   getApplicatorTypeBreakdown: () => { seedCount: number; count: number }[];
+  getFilteredAvailableApplicators: () => Applicator[];
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
@@ -106,10 +107,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const processApplicator = (applicator: Applicator) => {
-    // Remove from available applicators (using serialNumber for more reliable matching)
-    setAvailableApplicators((prev) => prev.filter(app => app.serialNumber !== applicator.serialNumber));
-    
-    // Check if applicator already exists in processed applicators (by serial number)
+    // Always add to processed applicators list for history tracking
     setProcessedApplicators((prev) => {
       const existingIndex = prev.findIndex(app => app.serialNumber === applicator.serialNumber);
       
@@ -124,24 +122,21 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
       }
     });
     
-    // If usage type is "none", return to available applicators (will be shown in red)
-    // But only if it's not already there from a previous "no use" process
+    // Handle available applicators based on usage type
     if (applicator.usageType === 'none') {
-      setAvailableApplicators((prev) => {
-        // Check if already exists to prevent duplicates
-        const exists = prev.some(app => app.serialNumber === applicator.serialNumber);
-        if (exists) {
-          // Update existing entry to ensure it has returnedFromNoUse flag
-          return prev.map(app => 
-            app.serialNumber === applicator.serialNumber 
-              ? { ...app, returnedFromNoUse: true }
-              : app
-          );
-        }
-        // Add as new entry with returnedFromNoUse flag
-        const returnedApplicator = { ...applicator, returnedFromNoUse: true };
-        return [...prev, returnedApplicator];
-      });
+      // For "No Use": Keep in available list but mark as returned from no use
+      setAvailableApplicators((prev) =>
+        prev.map(app => 
+          app.serialNumber === applicator.serialNumber 
+            ? { ...app, returnedFromNoUse: true }
+            : app
+        )
+      );
+    } else {
+      // For "Full use" and "Faulty": Remove from available list
+      setAvailableApplicators((prev) => 
+        prev.filter(app => app.serialNumber !== applicator.serialNumber)
+      );
     }
   };
 
@@ -162,6 +157,24 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setProcessedApplicators([]);
     setCurrentApplicator(null);
     setProcedureType(null);
+  };
+
+  // Centralized filtering function - single source of truth
+  const getFilteredAvailableApplicators = (): Applicator[] => {
+    if (!currentTreatment) return [];
+    
+    // Get serial numbers of applicators that should be excluded from available list
+    // Only exclude non-"No Use" processed applicators
+    const processedNonNoUseSerialNumbers = new Set(
+      processedApplicators
+        .filter(app => app.usageType !== 'none') // Keep "No Use" applicators available
+        .map(app => app.serialNumber)
+    );
+    
+    return availableApplicators.filter(app => 
+      app.patientId === currentTreatment.subjectId && // Current patient only
+      !processedNonNoUseSerialNumbers.has(app.serialNumber) // Exclude processed non-"No Use" applicators
+    );
   };
 
   // Progress calculation methods
@@ -189,18 +202,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
 
   // New functions for actual seed calculations
   const getActualTotalSeeds = () => {
-    // Calculate total seeds from available applicators + processed applicators
-    // But don't double count "no use" applicators that are returned to available
-    // Also exclude already processed applicators from available count to prevent double counting
-    const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
-    
-    const availableSeeds = availableApplicators
-      .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
-      .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
-      .filter(app => app.patientId === currentTreatment?.subjectId) // Only include current patient's applicators
-      .reduce((sum, app) => sum + app.seedQuantity, 0);
-    
-    const processedSeeds = processedApplicators.reduce((sum, app) => sum + app.seedQuantity, 0);
+    const filteredAvailable = getFilteredAvailableApplicators();
+    const availableSeeds = filteredAvailable.reduce((sum, app) => sum + app.seedQuantity, 0);
+    // Only count processed applicators that are not "No Use" - same logic as getActualInsertedSeeds
+    const processedSeeds = processedApplicators.reduce((sum, app) => {
+      if (app.usageType === 'none') return sum; // Exclude "No Use" applicators from total
+      return sum + app.seedQuantity;
+    }, 0);
     
     return availableSeeds + processedSeeds;
   };
@@ -215,18 +223,12 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const getApplicatorTypeBreakdown = () => {
-    // Group available applicators by seed quantity, excluding returned "no use" applicators
-    // Also exclude already processed applicators to prevent double counting
-    const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
+    const filteredAvailable = getFilteredAvailableApplicators();
     const breakdown: { [seedCount: number]: number } = {};
     
-    availableApplicators
-      .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
-      .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
-      .filter(app => app.patientId === currentTreatment?.subjectId) // Only include current patient's applicators
-      .forEach(app => {
-        breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
-      });
+    filteredAvailable.forEach(app => {
+      breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
+    });
     
     // Convert to sorted array (highest seed count first)
     return Object.entries(breakdown)
@@ -244,16 +246,15 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const actualTotalSeeds = getActualTotalSeeds();
   const actualInsertedSeeds = getActualInsertedSeeds();
   
-  // Calculate available applicators excluding already processed ones
-  const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
-  const actualAvailableApplicators = availableApplicators
-    .filter(app => !app.returnedFromNoUse) // Exclude returned "no use" applicators
-    .filter(app => !processedSerialNumbers.has(app.serialNumber)) // Exclude already processed applicators
-    .filter(app => app.patientId === currentTreatment?.subjectId); // Only include current patient's applicators
+  // Use centralized filtering for consistency
+  const actualAvailableApplicators = getFilteredAvailableApplicators();
+  
+  // Only count non-"No Use" processed applicators as actually used
+  const actuallyUsedApplicators = processedApplicators.filter(app => app.usageType !== 'none');
   
   const progressStats: ProgressStats = {
-    totalApplicators: actualAvailableApplicators.length + processedApplicators.length,
-    usedApplicators: processedApplicators.length,
+    totalApplicators: actualAvailableApplicators.length + actuallyUsedApplicators.length,
+    usedApplicators: actuallyUsedApplicators.length,
     totalSeeds: actualTotalSeeds,
     insertedSeeds: actualInsertedSeeds,
     completionPercentage: actualTotalSeeds > 0 ? 
@@ -289,7 +290,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         getUsageTypeDistribution,
         getActualTotalSeeds,
         getActualInsertedSeeds,
-        getApplicatorTypeBreakdown
+        getApplicatorTypeBreakdown,
+        getFilteredAvailableApplicators
       }}
     >
       {children}

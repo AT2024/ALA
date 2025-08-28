@@ -11,7 +11,16 @@ import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 
 const TreatmentDocumentation = () => {
-  const { currentTreatment, processApplicator, applicators, progressStats, availableApplicators, processedApplicators, addAvailableApplicator } = useTreatment();
+  const { 
+    currentTreatment, 
+    processApplicator, 
+    applicators, 
+    progressStats, 
+    availableApplicators, 
+    processedApplicators, 
+    addAvailableApplicator,
+    getFilteredAvailableApplicators
+  } = useTreatment();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -26,6 +35,7 @@ const TreatmentDocumentation = () => {
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [aSuffixQuery, setASuffixQuery] = useState('');
+  const [isReturnedFromNoUse, setIsReturnedFromNoUse] = useState(false);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -40,12 +50,8 @@ const TreatmentDocumentation = () => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerDivRef = useRef<HTMLDivElement>(null);
 
-  // Calculate patient-specific filtered applicators (reusable across UI elements)
-  const processedSerialNumbers = new Set(processedApplicators.map(app => app.serialNumber));
-  const patientFilteredApplicators = availableApplicators.filter(app => 
-    !processedSerialNumbers.has(app.serialNumber) &&
-    app.patientId === currentTreatment?.subjectId
-  );
+  // Use centralized filtering function - single source of truth
+  const patientFilteredApplicators = getFilteredAvailableApplicators();
 
   useEffect(() => {
     if (!currentTreatment) {
@@ -236,6 +242,7 @@ const TreatmentDocumentation = () => {
     const serialNumber = applicatorData.serialNumber || '';
     const applicatorType = applicatorData.applicatorType || '';
     const seedQuantity = applicatorData.seedQuantity || 0;
+    const returnedFromNoUse = applicatorData.returnedFromNoUse || false;
 
     if (!serialNumber) {
       console.error('Missing serial number in applicator data:', applicatorData);
@@ -243,18 +250,25 @@ const TreatmentDocumentation = () => {
       return;
     }
 
-    // Fill form with validated applicator data - smart auto-fill
+    // Set the returned from no use flag
+    setIsReturnedFromNoUse(returnedFromNoUse);
+
+    // Fill form with validated applicator data - default to Full use for consistency
     setFormData({
       serialNumber,
       applicatorType,
       seedsQty: seedQuantity.toString(),
       insertionTime: new Date().toISOString(),
-      usingType: 'Full use', // Smart default selection
+      usingType: 'Full use', // Default to Full use for all applicators
       insertedSeedsQty: seedQuantity.toString(), // Auto-filled from Priority PARTS
       comments: ''
     });
 
-    setSuccess(`Applicator ${serialNumber} validated successfully! Seeds auto-filled for Full use.`);
+    if (returnedFromNoUse) {
+      setSuccess(`Applicator ${serialNumber} validated successfully! This applicator was previously marked as "No Use" - you can select any usage type.`);
+    } else {
+      setSuccess(`Applicator ${serialNumber} validated successfully! Seeds auto-filled for Full use.`);
+    }
   };
 
   const handleConfirmValidation = async () => {
@@ -322,6 +336,10 @@ const TreatmentDocumentation = () => {
     setShowSuggestions(false);
     setSearchSuggestions([]);
     setError(null);
+    
+    // Set the returned from no use flag for suggestions too
+    setIsReturnedFromNoUse(suggestion.returnedFromNoUse || false);
+    
     handleBarcodeScanned(suggestion.serialNumber);
   };
 
@@ -331,19 +349,26 @@ const TreatmentDocumentation = () => {
     setError(null);
     setSuccess(null);
     
+    // Set the returned from no use flag
+    const isReturnedFromNoUse = applicator.returnedFromNoUse || false;
+    setIsReturnedFromNoUse(isReturnedFromNoUse);
+    
     // Fill form with selected applicator data directly (no validation needed since it's from Priority)
     setFormData({
       serialNumber: applicator.serialNumber,
       applicatorType: applicator.applicatorType || '',
       seedsQty: applicator.seedQuantity?.toString() || '',
       insertionTime: new Date().toISOString(),
-      usingType: applicator.returnedFromNoUse ? 'No Use' : 'Full use', // Smart default selection
-      insertedSeedsQty: applicator.returnedFromNoUse ? '0' : applicator.seedQuantity?.toString() || '',
+      usingType: 'Full use', // Default to Full use for all applicators
+      insertedSeedsQty: applicator.seedQuantity?.toString() || '',
       comments: ''
     });
 
-    const usageType = applicator.returnedFromNoUse ? 'No Use' : 'Full use';
-    setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Seeds auto-filled for ${usageType}.`);
+    if (isReturnedFromNoUse) {
+      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as "No Use" - you can select any usage type.`);
+    } else {
+      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Seeds auto-filled for Full use.`);
+    }
   };
 
   const adjustTime = (minutes: number) => {
@@ -437,6 +462,9 @@ const TreatmentDocumentation = () => {
         insertedSeedsQty: '',
         comments: ''
       });
+      
+      // Reset the returned from no use flag
+      setIsReturnedFromNoUse(false);
 
       // Enhanced success message with progress information
       const totalSeeds = progressStats.totalSeeds;
@@ -674,6 +702,7 @@ const TreatmentDocumentation = () => {
                             .sort((a, b) => b.seedQuantity - a.seedQuantity)
                             .map((applicator, index) => {
                             const isNoUseReturned = applicator.returnedFromNoUse;
+                            
                             return (
                               <button
                                 key={index}
@@ -873,12 +902,19 @@ const TreatmentDocumentation = () => {
               <div>
                 <label htmlFor="usingType" className="block text-sm font-medium text-gray-700 mb-1">
                   Using Type *
+                  {isReturnedFromNoUse && (
+                    <span className="ml-2 text-xs text-red-600 font-normal">
+                      (Previously marked as No Use)
+                    </span>
+                  )}
                 </label>
                 <select
                   id="usingType"
                   value={formData.usingType}
                   onChange={(e) => setFormData(prev => ({ ...prev, usingType: e.target.value }))}
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm ${
+                    isReturnedFromNoUse ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                   required
                   disabled={loading}
                 >
@@ -887,6 +923,11 @@ const TreatmentDocumentation = () => {
                   <option value="Faulty">Faulty</option>
                   <option value="No Use">No Use</option>
                 </select>
+                {isReturnedFromNoUse && (
+                  <p className="mt-1 text-xs text-red-600">
+                    This applicator was previously marked as "No Use". You can now select any usage type.
+                  </p>
+                )}
               </div>
 
               {/* Inserted Seeds Qty */}
