@@ -5,6 +5,14 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { errorHandler } from './middleware/errorMiddleware';
 import { notFound } from './middleware/notFoundMiddleware';
+import { 
+  apiRateLimit, 
+  authRateLimit, 
+  httpsRedirect, 
+  securityHeaders, 
+  corsOptions, 
+  requestLogger 
+} from './middleware/securityMiddleware';
 import authRoutes from './routes/authRoutes';
 import treatmentRoutes from './routes/treatmentRoutes';
 import applicatorRoutes from './routes/applicatorRoutes';
@@ -20,12 +28,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
+// Security middleware
+app.use(httpsRedirect);
+app.use(securityHeaders);
+app.use(requestLogger);
+
+// Basic middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cors(corsOptions));
+
+// Development logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
 
 // Track database connection status
 let isDatabaseConnected = false;
@@ -74,12 +90,12 @@ app.get('/api/routes', (req, res) => {
   });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/treatments', treatmentRoutes);
-app.use('/api/applicators', applicatorRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/proxy/priority', priorityRoutes);
+// Routes with rate limiting
+app.use('/api/auth', authRateLimit, authRoutes);
+app.use('/api/treatments', apiRateLimit, treatmentRoutes);
+app.use('/api/applicators', apiRateLimit, applicatorRoutes);
+app.use('/api/admin', apiRateLimit, adminRoutes);
+app.use('/api/proxy/priority', apiRateLimit, priorityRoutes);
 
 // 404 handler
 app.use(notFound);

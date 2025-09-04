@@ -9,7 +9,7 @@
 # =================================================================
 # BASE STAGE - Common dependencies and setup
 # =================================================================
-FROM node:20.20.0-alpine AS base
+FROM node:20-alpine AS base
 
 # Install security updates and necessary packages
 RUN apk update && apk upgrade && \
