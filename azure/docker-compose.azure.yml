@@ -16,7 +16,10 @@ services:
   # Backend API - Azure Production
   # =================================================================
   api:
-    image: ala-improved-api:latest
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
     container_name: ala-api-azure
     env_file:
       - .env.azure
@@ -43,15 +46,20 @@ services:
   # Frontend Application - Azure Production
   # =================================================================
   frontend:
-    image: ala-improved-frontend:latest
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_API_URL=http://20.217.84.100:5000/api
+        - VITE_ENVIRONMENT=production
+        - VITE_PRIORITY_API_URL=${VITE_PRIORITY_API_URL}
+        - VITE_OFFLINE_STORAGE=true
     container_name: ala-frontend-azure
     env_file:
       - .env.azure
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=http://20.217.84.100:5000/api
-      - VITE_ENVIRONMENT=production
-      - VITE_OFFLINE_STORAGE=true
     ports:
       - "3000:80"  # Frontend serves on port 80 internally via nginx
     restart: always

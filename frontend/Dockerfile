@@ -67,6 +67,18 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 # =================================================================
 FROM base AS build
 
+# Accept build arguments for environment variables
+ARG VITE_API_URL=http://localhost:5000/api
+ARG VITE_ENVIRONMENT=development
+ARG VITE_PRIORITY_API_URL
+ARG VITE_OFFLINE_STORAGE=true
+
+# Set environment variables from build args
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_ENVIRONMENT=${VITE_ENVIRONMENT}
+ENV VITE_PRIORITY_API_URL=${VITE_PRIORITY_API_URL}
+ENV VITE_OFFLINE_STORAGE=${VITE_OFFLINE_STORAGE}
+
 # Install ALL dependencies needed for build
 RUN npm install && npm cache clean --force
 
