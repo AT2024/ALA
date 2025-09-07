@@ -5,11 +5,26 @@ const API_DEBUG = true;
 
 // Get the API URL from environment or use default
 // When running inside docker, we need to adjust for browser context
-let baseURL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000/api';
+let baseURL = (import.meta as any).env.VITE_API_URL;
+
+// Production environment detection and URL handling
+if (!baseURL) {
+  // Check if we're in production environment
+  const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
+  
+  if (isProduction) {
+    // In production, use the Azure VM IP
+    baseURL = 'http://20.217.84.100:5000/api';
+  } else {
+    // In development, use localhost
+    baseURL = 'http://localhost:5000/api';
+  }
+}
 
 // If using Docker's internal API URL (service name), replace it for browser requests
 if (baseURL === 'http://api:5000/api' && typeof window !== 'undefined') {
-  baseURL = 'http://localhost:5000/api';
+  const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
+  baseURL = isProduction ? 'http://20.217.84.100:5000/api' : 'http://localhost:5000/api';
 }
 
 if (API_DEBUG) {
