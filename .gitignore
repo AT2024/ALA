@@ -20,6 +20,10 @@ logs/
 .env.*.local
 .env.local.*
 
+# Azure production secrets (NEVER commit!)
+azure/.env.azure
+.env.azure
+
 # Environment file backups
 .env.backup.*
 environments/.env.backup.*

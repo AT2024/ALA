@@ -16,8 +16,6 @@ const TreatmentDocumentation = () => {
     processApplicator, 
     applicators, 
     progressStats, 
-    availableApplicators, 
-    processedApplicators, 
     addAvailableApplicator,
     getFilteredAvailableApplicators
   } = useTreatment();
@@ -555,8 +553,12 @@ const TreatmentDocumentation = () => {
                   <div>
                     <p className="text-gray-500">Site</p>
                     <p className="font-medium">{(() => {
-                      const currentSite = user?.sites?.find(site => site.custName === currentTreatment.site);
-                      return currentSite ? `${currentSite.custDes} (${currentSite.custName})` : currentTreatment.site;
+                      const currentSite = user?.sites?.find(site => 
+                        typeof site === 'object' && site.custName === currentTreatment.site
+                      );
+                      return currentSite && typeof currentSite === 'object' 
+                        ? `${currentSite.custDes} (${currentSite.custName})` 
+                        : currentTreatment.site;
                     })()}</p>
                   </div>
                   <div>

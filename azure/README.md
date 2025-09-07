@@ -1,113 +1,152 @@
-# הפריסה של Accountability Log Application בענן Azure
+# Azure VM Deployment Guide
 
-מסמך זה מספק הוראות מפורטות לפריסת האפליקציה בענן Azure באמצעות Docker Containers.
+## 🚀 Quick Start
 
-## דרישות מקדימות
+This guide explains how to deploy the ALA application to Azure VM at `20.217.84.100`.
 
-לפני שמתחילים, יש צורך ב:
-- מנוי Azure פעיל
-- Azure CLI מותקן במחשב
-- Docker Desktop מותקן ופועל
-- Git
+## Architecture
 
-## שלבי הפריסה
-
-### 1. הגדרת סביבת Azure
-
-1. התקנת Azure CLI (אם לא מותקן):
-   - הורדה מ: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
-
-2. התחברות ל-Azure:
-   ```
-   az login
-   ```
-
-3. ודאו שאתם משתמשים במנוי הנכון:
-   ```
-   az account show
-   ```
-   אם צריך להחליף מנוי:
-   ```
-   az account set --subscription "YOUR_SUBSCRIPTION_ID"
-   ```
-
-### 2. התאמת הגדרות הפריסה
-
-1. ערוך את הקובץ `.env.azure` והתאם את הפרמטרים:
-   - שנה את מזהה המנוי (`AZURE_SUBSCRIPTION_ID`)
-   - שנה סיסמאות וערכים רגישים אחרים
-   - התאם את האזור אם נדרש (`LOCATION`)
-
-### 3. הרצת הפריסה
-
-**לינוקס/macOS**:
-1. הענק הרשאות הרצה לסקריפט:
-   ```
-   chmod +x azure-deploy.sh
-   ```
-
-2. הרצת הסקריפט:
-   ```
-   ./azure-deploy.sh
-   ```
-
-**Windows (PowerShell)**:
-1. הרצת הסקריפט:
-   ```
-   .\deploy.ps1
-   ```
-
-### 4. בדיקת הפריסה
-
-1. לאחר השלמת התהליך, האפליקציה תהיה זמינה בכתובות:
-   - ממשק משתמש: `https://accountability-log-app.azurewebsites.net`
-   - API: `https://accountability-log-app-api.azurewebsites.net`
-
-2. ניתן לצפות בלוגים ומידע נוסף דרך פורטל Azure:
-   - כניסה לפורטל: https://portal.azure.com
-   - ניווט ל-App Services
-   - בחירת האפליקציה הרלוונטית
-
-## עדכון האפליקציה
-
-כדי לעדכן את האפליקציה לאחר שינויים:
-
-1. בנייה מחדש של הדוקר והעלאתו:
-   ```
-   az acr build --registry alaregistry --image ala-backend:latest ./backend
-   az acr build --registry alaregistry --image ala-frontend:latest ./frontend
-   ```
-
-2. עדכון ה-Web App:
-   ```
-   az webapp restart --resource-group ala-resource-group --name accountability-log-app-api
-   az webapp restart --resource-group ala-resource-group --name accountability-log-app
-   ```
-
-## פתרון בעיות
-
-### בעיית התחברות ל-Azure Container Registry
 ```
-az acr login --name alaregistry
+GitHub Repository → Azure VM (Git Pull) → Docker Compose → Live Application
 ```
 
-### נתק בין אפליקציה לבסיס נתונים
-1. בדוק את הגדרות חיבור ה-DATABASE_URL
-2. ודא שכללי ה-Firewall מאפשרים גישה
+## Prerequisites
 
-### בעיות בהפעלת הדוקר
-בדוק את הלוגים של האפליקציה:
-```
-az webapp log tail --resource-group ala-resource-group --name accountability-log-app-api
-```
+- SSH access to Azure VM (`azureuser@20.217.84.100`)
+- GitHub repository: https://github.com/AT2024/ALA
 
-## גיבוי ושחזור
+## Initial Setup (One-time)
 
-### גיבוי בסיס נתונים
-```
-az postgres flexible-server backup list --resource-group ala-resource-group --server-name ala-db
+### 1. SSH to Azure VM
+```bash
+ssh azureuser@20.217.84.100
 ```
 
-## סיכום
+### 2. Run Initial Setup Script
+```bash
+# Download and run the setup script
+curl -O https://raw.githubusercontent.com/AT2024/ALA/main/azure/vm-initial-setup.sh
+bash vm-initial-setup.sh
+```
 
-הסקריפטים שהוכנו מאפשרים פריסה מהירה ופשוטה של האפליקציה לענן Azure. ההגדרות הנוכחיות מתאימות לסביבת פיתוח וניתן להתאים אותן לסביבת ייצור לפי הצורך.
+This script will:
+- Install Docker and Docker Compose
+- Clone the repository
+- Generate secure secrets
+- Configure firewall
+- Create deployment scripts
+
+### 3. Configure Secrets
+Edit the environment file to add your Priority API credentials:
+```bash
+nano ~/ala-improved/azure/.env.azure
+```
+
+### 4. Deploy Application
+```bash
+cd ~/ala-improved
+sudo docker-compose -f azure/docker-compose.azure.yml up -d --build
+```
+
+## Updating the Application
+
+### Method 1: Manual Update
+SSH to the VM and run:
+```bash
+~/deploy.sh
+```
+
+### Method 2: Automatic GitHub Actions
+Push to `main` or `azure-development` branch, and GitHub Actions will automatically deploy.
+
+## Useful Commands
+
+### View logs
+```bash
+sudo docker-compose -f azure/docker-compose.azure.yml logs -f
+```
+
+### Restart containers
+```bash
+sudo docker-compose -f azure/docker-compose.azure.yml restart
+```
+
+### Check container status
+```bash
+sudo docker ps
+```
+
+### Stop application
+```bash
+sudo docker-compose -f azure/docker-compose.azure.yml down
+```
+
+## Access Points
+
+- **Frontend**: http://20.217.84.100:3000
+- **Backend API**: http://20.217.84.100:5000
+- **Health Check**: http://20.217.84.100:5000/api/health
+
+## Security Notes
+
+- Never commit `.env.azure` to Git
+- Secrets are generated automatically during setup
+- Firewall allows only ports 22 (SSH), 3000 (Frontend), 5000 (Backend)
+- All containers run as non-root user (UID 1001)
+
+## Troubleshooting
+
+### Containers not starting
+```bash
+# Check logs
+sudo docker-compose -f azure/docker-compose.azure.yml logs
+
+# Check disk space
+df -h
+
+# Restart Docker
+sudo systemctl restart docker
+```
+
+### Cannot connect from phone/browser
+1. Verify firewall rules: `sudo ufw status`
+2. Check if containers are running: `sudo docker ps`
+3. Test locally on VM: `curl http://localhost:3000`
+
+### Database issues
+```bash
+# Connect to database
+sudo docker exec -it ala-db-azure psql -U ala_user -d ala_production
+
+# Backup database
+sudo docker exec ala-db-azure pg_dump -U ala_user ala_production > backup.sql
+```
+
+## GitHub Actions Setup
+
+To enable automatic deployment:
+
+1. Go to GitHub repository settings
+2. Add these secrets:
+   - `AZURE_VM_HOST`: 20.217.84.100
+   - `AZURE_VM_USERNAME`: azureuser
+   - `AZURE_VM_SSH_KEY`: Your private SSH key
+
+## Maintenance
+
+### Daily backups
+Create a cron job for automatic backups:
+```bash
+crontab -e
+# Add: 0 2 * * * docker exec ala-db-azure pg_dump -U ala_user ala_production > ~/backups/db_$(date +\%Y\%m\%d).sql
+```
+
+### Update system
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo reboot  # if kernel was updated
+```
+
+## Support
+
+For issues or questions, check the main project documentation or create an issue on GitHub.

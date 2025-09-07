@@ -11,6 +11,7 @@ export interface ApplicatorValidationResult {
     seedQuantity: number;   // INTDATA2 from Priority
     intendedPatientId?: string;
     previousTreatmentId?: string;
+    returnedFromNoUse?: boolean;
   };
 }
 

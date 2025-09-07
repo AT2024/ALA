@@ -9,7 +9,7 @@
 # =================================================================
 # BASE STAGE - Common Node.js setup
 # =================================================================
-FROM node:20.20.0-alpine AS base
+FROM node:20-alpine AS base
 
 # Install security updates and necessary packages
 RUN apk update && apk upgrade && \
@@ -103,6 +103,19 @@ COPY --from=build --chown=nginx-app:nginx-app /usr/src/app/dist /usr/share/nginx
 
 # Copy nginx configuration
 COPY --chown=nginx-app:nginx-app nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create custom nginx configuration with pid file in writable location
+RUN echo "pid /var/cache/nginx/nginx.pid;" > /etc/nginx/nginx.conf && \
+    echo "worker_processes auto;" >> /etc/nginx/nginx.conf && \
+    echo "error_log /var/log/nginx/error.log warn;" >> /etc/nginx/nginx.conf && \
+    echo "events { worker_connections 1024; }" >> /etc/nginx/nginx.conf && \
+    echo "http {" >> /etc/nginx/nginx.conf && \
+    echo "    include /etc/nginx/mime.types;" >> /etc/nginx/nginx.conf && \
+    echo "    default_type application/octet-stream;" >> /etc/nginx/nginx.conf && \
+    echo "    sendfile on;" >> /etc/nginx/nginx.conf && \
+    echo "    keepalive_timeout 65;" >> /etc/nginx/nginx.conf && \
+    echo "    include /etc/nginx/conf.d/*.conf;" >> /etc/nginx/nginx.conf && \
+    echo "}" >> /etc/nginx/nginx.conf
 
 # Create necessary directories and set permissions
 RUN mkdir -p /var/cache/nginx/client_temp && \

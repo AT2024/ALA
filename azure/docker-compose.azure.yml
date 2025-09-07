@@ -1,0 +1,107 @@
+# =================================================================
+# ALA Application - Azure Production Deployment Configuration
+# =================================================================
+# This file is specifically configured for Azure VM deployment
+# Usage: docker-compose -f docker-compose.azure.yml up -d
+#
+# Features:
+# - Uses pre-built ACR images
+# - Production environment variables
+# - Azure VM IP configuration
+# - Security-hardened settings
+# - Persistent data volume
+
+services:
+  # =================================================================
+  # Backend API - Azure Production
+  # =================================================================
+  api:
+    image: ala-improved-api:latest
+    container_name: ala-api-azure
+    env_file:
+      - .env.azure
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - PRIORITY_MOCK=false
+      - DATABASE_URL=${DATABASE_URL}
+    ports:
+      - "5000:5000"
+    restart: always
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ala-network
+
+  # =================================================================
+  # Frontend Application - Azure Production
+  # =================================================================
+  frontend:
+    image: ala-improved-frontend:latest
+    container_name: ala-frontend-azure
+    env_file:
+      - .env.azure
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://20.217.84.100:5000/api
+      - VITE_ENVIRONMENT=production
+      - VITE_OFFLINE_STORAGE=true
+    ports:
+      - "3000:80"  # Frontend serves on port 80 internally via nginx
+    restart: always
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ala-network
+
+  # =================================================================
+  # PostgreSQL Database - Azure Production
+  # =================================================================
+  db:
+    image: postgres:16.6-alpine
+    container_name: ala-db-azure
+    env_file:
+      - .env.azure
+    environment:
+      - POSTGRES_DB=ala_production
+      - POSTGRES_USER=ala_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ala-postgres-data-prod:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ala_user -d ala_production"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ala-network
+
+# =================================================================
+# Networks
+# =================================================================
+networks:
+  ala-network:
+    driver: bridge
+
+# =================================================================
+# Volumes
+# =================================================================
+volumes:
+  ala-postgres-data-prod:
+    driver: local

@@ -1,0 +1,82 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: 
+      - main
+      - azure-development
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Azure VM
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Deploy to Azure VM via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            echo "Starting deployment to Azure VM..."
+            
+            # Navigate to project directory
+            cd ~/ala-improved
+            
+            # Pull latest changes
+            git fetch --all
+            git reset --hard origin/${{ github.ref_name }}
+            
+            # Stop existing containers
+            sudo docker-compose -f azure/docker-compose.azure.yml down
+            
+            # Build and start new containers
+            sudo docker-compose -f azure/docker-compose.azure.yml up -d --build
+            
+            # Wait for containers to be ready
+            sleep 10
+            
+            # Check container status
+            sudo docker ps
+            
+            # Test if services are responding
+            curl -f http://localhost:3000 || echo "Frontend not ready yet"
+            curl -f http://localhost:5000/api/health || echo "Backend not ready yet"
+            
+            echo "Deployment complete!"
+      
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            # Check if containers are running
+            if sudo docker ps | grep -q ala-frontend-azure; then
+              echo "✅ Frontend container is running"
+            else
+              echo "❌ Frontend container is not running"
+              exit 1
+            fi
+            
+            if sudo docker ps | grep -q ala-api-azure; then
+              echo "✅ Backend container is running"
+            else
+              echo "❌ Backend container is not running"
+              exit 1
+            fi
+            
+            if sudo docker ps | grep -q ala-db-azure; then
+              echo "✅ Database container is running"
+            else
+              echo "❌ Database container is not running"
+              exit 1
+            fi
+            
+            echo "✅ All containers are running successfully!"
