@@ -29,15 +29,29 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git pull origin $CURRENT_BRANCH
 echo -e "${GREEN}✅ Code updated${NC}"
 
-# Step 2: Check environment file
+# Step 2: Check environment file and preserve secrets
 echo -e "${YELLOW}[2/5] Checking environment configuration...${NC}"
 if [ ! -f "azure/.env.azure" ]; then
     echo -e "${RED}❌ Error: azure/.env.azure not found!${NC}"
-    echo -e "${YELLOW}Creating from template...${NC}"
-    cp azure/.env.azure.template azure/.env.azure
-    echo -e "${YELLOW}⚠️  Please edit azure/.env.azure with your secrets before continuing${NC}"
+    echo -e "${YELLOW}Run the initial setup script first:${NC}"
+    echo -e "${BLUE}   bash azure/setup-secrets.sh${NC}"
     exit 1
 fi
+
+# Check if environment file has real secrets (not placeholders)
+if grep -q "REPLACE_WITH_YOUR_PRIORITY_USERNAME" azure/.env.azure; then
+    echo -e "${YELLOW}⚠️  Priority credentials not configured in .env.azure${NC}"
+    echo -e "${YELLOW}Edit azure/.env.azure and replace:${NC}"
+    echo -e "${BLUE}   PRIORITY_USERNAME=REPLACE_WITH_YOUR_PRIORITY_USERNAME${NC}"
+    echo -e "${BLUE}   PRIORITY_PASSWORD=REPLACE_WITH_YOUR_PRIORITY_PASSWORD${NC}"
+    echo ""
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
 echo -e "${GREEN}✅ Environment configured${NC}"
 
 # Step 3: Stop existing containers

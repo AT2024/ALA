@@ -23,10 +23,19 @@ logs/
 # Azure production secrets (NEVER commit!)
 azure/.env.azure
 .env.azure
+azure/.env.azure.backup*
+.env
 
 # Environment file backups
 .env.backup.*
 environments/.env.backup.*
+*/.env.backup*
+
+# Secret backups and recovery files
+backups/
+*secrets-backup*
+*RECOVERY.txt
+*.tar.gz.enc
 
 # Sensitive environment files (if any)
 .env.secrets

@@ -1,52 +1,75 @@
-# Azure VM Deployment Guide
+# ALA Application - Azure VM Production Deployment Guide
 
-## 🚀 Quick Start
+## 🚀 Quick Start (First Time Setup)
 
-This guide explains how to deploy the ALA application to Azure VM at `20.217.84.100`.
+This guide explains the **correct production approach** for deploying the ALA medical application to Azure VM.
 
-## Architecture
+## 🎯 Architecture & Security Model
 
 ```
-GitHub Repository → Azure VM (Git Pull) → Docker Compose → Live Application
+Development → Git Push → Azure VM → Secure Deployment
+     ↓              ↓           ↓
+Local .env → Template → Production Secrets (never in Git)
 ```
 
-## Prerequisites
+### Security Principles:
+- ✅ **Template in Git** - Contains placeholders only
+- ✅ **Secrets on VM** - Generated securely, never committed
+- ✅ **Backup Strategy** - Encrypted backups with recovery
+- ✅ **Smart Updates** - Code changes without losing secrets
+
+## 📋 Prerequisites
 
 - SSH access to Azure VM (`azureuser@20.217.84.100`)
 - GitHub repository: https://github.com/AT2024/ALA
+- Basic understanding of Docker and environment variables
 
-## Initial Setup (One-time)
+## 🚀 Initial Setup (One-time)
 
-### 1. SSH to Azure VM
+### Step 1: VM Preparation
 ```bash
+# SSH to your Azure VM
 ssh azureuser@20.217.84.100
-```
 
-### 2. Run Initial Setup Script
-```bash
-# Download and run the setup script
-curl -O https://raw.githubusercontent.com/AT2024/ALA/main/azure/vm-initial-setup.sh
+# Run the VM initial setup (installs Docker, Git, etc.)
 bash vm-initial-setup.sh
 ```
 
-This script will:
-- Install Docker and Docker Compose
-- Clone the repository
-- Generate secure secrets
-- Configure firewall
-- Create deployment scripts
-
-### 3. Configure Secrets
-Edit the environment file to add your Priority API credentials:
+### Step 2: Generate Production Secrets
 ```bash
-nano ~/ala-improved/azure/.env.azure
-```
-
-### 4. Deploy Application
-```bash
+# Navigate to project directory
 cd ~/ala-improved
-sudo docker-compose -f azure/docker-compose.azure.yml up -d --build
+
+# Generate secure production secrets
+bash azure/setup-secrets.sh
 ```
+
+This creates:
+- Cryptographically secure database password
+- Strong JWT secret for authentication
+- Encrypted backup of secrets
+- Production-ready `.env.azure` file
+
+### Step 3: Add Priority API Credentials
+```bash
+# Edit the environment file
+nano azure/.env.azure
+
+# Replace these lines with your real Priority credentials:
+# PRIORITY_USERNAME=REPLACE_WITH_YOUR_PRIORITY_USERNAME
+# PRIORITY_PASSWORD=REPLACE_WITH_YOUR_PRIORITY_PASSWORD
+```
+
+### Step 4: Deploy Application
+```bash
+# Deploy the application
+sudo docker-compose -f azure/docker-compose.azure.yml up -d --build
+
+# Verify deployment
+sudo docker ps
+```
+
+## 🔄 Updates & Maintenance
 
 ## Updating the Application
 
