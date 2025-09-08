@@ -4,6 +4,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# NPM cache and temporary files
+.npm/
+*/.npm/
+.npmrc.local
+
 # Build output
 dist/
 build/
@@ -15,16 +20,28 @@ build/
 logs/
 *.log
 
-# dotenv environment variables (local overrides only)
-.env.local
-.env.*.local
-.env.local.*
-
-# Azure production secrets (NEVER commit!)
-azure/.env.azure
-.env.azure
-azure/.env.azure.backup*
+# Environment variables - ignore all except templates and examples
 .env
+.env.*
+!.env.*.template
+!.env.template
+!.env.example
+
+# Environment files in subdirectories
+environments/.env*
+!environments/.env.*.template
+!environments/.env.template
+!environments/.env.example
+
+# Backend environment files
+backend/.env*
+!backend/.env.template
+!backend/.env.example
+
+# Azure environment files
+azure/.env*
+!azure/.env.*.template
+!azure/.env.template
 
 # Environment file backups
 .env.backup.*

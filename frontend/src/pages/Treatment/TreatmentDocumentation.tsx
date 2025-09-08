@@ -36,6 +36,7 @@ const TreatmentDocumentation = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [aSuffixQuery, setASuffixQuery] = useState('');
   const [isReturnedFromNoUse, setIsReturnedFromNoUse] = useState(false);
+  const [showFinalizeConfirmDialog, setShowFinalizeConfirmDialog] = useState(false);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -492,6 +493,19 @@ const TreatmentDocumentation = () => {
     }
   };
 
+  const handleFinalizeClick = () => {
+    setShowFinalizeConfirmDialog(true);
+  };
+
+  const handleConfirmFinished = () => {
+    setShowFinalizeConfirmDialog(false);
+    navigate('/treatment/list');
+  };
+
+  const handleContinueInsertion = () => {
+    setShowFinalizeConfirmDialog(false);
+  };
+
   const handleFinalize = async () => {
     if (applicators.length === 0) {
       setError('Please add at least one applicator before finalizing');
@@ -603,17 +617,6 @@ const TreatmentDocumentation = () => {
                   <div>
                     <p className="text-gray-500">Type</p>
                     <p className="font-medium capitalize">{currentTreatment.type}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Applicators Added</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{applicators.length}</p>
-                      {applicators.length > 0 && (
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
-                          Active
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
               ) : (
@@ -864,6 +867,19 @@ const TreatmentDocumentation = () => {
           loading={loading}
         />
 
+        {/* Finalize Confirmation Dialog */}
+        <ConfirmationDialog
+          isOpen={showFinalizeConfirmDialog}
+          onClose={handleContinueInsertion}
+          onConfirm={handleConfirmFinished}
+          title="Did you finish the insertion?"
+          message="Please confirm if you have finished inserting all applicators."
+          confirmText="Yes"
+          cancelText="No"
+          type="info"
+          loading={false}
+        />
+
         {/* Applicator Details Form */}
         {formData.serialNumber && (
           <div className="rounded-lg border bg-white p-4 shadow-sm">
@@ -1039,12 +1055,20 @@ const TreatmentDocumentation = () => {
                 }
                 className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Next'}
+                {loading ? 'Saving...' : 'Insert'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Finalize / Use List Button - Show Only After At Least One Applicator */}
+        {processedApplicators.length > 0 && (
+          <div className="rounded-lg border bg-white p-4 shadow-sm">
+            <div className="flex justify-center">
               <button
-                onClick={handleFinalize}
-                disabled={loading || applicators.length === 0}
-                className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                onClick={handleFinalizeClick}
+                disabled={loading}
+                className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? 'Processing...' : 'Finalize / Use List'}
               </button>

@@ -311,7 +311,7 @@ const UseList = () => {
             onClick={handleNext}
             className="flex-1 rounded-md border border-primary bg-white px-4 py-2 text-sm font-medium text-primary shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
-            Next
+            Back to Treatment
           </button>
           <button
             onClick={handleDownloadPDF}
@@ -336,7 +336,7 @@ const UseList = () => {
             <li>• Only processed applicators are shown in the list</li>
             <li>• Applicators are sorted by Seeds Qty. as specified</li>
             <li>• Use 'Edit' to modify processed applicator details</li>
-            <li>• Use 'Next' to scan and process another applicator</li>
+            <li>• Use 'Back to Treatment' to scan and process another applicator</li>
             <li>• Use 'Finalize' to complete the treatment</li>
             <li>• Total Activity = Total Seeds × Activity Per Seed</li>
           </ul>
