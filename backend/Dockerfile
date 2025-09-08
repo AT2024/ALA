@@ -50,14 +50,14 @@ RUN chown -R nodejs:nodejs /usr/src/app
 USER nodejs
 
 # Expose development port
-EXPOSE 5000
+EXPOSE 3000
 
 # Set environment variables
 ENV NODE_ENV=development
 
 # Add development health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:5000/api/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
@@ -109,15 +109,16 @@ RUN chown -R nodejs:nodejs /usr/src/app
 # Switch to non-root user
 USER nodejs
 
-# Expose production port
-EXPOSE 5000
+# Expose production port (Azure App Service uses WEBSITES_PORT)
+EXPOSE 3000
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV PORT=3000
 
 # Add production health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:5000/api/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
