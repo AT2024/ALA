@@ -9,12 +9,14 @@ import { useAuth } from '@/context/AuthContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
+import { PDFService } from '@/services/pdfService';
 
 const TreatmentDocumentation = () => {
   const { 
     currentTreatment, 
     processApplicator, 
     applicators, 
+    processedApplicators,
     progressStats, 
     addAvailableApplicator,
     getFilteredAvailableApplicators
@@ -504,6 +506,43 @@ const TreatmentDocumentation = () => {
     setLoading(true);
 
     try {
+      // Generate PDF before finalizing
+      if (processedApplicators.length > 0) {
+        // Calculate treatment summary for PDF
+        const treatmentSummary = {
+          timeInsertionStarted: processedApplicators.length > 0 
+            ? processedApplicators.reduce((earliest, app) => {
+                const appTime = new Date(app.insertionTime).getTime();
+                const earliestTime = new Date(earliest).getTime();
+                return appTime < earliestTime ? app.insertionTime : earliest;
+              }, processedApplicators[0].insertionTime)
+            : '',
+          totalApplicatorUse: processedApplicators.filter(app => app.usageType === 'full' || app.usageType === 'faulty').length,
+          faultyApplicator: processedApplicators.filter(app => app.usageType === 'faulty').length,
+          notUsedApplicators: processedApplicators.filter(app => app.usageType === 'none').length,
+          totalDartSeedsInserted: processedApplicators.reduce((sum, app) => {
+            if (app.usageType === 'full') return sum + app.seedQuantity;
+            if (app.usageType === 'faulty') return sum + (app.insertedSeedsQty || 0);
+            return sum;
+          }, 0),
+          seedsInsertedBy: currentTreatment?.surgeon || user?.name || 'Unknown',
+          totalActivity: 0
+        };
+
+        // Calculate total activity
+        const activityPerSeed = currentTreatment?.activityPerSeed || 0;
+        treatmentSummary.totalActivity = treatmentSummary.totalDartSeedsInserted * activityPerSeed;
+
+        // Generate and download PDF
+        PDFService.generateTreatmentReport(
+          currentTreatment,
+          processedApplicators,
+          treatmentSummary
+        );
+
+        setSuccess('PDF report generated and downloaded!');
+      }
+
       // Update treatment status to "Performed" in Priority
       const statusResult = await applicatorService.updateTreatmentStatus(
         currentTreatment.id, 
@@ -515,12 +554,12 @@ const TreatmentDocumentation = () => {
         return;
       }
 
-      setSuccess('Treatment completed and status updated in Priority system!');
+      setSuccess('Treatment completed, PDF downloaded, and status updated in Priority system!');
       
       // Navigate to Use List screen after a brief delay
       setTimeout(() => {
         navigate('/treatment/list');
-      }, 1500);
+      }, 2000);
     } catch (error: any) {
       console.error('Error finalizing treatment:', error);
       setError('Failed to finalize treatment. Please try again.');

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
+import { PDFService } from '@/services/pdfService';
 
 const UseList = () => {
   const navigate = useNavigate();
@@ -47,6 +48,33 @@ const UseList = () => {
   const handleNext = () => {
     // Takes to Treatment Documentation screen for inserting another applicator
     navigate('/treatment/scan');
+  };
+
+  const handleDownloadPDF = () => {
+    if (!currentTreatment || processedApplicators.length === 0) {
+      setError('No treatment data available to generate PDF');
+      return;
+    }
+
+    try {
+      // Calculate total activity for PDF
+      const activityPerSeed = currentTreatment?.activityPerSeed || 0;
+      const summaryWithActivity = {
+        ...treatmentSummary,
+        totalActivity: treatmentSummary.totalDartSeedsInserted * activityPerSeed
+      };
+
+      // Generate and download PDF
+      PDFService.generateTreatmentReport(
+        currentTreatment,
+        processedApplicators,
+        summaryWithActivity
+      );
+      setSuccess('PDF downloaded successfully!');
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      setError('Failed to generate PDF. Please try again.');
+    }
   };
 
   const handleFinalize = async () => {
@@ -284,6 +312,13 @@ const UseList = () => {
             className="flex-1 rounded-md border border-primary bg-white px-4 py-2 text-sm font-medium text-primary shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
             Next
+          </button>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={processedApplicators.length === 0}
+            className="flex-1 rounded-md border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 shadow-sm hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            Download PDF
           </button>
           <button
             onClick={handleFinalize}
