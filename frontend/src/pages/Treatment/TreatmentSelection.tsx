@@ -65,7 +65,6 @@ const TreatmentSelection = () => {
 
   const [availablePatients, setAvailablePatients] = useState<PriorityPatient[]>([]);
   const [availableSites, setAvailableSites] = useState<PrioritySite[]>([]);
-  const [availableSurgeons, setAvailableSurgeons] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,15 +105,6 @@ const TreatmentSelection = () => {
           setFormData(prev => ({ ...prev, site: user.custName || '' }));
         }
         
-        // Load surgeons from Priority (for now use mock data)
-        // TODO: Implement Priority surgeon fetching
-        setAvailableSurgeons([
-          'Dr. Smith, John',
-          'Dr. Johnson, Sarah', 
-          'Dr. Williams, Michael',
-          'Dr. Brown, Emily',
-          'Dr. Davis, Robert'
-        ]);
       } catch (err) {
         console.error('Error loading user sites:', err);
         setError('Failed to load available sites');
@@ -677,20 +667,16 @@ const TreatmentSelection = () => {
               <label htmlFor="surgeon" className="block text-sm font-medium text-gray-700 mb-2">
                 Surgeon *
               </label>
-              <select
+              <input
+                type="text"
                 id="surgeon"
+                maxLength={100}
                 value={formData.surgeon}
                 onChange={(e) => setFormData(prev => ({ ...prev, surgeon: e.target.value }))}
                 className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                placeholder="Enter surgeon name"
                 required
-              >
-                <option value="">Select Surgeon</option>
-                {availableSurgeons.map((surgeon) => (
-                  <option key={surgeon} value={surgeon}>
-                    {surgeon}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             {/* Continue Button */}
             <div className="pt-4">
