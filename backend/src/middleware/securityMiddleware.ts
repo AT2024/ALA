@@ -23,7 +23,18 @@ export const strictRateLimit = createRateLimiter(60 * 1000, 10); // 10 requests 
 
 // HTTPS redirect middleware
 export const httpsRedirect = (req: Request, res: Response, next: NextFunction) => {
-  if (process.env.NODE_ENV === 'production' && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+  // Skip redirect for OPTIONS requests (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
+  // Skip redirect for health check endpoints
+  if (req.path === '/api/health') {
+    return next();
+  }
+  
+  // Only redirect in production when HTTPS is properly configured
+  if (process.env.NODE_ENV === 'production' && process.env.HTTPS_ENABLED === 'true' && !req.secure && req.get('x-forwarded-proto') !== 'https') {
     return res.redirect(301, `https://${req.get('host')}${req.url}`);
   }
   next();
