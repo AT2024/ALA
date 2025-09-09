@@ -28,6 +28,7 @@ services:
       - LOG_LEVEL=info
       - PRIORITY_MOCK=false
       - DATABASE_URL=${DATABASE_URL}
+      - BYPASS_PRIORITY_EMAILS=alexs@alphatau.com
     ports:
       - "5000:5000"
     restart: always
