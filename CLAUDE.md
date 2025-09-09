@@ -332,6 +332,13 @@ npm run test:e2e                                    # Playwright E2E tests
   - 🎯 Real API
   - ❌ Fallback
 
+### 2.1. CUSTOMERS Endpoint for Site Retrieval
+- **Use** `/CUSTOMERS` endpoint to retrieve ALL sites (100+ sites) for AlphaTau employees
+- **Include** `$top: 500` parameter to capture all customers 
+- **Select** only required fields: `CUSTNAME,CUSTDES`
+- **Order** results by `CUSTNAME` for consistency
+- **Success confirmed**: Works in production for alexs@alphatau.com (Position Code 99)
+
 ### 3. Data Source Management Rules
 - **Use test data** only in development mode with `test@example.com` user
 - **Apply** same filtering logic to both test data and real API responses
@@ -376,6 +383,62 @@ npm run test:e2e                                    # Playwright E2E tests
 
 ---
 
+## API Endpoints Reference
+
+### Authentication Endpoints
+- **Request Verification Code**: `POST /api/auth/request-code`
+  - Body: `{"identifier": "email@example.com"}` or `{"identifier": "phone-number"}`
+  - Returns: User data with available sites and verification code requirement
+
+- **Verify Code**: `POST /api/auth/verify`
+  - Body: `{"identifier": "email@example.com", "code": "123456"}`
+  - Returns: JWT token and user session data
+
+- **Resend Code**: `POST /api/auth/resend-code`
+  - Body: `{"identifier": "email@example.com"}`
+
+### System Health Endpoints
+- **Backend Health**: `GET /api/health`
+  - Returns: Server status, database connection, version info
+
+- **Priority API Health**: `GET /api/priority/health`
+  - Returns: Priority API connectivity status
+
+### Testing Commands
+
+#### Local Development
+```bash
+# Request verification code
+curl -X POST http://localhost:3001/api/auth/request-code \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"test@example.com"}'
+
+# Verify with fixed code (always 123456)
+curl -X POST http://localhost:3001/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"test@example.com","code":"123456"}'
+```
+
+#### Production (Azure VM)
+```bash
+# Test AlphaTau employee with access to all sites
+curl -X POST http://20.217.84.100:5000/api/auth/request-code \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"alexs@alphatau.com"}'
+
+# Test regular user (site-specific access)
+curl -X POST http://20.217.84.100:5000/api/auth/request-code \
+  -H "Content-Type: application/json" \
+  -d '{"identifier":"user@hospital.com"}'
+```
+
+### Bypass Users for Testing
+- **alexs@alphatau.com**: Position Code 99 (Full Admin) - Access to all 100+ sites
+- **test@bypass.com**: Emergency bypass user
+- **test@example.com**: Development mode test user
+
+---
+
 ## Troubleshooting
 
 ### Quick Diagnostics
@@ -415,6 +478,27 @@ ssh azureuser@20.217.84.100 "docker logs ala-db-azure --tail=20"
 # External accessibility test
 curl -s http://20.217.84.100:3000 | grep -o "<title>[^<]*</title>"  # Frontend
 curl -s http://20.217.84.100:5000/api/health                        # Backend API
+```
+
+#### Container Recovery Procedures (Azure VM)
+```bash
+# Quick container restart (if containers are stopped)
+ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f azure/docker-compose.azure.yml --env-file azure/.env.azure up -d"
+
+# Force rebuild containers (if there are build issues)
+ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f azure/docker-compose.azure.yml --env-file azure/.env.azure up -d --build"
+
+# Check container status with ports
+ssh azureuser@20.217.84.100 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+# Stop and cleanup before restart (if needed)
+ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f azure/docker-compose.azure.yml down"
+ssh azureuser@20.217.84.100 "docker system prune -f"
+
+# Container-specific restarts
+ssh azureuser@20.217.84.100 "docker restart ala-api-azure"        # Backend only
+ssh azureuser@20.217.84.100 "docker restart ala-frontend-azure"   # Frontend only
+ssh azureuser@20.217.84.100 "docker restart ala-db-azure"         # Database only
 ```
 
 ### Common Issues
@@ -501,9 +585,9 @@ docker exec -it postgres psql -U admin -d medical_app
 
 # API testing
 curl http://localhost:3001/health
-curl -X POST http://localhost:3001/api/auth/login \
+curl -X POST http://localhost:3001/api/auth/request-code \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com"}'
+  -d '{"identifier":"test@example.com"}'
 
 # Check Priority API
 curl -X GET "$PRIORITY_API_URL/health"
@@ -516,13 +600,13 @@ ssh azureuser@20.217.84.100 "docker exec -it ala-db-azure psql -U ala_user -d al
 
 # API testing on VM (local)
 ssh azureuser@20.217.84.100 "curl http://localhost:5000/api/health"
-ssh azureuser@20.217.84.100 "curl -X POST http://localhost:5000/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\"}'"
+ssh azureuser@20.217.84.100 "curl -X POST http://localhost:5000/api/auth/request-code -H 'Content-Type: application/json' -d '{\"identifier\":\"test@example.com\"}'"
 
 # External API testing
 curl http://20.217.84.100:5000/api/health
-curl -X POST http://20.217.84.100:5000/api/auth/login \
+curl -X POST http://20.217.84.100:5000/api/auth/request-code \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com"}'
+  -d '{"identifier":"test@example.com"}'
 
 # Priority API from VM
 ssh azureuser@20.217.84.100 "curl 'https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/PHONEBOOK?$top=1'"
