@@ -9,13 +9,11 @@ import { useAuth } from '@/context/AuthContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
-import { PDFService } from '@/services/pdfService';
 
 const TreatmentDocumentation = () => {
   const { 
     currentTreatment, 
     processApplicator, 
-    applicators, 
     processedApplicators,
     progressStats, 
     addAvailableApplicator,
