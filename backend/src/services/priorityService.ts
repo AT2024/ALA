@@ -157,6 +157,56 @@ const shouldUseTestData = (identifier: string): boolean => {
   return process.env.NODE_ENV === 'development' && identifier === 'test@example.com';
 };
 
+// Helper function to check if an email is in the bypass list
+const isEmailInBypassList = (email: string): boolean => {
+  const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS;
+  logger.info(`🔍 BYPASS DEBUG: Checking email ${email} against bypass list`);
+  logger.info(`🔍 BYPASS DEBUG: BYPASS_PRIORITY_EMAILS = "${bypassEmails}"`);
+  
+  if (!bypassEmails) {
+    logger.info(`🔍 BYPASS DEBUG: No bypass emails configured`);
+    return false;
+  }
+  
+  const emailList = bypassEmails.split(',').map(e => e.trim().toLowerCase());
+  const result = emailList.includes(email.toLowerCase());
+  logger.info(`🔍 BYPASS DEBUG: Email list: ${JSON.stringify(emailList)}`);
+  logger.info(`🔍 BYPASS DEBUG: Test email: "${email.toLowerCase()}" -> Result: ${result}`);
+  return result;
+};
+
+// Helper function to create a bypass user response
+const createBypassUserResponse = async (email: string, priorityServiceInstance: any) => {
+  logger.warn(`🔓 BYPASS ACCESS: Granting emergency access to ${email}`);
+  
+  // Try to get real sites from ORDERS endpoint
+  let realSites = [];
+  try {
+    logger.info('🔓 BYPASS: Attempting to fetch real sites for bypass user');
+    realSites = await priorityServiceInstance.getAllSites();
+    logger.info(`🔓 BYPASS: Retrieved ${realSites.length} real sites for bypass user`);
+  } catch (error) {
+    logger.error('🔓 BYPASS: Could not fetch real sites, using fallback:', error);
+    realSites = [];
+  }
+  
+  // If no real sites available, use emergency fallback
+  if (realSites.length === 0) {
+    realSites = [{ custName: 'ALL_SITES', custDes: 'All Sites (Emergency Access)' }];
+  }
+  
+  return {
+    found: true,
+    fullAccess: true,
+    sites: realSites,
+    user: {
+      email: email,
+      phone: '000-BYPASS',
+      positionCode: 99,
+    },
+  };
+};
+
 // Helper function to generate dynamic dates for test data
 const generateDynamicDates = () => {
   const today = new Date();
@@ -282,6 +332,12 @@ export const priorityService = {
       }
     }
 
+    // Check for bypass emails before proceeding with Priority API
+    const isEmail = identifier.includes('@');
+    if (isEmail && isEmailInBypassList(identifier)) {
+      logger.warn(`🔓 BYPASS: Email ${identifier} is in bypass list - will use bypass if Priority API fails`);
+    }
+
     // For real users, proceed with Priority API calls
     logger.info(`Processing real user ${identifier} through Priority API`);
     
@@ -313,6 +369,12 @@ export const priorityService = {
           }
         }
         
+        // Check if this is a bypass email before throwing error
+        if (isEmail && isEmailInBypassList(identifier)) {
+          logger.warn(`🔓 BYPASS: Priority API unavailable, granting bypass access to ${identifier}`);
+          return await createBypassUserResponse(identifier, this);
+        }
+        
         throw new Error(`Priority API is currently unavailable. Please try again later.`);
       }
       
@@ -339,6 +401,12 @@ export const priorityService = {
             },
           };
         }
+      }
+      
+      // Check if this is a bypass email before throwing error
+      if (isEmail && isEmailInBypassList(identifier)) {
+        logger.warn(`🔓 BYPASS: Priority system error, granting bypass access to ${identifier}`);
+        return await createBypassUserResponse(identifier, this);
       }
       
       throw new Error(`Priority system is currently unavailable. Please contact support or try again later.`);
@@ -604,28 +672,34 @@ export const priorityService = {
   async getAllSites() {
     try {
       logger.info('Fetching all sites for Alpha Tau employee');
-      const sitesResponse = await priorityApi.get('/PHONEBOOK', {
+      
+      // Use CUSTOMERS endpoint to get ALL sites (not just those with recent orders)
+      logger.info('Getting all sites from CUSTOMERS endpoint');
+      const customersResponse = await priorityApi.get('/CUSTOMERS', {
         params: {
           $select: 'CUSTNAME,CUSTDES',
+          $top: 500, // Get all customers (should capture all 100+ sites)
           $orderby: 'CUSTNAME',
         },
       });
 
-      // Extract unique sites with descriptions
-      const uniqueSites = sitesResponse.data.value.reduce((acc: SiteInfo[], item: any) => {
-        if (item.CUSTNAME && !acc.find((site: SiteInfo) => site.custName === item.CUSTNAME)) {
-          acc.push({
-            custName: item.CUSTNAME,
-            custDes: item.CUSTDES || item.CUSTNAME
+      // Extract unique sites from customers
+      const siteMap = new Map();
+      customersResponse.data.value.forEach((customer: any) => {
+        if (customer.CUSTNAME && !siteMap.has(customer.CUSTNAME)) {
+          siteMap.set(customer.CUSTNAME, {
+            custName: customer.CUSTNAME,
+            custDes: customer.CUSTDES || customer.CUSTNAME
           });
         }
-        return acc;
-      }, [] as SiteInfo[]);
-
-      logger.info(`Retrieved ${uniqueSites.length} unique sites`);
+      });
+      
+      const uniqueSites = Array.from(siteMap.values());
+      logger.info(`Retrieved ${uniqueSites.length} sites from CUSTOMERS endpoint`);
       return uniqueSites;
+      
     } catch (error: any) {
-      logger.error(`Error getting all sites: ${error}`);
+      logger.error(`Error getting all sites from CUSTOMERS: ${error}`);
       return [];
     }
   },
