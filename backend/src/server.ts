@@ -8,6 +8,9 @@ import { notFound } from './middleware/notFoundMiddleware';
 import { 
   apiRateLimit, 
   authRateLimit, 
+  codeRequestRateLimit,
+  verifyRateLimit,
+  tokenValidateRateLimit,
   httpsRedirect, 
   securityHeaders, 
   corsOptions, 
@@ -90,7 +93,13 @@ app.get('/api/routes', (req, res) => {
   });
 });
 
-// Routes with rate limiting
+// Auth routes with specific rate limiting
+app.post('/api/auth/request-code', codeRequestRateLimit, authRoutes);
+app.post('/api/auth/verify', verifyRateLimit, authRoutes);
+app.post('/api/auth/resend-code', codeRequestRateLimit, authRoutes);
+app.post('/api/auth/validate-token', tokenValidateRateLimit, authRoutes);
+app.get('/api/auth/debug-sites/:identifier', authRateLimit, authRoutes);
+// Fallback for any other auth routes
 app.use('/api/auth', authRateLimit, authRoutes);
 app.use('/api/treatments', apiRateLimit, treatmentRoutes);
 app.use('/api/applicators', apiRateLimit, applicatorRoutes);

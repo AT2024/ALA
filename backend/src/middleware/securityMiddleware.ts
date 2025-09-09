@@ -17,7 +17,10 @@ export const createRateLimiter = (windowMs: number = 15 * 60 * 1000, max: number
 };
 
 // Specific rate limiters for different endpoints
-export const authRateLimit = createRateLimiter(15 * 60 * 1000, 5); // 5 auth attempts per 15 min
+export const authRateLimit = createRateLimiter(15 * 60 * 1000, 20); // 20 auth attempts per 15 min
+export const codeRequestRateLimit = createRateLimiter(15 * 60 * 1000, 10); // 10 code requests per 15 min
+export const verifyRateLimit = createRateLimiter(15 * 60 * 1000, 15); // 15 verify attempts per 15 min
+export const tokenValidateRateLimit = createRateLimiter(15 * 60 * 1000, 50); // 50 token validations per 15 min
 export const apiRateLimit = createRateLimiter(15 * 60 * 1000, 100); // 100 requests per 15 min
 export const strictRateLimit = createRateLimiter(60 * 1000, 10); // 10 requests per minute
 
