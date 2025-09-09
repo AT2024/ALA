@@ -471,7 +471,7 @@ export const applicatorService = {
         throw new Error('Comments are required for faulty applicators');
       }
       
-      // Save to Priority system first
+      // Save to Priority system first (optional - won't block local save)
       const prioritySaveResult = await this.saveApplicatorToPriority(treatmentId, {
         serialNumber: data.serialNumber,
         insertionTime: data.insertionTime || new Date().toISOString(),
@@ -480,11 +480,14 @@ export const applicatorService = {
         comments: data.comments
       });
       
+      // Log Priority result but DON'T THROW ERROR - always continue with local save
       if (!prioritySaveResult.success) {
-        throw new Error(`Failed to save to Priority: ${prioritySaveResult.message}`);
+        logger.warn(`Priority save failed (continuing with local save): ${prioritySaveResult.message}`);
+      } else {
+        logger.info(`Priority save successful: ${prioritySaveResult.message}`);
       }
       
-      // Create the applicator in local database
+      // ALWAYS create the applicator in local database
       const applicator = await Applicator.create({
         ...data,
         treatmentId,
