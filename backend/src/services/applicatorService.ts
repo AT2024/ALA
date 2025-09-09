@@ -616,18 +616,20 @@ export const applicatorService = {
 
       const prioritySaveResult = await this.saveApplicatorToPriority(treatment.id, priorityData);
 
+      // Log Priority result but DON'T THROW ERROR - always continue with local save
       if (!prioritySaveResult.success) {
-        logger.error(`[APPLICATOR_SERVICE] [${requestId}] Failed to save to Priority system`, {
+        logger.warn(`[APPLICATOR_SERVICE] [${requestId}] Priority save failed (continuing with local save): ${prioritySaveResult.message}`, {
           treatmentId: treatment.id,
           priorityData,
           transformedData,
           error: prioritySaveResult.message,
           priorityResult: prioritySaveResult
         });
-        throw new Error(`Failed to save to Priority: ${prioritySaveResult.message}`);
+      } else {
+        logger.info(`[APPLICATOR_SERVICE] [${requestId}] Priority save successful`);
       }
 
-      logger.info(`[APPLICATOR_SERVICE] [${requestId}] Priority save successful, creating local record`, {
+      logger.info(`[APPLICATOR_SERVICE] [${requestId}] Creating local record`, {
         treatmentId: treatment.id,
         priorityResult: prioritySaveResult
       });
