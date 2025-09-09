@@ -1533,7 +1533,7 @@ export const priorityService = {
    */
   async updateApplicatorInPriority(applicatorData: any) {
     try {
-      logger.info(`Updating applicator ${applicatorData.serialNumber} in Priority`);
+      logger.info(`Saving applicator ${applicatorData.serialNumber} to Priority`);
       
       // Prepare data for Priority update
       const priorityUpdateData = {
@@ -1546,58 +1546,12 @@ export const priorityService = {
         FREE1: applicatorData.comments || ''
       };
       
-      logger.info(`Prepared Priority update data:`, priorityUpdateData);
+      logger.info(`Prepared Priority data:`, priorityUpdateData);
       
-      // Check if record exists first
-      logger.info(`Checking if applicator record exists in Priority...`);
-      const existingResponse = await priorityApi.get('/SIBD_APPLICATUSELIST', {
-        params: {
-          $filter: `SERNUM eq '${applicatorData.serialNumber}' and ORDNAME eq '${applicatorData.treatmentId}'`,
-          $top: 1
-        },
-      });
-      
-      logger.info(`Found ${existingResponse.data.value.length} existing records`);
-      
-      if (existingResponse.data.value.length > 0) {
-        // Update existing record - use simple key format instead of composite key
-        logger.info(`Updating existing applicator record in Priority`);
-        
-        // Try different approaches for the UPDATE operation
-        try {
-          // Option 1: Use single key (SERNUM only)
-          logger.info(`Attempting update with SERNUM key only: ${applicatorData.serialNumber}`);
-          const updateResponse = await priorityApi.patch(
-            `/SIBD_APPLICATUSELIST('${applicatorData.serialNumber}')`,
-            priorityUpdateData
-          );
-          logger.info(`Successfully updated applicator record using SERNUM key`);
-        } catch (singleKeyError: any) {
-          logger.warn(`Single key update failed: ${singleKeyError.message}, trying alternative approach`);
-          
-          try {
-            // Option 2: Use different composite key format
-            logger.info(`Attempting update with alternative composite key format`);
-            const updateResponse = await priorityApi.patch(
-              `/SIBD_APPLICATUSELIST(SERNUM%3D'${applicatorData.serialNumber}'%2CORDNAME%3D'${applicatorData.treatmentId}')`,
-              priorityUpdateData
-            );
-            logger.info(`Successfully updated applicator record using URL-encoded composite key`);
-          } catch (compositeKeyError: any) {
-            logger.warn(`Composite key update failed: ${compositeKeyError.message}, trying direct table update`);
-            
-            // Option 3: Try creating a new record instead (Priority might handle duplicates automatically)
-            logger.info(`Attempting to create new record instead of update`);
-            const createResponse = await priorityApi.post('/SIBD_APPLICATUSELIST', priorityUpdateData);
-            logger.info(`Successfully created new applicator record in Priority`);
-          }
-        }
-      } else {
-        // Create new record
-        logger.info(`Creating new applicator record in Priority`);
-        const createResponse = await priorityApi.post('/SIBD_APPLICATUSELIST', priorityUpdateData);
-        logger.info(`Created new applicator record in Priority`);
-      }
+      // Send data to Priority using POST (let Priority handle duplicates based on unique keys)
+      logger.info(`Sending applicator data to Priority SIBD_APPLICATUSELIST table`);
+      const response = await priorityApi.post('/SIBD_APPLICATUSELIST', priorityUpdateData);
+      logger.info(`Successfully saved applicator record to Priority`);
       
       return {
         success: true,
