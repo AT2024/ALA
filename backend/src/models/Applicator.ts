@@ -53,20 +53,24 @@ Applicator.init(
     serialNumber: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'serial_number', // Map to database column name
     },
     seedQuantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+      field: 'seed_quantity', // Map to database column name
     },
     usageType: {
       type: DataTypes.ENUM('full', 'faulty', 'none'),
       allowNull: false,
       defaultValue: 'full',
+      field: 'usage_type', // Map to database column name
     },
     insertionTime: {
       type: DataTypes.DATE,
       allowNull: false,
+      field: 'insertion_time', // Map to database column name
     },
     comments: {
       type: DataTypes.TEXT,
@@ -75,27 +79,33 @@ Applicator.init(
     imagePath: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'image_path', // Map to database column name
     },
     isRemoved: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+      field: 'is_removed', // Map to database column name
     },
     removalComments: {
       type: DataTypes.TEXT,
       allowNull: true,
+      field: 'removal_comments', // Map to database column name
     },
     removalImagePath: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'removal_image_path', // Map to database column name
     },
     removalTime: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'removal_time', // Map to database column name
     },
     treatmentId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'treatment_id', // Map to database column name
       references: {
         model: 'treatments',
         key: 'id',
@@ -104,6 +114,7 @@ Applicator.init(
     addedBy: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'added_by', // Map to database column name
       references: {
         model: 'users',
         key: 'id',
@@ -112,6 +123,7 @@ Applicator.init(
     removedBy: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'removed_by', // Map to database column name
       references: {
         model: 'users',
         key: 'id',
@@ -125,10 +137,10 @@ Applicator.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['serialNumber'],
+        fields: ['serial_number'], // Use database column name
       },
       {
-        fields: ['treatmentId'],
+        fields: ['treatment_id'], // Use database column name
       },
     ],
   }
