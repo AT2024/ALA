@@ -94,7 +94,11 @@ check_containers() {
         fi
     done
     
-    return $all_healthy
+    if $all_healthy; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Check system resources
