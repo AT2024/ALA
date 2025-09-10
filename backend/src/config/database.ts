@@ -19,8 +19,7 @@ const sequelize = new Sequelize(DATABASE_URL, {
     min: parseInt(process.env.DB_POOL_MIN || '2', 10),  // Minimum number of connections
     acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10), // Max time to get connection (30s)
     idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10), // Max idle time (10s)
-    evict: parseInt(process.env.DB_POOL_EVICT || '1000', 10), // Check for idle connections every 1s
-    handleDisconnects: true // Handle disconnects automatically
+    evict: parseInt(process.env.DB_POOL_EVICT || '1000', 10) // Check for idle connections every 1s
   },
   retry: {
     max: 3, // Maximum retry attempts
@@ -117,7 +116,10 @@ export const initializeDatabase = async (maxRetries = 5, initialDelay = 1000): P
       ]);
       
       logger.info('Database connection established successfully');
-      logger.info(`Connection pool: min=${sequelize.options.pool?.min}, max=${sequelize.options.pool?.max}`);
+      // Get pool configuration from environment variables for logging
+      const poolMin = process.env.DB_POOL_MIN || '2';
+      const poolMax = process.env.DB_POOL_MAX || '10';
+      logger.info(`Connection pool: min=${poolMin}, max=${poolMax}`);
       
       // Sync models with database (only alter in development)
       await sequelize.sync({ 
