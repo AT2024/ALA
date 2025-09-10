@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
+import { generateUUID } from '@/utils/uuid';
 
 const TreatmentDocumentation = () => {
   const { 
@@ -112,7 +113,7 @@ const TreatmentDocumentation = () => {
         // Add each applicator to the context
         applicators.forEach((applicator: any) => {
           addAvailableApplicator({
-            id: applicator.serialNumber || crypto.randomUUID(),
+            id: applicator.serialNumber || generateUUID(),
             serialNumber: applicator.serialNumber,
             applicatorType: applicator.applicatorType || applicator.type || '',
             seedQuantity: applicator.seedQuantity || 0,
@@ -437,7 +438,7 @@ const TreatmentDocumentation = () => {
 
       // Add applicator to local treatment context
       const applicator = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,

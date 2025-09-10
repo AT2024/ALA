@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { PDFService } from '@/services/pdfService';
+import { JSONExportService } from '@/services/jsonExportService';
 
 const UseList = () => {
   const navigate = useNavigate();
@@ -70,10 +71,18 @@ const UseList = () => {
         processedApplicators,
         summaryWithActivity
       );
-      setSuccess('PDF downloaded successfully!');
+
+      // Automatically export JSON data with PDF
+      JSONExportService.exportTreatmentData(
+        currentTreatment,
+        processedApplicators,
+        summaryWithActivity
+      );
+
+      setSuccess('PDF and JSON data downloaded successfully!');
     } catch (error: any) {
-      console.error('Error generating PDF:', error);
-      setError('Failed to generate PDF. Please try again.');
+      console.error('Error generating files:', error);
+      setError('Failed to generate PDF and JSON files. Please try again.');
     }
   };
 
