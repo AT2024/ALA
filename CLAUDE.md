@@ -774,6 +774,43 @@ sudo systemctl stop nginx
 
 ---
 
+## Version Recovery & Backup
+
+### 🏷️ Working Production Version Tag
+
+**Tag**: `v1.0-working-production-2025-09-10`  
+**Status**: ✅ FULLY WORKING - Database, applicator saving, PDF/JSON export all functional
+
+### 🔄 Quick Recovery
+
+If you encounter issues and need to restore to the last working version:
+
+```bash
+# Automatic restoration script
+./scripts/restore-working-version.sh
+
+# Or manual restoration:
+git fetch --tags
+git checkout v1.0-working-production-2025-09-10
+
+# Deploy to Azure VM
+ssh azureuser@20.217.84.100 "cd ala-improved && git fetch --tags && git checkout v1.0-working-production-2025-09-10"
+ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f azure/docker-compose.azure.yml --env-file azure/.env.azure up -d --build"
+```
+
+### 📋 What's Included in Working Version
+
+- ✅ All database tables created (users, treatments, applicators)
+- ✅ Complete field mappings (camelCase → snake_case)  
+- ✅ Applicator saving functionality working
+- ✅ PDF and JSON export capabilities
+- ✅ Priority API authentication
+- ✅ Azure VM deployment configuration
+
+See `WORKING-VERSION.md` for complete documentation.
+
+---
+
 **Note**: This application is designed for medical environments requiring reliability, real-time data validation, and seamless integration with existing Priority systems. Always prioritize data accuracy and validation over performance optimizations.
 
 **Production Environment**: The application is currently deployed and running on Azure VM (20.217.84.100) with full Priority API integration. Use SSH access for production management and monitoring.
