@@ -22,6 +22,7 @@ import applicatorRoutes from './routes/applicatorRoutes';
 import adminRoutes from './routes/adminRoutes';
 import priorityRoutes from './routes/priorityRoutes';
 import { initializeDatabase } from './config/database';
+import './models'; // Import models to ensure they're loaded before database sync
 import logger from './utils/logger';
 
 // Load environment variables
