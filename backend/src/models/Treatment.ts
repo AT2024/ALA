@@ -60,6 +60,7 @@ Treatment.init(
     subjectId: {
       type: DataTypes.STRING,
       allowNull: false,
+      field: 'subject_id', // Map to database column name
     },
     site: {
       type: DataTypes.STRING,
@@ -73,14 +74,17 @@ Treatment.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+      field: 'is_complete', // Map to database column name
     },
     priorityId: {
       type: DataTypes.STRING,
       allowNull: true,
+      field: 'priority_id', // Map to database column name
     },
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'user_id', // Map to database column name
       references: {
         model: 'users',
         key: 'id',
@@ -89,6 +93,7 @@ Treatment.init(
     completedBy: {
       type: DataTypes.UUID,
       allowNull: true,
+      field: 'completed_by', // Map to database column name
       references: {
         model: 'users',
         key: 'id',
@@ -97,6 +102,7 @@ Treatment.init(
     completedAt: {
       type: DataTypes.DATE,
       allowNull: true,
+      field: 'completed_at', // Map to database column name
     },
     email: {
       type: DataTypes.STRING,
@@ -105,10 +111,12 @@ Treatment.init(
     seedQuantity: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      field: 'seed_quantity', // Map to database column name
     },
     activityPerSeed: {
       type: DataTypes.FLOAT,
       allowNull: true,
+      field: 'activity_per_seed', // Map to database column name
     },
     surgeon: {
       type: DataTypes.STRING,
