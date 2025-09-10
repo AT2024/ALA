@@ -31,15 +31,17 @@ services:
       - BYPASS_PRIORITY_EMAILS=alexs@alphatau.com
     ports:
       - "5000:5000"
-    restart: always
+    restart: unless-stopped
+    restart_delay: 10s
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ala-network
 
@@ -63,15 +65,17 @@ services:
       - NODE_ENV=production
     ports:
       - "3000:80"  # Frontend serves on port 80 internally via nginx
-    restart: always
+    restart: unless-stopped
+    restart_delay: 5s
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - ala-network
 
@@ -91,13 +95,14 @@ services:
       - "5432:5432"
     volumes:
       - ala-postgres-data-prod:/var/lib/postgresql/data
-    restart: always
+    restart: unless-stopped
+    restart_delay: 15s
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ala_user -d ala_production"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ala-network
 
