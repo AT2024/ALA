@@ -130,7 +130,7 @@ Treatment.init(
     timestamps: true,
     indexes: [
       {
-        fields: ['subjectId'],
+        fields: ['subject_id'], // Use database column name for indexes
       },
       {
         fields: ['date'],
