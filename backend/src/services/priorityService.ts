@@ -154,7 +154,7 @@ const generateTestDataForDate = (requestedDate: string) => {
 
 // Helper function to check if we should use test data for development
 const shouldUseTestData = (identifier: string): boolean => {
-  return process.env.NODE_ENV === 'development' && identifier === 'test@example.com';
+  return (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_DATA === 'true') && identifier === 'test@example.com';
 };
 
 // Helper function to check if an email is in the bypass list
