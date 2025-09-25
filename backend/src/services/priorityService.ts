@@ -308,12 +308,12 @@ export const priorityService = {
     // Always treat identifier as string
     identifier = String(identifier).trim();
 
-    // Special handling for test@example.com in development mode
+    // Priority check: Handle test@example.com FIRST before any Priority API calls
     if (shouldUseTestData(identifier)) {
-      logger.info(`Using test data for development user: ${identifier}`);
+      logger.info(`🧪 TEST USER DETECTED: Using test data for ${identifier} (bypassing Priority API)`);
       const testData = loadTestData();
       if (testData && testData.sites) {
-        logger.info(`Loaded ${testData.sites.length} sites for test user:`, testData.sites.map((s: any) => s.custName));
+        logger.info(`🧪 TEST DATA: Loaded ${testData.sites.length} sites for test user:`, testData.sites.map((s: any) => s.custName));
         return {
           found: true,
           fullAccess: true, // Grant full access for testing
@@ -328,7 +328,18 @@ export const priorityService = {
           },
         };
       } else {
-        logger.warn(`Failed to load test data for user ${identifier}`);
+        logger.error(`🧪 TEST DATA ERROR: Failed to load test data for user ${identifier}`);
+        // Return minimal test data as fallback
+        return {
+          found: true,
+          fullAccess: true,
+          sites: [{ custName: 'TEST_SITE', custDes: 'Test Site' }],
+          user: {
+            email: identifier,
+            phone: '555-TEST',
+            positionCode: 99,
+          },
+        };
       }
     }
 
@@ -1836,28 +1847,148 @@ export const priorityService = {
   },
 
   /**
+   * Check removal status for a treatment order
+   * Returns true if the treatment is ready for removal (status = "Waiting for removal")
+   */
+  async checkRemovalStatus(orderId: string, userId?: string): Promise<{
+    readyForRemoval: boolean;
+    status: string;
+    orderFound: boolean;
+    error?: string;
+  }> {
+    try {
+      logger.info(`🔍 Checking removal status for order ${orderId}`);
+
+      // For development mode with test@example.com, check test data first
+      if (userId && shouldUseTestData(userId)) {
+        logger.info(`🧪 DEVELOPMENT MODE: Checking test data for removal status of order ${orderId}`);
+        const testData = loadTestData();
+        if (testData && testData.orders) {
+          // Handle expanded order names (SO25000010_Y, SO25000010_T, SO25000010_M)
+          const baseOrderId = orderId.replace(/_(Y|T|M)$/, '');
+
+          const order = testData.orders.find((o: any) =>
+            o.ORDNAME === orderId || o.ORDNAME === baseOrderId
+          );
+
+          if (order) {
+            const status = order.ORDSTATUSDES || 'Open';
+            const readyForRemoval = status === 'Waiting for removal' || status === 'Performed';
+
+            logger.info(`🧪 TEST DATA: Order ${orderId} found with status "${status}", ready for removal: ${readyForRemoval}`);
+
+            return {
+              readyForRemoval,
+              status,
+              orderFound: true
+            };
+          } else {
+            logger.warn(`🧪 TEST DATA: Order ${orderId} not found in test data`);
+            return {
+              readyForRemoval: false,
+              status: 'Not Found',
+              orderFound: false
+            };
+          }
+        }
+      }
+
+      // For real users, query Priority API
+      logger.info(`🎯 REAL API: Checking Priority API for removal status of order ${orderId}`);
+
+      try {
+        const response = await priorityApi.get(`/ORDERS('${orderId}')`, {
+          params: {
+            $select: 'ORDNAME,ORDSTATUSDES,CUSTNAME,REFERENCE',
+          },
+          timeout: 30000,
+        });
+
+        if (response.data) {
+          const orderStatus = response.data.ORDSTATUSDES || 'Open';
+          const readyForRemoval = orderStatus === 'Waiting for removal' || orderStatus === 'Performed';
+
+          logger.info(`🎯 REAL API: Order ${orderId} found with status "${orderStatus}", ready for removal: ${readyForRemoval}`);
+
+          return {
+            readyForRemoval,
+            status: orderStatus,
+            orderFound: true
+          };
+        } else {
+          logger.warn(`🎯 REAL API: Order ${orderId} not found in Priority API`);
+          return {
+            readyForRemoval: false,
+            status: 'Not Found',
+            orderFound: false
+          };
+        }
+      } catch (apiError: any) {
+        logger.error(`🎯 REAL API: Error querying Priority API for order ${orderId}:`, apiError);
+
+        // If this is a test user and API fails, fall back to test data
+        if (userId && shouldUseTestData(userId)) {
+          logger.warn(`❌ Priority API failed for test user ${userId}, using test data fallback for removal status check`);
+          const testData = loadTestData();
+          if (testData && testData.orders) {
+            const baseOrderId = orderId.replace(/_(Y|T|M)$/, '');
+            const order = testData.orders.find((o: any) =>
+              o.ORDNAME === orderId || o.ORDNAME === baseOrderId
+            );
+
+            if (order) {
+              const status = order.ORDSTATUSDES || 'Open';
+              const readyForRemoval = status === 'Waiting for removal' || status === 'Performed';
+
+              logger.info(`🧪 TEST DATA FALLBACK: Order ${orderId} found with status "${status}", ready for removal: ${readyForRemoval}`);
+
+              return {
+                readyForRemoval,
+                status,
+                orderFound: true
+              };
+            }
+          }
+        }
+
+        // For real users, don't use test data fallback
+        throw apiError;
+      }
+    } catch (error: any) {
+      logger.error(`❌ Error checking removal status for order ${orderId}: ${error.message}`);
+
+      return {
+        readyForRemoval: false,
+        status: 'Error',
+        orderFound: false,
+        error: error.message
+      };
+    }
+  },
+
+  /**
    * Update treatment status in Priority ORDERS table
    */
   async updateTreatmentStatus(orderName: string, status: 'Performed' | 'Removed') {
     try {
       logger.info(`Updating treatment ${orderName} status to ${status} in Priority`);
-      
+
       const updateData = {
         ORDSTATUSDES: status
       };
-      
+
       const response = await priorityApi.patch(`/ORDERS(ORDNAME='${orderName}')`, updateData);
-      
+
       logger.info(`Successfully updated treatment status to ${status}`);
-      
+
       return {
         success: true,
         message: `Treatment status updated to "${status}" in Priority`
       };
-      
+
     } catch (error: any) {
       logger.error(`Error updating treatment status in Priority: ${error}`);
-      
+
       // For testing, simulate success
       if (process.env.NODE_ENV === 'development') {
         logger.info(`Simulating successful treatment status update for testing`);
@@ -1866,7 +1997,7 @@ export const priorityService = {
           message: `Treatment status updated to "${status}" in Priority (simulated for testing)`
         };
       }
-      
+
       throw new Error(`Failed to update treatment status in Priority: ${error.message}`);
     }
   },

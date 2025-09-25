@@ -11,7 +11,8 @@ import {
   getOrderDetails,
   validateApplicator,
   getAvailableApplicators,
-  searchApplicators
+  searchApplicators,
+  checkRemovalStatus
 } from '../controllers/priorityController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -28,6 +29,7 @@ router.get('/orders', protect, getOrdersForSite);
 router.post('/orders', protect, getOrdersForSiteAndDate);
 router.get('/orders/:orderId/subform', protect, getOrderSubform);
 router.get('/orders/:orderId/details', protect, getOrderDetails);
+router.get('/orders/:orderId/removal-status', protect, checkRemovalStatus);
 router.post('/validate-applicator', protect, validateApplicator);
 router.get('/allowed-sites', protect, getAllowedSitesForUser);
 router.get('/applicators/available', protect, getAvailableApplicators);

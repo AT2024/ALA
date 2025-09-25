@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import treatmentService from '../services/treatmentService';
 import applicatorService from '../services/applicatorService';
+import priorityService from '../services/priorityService';
 import sequelize from '../config/database';
 import { Treatment } from '../models';
 import { QueryTypes } from 'sequelize';
@@ -423,6 +424,200 @@ export const debugTreatment = asyncHandler(async (req: Request, res: Response) =
       debugId,
       timestamp: new Date().toISOString()
     });
+  }
+});
+
+// @desc    Find treatments eligible for removal (13-21 days after insertion)
+// @route   GET /api/treatments/removal-candidates
+// @access  Private
+export const getRemovalCandidates = asyncHandler(async (req: Request, res: Response) => {
+  const { site, treatmentNumber } = req.query;
+
+  logger.info('[TREATMENT_CONTROLLER] Getting removal candidates', {
+    site,
+    treatmentNumber,
+    userId: req.user?.id
+  });
+
+  if (!site) {
+    res.status(400);
+    throw new Error('Site parameter is required');
+  }
+
+  // Check for test user FIRST (existing pattern from priorityService)
+  if (req.user?.email === 'test@example.com') {
+    logger.info(`🧪 TEST MODE: Getting removal candidates for test user at site ${site}`);
+
+    try {
+      // Reuse existing method that already handles test data properly
+      const orders = await priorityService.getOrdersForSiteWithFilter(
+        site as string,
+        req.user.email
+      );
+
+      logger.info(`🧪 Retrieved ${orders.length} orders from test data for site ${site}`);
+
+      // Filter for removal-ready orders matching test data statuses
+      const removalCandidates = orders.filter((order: any) => {
+        // Optional treatment number filter - handle base order names (removes _Y, _T, _M suffixes)
+        if (treatmentNumber) {
+          const baseOrderName = order.ORDNAME.replace(/_(Y|T|M)$/, '');
+          if (baseOrderName !== treatmentNumber as string) {
+            return false;
+          }
+        }
+
+        // Check removal status from test data
+        const isRemovalReady =
+          order.ORDSTATUSDES === 'Waiting for removal' ||
+          order.ORDSTATUSDES === 'Performed';
+
+        if (isRemovalReady) {
+          logger.info(`🧪 Found removal candidate: ${order.ORDNAME} - ${order.ORDSTATUSDES}`);
+        }
+
+        return isRemovalReady;
+      });
+
+      if (removalCandidates.length > 0) {
+        let candidate;
+
+        if (treatmentNumber) {
+          // Find the exact matching treatment (handle base order names)
+          candidate = removalCandidates.find((order: any) => {
+            const baseOrderName = order.ORDNAME.replace(/_(Y|T|M)$/, '');
+            return baseOrderName === treatmentNumber;
+          });
+          if (!candidate) {
+            // This shouldn't happen due to filtering, but safety check
+            logger.info(`🧪 Treatment ${treatmentNumber} not found in removal candidates`);
+            res.status(404).json({
+              isEligible: false,
+              reason: `Treatment ${treatmentNumber} not found or not eligible for removal`
+            });
+            return;
+          }
+          logger.info(`🧪 Found exact match for treatment: ${treatmentNumber} (matched ${candidate.ORDNAME})`);
+        } else {
+          // No specific treatment requested, return first available
+          candidate = removalCandidates[0];
+          logger.info(`🧪 No specific treatment requested, returning first available: ${candidate.ORDNAME}`);
+        }
+        const treatmentDate = new Date(candidate.SIBD_TREATDAY || candidate.CURDATE);
+        const daysSinceInsertion = Math.floor(
+          (Date.now() - treatmentDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        const candidateResponse = {
+          treatmentId: candidate.ORDNAME.replace(/_(Y|T|M)$/, ''), // Return base order name without suffix
+          subjectId: candidate.ORDNAME.replace(/_(Y|T|M)$/, ''), // Add this for frontend compatibility
+          patientName: candidate.PNAME || 'Test Patient',
+          insertionDate: candidate.SIBD_TREATDAY || candidate.CURDATE,
+          daysSinceInsertion,
+          status: candidate.ORDSTATUSDES,
+          seedQuantity: candidate.SBD_SEEDQTY || 0, // Use correct field from test data
+          activityPerSeed: candidate.SBD_PREFACTIV || 0, // Add this field
+          activity: (candidate.SBD_SEEDQTY || 0) * (candidate.SBD_PREFACTIV || 0), // Calculate total activity
+          surgeon: candidate.SURGEON || 'Dr. Test', // Add surgeon field
+          isEligible: true,
+          site: candidate.CUSTNAME
+        };
+
+        logger.info(`🧪 Returning test removal candidate: ${candidate.ORDNAME}`);
+        res.json(candidateResponse);
+        return;
+      } else {
+        if (treatmentNumber) {
+          logger.info(`🧪 Treatment ${treatmentNumber} not found at site ${site}`);
+          res.status(404).json({
+            success: false,
+            message: `Treatment ${treatmentNumber} not found at site ${site}`,
+            treatmentNumber,
+            site
+          });
+        } else {
+          logger.info(`🧪 No test removal candidates found for site ${site}`);
+          res.status(404).json({
+            isEligible: false,
+            reason: 'No removal candidates found in test data'
+          });
+        }
+        return;
+      }
+    } catch (error: any) {
+      logger.error(`🧪 Error getting test removal candidates: ${error.message}`);
+      res.status(500).json({
+        isEligible: false,
+        reason: 'Error retrieving test removal candidates'
+      });
+      return;
+    }
+  }
+
+  // EXISTING LOGIC - Real users use database
+  try {
+    // If treatmentNumber is provided, search for specific treatment
+    if (treatmentNumber) {
+      const treatment = await treatmentService.getTreatmentBySubjectId(treatmentNumber as string, site as string);
+
+      if (!treatment) {
+        res.status(404).json({
+          success: false,
+          message: 'Treatment not found',
+          treatmentNumber,
+          site
+        });
+        return;
+      }
+
+      // Calculate days since insertion
+      const treatmentDate = new Date(treatment.date);
+      const today = new Date();
+      const daysSinceInsertion = Math.floor((today.getTime() - treatmentDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Check if treatment is eligible for removal (13-21 days)
+      const isEligible = daysSinceInsertion >= 13 && daysSinceInsertion <= 21;
+      const isInsertion = treatment.type === 'insertion';
+      const isCompleted = treatment.isComplete;
+
+      // Get applicators for this treatment
+      const applicators = await applicatorService.getApplicators(treatment.id);
+
+      res.status(200).json({
+        success: true,
+        treatment: {
+          ...treatment,
+          daysSinceInsertion,
+          isEligible: isEligible && isInsertion && isCompleted,
+          eligibilityReasons: {
+            daysSinceInsertion,
+            validDayRange: daysSinceInsertion >= 13 && daysSinceInsertion <= 21,
+            isInsertion,
+            isCompleted
+          }
+        },
+        applicators
+      });
+    } else {
+      // Find all treatments eligible for removal for this site
+      const eligibleTreatments = await treatmentService.getRemovalCandidates(site as string, req.user?.id || '');
+
+      res.status(200).json({
+        success: true,
+        treatments: eligibleTreatments,
+        count: eligibleTreatments.length
+      });
+    }
+  } catch (error: any) {
+    logger.error('[TREATMENT_CONTROLLER] Error getting removal candidates', {
+      error: error.message,
+      site,
+      treatmentNumber,
+      userId: req.user?.id
+    });
+
+    res.status(500);
+    throw new Error(error.message || 'Failed to get removal candidates');
   }
 });
 

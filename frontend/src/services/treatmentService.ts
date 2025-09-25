@@ -14,6 +14,7 @@ export interface Treatment {
   surgeon?: string;
   userId?: string;
   priorityId?: string;
+  originalTreatmentId?: string; // For removal treatments - links to original insertion
   createdAt?: string;
   updatedAt?: string;
 }
@@ -79,8 +80,30 @@ export const treatmentService = {
     seedQuantity?: number;
     activityPerSeed?: number;
     surgeon?: string;
+    originalTreatmentId?: string; // For removal treatments
   }): Promise<Treatment> {
     const response = await api.post('/treatments', treatmentData);
+    return response.data;
+  },
+
+  // Get removal candidates for a specific treatment number and site
+  async getRemovalCandidates(site: string, treatmentNumber: string): Promise<{
+    id: string;
+    subjectId: string;
+    site: string;
+    date: string;
+    surgeon: string;
+    seedQuantity: number;
+    activityPerSeed: number;
+    daysSinceInsertion: number;
+    status: string;
+    activity: number;
+    isEligible: boolean;
+    reason?: string;
+  }> {
+    const response = await api.get('/treatments/removal-candidates', {
+      params: { site, treatmentNumber }
+    });
     return response.data;
   },
 

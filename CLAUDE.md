@@ -136,30 +136,208 @@ ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
 - **Security Auditing**: Verify safety measures and error handling
 - **Integration Testing**: Validate end-to-end workflows and API compatibility
 
-### 2. MCP Servers
-**Location**: `~/mcp-servers-global/`
+### 2. MCP Servers (Claude CLI Integration)
+**Status**: ✅ Configured via Claude CLI
+**Configuration**: Local project scope via `claude mcp` commands
 
-#### Context7 MCP - Documentation & Best Practices
+#### Available MCP Servers
+
+##### Context7 MCP - Documentation & Best Practices ✅
+- **Status**: Connected
 - **Use for**: API documentation, framework best practices, coding patterns
-- **Examples**: JWT authentication in Express, React Context patterns
+- **Agent Integration**: Enhances frontend-ui, security-audit, database-specialist agents
+- **Examples**: JWT authentication in Express, React Context patterns, PostgreSQL best practices
 
-#### Sequential MCP - Complex Problem Solving
+##### Sequential MCP - Complex Problem Solving ✅
+- **Status**: Connected
 - **Use for**: Breaking down complex features, architectural decisions, debugging workflows
-- **Examples**: Multi-phase implementations, complex bug troubleshooting
+- **Agent Integration**: Enhances priority-integration, performance-optimization, security-audit agents
+- **Examples**: Multi-phase implementations, complex Priority API chains, performance bottleneck analysis
 
-#### Magic MCP - UI Component Generation
-- **Use for**: React components, Tailwind styling, responsive design
-- **Examples**: Medical data tables, progress tracker UI
-
-#### Playwright MCP - Browser Automation & Testing
+##### Playwright MCP - Browser Automation & Testing ✅
+- **Status**: Connected
 - **Use for**: E2E testing, UI testing, browser automation
-- **Examples**: Treatment workflow testing, barcode scanner validation
+- **Agent Integration**: Enhances testing-specialist, frontend-ui agents
+- **Examples**: Treatment workflow testing, barcode scanner validation, component interaction testing
+
+##### GitHub MCP - Repository Integration ❌
+- **Status**: Connection failed (known issue)
+- **Alternative**: Use built-in `gh` CLI commands for GitHub operations
+- **Agent Integration**: Would enhance all agents with repository context
 
 #### MCP Management Commands
 ```bash
-cd ~/mcp-servers-global && docker-compose up -d    # Start all servers
-cd ~/mcp-servers-global && docker-compose down     # Stop all servers
-docker ps --filter "name=mcp"                      # Check status
+claude mcp list                    # View all configured servers
+claude mcp get <server-name>       # Get server details
+claude mcp remove <server-name>    # Remove a server
+/mcp                              # Check server status in Claude Code
+```
+
+#### MCP-Enhanced Agent Workflows
+
+When using Task agents, MCP servers automatically provide contextual information:
+
+**testing-specialist** + Playwright MCP:
+```bash
+# Enhanced test generation with browser automation patterns
+Task: "Create E2E tests for applicator workflow using Playwright MCP patterns"
+```
+
+**frontend-ui** + Context7 MCP:
+```bash
+# Enhanced component development with framework best practices
+Task: "Build responsive treatment cards using Context7 React patterns"
+```
+
+**priority-integration** + Sequential MCP:
+```bash
+# Enhanced API integration with complex logic handling
+Task: "Implement Priority order validation using Sequential thinking patterns"
+```
+
+**security-audit** + Context7 + Sequential MCP:
+```bash
+# Enhanced security analysis with best practices
+Task: "Audit authentication flow using Context7 security patterns and Sequential analysis"
+```
+
+### 3. MCP-Enhanced Agent Usage Patterns
+
+#### Agent-Specific MCP Integration Guide
+
+##### testing-specialist Agent
+**Enhanced with**: Playwright MCP ✅
+```bash
+# E2E Test Development
+Task testing-specialist: "Create comprehensive E2E tests for the seed removal workflow. Use Playwright MCP patterns for:
+- Barcode scanner simulation
+- Treatment progress validation
+- PDF export verification
+- Cross-browser compatibility testing"
+
+# Test Automation
+Task testing-specialist: "Set up automated testing pipeline with Playwright MCP best practices for:
+- Visual regression testing
+- Performance monitoring
+- Mobile device testing"
+```
+
+##### frontend-ui Agent
+**Enhanced with**: Context7 MCP ✅, Playwright MCP ✅
+```bash
+# Component Development
+Task frontend-ui: "Build responsive treatment progress card component. Use Context7 MCP for:
+- React hooks best practices
+- Tailwind responsive patterns
+- TypeScript interface design
+- State management patterns"
+
+# UI Testing Integration
+Task frontend-ui: "Create treatment selection UI with built-in testing. Use Playwright MCP for:
+- Component interaction testing
+- Accessibility validation
+- Performance measurement"
+```
+
+##### priority-integration Agent
+**Enhanced with**: Sequential MCP ✅, Context7 MCP ✅
+```bash
+# Complex API Integration
+Task priority-integration: "Implement advanced Priority API order validation with Sequential MCP for:
+- Multi-step validation chains
+- Error handling strategies
+- Retry logic patterns
+- Cache optimization"
+
+# Integration Debugging
+Task priority-integration: "Debug Priority API reference chain issues using Sequential MCP thinking patterns:
+- Step-by-step chain analysis
+- Root cause identification
+- Solution implementation"
+```
+
+##### security-audit Agent
+**Enhanced with**: Context7 MCP ✅, Sequential MCP ✅
+```bash
+# Security Analysis
+Task security-audit: "Perform comprehensive security audit using Context7 security patterns:
+- JWT token validation
+- Input sanitization
+- CORS configuration
+- Authentication flow security"
+
+# Vulnerability Assessment
+Task security-audit: "Analyze potential vulnerabilities using Sequential MCP methodology:
+- Threat modeling
+- Attack vector analysis
+- Risk assessment
+- Mitigation strategies"
+```
+
+##### performance-optimization Agent
+**Enhanced with**: Sequential MCP ✅, Playwright MCP ✅
+```bash
+# Performance Analysis
+Task performance-optimization: "Optimize application performance using Sequential MCP for:
+- Bundle size analysis
+- Database query optimization
+- Memory leak detection
+- API response time improvement"
+
+# Performance Testing
+Task performance-optimization: "Implement performance monitoring with Playwright MCP:
+- Load testing scenarios
+- Performance benchmarking
+- Resource utilization tracking"
+```
+
+##### database-specialist Agent
+**Enhanced with**: Context7 MCP ✅, Sequential MCP ✅
+```bash
+# Database Design
+Task database-specialist: "Design optimal database schema using Context7 PostgreSQL patterns:
+- Index optimization
+- Query performance tuning
+- Migration strategies
+- Data integrity constraints"
+
+# Complex Migrations
+Task database-specialist: "Plan database migration using Sequential MCP thinking:
+- Migration step planning
+- Risk assessment
+- Rollback strategies
+- Data validation"
+```
+
+##### deployment-azure Agent
+**Enhanced with**: Sequential MCP ✅
+```bash
+# Deployment Planning
+Task deployment-azure: "Plan Azure deployment strategy using Sequential MCP:
+- Container orchestration
+- Health check implementation
+- Zero-downtime deployment
+- Monitoring setup"
+
+# Troubleshooting
+Task deployment-azure: "Debug Azure deployment issues using Sequential analysis:
+- Container health diagnosis
+- Network connectivity issues
+- Resource constraint analysis"
+```
+
+#### Best Practices for MCP-Enhanced Agents
+
+1. **Combine Multiple MCPs**: Use Context7 for documentation + Sequential for complex logic
+2. **Specific Prompts**: Reference MCP capabilities in agent prompts
+3. **Iterative Approach**: Let agents build on MCP-provided context
+4. **Domain Expertise**: Match MCP strengths to agent specializations
+
+#### Quick MCP Status Check
+```bash
+# Before launching enhanced agents, verify MCP connectivity
+claude mcp list
+# Ensure Context7, Sequential, and Playwright show ✓ Connected
 ```
 
 ---

@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 
 interface Treatment {
   id: string;
@@ -11,6 +12,7 @@ interface Treatment {
   seedQuantity?: number;
   activityPerSeed?: number;
   surgeon?: string;
+  daysSinceInsertion?: number;
 }
 
 interface Applicator {
@@ -45,6 +47,20 @@ interface ProgressStats {
   applicatorsRemaining: number;
 }
 
+export interface ApplicatorGroup {
+  seedCount: number;
+  totalApplicators: number;
+  removedApplicators: number;
+  applicators: Applicator[];
+}
+
+interface RemovalProgress {
+  totalSeeds: number;
+  removedSeeds: number;
+  effectiveTotalSeeds: number;
+  effectiveRemovedSeeds: number;
+}
+
 interface TreatmentContextType {
   currentTreatment: Treatment | null;
   applicators: Applicator[];
@@ -71,17 +87,32 @@ interface TreatmentContextType {
   getActualInsertedSeeds: () => number;
   getApplicatorTypeBreakdown: () => { seedCount: number; count: number }[];
   getFilteredAvailableApplicators: () => Applicator[];
+  getApplicatorGroups: () => ApplicatorGroup[];
+  getRemovalProgress: () => RemovalProgress;
+  individualSeedsRemoved: number;
+  setIndividualSeedsRemoved: (count: number) => void;
+  getIndividualSeedsRemoved: () => number;
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
 
 export function TreatmentProvider({ children }: { children: ReactNode }) {
+  const location = useLocation();
+
   const [currentTreatment, setCurrentTreatment] = useState<Treatment | null>(null);
   const [applicators, setApplicators] = useState<Applicator[]>([]);
   const [availableApplicators, setAvailableApplicators] = useState<Applicator[]>([]);
   const [processedApplicators, setProcessedApplicators] = useState<Applicator[]>([]);
   const [currentApplicator, setCurrentApplicator] = useState<Applicator | null>(null);
-  const [procedureType, setProcedureType] = useState<'insertion' | 'removal' | null>(null);
+  const [individualSeedsRemoved, setIndividualSeedsRemoved] = useState<number>(0);
+  const [procedureType, setProcedureType] = useState<'insertion' | 'removal' | null>(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const urlType = urlParams.get('type') as 'insertion' | 'removal' | null;
+    if (urlType) return urlType;
+
+    const stored = localStorage.getItem('procedureType');
+    return stored as 'insertion' | 'removal' | null;
+  });
 
   const setTreatment = (treatment: Treatment) => {
     setCurrentTreatment(treatment);
@@ -156,6 +187,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setAvailableApplicators([]);
     setProcessedApplicators([]);
     setCurrentApplicator(null);
+    setIndividualSeedsRemoved(0);
     setProcedureType(null);
   };
 
@@ -225,15 +257,63 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   const getApplicatorTypeBreakdown = () => {
     const filteredAvailable = getFilteredAvailableApplicators();
     const breakdown: { [seedCount: number]: number } = {};
-    
+
     filteredAvailable.forEach(app => {
       breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
     });
-    
+
     // Convert to sorted array (highest seed count first)
     return Object.entries(breakdown)
       .map(([seedCount, count]) => ({ seedCount: parseInt(seedCount), count }))
       .sort((a, b) => b.seedCount - a.seedCount);
+  };
+
+  // Group applicators by seed count for removal workflow
+  const getApplicatorGroups = (): ApplicatorGroup[] => {
+    const groups: { [seedCount: number]: ApplicatorGroup } = {};
+
+    applicators.forEach(app => {
+      if (!groups[app.seedQuantity]) {
+        groups[app.seedQuantity] = {
+          seedCount: app.seedQuantity,
+          totalApplicators: 0,
+          removedApplicators: 0,
+          applicators: []
+        };
+      }
+
+      groups[app.seedQuantity].totalApplicators++;
+      groups[app.seedQuantity].applicators.push(app);
+
+      if (app.isRemoved) {
+        groups[app.seedQuantity].removedApplicators++;
+      }
+    });
+
+    return Object.values(groups).sort((a, b) => b.seedCount - a.seedCount);
+  };
+
+  // Calculate removal progress including individual seeds
+  const getRemovalProgress = (): RemovalProgress => {
+    const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
+    const removedFromApplicators = applicators.reduce((sum, app) =>
+      app.isRemoved ? sum + app.seedQuantity : sum, 0
+    );
+
+    const effectiveTotalSeeds = currentTreatment?.seedQuantity || totalSeeds;
+    const effectiveRemovedSeeds = removedFromApplicators + individualSeedsRemoved;
+
+    return {
+      totalSeeds,
+      removedSeeds: removedFromApplicators,
+      effectiveTotalSeeds,
+      effectiveRemovedSeeds
+    };
+  };
+
+  // Get individual seeds removed count
+  const getIndividualSeedsRemoved = (): number => {
+    return individualSeedsRemoved;
   };
 
   // Calculate totals for removal treatment
@@ -291,7 +371,12 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         getActualTotalSeeds,
         getActualInsertedSeeds,
         getApplicatorTypeBreakdown,
-        getFilteredAvailableApplicators
+        getFilteredAvailableApplicators,
+        getApplicatorGroups,
+        getRemovalProgress,
+        individualSeedsRemoved,
+        setIndividualSeedsRemoved,
+        getIndividualSeedsRemoved
       }}
     >
       {children}

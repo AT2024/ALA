@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useWorkflowNavigation } from '@/hooks/useWorkflowNavigation';
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,24 +11,17 @@ interface LayoutProps {
   showLogout?: boolean;
 }
 
-// Define the treatment flow sequence to enable sequential navigation
-const TREATMENT_FLOW = [
-  '/treatment/select',   // Treatment selection
-  '/treatment/scan',     // Treatment Documentation (scan QR codes)
-  '/treatment/list',     // Use list
-  '/treatment/removal'   // Seed removal
-];
-
-export default function Layout({ 
-  children, 
-  title, 
-  showBackButton = false, 
-  backPath = '', 
-  showLogout = true 
+export default function Layout({
+  children,
+  title,
+  showBackButton = false,
+  backPath = '',
+  showLogout = true
 }: LayoutProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  
+  const { navigateBack, navigateNext, getCurrentStepInfo } = useWorkflowNavigation();
+
   const handleBack = () => {
     if (backPath) {
       navigate(backPath);
@@ -35,24 +29,14 @@ export default function Layout({
       navigate(-1);
     }
   };
-  
-  // Helper function to navigate through the treatment flow
+
+  // FIXED: Helper function to navigate through the workflow-aware treatment flow
+  // This replaces the hardcoded TREATMENT_FLOW that caused the bug
   const navigateSequential = (direction: 'next' | 'prev') => {
-    const currentPath = window.location.pathname;
-    const currentIndex = TREATMENT_FLOW.indexOf(currentPath);
-    
-    if (currentIndex !== -1) {
-      // If we're in the treatment flow
-      const newIndex = direction === 'next' 
-        ? Math.min(currentIndex + 1, TREATMENT_FLOW.length - 1)
-        : Math.max(currentIndex - 1, 0);
-      
-      if (newIndex !== currentIndex) {
-        navigate(TREATMENT_FLOW[newIndex]);
-      }
+    if (direction === 'prev') {
+      navigateBack(); // Uses workflow-aware navigation
     } else {
-      // If we're not in the treatment flow, use browser history
-      navigate(direction === 'next' ? 1 : -1);
+      navigateNext(); // Uses workflow-aware navigation
     }
   };
 
@@ -62,9 +46,9 @@ export default function Layout({
         <div className="container mx-auto flex items-center justify-between">
           {/* Left section - Logo, title with back button */}
           <div className="flex items-center gap-3">
-            <img 
-              src="/alphataulogo.png" 
-              alt="AlphaTau Medical" 
+            <img
+              src="/alphataulogo.png"
+              alt="AlphaTau Medical"
               className="h-8 w-auto"
             />
             {showBackButton && (
@@ -91,22 +75,25 @@ export default function Layout({
             )}
             <h1 className="text-xl font-bold">{title}</h1>
           </div>
-          
-          {/* Middle section - Debug navigation */}
+
+          {/* Middle section - FIXED workflow-aware navigation */}
           <div className="flex flex-col items-center">
-            {/* Flow position indicator */}
+            {/* FIXED: Flow position indicator now uses workflow-aware logic */}
             <div className="mb-1 text-xs text-white/70">
-              {TREATMENT_FLOW.indexOf(window.location.pathname) !== -1 && (
-                <span>
-                  Step {TREATMENT_FLOW.indexOf(window.location.pathname) + 1}/{TREATMENT_FLOW.length} - Treatment Flow
-                </span>
-              )}
+              {(() => {
+                const stepInfo = getCurrentStepInfo();
+                return stepInfo.isInWorkflow && (
+                  <span>
+                    Step {stepInfo.currentStep}/{stepInfo.totalSteps} - {stepInfo.procedureType?.toUpperCase()} Flow
+                  </span>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => navigateSequential('prev')}
                 className="flex items-center justify-center rounded-md bg-primary-foreground/10 px-3 py-2 text-sm font-medium hover:bg-primary-foreground/20"
-                title="Previous screen (for debugging)"
+                title="Previous screen - workflow aware"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -127,7 +114,7 @@ export default function Layout({
               <button
                 onClick={() => navigateSequential('next')}
                 className="flex items-center justify-center rounded-md bg-primary-foreground/10 px-3 py-2 text-sm font-medium hover:bg-primary-foreground/20"
-                title="Next screen (for debugging)"
+                title="Next screen - workflow aware"
               >
                 Next
                 <svg
@@ -147,7 +134,7 @@ export default function Layout({
               </button>
             </div>
           </div>
-          
+
           {/* Right section - User info and logout */}
           <div className="flex items-center gap-4">
             {user && (

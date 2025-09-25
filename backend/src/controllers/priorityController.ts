@@ -535,3 +535,39 @@ export const searchApplicators = asyncHandler(async (req: Request, res: Response
   }
 });
 
+// @desc    Check removal status for a treatment order
+// @route   GET /api/proxy/priority/orders/:orderId/removal-status
+// @access  Private
+export const checkRemovalStatus = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      res.status(400).json({
+        error: 'Order ID is required'
+      });
+      return;
+    }
+
+    logger.info(`🔍 Checking removal status for order: ${orderId}`);
+
+    // Check removal status using Priority service
+    const removalStatus = await priorityService.checkRemovalStatus(orderId, req.user?.email);
+
+    logger.info(`✅ Removal status check completed for order ${orderId}: Ready for removal = ${removalStatus.readyForRemoval}`);
+
+    res.status(200).json({
+      success: true,
+      orderId: orderId,
+      ...removalStatus
+    });
+  } catch (error: any) {
+    logger.error(`❌ Error checking removal status for order ${req.params.orderId}: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      orderId: req.params.orderId
+    });
+  }
+});
+

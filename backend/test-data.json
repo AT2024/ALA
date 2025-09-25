@@ -133,6 +133,42 @@
       "SBD_SEEDQTY": 10,
       "SBD_PREFACTIV": 2.1,
       "DETAILS": "Patient Gamma-042"
+    },
+    {
+      "ORDNAME": "SO25000017",
+      "CUSTNAME": "100078",
+      "CUSTDES": "Main Test Hospital",
+      "REFERENCE": "PAT-2025-017",
+      "CURDATE": "2025-07-01T00:00:00Z",
+      "SIBD_TREATDAY": "2025-07-01T00:00:00Z",
+      "ORDSTATUSDES": "Waiting for removal",
+      "SBD_SEEDQTY": 20,
+      "SBD_PREFACTIV": 2.8,
+      "DETAILS": "Patient Main-017 (Ready for removal)"
+    },
+    {
+      "ORDNAME": "SO25000018",
+      "CUSTNAME": "100030",
+      "CUSTDES": "Regional Medical Center",
+      "REFERENCE": "PAT-2025-018",
+      "CURDATE": "2025-06-25T00:00:00Z",
+      "SIBD_TREATDAY": "2025-06-25T00:00:00Z",
+      "ORDSTATUSDES": "Performed",
+      "SBD_SEEDQTY": 15,
+      "SBD_PREFACTIV": 2.5,
+      "DETAILS": "Patient Alpha-018 (Treatment performed, ready for removal)"
+    },
+    {
+      "ORDNAME": "SO25000019",
+      "CUSTNAME": "100045",
+      "CUSTDES": "City General Hospital",
+      "REFERENCE": "PAT-2025-019",
+      "CURDATE": "2025-06-30T00:00:00Z",
+      "SIBD_TREATDAY": "2025-06-30T00:00:00Z",
+      "ORDSTATUSDES": "Waiting for removal",
+      "SBD_SEEDQTY": 18,
+      "SBD_PREFACTIV": 2.2,
+      "DETAILS": "Patient Gamma-019 (Awaiting removal procedure)"
     }
   ],
   "subform_data": {

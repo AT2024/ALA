@@ -94,3 +94,10 @@ gh_*/
 *.zip
 bin/
 tools/
+
+# Testing artifacts and reports
+frontend/playwright-report/
+frontend/test-results/
+
+# Temp files
+nul

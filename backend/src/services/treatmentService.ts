@@ -438,15 +438,15 @@ export const treatmentService = {
   async validateTreatmentTimeWindow(treatmentId: string, applicatorId?: string) {
     try {
       const treatment = await Treatment.findByPk(treatmentId);
-      
+
       if (!treatment) {
         throw new Error('Treatment not found');
       }
-      
+
       const today = new Date();
       const treatmentDate = new Date(treatment.date);
       const daysSinceTreatment = Math.floor((today.getTime() - treatmentDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       // Special rule for "No Use" applicators - allow future editing
       if (applicatorId) {
         const applicator = await Applicator.findByPk(applicatorId);
@@ -457,7 +457,7 @@ export const treatmentService = {
           };
         }
       }
-      
+
       // Standard window is 21 days (14 days + 7-day extension)
       if (daysSinceTreatment > 21) {
         return {
@@ -465,7 +465,7 @@ export const treatmentService = {
           message: 'This treatment cannot be modified after 21 days'
         };
       }
-      
+
       // Special rule for day after insertion
       if (treatment.type === 'insertion' && daysSinceTreatment === 1) {
         // Check if user is hospital staff or Alpha Tau
@@ -477,13 +477,292 @@ export const treatmentService = {
           };
         }
       }
-      
+
       return {
         valid: true,
         message: 'Treatment is within the editable time window'
       };
     } catch (error) {
       logger.error(`Error validating treatment time window: ${error}`);
+      throw error;
+    }
+  },
+
+  // Get a treatment by subject ID and site
+  async getTreatmentBySubjectId(subjectId: string, site: string) {
+    const queryId = `getTreatmentBySubjectId_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info(`[TREATMENT_SERVICE] Starting getTreatmentBySubjectId`, {
+        queryId,
+        subjectId,
+        site,
+        timestamp: new Date().toISOString()
+      });
+
+      // Validate input parameters
+      if (!subjectId || typeof subjectId !== 'string') {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Invalid subjectId format`, {
+          subjectId,
+          subjectIdType: typeof subjectId
+        });
+        throw new Error('Invalid subject ID format');
+      }
+
+      if (!site || typeof site !== 'string') {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Invalid site format`, {
+          site,
+          siteType: typeof site
+        });
+        throw new Error('Invalid site format');
+      }
+
+      // Check database connection
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Checking database connection`);
+      await sequelize.authenticate();
+
+      const queryOptions = {
+        where: {
+          subjectId,
+          site
+        },
+        include: [
+          {
+            model: Applicator,
+            as: 'applicators',
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'phoneNumber', 'role'],
+          },
+        ],
+        order: [['date', 'DESC']] as any,
+      };
+
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Executing database query`, {
+        subjectId,
+        site,
+        includeApplicators: true,
+        includeUser: true
+      });
+
+      const startTime = Date.now();
+      const treatment = await Treatment.findOne(queryOptions);
+      const queryDuration = Date.now() - startTime;
+
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Database query completed`, {
+        subjectId,
+        site,
+        queryDuration: `${queryDuration}ms`,
+        treatmentFound: !!treatment,
+        treatmentData: treatment ? {
+          id: treatment.id,
+          type: treatment.type,
+          subjectId: treatment.subjectId,
+          site: treatment.site,
+          isComplete: treatment.isComplete,
+          userId: treatment.userId,
+          applicatorsCount: treatment.applicators?.length || 0,
+          date: treatment.date
+        } : null
+      });
+
+      if (queryDuration > 1000) {
+        logger.warn(`[TREATMENT_SERVICE] [${queryId}] Slow database query detected`, {
+          subjectId,
+          site,
+          queryDuration: `${queryDuration}ms`,
+          threshold: '1000ms'
+        });
+      }
+
+      return treatment;
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in getTreatmentBySubjectId`, {
+        queryId,
+        subjectId,
+        site,
+        error: {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          sqlMessage: error.original?.message,
+          sqlCode: error.original?.code
+        },
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  // Get treatments eligible for removal (13-21 days after insertion)
+  async getRemovalCandidates(site: string, userId: string) {
+    const queryId = `getRemovalCandidates_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info(`[TREATMENT_SERVICE] Starting getRemovalCandidates`, {
+        queryId,
+        site,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Validate input parameters
+      if (!site || typeof site !== 'string') {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Invalid site format`, {
+          site,
+          siteType: typeof site
+        });
+        throw new Error('Invalid site format');
+      }
+
+      if (!userId || typeof userId !== 'string') {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] Invalid userId format`, {
+          userId,
+          userIdType: typeof userId
+        });
+        throw new Error('Invalid user ID format');
+      }
+
+      // Check database connection
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Checking database connection`);
+      await sequelize.authenticate();
+
+      // Get user and validate permissions
+      const user = await User.findByPk(userId);
+      if (!user) {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] User not found`, { userId });
+        throw new Error('User not found');
+      }
+
+      const userSites = user.metadata?.sites || [];
+      const isAdmin = user.role === 'admin';
+
+      // Check if user has access to the site
+      if (!isAdmin && !userSites.includes(site)) {
+        logger.error(`[TREATMENT_SERVICE] [${queryId}] User does not have access to site`, {
+          userId,
+          site,
+          userSites,
+          userRole: user.role
+        });
+        throw new Error('User does not have access to this site');
+      }
+
+      // Calculate date range for removal eligibility (13-21 days ago)
+      const today = new Date();
+      const minDate = new Date(today.getTime() - (21 * 24 * 60 * 60 * 1000)); // 21 days ago
+      const maxDate = new Date(today.getTime() - (13 * 24 * 60 * 60 * 1000)); // 13 days ago
+
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Calculating removal window`, {
+        today: today.toISOString(),
+        minDate: minDate.toISOString(),
+        maxDate: maxDate.toISOString(),
+        windowDays: '13-21 days ago'
+      });
+
+      // Build user filter for permission checking
+      let userFilter = {};
+      if (!isAdmin) {
+        userFilter = {
+          [Op.or]: [
+            { userId },
+            { site: { [Op.in]: userSites } }
+          ]
+        };
+      }
+
+      const queryOptions = {
+        where: {
+          type: 'insertion',
+          isComplete: true,
+          site,
+          date: {
+            [Op.gte]: minDate,
+            [Op.lte]: maxDate
+          },
+          ...userFilter
+        },
+        include: [
+          {
+            model: Applicator,
+            as: 'applicators',
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'phoneNumber', 'role'],
+          },
+        ],
+        order: [['date', 'DESC']] as any,
+      };
+
+      logger.debug(`[TREATMENT_SERVICE] [${queryId}] Executing removal candidates query`, {
+        site,
+        userId,
+        dateRange: `${minDate.toISOString()} to ${maxDate.toISOString()}`,
+        includeApplicators: true,
+        includeUser: true,
+        isAdmin
+      });
+
+      const startTime = Date.now();
+      const treatments = await Treatment.findAll(queryOptions);
+      const queryDuration = Date.now() - startTime;
+
+      // Calculate days since insertion for each treatment
+      const treatmentsWithDays = treatments.map(treatment => {
+        const treatmentDate = new Date(treatment.date);
+        const daysSinceInsertion = Math.floor((today.getTime() - treatmentDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        return {
+          ...treatment.toJSON(),
+          daysSinceInsertion
+        };
+      });
+
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Removal candidates query completed`, {
+        site,
+        userId,
+        queryDuration: `${queryDuration}ms`,
+        candidatesFound: treatmentsWithDays.length,
+        dateRange: `${minDate.toISOString()} to ${maxDate.toISOString()}`,
+        treatments: treatmentsWithDays.map(t => ({
+          id: t.id,
+          subjectId: t.subjectId,
+          date: t.date,
+          daysSinceInsertion: t.daysSinceInsertion,
+          applicatorsCount: (t as any).applicators?.length || 0
+        }))
+      });
+
+      if (queryDuration > 1000) {
+        logger.warn(`[TREATMENT_SERVICE] [${queryId}] Slow removal candidates query detected`, {
+          site,
+          userId,
+          queryDuration: `${queryDuration}ms`,
+          threshold: '1000ms'
+        });
+      }
+
+      return treatmentsWithDays;
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in getRemovalCandidates`, {
+        queryId,
+        site,
+        userId,
+        error: {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          sqlMessage: error.original?.message,
+          sqlCode: error.original?.code
+        },
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   },

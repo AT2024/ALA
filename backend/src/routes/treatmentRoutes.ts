@@ -10,6 +10,7 @@ import {
   addApplicator,
   exportTreatment,
   debugTreatment,
+  getRemovalCandidates,
 } from '../controllers/treatmentController';
 import { updateApplicator } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
@@ -29,6 +30,8 @@ router.use(treatmentRequestLoggingMiddleware);
 router.route('/')
   .get(databaseHealthCheck, getTreatments)
   .post(criticalOperationHealthCheck, createTreatment);
+
+router.get('/removal-candidates', databaseHealthCheck, getRemovalCandidates);
 
 router.route('/:id')
   .get(validateUUID('id'), databaseHealthCheck, getTreatmentById)
