@@ -1,0 +1,127 @@
+# =================================================================
+# ALA Application - Azure Staging Environment Configuration
+# =================================================================
+# This file is specifically configured for Azure VM staging deployment
+# Usage: docker-compose -f docker-compose.staging.yml --env-file azure/.env.staging up -d
+#
+# Features:
+# - Azure VM IP configuration for staging
+# - Production builds for realistic testing
+# - Isolated staging environment
+# - Security-hardened settings
+# - Staging-specific ports (3010/5010/5433)
+
+services:
+  # =================================================================
+  # Backend API - Azure Staging
+  # =================================================================
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: ala-api-staging
+    env_file:
+      - .env.staging
+    environment:
+      - NODE_ENV=staging
+      - LOG_LEVEL=info
+      - DEBUG=ala:staging:*
+      - PRIORITY_MOCK=false
+      - DATABASE_URL=${DATABASE_URL_STAGING}
+      - ENABLE_TEST_DATA=true
+      # Allow staging test users
+      - BYPASS_PRIORITY_EMAILS=test@example.com,alexs@alphatau.com,staging@test.com
+    ports:
+      - "5010:5000"  # Staging backend port
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - ala-network-staging
+
+  # =================================================================
+  # Frontend Application - Azure Staging
+  # =================================================================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # Point to Azure VM staging backend
+        - VITE_API_URL=http://20.217.84.100:5010/api
+        - VITE_ENVIRONMENT=staging
+        - VITE_PRIORITY_API_URL=${VITE_PRIORITY_API_URL}
+        - VITE_OFFLINE_STORAGE=true
+    container_name: ala-frontend-staging
+    env_file:
+      - .env.staging
+    environment:
+      - NODE_ENV=staging
+    ports:
+      - "3010:80"  # Staging frontend port (port 80 internally via nginx)
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ala-network-staging
+
+  # =================================================================
+  # PostgreSQL Database - Azure Staging
+  # =================================================================
+  db:
+    image: postgres:16.6-alpine
+    container_name: ala-db-staging
+    env_file:
+      - .env.staging
+    environment:
+      - POSTGRES_DB=ala_staging
+      - POSTGRES_USER=ala_staging_user
+      - POSTGRES_PASSWORD=${POSTGRES_STAGING_PASSWORD}
+      # Security settings
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    ports:
+      - "5433:5432"  # Staging database port
+    volumes:
+      - ala-postgres-data-staging:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ala_staging_user -d ala_staging"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - ala-network-staging
+
+# =================================================================
+# Networks - Staging Isolation
+# =================================================================
+networks:
+  ala-network-staging:
+    driver: bridge
+    name: ala-network-staging
+
+# =================================================================
+# Volumes - Staging Data
+# =================================================================
+volumes:
+  ala-postgres-data-staging:
+    driver: local
+    name: ala-postgres-data-staging

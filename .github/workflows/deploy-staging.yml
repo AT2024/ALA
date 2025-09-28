@@ -1,0 +1,312 @@
+name: Deploy to Staging
+
+# =================================================================
+# Triggered on: Push to main branch, manual dispatch
+# Purpose: Deploy tested code to staging environment for final validation
+# =================================================================
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip test execution (emergency only)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  AZURE_VM_IP: '20.217.84.100'
+
+jobs:
+  # =================================================================
+  # Quick Tests (Unless Skipped)
+  # =================================================================
+  quick-tests:
+    name: Quick Test Suite
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Quick Backend Test
+        run: |
+          cd backend
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Quick Frontend Test
+        run: |
+          cd frontend
+          npm ci
+          npm run lint
+          npm run build
+
+  # =================================================================
+  # Deploy to Staging
+  # =================================================================
+  deploy-staging:
+    name: Deploy to Azure Staging
+    runs-on: ubuntu-latest
+    needs: quick-tests
+    if: always() && (needs.quick-tests.result == 'success' || needs.quick-tests.result == 'skipped')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Deploy to Azure VM staging environment
+      - name: Deploy to Azure VM Staging
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            echo "🚀 Starting staging deployment..."
+
+            # Navigate to project directory
+            cd ~/ala-improved || { echo "❌ Project directory not found"; exit 1; }
+
+            # Create deployment log entry
+            echo "[$(date -Iseconds)] STAGING DEPLOYMENT: Started from commit ${{ github.sha }}" >> staging-deployment.log
+
+            # Pull latest changes from main branch
+            echo "📥 Pulling latest changes..."
+            git fetch --all
+            git reset --hard origin/main
+
+            # Verify staging environment file exists
+            if [ ! -f "azure/.env.staging" ]; then
+              echo "⚠️  Staging environment file not found, creating from template..."
+              if [ -f "azure/.env.staging.template" ]; then
+                echo "Please configure azure/.env.staging with actual values"
+                echo "❌ Staging deployment aborted - environment file missing"
+                exit 1
+              fi
+            fi
+
+            # Create pre-deployment backup
+            echo "💾 Creating pre-deployment backup..."
+            mkdir -p ~/backups/staging
+
+            # Backup current staging database if exists
+            if docker ps | grep -q ala-db-staging; then
+              docker exec ala-db-staging pg_dump -U ala_staging_user ala_staging > ~/backups/staging/pre_deploy_$(date +%Y%m%d_%H%M%S).sql || echo "⚠️ Database backup failed (container may be new)"
+            fi
+
+            # Stop existing staging containers
+            echo "🛑 Stopping existing staging containers..."
+            docker-compose -f azure/docker-compose.staging.yml down || echo "No existing containers to stop"
+
+            # Clean up unused Docker resources
+            docker system prune -f
+
+            # Build and start staging environment
+            echo "🏗️  Building and starting staging environment..."
+            docker-compose -f azure/docker-compose.staging.yml --env-file azure/.env.staging up -d --build
+
+            # Wait for services to initialize
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+
+            # Show container status
+            echo "📊 Container status:"
+            docker ps --filter "name=.*staging"
+
+            echo "✅ Staging deployment completed!"
+            echo "[$(date -Iseconds)] STAGING DEPLOYMENT: Completed successfully" >> staging-deployment.log
+
+      # Health check and verification
+      - name: Verify Staging Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USERNAME }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            echo "🔍 Verifying staging deployment..."
+
+            # Check if containers are running
+            if docker ps | grep -q ala-frontend-staging; then
+              echo "✅ Frontend container is running"
+            else
+              echo "❌ Frontend container is not running"
+              docker ps --filter "name=ala-frontend-staging"
+              exit 1
+            fi
+
+            if docker ps | grep -q ala-api-staging; then
+              echo "✅ Backend container is running"
+            else
+              echo "❌ Backend container is not running"
+              docker ps --filter "name=ala-api-staging"
+              exit 1
+            fi
+
+            if docker ps | grep -q ala-db-staging; then
+              echo "✅ Database container is running"
+            else
+              echo "❌ Database container is not running"
+              docker ps --filter "name=ala-db-staging"
+              exit 1
+            fi
+
+            # Wait a bit more for services to fully initialize
+            echo "⏳ Waiting for services to fully initialize..."
+            sleep 20
+
+            # Test backend health endpoint
+            echo "🔍 Testing backend health..."
+            max_attempts=10
+            attempt=0
+
+            while [ $attempt -lt $max_attempts ]; do
+              if curl -f http://localhost:5010/api/health; then
+                echo "✅ Backend health check passed"
+                break
+              else
+                attempt=$((attempt + 1))
+                echo "⏳ Attempt $attempt/$max_attempts - Backend not ready yet..."
+                sleep 3
+              fi
+            done
+
+            if [ $attempt -eq $max_attempts ]; then
+              echo "❌ Backend health check failed after $max_attempts attempts"
+              echo "📋 Backend logs:"
+              docker logs ala-api-staging --tail=20
+              exit 1
+            fi
+
+            # Test frontend accessibility
+            echo "🔍 Testing frontend accessibility..."
+            if curl -f http://localhost:3010; then
+              echo "✅ Frontend accessibility check passed"
+            else
+              echo "❌ Frontend accessibility check failed"
+              echo "📋 Frontend logs:"
+              docker logs ala-frontend-staging --tail=20
+              exit 1
+            fi
+
+            # Test database connectivity
+            echo "🔍 Testing database connectivity..."
+            if docker exec ala-db-staging pg_isready -U ala_staging_user -d ala_staging; then
+              echo "✅ Database connectivity check passed"
+            else
+              echo "❌ Database connectivity check failed"
+              echo "📋 Database logs:"
+              docker logs ala-db-staging --tail=20
+              exit 1
+            fi
+
+            echo "🎉 All staging verification checks passed!"
+            echo "📍 Staging URLs:"
+            echo "   Frontend: http://${{ env.AZURE_VM_IP }}:3010"
+            echo "   Backend API: http://${{ env.AZURE_VM_IP }}:5010/api"
+            echo "   Health Check: http://${{ env.AZURE_VM_IP }}:5010/api/health"
+
+  # =================================================================
+  # Post-Deployment Tests (Optional E2E against staging)
+  # =================================================================
+  staging-e2e-tests:
+    name: Staging E2E Tests
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'push'  # Only run on push, not manual dispatch
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Install Playwright
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E Tests Against Staging
+        env:
+          # Point tests to staging environment
+          BASE_URL: http://${{ env.AZURE_VM_IP }}:3010
+          API_URL: http://${{ env.AZURE_VM_IP }}:5010/api
+        run: |
+          cd frontend
+          # Run a subset of critical E2E tests against staging
+          npx playwright test --grep "critical|smoke" --reporter=github
+
+      - name: Upload Staging E2E Results
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: staging-e2e-report
+          path: frontend/playwright-report/
+          retention-days: 3
+
+  # =================================================================
+  # Notification and Summary
+  # =================================================================
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, staging-e2e-tests]
+    if: always()
+
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -Iseconds)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.deploy-staging.result }}" == "success" ]]; then
+            echo "✅ **Deployment Status:** SUCCESS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Staging URLs:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Frontend: http://${{ env.AZURE_VM_IP }}:3010" >> $GITHUB_STEP_SUMMARY
+            echo "- Backend API: http://${{ env.AZURE_VM_IP }}:5010/api" >> $GITHUB_STEP_SUMMARY
+            echo "- Health Check: http://${{ env.AZURE_VM_IP }}:5010/api/health" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Deployment Status:** FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the deployment logs and fix any issues before proceeding." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Results:**" >> $GITHUB_STEP_SUMMARY
+          echo "- E2E Tests: ${{ needs.staging-e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+
+          # Exit with error if deployment failed
+          if [[ "${{ needs.deploy-staging.result }}" != "success" ]]; then
+            exit 1
+          fi
