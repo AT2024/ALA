@@ -31,7 +31,7 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - ./environments/.env.development
+      - deployment/environments/.env.development
     environment:
       # Docker-specific database URL (uses service name)
       - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/ala_db_dev
@@ -73,7 +73,7 @@ services:
       api:
         condition: service_healthy
     env_file:
-      - ./environments/.env.development
+      - deployment/environments/.env.development
     environment:
       # Development-specific environment variables
       - NODE_ENV=development

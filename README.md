@@ -137,7 +137,7 @@ trivy image ala-api-prod
 - Weekly scheduled security audits
 - Notifications for critical vulnerabilities
 
-For detailed security guidelines, see [`docs/SECURITY.md`](docs/SECURITY.md).
+For detailed security guidelines, see [`docs/git/SECURITY.md`](docs/git/SECURITY.md).
 
 ## 🛠️ Technology Stack
 

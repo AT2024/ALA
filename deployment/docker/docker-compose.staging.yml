@@ -1,0 +1,116 @@
+# =================================================================
+# ALA Application - Staging Environment Configuration
+# =================================================================
+# This file extends the base configuration for staging deployment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#
+# Features:
+# - Production builds with staging ports
+# - Staging-specific environment variables
+# - Isolated staging database
+# - Testing-friendly configurations
+# - Azure VM compatible (ports 3010/5010/5433)
+
+services:
+  # =================================================================
+  # Backend API - Staging Configuration
+  # =================================================================
+  api:
+    build:
+      target: production  # Use production build for realistic testing
+    container_name: ala-api-staging
+    env_file:
+      - ../environments/.env.staging
+    environment:
+      - NODE_ENV=staging
+      - LOG_LEVEL=info
+      - DEBUG=ala:*
+      # Staging database connection
+      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/ala_db_staging
+      # Enable test data for staging validation
+      - ENABLE_TEST_DATA=true
+      - PRIORITY_MOCK=${PRIORITY_MOCK:-false}
+      # Allow test users for staging
+      - BYPASS_PRIORITY_EMAILS=test@example.com,alexs@alphatau.com,staging@test.com
+    ports:
+      - "5010:5000"  # Staging backend port
+    networks:
+      - ala-network-staging
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # =================================================================
+  # Frontend Application - Staging Configuration
+  # =================================================================
+  frontend:
+    build:
+      target: production  # Use production build for realistic testing
+      args:
+        # Point to staging backend
+        - VITE_API_URL=http://localhost:5010/api
+        - VITE_ENVIRONMENT=staging
+        - VITE_PRIORITY_API_URL=${VITE_PRIORITY_API_URL}
+        - VITE_OFFLINE_STORAGE=true
+    container_name: ala-frontend-staging
+    env_file:
+      - ../environments/.env.staging
+    environment:
+      - NODE_ENV=staging
+    ports:
+      - "3010:80"  # Staging frontend port
+    networks:
+      - ala-network-staging
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  # =================================================================
+  # PostgreSQL Database - Staging Configuration
+  # =================================================================
+  db:
+    container_name: ala-db-staging
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=ala_db_staging
+      # Security settings for staging
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    ports:
+      - "5433:5432"  # Staging database port
+    networks:
+      - ala-network-staging
+    volumes:
+      # Separate staging data volume
+      - postgres-data-staging:/var/lib/postgresql/data
+      # Optional: Add staging-specific init scripts
+      # - ./database/init-staging:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ala_db_staging"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# =================================================================
+# Network Configuration - Staging Isolation
+# =================================================================
+networks:
+  ala-network-staging:
+    driver: bridge
+    name: ala-network-staging
+
+# =================================================================
+# Volume Configuration - Staging Data
+# =================================================================
+volumes:
+  # Staging database storage (isolated from dev/prod)
+  postgres-data-staging:
+    name: ala-postgres-data-staging

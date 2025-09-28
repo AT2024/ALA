@@ -1,0 +1,142 @@
+# =================================================================
+# ALA Application - Development Docker Compose Configuration
+# =================================================================
+# This is the main configuration optimized for development:
+#
+# Development (default): 
+#   docker-compose up
+#
+# Production:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Features:
+# - Hot reload for both backend and frontend
+# - Volume mounts for live code changes
+# - Development build targets
+# - Debug-friendly configurations
+
+services:
+  # =================================================================
+  # Backend API Service
+  # =================================================================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      # Use development target by default
+      target: development
+    container_name: ala-api-${COMPOSE_PROJECT_NAME:-app}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ../environments/.env.development
+    environment:
+      # Docker-specific database URL (uses service name)
+      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/ala_db_dev
+      - NODE_ENV=development
+      - DEBUG=ala:*
+      - PRIORITY_MOCK=true
+      - ENABLE_TEST_DATA=true
+      - PORT=5000
+    ports:
+      - "5000:5000"
+    networks:
+      - ala-network
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/usr/src/app
+      # Preserve node_modules (performance optimization)
+      - /usr/src/app/node_modules
+      # Mount logs for easier debugging
+      - ./backend/logs:/usr/src/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # =================================================================
+  # Frontend Application Service
+  # =================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # Use development target by default
+      target: development
+    container_name: ala-frontend-${COMPOSE_PROJECT_NAME:-app}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - ../environments/.env.development
+    environment:
+      # Development-specific environment variables
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:5000/api
+      - VITE_ENVIRONMENT=development
+      - VITE_OFFLINE_STORAGE=true
+    ports:
+      - "3000:3000"
+    networks:
+      - ala-network
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/usr/src/app
+      # Preserve node_modules (performance optimization)
+      - /usr/src/app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # =================================================================
+  # PostgreSQL Database Service
+  # =================================================================
+  db:
+    image: postgres:16.6-alpine
+    container_name: ala-db-${COMPOSE_PROJECT_NAME:-app}
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=ala_db_dev
+      # Improve performance and security
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    ports:
+      - "5432:5432"
+    networks:
+      - ala-network
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+      # Optional: Add init scripts
+      # - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ala_db_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# =================================================================
+# Network Configuration
+# =================================================================
+networks:
+  ala-network:
+    driver: bridge
+    name: ala-network-${COMPOSE_PROJECT_NAME:-app}
+
+# =================================================================
+# Volume Configuration
+# =================================================================
+volumes:
+  # Development database storage
+  postgres-data-dev:
+    name: ala-postgres-data-dev

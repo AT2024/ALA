@@ -5,12 +5,12 @@ on:
     branches: [ main, develop ]
     paths:
       - '**/Dockerfile*'
-      - 'docker-compose*.yml'
+      - 'deployment/docker/*.yml'
   pull_request:
     branches: [ main ]
     paths:
       - '**/Dockerfile*'
-      - 'docker-compose*.yml'
+      - 'deployment/docker/*.yml'
   schedule:
     # Run weekly security scans on Mondays at 9 AM UTC
     - cron: '0 9 * * 1'

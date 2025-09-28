@@ -2,7 +2,7 @@
 # ALA Application - Azure Staging Environment Configuration
 # =================================================================
 # This file is specifically configured for Azure VM staging deployment
-# Usage: docker-compose -f docker-compose.staging.yml --env-file azure/.env.staging up -d
+# Usage: docker-compose -f docker-compose.staging.yml --env-file deployment/azure/.env.staging up -d
 #
 # Features:
 # - Azure VM IP configuration for staging
@@ -53,7 +53,7 @@ services:
   frontend:
     build:
       context: ../frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.staging
       target: production
       args:
         # Point to Azure VM staging backend

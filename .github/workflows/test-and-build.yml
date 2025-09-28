@@ -198,8 +198,8 @@ jobs:
       - name: Test Docker Compose
         run: |
           # Create minimal test environment file
-          mkdir -p environments
-          cat > environments/.env.test << EOF
+          mkdir -p deployment/environments
+          cat > deployment/environments/.env.test << EOF
           NODE_ENV=test
           DB_USER=postgres
           DB_PASSWORD=test_password
@@ -208,7 +208,7 @@ jobs:
           EOF
 
           # Test docker-compose build
-          docker-compose -f docker-compose.yml build
+          docker-compose -f deployment/docker/docker-compose.dev.yml build
 
   # =================================================================
   # Security Scan (Enhance existing)

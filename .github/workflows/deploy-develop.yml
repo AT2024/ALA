@@ -113,7 +113,7 @@ jobs:
 
           # Start a quick test with docker-compose
           export COMPOSE_PROJECT_NAME=dev-test
-          docker-compose -f docker-compose.yml --env-file test-env/.env.test config > /dev/null
+          docker-compose -f deployment/docker/docker-compose.dev.yml --env-file test-env/.env.test config > /dev/null
 
           echo "✅ Smoke tests passed - development build is valid"
 

@@ -91,10 +91,10 @@ jobs:
             git reset --hard origin/main
 
             # Verify staging environment file exists
-            if [ ! -f "azure/.env.staging" ]; then
+            if [ ! -f "deployment/azure/.env.staging" ]; then
               echo "⚠️  Staging environment file not found, creating from template..."
-              if [ -f "azure/.env.staging.template" ]; then
-                echo "Please configure azure/.env.staging with actual values"
+              if [ -f "deployment/azure/.env.staging.template" ]; then
+                echo "Please configure deployment/azure/.env.staging with actual values"
                 echo "❌ Staging deployment aborted - environment file missing"
                 exit 1
               fi
@@ -111,14 +111,14 @@ jobs:
 
             # Stop existing staging containers
             echo "🛑 Stopping existing staging containers..."
-            docker-compose -f azure/docker-compose.staging.yml down || echo "No existing containers to stop"
+            docker-compose -f deployment/azure/docker-compose.staging.yml down || echo "No existing containers to stop"
 
             # Clean up unused Docker resources
             docker system prune -f
 
             # Build and start staging environment
             echo "🏗️  Building and starting staging environment..."
-            docker-compose -f azure/docker-compose.staging.yml --env-file azure/.env.staging up -d --build
+            docker-compose -f deployment/azure/docker-compose.staging.yml --env-file deployment/azure/.env.staging up -d --build
 
             # Wait for services to initialize
             echo "⏳ Waiting for services to start..."
