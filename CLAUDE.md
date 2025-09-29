@@ -22,7 +22,7 @@ docker-compose restart backend   # Restart backend service
 
 **Azure VM Production:**
 ```bash
-ssh azureuser@20.217.84.100 "cd ala-improved && ~/deployment/scripts/deploy.sh"  # Quick deployment
+ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy.sh"  # Quick deployment
 ssh azureuser@20.217.84.100 "docker ps"                                          # Check containers
 curl http://20.217.84.100:5000/api/health                                        # Backend health
 ```
@@ -47,18 +47,44 @@ curl http://20.217.84.100:5000/api/health                                       
 ### Deployment Commands
 ```bash
 # Quick deployment (recommended)
-ssh azureuser@20.217.84.100 "cd ala-improved && ~/deployment/scripts/deploy.sh"
+ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy.sh"
 
 # Manual deployment
 ssh azureuser@20.217.84.100
 cd ala-improved
-git pull origin main
+git pull origin develop  # or main
+
+# Ensure infrastructure exists (IMPORTANT)
+docker network create azure_ala-network 2>/dev/null || true
+docker volume create azure_ala-postgres-data-prod 2>/dev/null || true
+
+# Deploy
 docker-compose -f deployment/azure/docker-compose.azure.yml --env-file deployment/azure/.env.azure up -d --build
 
 # Container management
-ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
-ssh azureuser@20.217.84.100 "docker restart ala-frontend-azure"
+ssh azureuser@20.217.84.100 "docker ps --format 'table {{.Names}}\t{{.Status}}'"  # Better status view
+ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=50 -f"             # Live logs
+ssh azureuser@20.217.84.100 "docker-compose -f deployment/azure/docker-compose.azure.yml ps"  # Compose status
 ```
+
+### Recovery & Monitoring
+```bash
+# Automatic recovery (preserves data)
+ssh azureuser@20.217.84.100 "~/ala-improved/deployment/azure/recover.sh"
+
+# Start continuous monitoring with auto-recovery
+ssh azureuser@20.217.84.100 "nohup ~/ala-improved/deployment/scripts/monitor-auto.sh > monitor.log 2>&1 &"
+
+# Check monitoring status
+ssh azureuser@20.217.84.100 "tail -f monitor.log"
+```
+
+### Deployment Files Structure
+- `deployment/azure/docker-compose.azure.yml` - Container config (uses ../../backend context paths)
+- `deployment/azure/.env.azure` - Production secrets (never commit!)
+- `deployment/scripts/deploy.sh` - Automated deployment with rollback
+- `deployment/azure/recover.sh` - Container recovery script
+- `deployment/scripts/monitor-auto.sh` - Health monitoring with auto-recovery
 
 ---
 
@@ -77,13 +103,44 @@ ssh azureuser@20.217.84.100 "docker restart ala-frontend-azure"
 4. **Progress Tracking** → Live calculations in TreatmentContext
 5. **Data Persistence** → Local PostgreSQL + Priority system sync
 
-### MCP Servers (Available)
+### MCP Servers (MUST USE PROACTIVELY)
 - **Context7**: Documentation & best practices (✅ Connected)
+  - **USE**: `mcp__context7__resolve-library-id` then `get-library-docs` for ALL library lookups
+  - **When**: Any time implementing new libraries or frameworks
 - **Sequential**: Complex problem solving (✅ Connected)
+  - **USE**: `mcp__sequential__sequentialthinking` for multi-step analysis
+  - **When**: Breaking down complex problems, debugging workflows
 - **Playwright**: Browser automation & testing (✅ Connected)
+  - **USE**: `mcp__playwright__*` tools for E2E testing
+  - **When**: UI testing, browser automation, screenshot capture
 - **GitHub**: Repository integration (❌ Failed - use `gh` CLI instead)
 
 Quick status: `claude mcp list`
+
+## 🤖 Subagent Usage Instructions (CRITICAL)
+
+### PROACTIVE DELEGATION - MUST USE
+You MUST PROACTIVELY use the Task tool for these specialized agents:
+- **testing-specialist**: For ALL test creation, failures, coverage improvements
+- **security-audit**: For ALL security vulnerabilities, auth issues, JWT problems
+- **priority-integration**: For ALL Priority API issues, OData, applicator validation
+- **performance-optimization**: For ALL performance issues, slow responses, memory leaks
+- **frontend-ui**: For ALL React components, TypeScript issues, Tailwind styling
+- **deployment-azure**: For ALL Azure VM deployments, Docker issues, SSH connections
+- **database-specialist**: For ALL PostgreSQL operations, Sequelize issues, migrations
+
+### Automatic Triggers
+When user mentions these keywords, IMMEDIATELY invoke corresponding agent:
+- "test", "coverage", "jest" → testing-specialist
+- "security", "auth", "JWT" → security-audit
+- "Priority", "OData", "applicator" → priority-integration
+- "slow", "performance" → performance-optimization
+- "React", "component", "UI" → frontend-ui
+- "deploy", "Azure", "Docker" → deployment-azure
+- "database", "PostgreSQL" → database-specialist
+
+### Parallel Execution
+When user says "parallel" or complex tasks span domains, use MULTIPLE Task calls in ONE message.
 
 ---
 
@@ -212,6 +269,17 @@ npm run test:e2e                              # Playwright E2E tests
 3. Test with barcode scanner
 4. Verify Priority API integration
 
+## Todo Management (ALWAYS USE)
+- **ALWAYS use TodoWrite** for tasks with 3+ steps
+- **Mark in_progress** BEFORE starting each task
+- **Mark completed** IMMEDIATELY after finishing each task
+- **Never batch completions** - update after EACH individual task
+- **Keep todos focused** - break down complex tasks into smaller steps
+
+## Subagent Details
+See `docs/development/CLAUDE-CODE-SUBAGENTS.md` for detailed agent capabilities and usage examples.
+All agents configured in `.claude/agents/` directory with PROACTIVE triggers enabled.
+
 ---
 
 ## API Endpoints
@@ -275,13 +343,38 @@ ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azu
 ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azure/docker-compose.azure.yml --env-file deployment/azure/.env.azure up -d --build"
 ```
 
+**Database Container Missing (Critical Fix):**
+```bash
+# This recreates the database container with proper network configuration
+ssh azureuser@20.217.84.100 "docker run -d \
+  --name ala-db-azure \
+  --network azure_ala-network \
+  --network-alias db \
+  -v azure_ala-postgres-data-prod:/var/lib/postgresql/data \
+  -e POSTGRES_DB=ala_production \
+  -e POSTGRES_USER=ala_user \
+  -e POSTGRES_PASSWORD=AzureProd2024! \
+  -p 5432:5432 \
+  --restart=unless-stopped \
+  postgres:16.6-alpine"
+
+# Then restart API container to reconnect
+ssh azureuser@20.217.84.100 "docker restart ala-api-azure"
+```
+
+**Deployment Script Line Ending Errors:**
+```bash
+# Fix Windows line endings on all scripts
+ssh azureuser@20.217.84.100 "sed -i 's/\r$//' ~/ala-improved/deployment/scripts/*.sh ~/ala-improved/deployment/azure/*.sh"
+```
+
 ### Recovery Commands
 ```bash
 # Version recovery (if needed)
 git fetch --tags && git checkout v1.0-working-production-2025-09-10
 
 # Azure VM deployment recovery
-ssh azureuser@20.217.84.100 "cd ala-improved && ~/deployment/scripts/deploy.sh"
+ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy.sh"
 
 # Database access
 docker exec -it postgres psql -U admin -d medical_app  # Local

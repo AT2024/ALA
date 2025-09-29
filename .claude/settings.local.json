@@ -8,7 +8,8 @@
       "WebFetch(domain:docs.anthropic.com)",
       "Bash(cat:*)",
       "Bash(ssh:*)",
-      "Bash(curl -f http://20.217.84.100:5000/api/health)"
+      "Bash(curl -f http://20.217.84.100:5000/api/health)",
+      "WebSearch"
     ],
     "deny": []
   }

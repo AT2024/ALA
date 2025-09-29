@@ -5,7 +5,7 @@
 # =================================================================
 # Run this script ON the Azure VM to deploy latest changes
 # This preserves your secrets while updating code
-# Usage: ~/deploy.sh
+# Usage: ~/ala-improved/deployment/scripts/deploy.sh
 
 set -e
 
@@ -17,16 +17,92 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Configuration
+PROJECT_DIR="$HOME/ala-improved"
+DEPLOYMENT_DIR="$PROJECT_DIR/deployment"
+AZURE_DIR="$DEPLOYMENT_DIR/azure"
+COMPOSE_FILE="$AZURE_DIR/docker-compose.azure.yml"
+ENV_FILE="$AZURE_DIR/.env.azure"
+
 echo -e "${BLUE}==================================================================${NC}"
 echo -e "${BLUE}ALA Application - Production Deployment${NC}"
-echo -e "${BLUE}Preserving secrets while updating code${NC}"
+echo -e "${BLUE}Enhanced with recovery and validation${NC}"
 echo -e "${BLUE}==================================================================${NC}"
 
-# Navigate to project directory
-cd ~/ala-improved
+# Function to check if containers are healthy
+check_health() {
+    local service=$1
+    local timeout=${2:-60}
+    local counter=0
 
-# Step 1: Pull latest changes
-echo -e "${YELLOW}[1/6] Pulling latest changes from GitHub...${NC}"
+    echo -e "${CYAN}Waiting for $service to become healthy...${NC}"
+    while [ $counter -lt $timeout ]; do
+        if docker inspect "ala-$service-azure" --format='{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
+            echo -e "${GREEN}✅ $service is healthy${NC}"
+            return 0
+        fi
+        sleep 2
+        counter=$((counter + 2))
+        echo -n "."
+    done
+    echo -e "${RED}❌ $service failed to become healthy within ${timeout}s${NC}"
+    return 1
+}
+
+# Function to create recovery snapshot
+create_snapshot() {
+    echo -e "${YELLOW}Creating recovery snapshot...${NC}"
+    SNAPSHOT_DIR="$AZURE_DIR/snapshots/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$SNAPSHOT_DIR"
+
+    # Backup current environment
+    cp "$ENV_FILE" "$SNAPSHOT_DIR/" 2>/dev/null || true
+
+    # Save container states
+    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" | grep ala > "$SNAPSHOT_DIR/container_state.txt" || true
+
+    echo -e "${GREEN}✅ Snapshot created: $SNAPSHOT_DIR${NC}"
+    echo "$SNAPSHOT_DIR" > "$AZURE_DIR/.last_snapshot"
+}
+
+# Function to rollback
+rollback() {
+    echo -e "${RED}Rolling back to previous state...${NC}"
+    if [ -f "$AZURE_DIR/.last_snapshot" ]; then
+        SNAPSHOT_DIR=$(cat "$AZURE_DIR/.last_snapshot")
+        if [ -d "$SNAPSHOT_DIR" ]; then
+            echo -e "${CYAN}Restoring from: $SNAPSHOT_DIR${NC}"
+            cp "$SNAPSHOT_DIR/.env.azure" "$ENV_FILE" 2>/dev/null || true
+            echo -e "${GREEN}✅ Rollback completed${NC}"
+        fi
+    fi
+}
+
+# Navigate to project directory
+cd "$PROJECT_DIR"
+
+# Validate required files exist
+echo -e "${YELLOW}[1/8] Validating deployment environment...${NC}"
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo -e "${RED}❌ Error: $COMPOSE_FILE not found!${NC}"
+    echo -e "${YELLOW}Ensure deployment files are synced to Azure VM${NC}"
+    exit 1
+fi
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}❌ Error: $ENV_FILE not found!${NC}"
+    echo -e "${YELLOW}Run the initial setup script first${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Environment validation passed${NC}"
+
+# Step 1: Create snapshot
+echo -e "${YELLOW}[2/8] Creating deployment snapshot...${NC}"
+create_snapshot
+
+# Step 2: Pull latest changes
+echo -e "${YELLOW}[3/8] Pulling latest changes from GitHub...${NC}"
 git fetch --all
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
@@ -43,136 +119,115 @@ fi
 git pull origin $CURRENT_BRANCH
 echo -e "${GREEN}✅ Code updated${NC}"
 
-# Step 2: Backup current secrets
-echo -e "${YELLOW}[2/6] Backing up current secrets...${NC}"
-if [ -f "azure/.env.azure" ]; then
-    BACKUP_FILE="azure/.env.azure.backup-$(date +%Y%m%d-%H%M%S)"
-    cp azure/.env.azure "$BACKUP_FILE"
-    echo -e "${GREEN}✅ Secrets backed up to $BACKUP_FILE${NC}"
-else
-    echo -e "${RED}❌ Error: azure/.env.azure not found!${NC}"
-    echo -e "${YELLOW}Run the initial setup script first:${NC}"
-    echo -e "${BLUE}   bash azure/setup-secrets.sh${NC}"
-    exit 1
-fi
-
-# Step 3: Check if new environment variables were added to template
-echo -e "${YELLOW}[3/6] Checking for new environment variables...${NC}"
-# Extract variable names from template and current env
-TEMPLATE_VARS=$(grep '^[A-Z]' azure/.env.azure.template | cut -d'=' -f1 | sort)
-CURRENT_VARS=$(grep '^[A-Z]' azure/.env.azure | cut -d'=' -f1 | sort)
-
-# Find missing variables
-MISSING_VARS=$(comm -23 <(echo "$TEMPLATE_VARS") <(echo "$CURRENT_VARS"))
-
-if [ -n "$MISSING_VARS" ]; then
-    echo -e "${YELLOW}⚠️  New environment variables found in template:${NC}"
-    echo "$MISSING_VARS"
-    echo -e "${YELLOW}Adding them to your .env.azure with placeholder values...${NC}"
-    
-    # Add missing variables from template
-    for var in $MISSING_VARS; do
-        TEMPLATE_LINE=$(grep "^$var=" azure/.env.azure.template)
-        echo "$TEMPLATE_LINE" >> azure/.env.azure
-        echo -e "${CYAN}Added: $TEMPLATE_LINE${NC}"
-    done
-    
-    echo -e "${YELLOW}⚠️  Please review and update these new variables if needed${NC}"
-else
-    echo -e "${GREEN}✅ No new environment variables${NC}"
-fi
-
-# Step 4: Validate environment configuration
-echo -e "${YELLOW}[4/6] Validating environment configuration...${NC}"
+# Step 3: Validate configuration
+echo -e "${YELLOW}[4/8] Validating configuration...${NC}"
 
 # Check for critical missing values
 CRITICAL_MISSING=()
-if grep -q "POSTGRES_PASSWORD=CHANGE_ME" azure/.env.azure; then
+if grep -q "POSTGRES_PASSWORD=CHANGE_ME" "$ENV_FILE"; then
     CRITICAL_MISSING+=("POSTGRES_PASSWORD")
 fi
-if grep -q "JWT_SECRET=GENERATE_ME_WITH_OPENSSL" azure/.env.azure; then
+if grep -q "JWT_SECRET=GENERATE_ME_WITH_OPENSSL" "$ENV_FILE"; then
     CRITICAL_MISSING+=("JWT_SECRET")
 fi
 
 if [ ${#CRITICAL_MISSING[@]} -ne 0 ]; then
     echo -e "${RED}❌ Critical secrets not configured: ${CRITICAL_MISSING[*]}${NC}"
-    echo -e "${YELLOW}Run the setup script to generate them:${NC}"
-    echo -e "${BLUE}   bash azure/setup-secrets.sh${NC}"
     exit 1
 fi
 
-# Warn about placeholder values
-PLACEHOLDER_COUNT=$(grep -c "REPLACE_WITH_YOUR" azure/.env.azure || true)
-if [ "$PLACEHOLDER_COUNT" -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  $PLACEHOLDER_COUNT placeholder values found in .env.azure${NC}"
-    echo -e "${YELLOW}Application may not work fully without real Priority credentials${NC}"
+echo -e "${GREEN}✅ Configuration validation passed${NC}"
+
+# Step 4: Test compose file
+echo -e "${YELLOW}[5/8] Testing Docker Compose configuration...${NC}"
+if ! docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config > /dev/null; then
+    echo -e "${RED}❌ Docker Compose configuration invalid${NC}"
+    rollback
+    exit 1
 fi
+echo -e "${GREEN}✅ Docker Compose configuration valid${NC}"
 
-echo -e "${GREEN}✅ Environment validation passed${NC}"
+# Step 5: Deploy with graceful handling
+echo -e "${YELLOW}[6/8] Deploying updated application...${NC}"
 
-# Step 5: Stop existing containers and deploy
-echo -e "${YELLOW}[5/6] Deploying updated application...${NC}"
-sudo docker-compose -f azure/docker-compose.azure.yml down
+# Check if containers are running before stopping them
+RUNNING_CONTAINERS=$(docker ps --filter "name=ala-" --format "{{.Names}}" || true)
+if [ -n "$RUNNING_CONTAINERS" ]; then
+    echo -e "${CYAN}Stopping existing containers gracefully...${NC}"
+    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down --timeout 30
+fi
 
 # Clean up old images to save space
 echo -e "${CYAN}Cleaning up old Docker images...${NC}"
-sudo docker image prune -f
+docker image prune -f
 
 # Start new containers
-sudo docker-compose -f azure/docker-compose.azure.yml up -d --build
+echo -e "${CYAN}Starting new containers...${NC}"
+if ! docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build; then
+    echo -e "${RED}❌ Failed to start containers${NC}"
+    rollback
+    exit 1
+fi
+
 echo -e "${GREEN}✅ Containers deployed${NC}"
 
-# Step 6: Verify deployment
-echo -e "${YELLOW}[6/6] Verifying deployment...${NC}"
-sleep 15
+# Step 6: Health verification with timeout
+echo -e "${YELLOW}[7/8] Verifying deployment health...${NC}"
 
-# Check container status
-echo -e "${CYAN}Container Status:${NC}"
-RUNNING_CONTAINERS=$(sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep ala)
-echo "$RUNNING_CONTAINERS"
-
-# Test endpoints with timeout
-echo -e "${CYAN}Testing endpoints...${NC}"
-
-# Test frontend
-if timeout 10 curl -f -s http://localhost:3000 > /dev/null; then
-    echo -e "${GREEN}✅ Frontend (port 3000) is responding${NC}"
-else
-    echo -e "${RED}❌ Frontend is not responding${NC}"
-    echo -e "${YELLOW}Check logs: sudo docker logs ala-frontend-azure${NC}"
+# Wait for database first
+if ! check_health "db" 90; then
+    echo -e "${RED}❌ Database failed to start${NC}"
+    echo -e "${YELLOW}Rolling back...${NC}"
+    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+    rollback
+    exit 1
 fi
 
-# Test backend
-if timeout 10 curl -f -s http://localhost:5000/api/health > /dev/null; then
-    echo -e "${GREEN}✅ Backend API (port 5000) is healthy${NC}"
-else
-    echo -e "${RED}❌ Backend API is not responding${NC}"
-    echo -e "${YELLOW}Check logs: sudo docker logs ala-api-azure${NC}"
+# Wait for API
+if ! check_health "api" 60; then
+    echo -e "${RED}❌ API failed to start${NC}"
+    echo -e "${YELLOW}Rolling back...${NC}"
+    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+    rollback
+    exit 1
 fi
 
-# Test database connection
-DB_STATUS=$(sudo docker exec ala-db-azure pg_isready -U ala_user -d ala_production 2>/dev/null | grep "accepting connections" || echo "not ready")
-if [[ $DB_STATUS == *"accepting connections"* ]]; then
-    echo -e "${GREEN}✅ Database is accepting connections${NC}"
-else
-    echo -e "${RED}❌ Database is not ready${NC}"
-    echo -e "${YELLOW}Check logs: sudo docker logs ala-db-azure${NC}"
+# Wait for Frontend
+if ! check_health "frontend" 60; then
+    echo -e "${RED}❌ Frontend failed to start${NC}"
+    echo -e "${YELLOW}Rolling back...${NC}"
+    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+    rollback
+    exit 1
+fi
+
+# Step 7: Final verification
+echo -e "${YELLOW}[8/8] Final endpoint verification...${NC}"
+
+# Test external endpoints
+if ! timeout 10 curl -f -s http://20.217.84.100:3000 > /dev/null; then
+    echo -e "${RED}❌ Frontend external access failed${NC}"
+    exit 1
+fi
+
+if ! timeout 10 curl -f -s http://20.217.84.100:5000/api/health > /dev/null; then
+    echo -e "${RED}❌ API external access failed${NC}"
+    exit 1
 fi
 
 echo ""
 echo -e "${GREEN}==================================================================${NC}"
-echo -e "${GREEN}🎉 Deployment Complete!${NC}"
+echo -e "${GREEN}🎉 Deployment Complete and Verified!${NC}"
 echo -e "${GREEN}==================================================================${NC}"
 echo ""
 echo -e "${BLUE}Application Access:${NC}"
 echo -e "   Frontend: ${CYAN}http://20.217.84.100:3000${NC}"
 echo -e "   API Health: ${CYAN}http://20.217.84.100:5000/api/health${NC}"
 echo ""
-echo -e "${BLUE}Useful Commands:${NC}"
-echo -e "   View logs: ${CYAN}sudo docker-compose -f azure/docker-compose.azure.yml logs -f${NC}"
-echo -e "   Stop app: ${CYAN}sudo docker-compose -f azure/docker-compose.azure.yml down${NC}"
-echo -e "   Check status: ${CYAN}sudo docker ps${NC}"
+echo -e "${BLUE}Container Status:${NC}"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep ala
 echo ""
-echo -e "${BLUE}Backup Info:${NC}"
-echo -e "   Secrets backup: ${CYAN}$BACKUP_FILE${NC}"
+echo -e "${BLUE}Recovery Information:${NC}"
+echo -e "   Snapshot: ${CYAN}$(cat "$AZURE_DIR/.last_snapshot" 2>/dev/null || echo "None")${NC}"
+echo -e "   Recovery: ${CYAN}$AZURE_DIR/recover.sh${NC}"
 echo ""

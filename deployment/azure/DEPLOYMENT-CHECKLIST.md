@@ -1,149 +1,173 @@
 # ✅ Azure VM Deployment Checklist
 
-## 🎯 Goal: Get Your Phone Connected to http://20.217.84.100:3000
+## 🎯 Goal: Deploy ALA Application to Azure VM (20.217.84.100)
 
 ---
 
-## Step 1: Stop Local Containers (Windows Machine)
+## Prerequisites
+- [ ] SSH access to Azure VM (username: azureuser)
+- [ ] Deployment files synced to VM
+- [ ] .env.azure configured with secrets
 
-**❌ STOP:** First, stop your local development containers to prevent conflicts.
+---
 
-**On your Windows machine:**
+## Step 1: Prepare Local Environment
+
+**Stop local containers to free ports:**
 ```cmd
 cd C:\Users\amitaik\Desktop\ala-improved
-azure\stop-local-containers.bat
+docker-compose down
 ```
 
-**✅ Verify:** Local containers stopped
+**✅ Verify:** No ALA containers running locally
 ```cmd
-docker ps
-# Should show no ALA containers running locally
+docker ps | grep ala
+# Should return nothing
 ```
 
 ---
 
-## Step 2: Configure Azure Firewall (Already Done!)
+## Step 2: SSH to Azure VM
 
-**✅ COMPLETED:** You already ran the NSG configuration script and confirmed:
-- Port 3000 is reachable ✅
-- Port 5000 is reachable ✅
-- VM is running ✅
-
----
-
-## Step 3: SSH into Azure VM
-
-**Find your username first:**
 ```cmd
-# Try common usernames:
 ssh azureuser@20.217.84.100
-# OR
-ssh adminuser@20.217.84.100
-# OR
-ssh ubuntu@20.217.84.100
 ```
 
 **✅ Verify:** Successfully connected to VM
 ```bash
-# You should see something like:
-azureuser@ALAapp:~$ 
+# You should see:
+azureuser@ALAapp:~$
 ```
 
 ---
 
-## Step 4: Deploy Application on Azure VM
+## Step 3: Deploy Using Correct Scripts
 
-**Once SSH'd into the VM, run:**
+### Option A: Automated Deployment (RECOMMENDED)
 ```bash
-# Make script executable
-chmod +x azure/deploy-on-azure-vm.sh
-
-# Run deployment script
-./azure/deploy-on-azure-vm.sh
+cd ~/ala-improved
+~/ala-improved/deployment/scripts/deploy.sh
 ```
 
-**OR deploy manually:**
+### Option B: Recovery Script (If containers fail)
 ```bash
-# Find your project directory
-cd /path/to/ala-improved
+~/ala-improved/deployment/azure/recover.sh
+```
 
-# Deploy containers
-docker-compose -f azure/docker-compose.azure.yml down
-docker-compose -f azure/docker-compose.azure.yml up -d --build
+### Option C: Manual Deployment
+```bash
+cd ~/ala-improved
+
+# CRITICAL: Create infrastructure first
+docker network create azure_ala-network 2>/dev/null || true
+docker volume create azure_ala-postgres-data-prod 2>/dev/null || true
+
+# Deploy with correct paths
+docker-compose -f deployment/azure/docker-compose.azure.yml \
+  --env-file deployment/azure/.env.azure up -d --build
 ```
 
 **✅ Verify:** Containers running on Azure VM
 ```bash
-docker ps
-# Should show: ala-frontend-azure, ala-api-azure, ala-db-azure
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+# Should show: ala-frontend-azure, ala-api-azure, ala-db-azure (all healthy)
 ```
 
 ---
 
-## Step 5: Test Connectivity
+## Step 4: Test Connectivity
 
 ### Test from Azure VM (locally):
 ```bash
+# API health check
+curl http://localhost:5000/api/health
+# Should return: {"status":"ok","databaseConnected":true}
+
+# Frontend check
 curl -I http://localhost:3000
-curl -I http://localhost:5000
-# Should return HTTP/1.1 200 OK responses
+# Should return: HTTP/1.1 200 OK
 ```
 
-### Test from your phone:
-- Open browser on phone
-- Navigate to: **http://20.217.84.100:3000**
+### Test from external (phone/browser):
+- Open browser and navigate to: **http://20.217.84.100:3000**
 - Should load the ALA application interface
 
-**✅ Verify:** Phone can access the application
+**✅ Verify:** Phone can access the application without "Cannot connect to server" errors
 
 ---
 
-## 🔍 Troubleshooting Checklist
+## 🚨 Common Issues & Quick Fixes
 
-### ❌ Problem: "Cannot SSH to VM"
-**Solutions:**
-- [ ] Check if VM is running in Azure Portal
-- [ ] Try different usernames: `azureuser`, `adminuser`, `ubuntu`
-- [ ] Check NSG allows SSH (port 22)
-- [ ] Use PuTTY if Windows SSH doesn't work
-
-### ❌ Problem: "Containers won't start"
-**Check:**
+### ❌ Database Container Missing (MOST COMMON ISSUE)
+**Symptoms:** API shows "databaseConnected":false, authentication fails
+**Solution:**
 ```bash
-# View container logs
-docker-compose -f azure/docker-compose.azure.yml logs
+# Recreate database with proper network alias
+docker run -d \
+  --name ala-db-azure \
+  --network azure_ala-network \
+  --network-alias db \
+  -v azure_ala-postgres-data-prod:/var/lib/postgresql/data \
+  -e POSTGRES_DB=ala_production \
+  -e POSTGRES_USER=ala_user \
+  -e POSTGRES_PASSWORD=AzureProd2024! \
+  -p 5432:5432 \
+  --restart=unless-stopped \
+  postgres:16.6-alpine
 
-# Check Docker service
-sudo systemctl status docker
-
-# Check disk space
-df -h
+# Then restart API to reconnect
+docker restart ala-api-azure
 ```
 
-### ❌ Problem: "Phone still can't connect"
-**Verify:**
+### ❌ Script Line Ending Errors
+**Symptoms:** "bad interpreter: /bin/bash^M"
+**Solution:**
 ```bash
-# From Azure VM - check if containers are running
-docker ps | grep ala
-
-# Test ports are bound
-netstat -tlnp | grep -E ":(3000|5000)"
-
-# Check from outside the VM
-curl -I http://20.217.84.100:3000
+# Fix Windows line endings
+sed -i 's/\r$//' ~/ala-improved/deployment/scripts/*.sh ~/ala-improved/deployment/azure/*.sh
 ```
 
-### ❌ Problem: "Frontend loads but shows 'Cannot connect to server'"
-**Fix:**
+### ❌ Containers Won't Build
+**Check:** Build context paths in docker-compose.azure.yml
 ```bash
-# Check backend is running
+# Should be: context: ../../backend (NOT ../backend)
+# Should be: context: ../../frontend (NOT ../frontend)
+```
+
+### ❌ Network/Volume Errors
+```bash
+# Create missing infrastructure
+docker network create azure_ala-network 2>/dev/null || true
+docker volume create azure_ala-postgres-data-prod 2>/dev/null || true
+```
+
+### ❌ Frontend Shows "Cannot connect to server"
+```bash
+# Check backend is healthy
 curl http://localhost:5000/api/health
 
-# Restart containers
-docker-compose -f azure/docker-compose.azure.yml restart
-
 # Check environment variables
-grep VITE_API_URL azure/.env.azure
+grep VITE_API_URL deployment/azure/.env.azure
+# Should show: VITE_API_URL=http://20.217.84.100:5000/api
+
+# Restart containers
+docker-compose -f deployment/azure/docker-compose.azure.yml \
+  --env-file deployment/azure/.env.azure restart
+```
+
+---
+
+## Step 5: Enable Monitoring (Optional but Recommended)
+
+```bash
+# Start auto-recovery monitoring
+nohup ~/ala-improved/deployment/scripts/monitor-auto.sh > monitor.log 2>&1 &
+
+# Check monitoring status
+tail -f monitor.log
+
+# Verify monitoring is running
+ps aux | grep monitor-auto
 ```
 
 ---
@@ -152,28 +176,31 @@ grep VITE_API_URL azure/.env.azure
 
 - [ ] **Local containers stopped** (on Windows machine)
 - [ ] **SSH connection working** to 20.217.84.100
-- [ ] **Project directory found** on Azure VM
+- [ ] **Project directory found** at ~/ala-improved on Azure VM
 - [ ] **Docker containers running** on Azure VM:
-  - [ ] ala-frontend-azure (port 3000)
-  - [ ] ala-api-azure (port 5000)  
-  - [ ] ala-db-azure (port 5432)
+  - [ ] ala-frontend-azure (port 3000) - Status: healthy
+  - [ ] ala-api-azure (port 5000) - Status: healthy
+  - [ ] ala-db-azure (port 5432) - Status: healthy
 - [ ] **Local connectivity working** on VM:
+  - [ ] `curl http://localhost:5000/api/health` returns {"databaseConnected":true}
   - [ ] `curl http://localhost:3000` returns 200 OK
-  - [ ] `curl http://localhost:5000` returns response
 - [ ] **External connectivity working**:
   - [ ] Phone browser can load http://20.217.84.100:3000
-  - [ ] Application interface appears
+  - [ ] Application interface appears correctly
   - [ ] No "Cannot connect to server" errors
+  - [ ] Users can authenticate with Priority credentials
 
 ---
 
 ## 🎉 Success Criteria
 
-✅ **Your phone shows the ALA application interface when visiting http://20.217.84.100:3000**
+✅ **Phone shows ALA application interface at http://20.217.84.100:3000**
 
-✅ **The application can connect to the backend API (no "server connection" errors)**
+✅ **Application connects to backend API successfully**
 
-✅ **All containers are running on the Azure VM, not locally**
+✅ **All containers healthy on Azure VM, none running locally**
+
+✅ **Authentication works with Priority users (e.g., tamig@alphatau.com)**
 
 ---
 
@@ -181,20 +208,38 @@ grep VITE_API_URL azure/.env.azure
 
 ### On Windows (before SSH):
 ```cmd
-azure\stop-local-containers.bat
+docker-compose down
 ssh azureuser@20.217.84.100
 ```
 
 ### On Azure VM (after SSH):
 ```bash
-./azure/deploy-on-azure-vm.sh
-docker ps
-curl http://localhost:3000
+# Quick deployment
+~/ala-improved/deployment/scripts/deploy.sh
+
+# Check status
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+
+# Test connectivity
+curl http://localhost:5000/api/health
 ```
 
-### Testing URLs:
-- **From phone**: http://20.217.84.100:3000
-- **From VM**: http://localhost:3000
-- **API health**: http://20.217.84.100:5000
+### Critical File Locations:
+- **Deployment Config**: `~/ala-improved/deployment/azure/docker-compose.azure.yml`
+- **Environment Secrets**: `~/ala-improved/deployment/azure/.env.azure`
+- **Main Deploy Script**: `~/ala-improved/deployment/scripts/deploy.sh`
+- **Recovery Script**: `~/ala-improved/deployment/azure/recover.sh`
+- **Monitor Script**: `~/ala-improved/deployment/scripts/monitor-auto.sh`
 
-Remember: The key is that containers must run **ON the Azure VM**, not on your local Windows machine!
+### Testing URLs:
+- **From phone/external**: http://20.217.84.100:3000
+- **From VM (local)**: http://localhost:3000
+- **API health check**: http://20.217.84.100:5000/api/health
+
+---
+
+## ⚠️ Remember
+
+**The key is that containers must run ON the Azure VM, not on your local Windows machine!**
+
+All paths use `deployment/azure/` structure, not the old `azure/` paths.

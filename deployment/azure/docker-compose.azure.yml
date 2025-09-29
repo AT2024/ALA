@@ -17,7 +17,7 @@ services:
   # =================================================================
   api:
     build:
-      context: ../backend
+      context: ../../backend
       dockerfile: Dockerfile
       target: production
     container_name: ala-api-azure
@@ -38,10 +38,14 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    labels:
+      - "ala.service=api"
+      - "ala.version=production"
+      - "ala.recovery=auto"
     networks:
       - ala-network
 
@@ -50,7 +54,7 @@ services:
   # =================================================================
   frontend:
     build:
-      context: ../frontend
+      context: ../../frontend
       dockerfile: Dockerfile
       target: production
       args:
@@ -71,10 +75,14 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "ala.service=frontend"
+      - "ala.version=production"
+      - "ala.recovery=auto"
     networks:
       - ala-network
 
@@ -97,23 +105,31 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ala_user -d ala_production"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     networks:
-      - ala-network
+      ala-network:
+        aliases:
+          - db
+    labels:
+      - "ala.service=database"
+      - "ala.version=production"
+      - "ala.recovery=critical"
 
 # =================================================================
 # Networks
 # =================================================================
 networks:
   ala-network:
-    driver: bridge
+    name: azure_ala-network
+    external: true
 
 # =================================================================
 # Volumes
 # =================================================================
 volumes:
   ala-postgres-data-prod:
-    driver: local
+    name: azure_ala-postgres-data-prod
+    external: true
