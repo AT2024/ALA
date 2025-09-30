@@ -20,7 +20,7 @@ NC='\033[0m' # No Color
 PROJECT_DIR="$HOME/ala-improved"
 DEPLOYMENT_DIR="$PROJECT_DIR/deployment"
 AZURE_DIR="$DEPLOYMENT_DIR/azure"
-COMPOSE_FILE="$AZURE_DIR/docker-compose.azure.yml"
+COMPOSE_FILE="$AZURE_DIR/docker-compose.https.azure.yml"
 ENV_FILE="$AZURE_DIR/.env.azure"
 SSL_DIR="$PROJECT_DIR/ssl-certs"
 
