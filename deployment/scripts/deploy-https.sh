@@ -85,8 +85,8 @@ EXTEOF
       -out "$SSL_DIR/certs/certificate.crt" \
       -extensions v3_req -extfile "$SSL_DIR/extensions.conf"
 
-    # Set proper permissions
-    chmod 600 "$SSL_DIR/private/private.key"
+    # Set proper permissions (readable by nginx container user)
+    chmod 644 "$SSL_DIR/private/private.key"
     chmod 644 "$SSL_DIR/certs/certificate.crt"
 
     echo -e "${GREEN}✅ SSL certificate generated successfully${NC}"
