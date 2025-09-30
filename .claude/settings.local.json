@@ -9,7 +9,13 @@
       "Bash(cat:*)",
       "Bash(ssh:*)",
       "Bash(curl -f http://20.217.84.100:5000/api/health)",
-      "WebSearch"
+      "WebSearch",
+      "mcp__sequential__sequentialthinking",
+      "WebFetch(domain:www.anthropic.com)",
+      "mcp__mcp-as-a-judge__*",
+      "mcp__context7__*",
+      "mcp__playwright__*",
+      "Task"
     ],
     "deny": []
   }

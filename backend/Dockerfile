@@ -100,6 +100,9 @@ COPY --from=build --chown=nodejs:nodejs /usr/src/app/node_modules ./node_modules
 # Copy only necessary files
 COPY --chown=nodejs:nodejs package*.json ./
 
+# Copy test data file for development testing
+COPY --chown=nodejs:nodejs test-data.json ./
+
 # Create logs directory
 RUN mkdir -p logs && chown -R nodejs:nodejs logs
 
