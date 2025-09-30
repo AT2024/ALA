@@ -1,0 +1,85 @@
+# Docker Compose for local HTTPS testing
+# Usage: docker-compose -f docker-compose.https.yml --env-file .env.https up
+
+services:
+  # Backend API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: ala-api-https
+    environment:
+      - NODE_ENV=development
+      - USE_HTTPS=true
+      - DOMAIN=localhost
+      - CORS_ORIGIN=https://localhost:3000
+      - HSTS_ENABLED=false
+      - DATABASE_URL=postgresql://admin:password@db:5432/medical_app
+      - PRIORITY_MOCK=true
+      - ENABLE_TEST_DATA=true
+      - BYPASS_PRIORITY_EMAILS=test@example.com
+      - JWT_SECRET=local-dev-secret
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ala-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_API_URL=https://localhost:5000/api
+        - VITE_ENVIRONMENT=development
+        - VITE_USE_HTTPS=true
+        - VITE_OFFLINE_STORAGE=true
+    container_name: ala-frontend-https
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:80"   # HTTP (will redirect to HTTPS)
+      - "443:443"   # HTTPS
+    volumes:
+      # SSL certificates
+      - ./ssl-certs/certs:/etc/ssl/certs:ro
+      - ./ssl-certs/private:/etc/ssl/private:ro
+      # Use HTTPS nginx configuration for local testing
+      - ./frontend/nginx.https.local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    networks:
+      - ala-network
+
+  # Database
+  db:
+    image: postgres:16.6-alpine
+    container_name: ala-db-https
+    environment:
+      - POSTGRES_DB=medical_app
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_https:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d medical_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ala-network
+
+networks:
+  ala-network:
+    driver: bridge
+
+volumes:
+  postgres_data_https:

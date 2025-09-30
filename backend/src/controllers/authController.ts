@@ -4,9 +4,13 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import logger from '../utils/logger';
 import priorityService from '../services/priorityService';
+import { shouldEnforceHttps } from '../config/https';
 
-// JWT Secret from environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// JWT Secret from environment variables - REQUIRED for security
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required for security');
+}
 
 // Generate JWT token
 const generateToken = (id: string) => {
@@ -173,6 +177,16 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
 
   // Generate JWT token
   const token = generateToken(user.id);
+
+  // Set secure cookie for HTTPS environments
+  if (shouldEnforceHttps()) {
+    res.cookie('auth-token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+  }
 
   res.status(200).json({
     success: true,

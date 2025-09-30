@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
+import { getHttpsConfig, getCorsOrigins, shouldEnforceHttps } from '../config/https';
 
 // Rate limiting middleware
 export const createRateLimiter = (windowMs: number = 15 * 60 * 1000, max: number = 100) => {
@@ -30,14 +31,14 @@ export const httpsRedirect = (req: Request, res: Response, next: NextFunction) =
   if (req.method === 'OPTIONS') {
     return next();
   }
-  
+
   // Skip redirect for health check endpoints
   if (req.path === '/api/health') {
     return next();
   }
-  
-  // Only redirect in production when HTTPS is properly configured
-  if (process.env.NODE_ENV === 'production' && process.env.HTTPS_ENABLED === 'true' && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+
+  // Only redirect when HTTPS enforcement is enabled
+  if (shouldEnforceHttps() && !req.secure && req.get('x-forwarded-proto') !== 'https') {
     return res.redirect(301, `https://${req.get('host')}${req.url}`);
   }
   next();
@@ -52,28 +53,28 @@ export const securityHeaders = helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", process.env.VITE_API_URL || "'self'"],
+      connectSrc: ["'self'", process.env.VITE_API_URL || "'self'", "https://*.priority-connect.online"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
-      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      upgradeInsecureRequests: shouldEnforceHttps() ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for QR code scanner compatibility
-  hsts: {
-    maxAge: 31536000, // 1 year
+  hsts: shouldEnforceHttps() ? {
+    maxAge: getHttpsConfig().hstsMaxAge,
     includeSubDomains: true,
     preload: true
-  }
+  } : false
 });
 
 // CORS configuration
 export const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
-    
+    const allowedOrigins = getCorsOrigins();
+
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {

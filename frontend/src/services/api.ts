@@ -3,29 +3,45 @@ import axios from 'axios';
 // Add debug logging
 const API_DEBUG = true;
 
-// Get the API URL from environment or use default
-// When running inside docker, we need to adjust for browser context
-let baseURL = (import.meta as any).env.VITE_API_URL;
+// Dynamic URL generation based on HTTPS configuration
+const getBaseURL = (): string => {
+  // First, try environment variable (build-time configuration)
+  let baseURL = (import.meta as any).env.VITE_API_URL;
 
-// Production environment detection and URL handling
-if (!baseURL) {
-  // Check if we're in production environment
-  const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
-  
-  if (isProduction) {
-    // In production, use the Azure VM IP
-    baseURL = 'http://20.217.84.100:5000/api';
-  } else {
-    // In development, use localhost
-    baseURL = 'http://localhost:5000/api';
+  if (baseURL) {
+    // If using Docker's internal API URL, adjust for browser context
+    if (baseURL === 'http://api:5000/api' && typeof window !== 'undefined') {
+      const useHttps = (import.meta as any).env.VITE_USE_HTTPS === 'true';
+      const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
+      const protocol = useHttps && isProduction ? 'https' : 'http';
+      baseURL = `${protocol}://${window.location.hostname}:5000/api`;
+    }
+    return baseURL;
   }
-}
 
-// If using Docker's internal API URL (service name), replace it for browser requests
-if (baseURL === 'http://api:5000/api' && typeof window !== 'undefined') {
+  // Runtime URL generation when no build-time URL is provided
+  if (typeof window !== 'undefined') {
+    const useHttps = (import.meta as any).env.VITE_USE_HTTPS === 'true';
+    const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
+
+    // Use HTTPS in production if enabled, HTTP otherwise
+    const protocol = useHttps && isProduction ? 'https' : 'http';
+    const hostname = window.location.hostname;
+
+    return `${protocol}://${hostname}:5000/api`;
+  }
+
+  // Fallback for server-side rendering or missing window object
   const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
-  baseURL = isProduction ? 'http://20.217.84.100:5000/api' : 'http://localhost:5000/api';
-}
+  const useHttps = (import.meta as any).env.VITE_USE_HTTPS === 'true';
+  const protocol = useHttps && isProduction ? 'https' : 'http';
+
+  return isProduction
+    ? `${protocol}://20.217.84.100:5000/api`
+    : 'http://localhost:5000/api';
+};
+
+const baseURL = getBaseURL();
 
 if (API_DEBUG) {
   console.log('API Service initialized with baseURL:', baseURL);
