@@ -7,7 +7,9 @@
     "start": "node run.js",
     "run": "node run.js",
     "dev": "node run.js",
-    "docker": "node run.js"
+    "docker": "node run.js",
+    "docs:update": "node scripts/update-docs.js",
+    "docs:check": "echo '\n📝 Documentation Reminder:\n' && echo '  If you changed:' && echo '  - Azure commands → Update docs/deployment/AZURE_DEPLOYMENT.md' && echo '  - API endpoints → Update docs/API_REFERENCE.md' && echo '  - Priority logic → Update docs/PRIORITY_INTEGRATION.md' && echo '\n  Or just run: npm run docs:update\n'"
   },
   "keywords": [
     "docker",

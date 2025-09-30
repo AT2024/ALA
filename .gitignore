@@ -101,3 +101,25 @@ frontend/test-results/
 
 # Temp files
 nul
+
+# SSL/TLS Certificates - NEVER commit these to version control!
+ssl-certs/
+*.key
+*.crt
+*.csr
+*.pem
+*.pfx
+*.p12
+
+# Additional certificate formats
+*.cer
+*.der
+*.jks
+*.keystore
+*.truststore
+
+# Claude settings - local configuration
+.claude/settings.local.json
+
+# Generated documentation
+docs/generated/
