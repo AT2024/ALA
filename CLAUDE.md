@@ -1,5 +1,35 @@
 # CLAUDE.md
 
+## 🚨 MANDATORY AUTOMATION RULES (FOLLOW IMMEDIATELY)
+
+### MCP Judge System - USE FOR ACTUAL CODING
+- **For NEW features, bug fixes, or code modifications** → Start with `mcp__mcp-as-a-judge__set_coding_task`
+- **Skip for**: explanations, research, documentation, or read-only tasks
+- Include task_title, task_description, and user_request parameters when using
+
+### Task Management - USE AUTOMATICALLY
+- **Tasks with 3+ steps** → Use `TodoWrite` to track progress automatically
+- Mark tasks `in_progress` before starting, `completed` immediately after finishing
+- Never batch completions - update after EACH individual task
+
+### Automatic Tool Triggers - USE WITHOUT BEING ASKED
+When these keywords appear in user requests, you MUST invoke tools IMMEDIATELY:
+- **"test", "coverage", "jest"** → Use `Task` tool with `testing-specialist` subagent
+  - For E2E/UI tests also use `mcp__playwright__*` tools for browser automation
+- **"Priority", "OData", "applicator"** → Use `Task` tool with `priority-integration` subagent
+- **"React", "component", "UI"** → Use `Task` tool with `frontend-ui` subagent
+- **"deploy", "Azure", "Docker"** → Use `Task` tool with `deployment-azure` subagent
+- **"database", "PostgreSQL", "migration"** → Use `Task` tool with `database-specialist` subagent
+- **"security", "auth", "JWT"** → Use `Task` tool with `security-audit` subagent
+- **"slow", "performance", "optimize"** → Use `Task` tool with `performance-optimization` subagent
+
+### MCP Servers - USE AUTOMATICALLY
+- **Library/framework questions** → Use `mcp__context7__resolve-library-id` then `mcp__context7__get-library-docs`
+- **Complex multi-step problems** → Use `mcp__sequential__sequentialthinking`
+- **UI testing or browser automation** → Use `mcp__playwright__*` tools
+
+---
+
 This file provides guidance to Claude Code (claude.ai/code) when working with this medical treatment tracking application.
 
 ## Quick Start & Overview
@@ -45,6 +75,8 @@ curl http://20.217.84.100:5000/api/health                                       
 - **Containers**: ala-frontend-azure, ala-api-azure, ala-db-azure
 
 ### Deployment Commands
+
+**HTTP Deployment (Stable):**
 ```bash
 # Quick deployment (recommended)
 ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy.sh"
@@ -52,19 +84,38 @@ ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/script
 # Manual deployment
 ssh azureuser@20.217.84.100
 cd ala-improved
-git pull origin develop  # or main
+git pull origin develop
 
 # Ensure infrastructure exists (IMPORTANT)
 docker network create azure_ala-network 2>/dev/null || true
 docker volume create azure_ala-postgres-data-prod 2>/dev/null || true
 
-# Deploy
+# Deploy HTTP version
 docker-compose -f deployment/azure/docker-compose.azure.yml --env-file deployment/azure/.env.azure up -d --build
+```
 
-# Container management
-ssh azureuser@20.217.84.100 "docker ps --format 'table {{.Names}}\t{{.Status}}'"  # Better status view
-ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=50 -f"             # Live logs
-ssh azureuser@20.217.84.100 "docker-compose -f deployment/azure/docker-compose.azure.yml ps"  # Compose status
+**HTTPS Deployment (Self-Signed Certificate):**
+```bash
+# Automated HTTPS deployment with SSL certificate generation
+ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy-https.sh"
+
+# Manual HTTPS deployment
+ssh azureuser@20.217.84.100
+cd ala-improved
+git pull origin develop
+
+# Generate SSL certificates (if not exists)
+bash scripts/generate-ssl-cert.sh 20.217.84.100
+
+# Deploy HTTPS version
+docker-compose -f deployment/azure/docker-compose.https.azure.yml --env-file deployment/azure/.env.azure up -d --build
+```
+
+**Container Management:**
+```bash
+ssh azureuser@20.217.84.100 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=50 -f"
+ssh azureuser@20.217.84.100 "docker-compose -f deployment/azure/docker-compose.https.azure.yml ps"
 ```
 
 ### Recovery & Monitoring
@@ -103,44 +154,9 @@ ssh azureuser@20.217.84.100 "tail -f monitor.log"
 4. **Progress Tracking** → Live calculations in TreatmentContext
 5. **Data Persistence** → Local PostgreSQL + Priority system sync
 
-### MCP Servers (MUST USE PROACTIVELY)
-- **Context7**: Documentation & best practices (✅ Connected)
-  - **USE**: `mcp__context7__resolve-library-id` then `get-library-docs` for ALL library lookups
-  - **When**: Any time implementing new libraries or frameworks
-- **Sequential**: Complex problem solving (✅ Connected)
-  - **USE**: `mcp__sequential__sequentialthinking` for multi-step analysis
-  - **When**: Breaking down complex problems, debugging workflows
-- **Playwright**: Browser automation & testing (✅ Connected)
-  - **USE**: `mcp__playwright__*` tools for E2E testing
-  - **When**: UI testing, browser automation, screenshot capture
-- **GitHub**: Repository integration (❌ Failed - use `gh` CLI instead)
-
-Quick status: `claude mcp list`
-
-## 🤖 Subagent Usage Instructions (CRITICAL)
-
-### PROACTIVE DELEGATION - MUST USE
-You MUST PROACTIVELY use the Task tool for these specialized agents:
-- **testing-specialist**: For ALL test creation, failures, coverage improvements
-- **security-audit**: For ALL security vulnerabilities, auth issues, JWT problems
-- **priority-integration**: For ALL Priority API issues, OData, applicator validation
-- **performance-optimization**: For ALL performance issues, slow responses, memory leaks
-- **frontend-ui**: For ALL React components, TypeScript issues, Tailwind styling
-- **deployment-azure**: For ALL Azure VM deployments, Docker issues, SSH connections
-- **database-specialist**: For ALL PostgreSQL operations, Sequelize issues, migrations
-
-### Automatic Triggers
-When user mentions these keywords, IMMEDIATELY invoke corresponding agent:
-- "test", "coverage", "jest" → testing-specialist
-- "security", "auth", "JWT" → security-audit
-- "Priority", "OData", "applicator" → priority-integration
-- "slow", "performance" → performance-optimization
-- "React", "component", "UI" → frontend-ui
-- "deploy", "Azure", "Docker" → deployment-azure
-- "database", "PostgreSQL" → database-specialist
-
-### Parallel Execution
-When user says "parallel" or complex tasks span domains, use MULTIPLE Task calls in ONE message.
+## 🤖 Additional Notes
+- For complex tasks spanning multiple domains, use MULTIPLE Task calls in ONE message
+- Check MCP server status: `claude mcp list`
 
 ---
 
@@ -269,13 +285,6 @@ npm run test:e2e                              # Playwright E2E tests
 3. Test with barcode scanner
 4. Verify Priority API integration
 
-## Todo Management (ALWAYS USE)
-- **ALWAYS use TodoWrite** for tasks with 3+ steps
-- **Mark in_progress** BEFORE starting each task
-- **Mark completed** IMMEDIATELY after finishing each task
-- **Never batch completions** - update after EACH individual task
-- **Keep todos focused** - break down complex tasks into smaller steps
-
 ## Subagent Details
 See `docs/development/CLAUDE-CODE-SUBAGENTS.md` for detailed agent capabilities and usage examples.
 All agents configured in `.claude/agents/` directory with PROACTIVE triggers enabled.
@@ -305,13 +314,17 @@ docker ps && node scripts/debug-unified.js health
 docker-compose logs -f backend
 docker-compose restart backend
 
-# Azure VM
+# Azure VM (HTTP)
 ssh azureuser@20.217.84.100 "docker ps && curl -s localhost:5000/api/health"
 ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
-
-# External access test
 curl http://20.217.84.100:3000 | grep -o "<title>[^<]*</title>"
 curl http://20.217.84.100:5000/api/health
+
+# Azure VM (HTTPS)
+ssh azureuser@20.217.84.100 "docker ps && curl -k -s https://localhost:5000/api/health"
+curl -k https://20.217.84.100:3000  # Frontend (self-signed cert)
+curl -k https://20.217.84.100:5000/api/health  # API (self-signed cert)
+curl -I http://20.217.84.100:3000  # Should redirect to HTTPS (301/302)
 ```
 
 ### Common Issues
@@ -333,14 +346,39 @@ curl http://20.217.84.100:5000/api/health
 cd backend && rm -rf dist/ node_modules/.cache/ && npm run build
 ```
 
+**HTTPS Certificate Issues:**
+```bash
+# Regenerate SSL certificates on Azure VM
+ssh azureuser@20.217.84.100 "cd ~/ala-improved && rm -rf ssl-certs && bash scripts/generate-ssl-cert.sh 20.217.84.100"
+
+# Verify certificate is mounted correctly
+ssh azureuser@20.217.84.100 "docker exec ala-frontend-azure ls -la /etc/ssl/certs/ | grep certificate"
+
+# Check nginx SSL configuration
+ssh azureuser@20.217.84.100 "docker exec ala-frontend-azure nginx -t"
+```
+
+**HTTP to HTTPS Redirect Not Working:**
+```bash
+# Check nginx configuration
+ssh azureuser@20.217.84.100 "docker exec ala-frontend-azure cat /etc/nginx/conf.d/default.conf | grep -A5 'listen 80'"
+
+# Verify HTTPS environment variable
+ssh azureuser@20.217.84.100 "cat ~/ala-improved/deployment/azure/.env.azure | grep USE_HTTPS"
+```
+
 **Containers Not Starting:**
 ```bash
 # Local
 docker-compose down -v && docker system prune -f && docker-compose up -d --build
 
-# Azure VM
+# Azure VM (HTTP)
 ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azure/docker-compose.azure.yml down && docker system prune -f"
 ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azure/docker-compose.azure.yml --env-file deployment/azure/.env.azure up -d --build"
+
+# Azure VM (HTTPS)
+ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azure/docker-compose.https.azure.yml down && docker system prune -f"
+ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy-https.sh"
 ```
 
 **Database Container Missing (Critical Fix):**
