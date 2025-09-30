@@ -114,7 +114,7 @@ RUN addgroup -g 1001 -S nginx-app && \
 COPY --from=build --chown=nginx-app:nginx-app /usr/src/app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
-COPY --chown=nginx-app:nginx-app nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chown=nginx-app:nginx-app nginx.staging.conf /etc/nginx/conf.d/default.conf
 
 # Create custom nginx configuration with pid file in writable location
 RUN echo "pid /var/cache/nginx/nginx.pid;" > /etc/nginx/nginx.conf && \
