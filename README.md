@@ -6,7 +6,7 @@ A comprehensive medical treatment tracking system for real-time seed applicator 
 
 This application tracks medical treatments using seed applicators with real-time validation against the Priority system. It handles insertion and removal procedures, progress tracking, and comprehensive documentation with PDF/JSON export capabilities.
 
-**Production Status**: ✅ Deployed at http://20.217.84.100:3000
+**Production Status**: ✅ Deployed at https://ala-app.israelcentral.cloudapp.azure.com
 
 ## 🚀 Quick Start
 
@@ -29,10 +29,14 @@ cd frontend && npm run test:e2e      # Playwright E2E tests
 ### Production (Azure VM)
 ```bash
 # Quick deployment
-ssh azureuser@20.217.84.100 "cd ala-improved && ~/deployment/scripts/deploy.sh"
+ssh azureuser@20.217.84.100 "cd ala-improved && bash deployment/azure/deploy-https.sh"
 
 # Health check
-curl http://20.217.84.100:5000/api/health
+curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
+
+# Test access
+# Frontend: https://ala-app.israelcentral.cloudapp.azure.com
+# Test user: test@example.com (code: 123456)
 ```
 
 ## 📁 Project Structure

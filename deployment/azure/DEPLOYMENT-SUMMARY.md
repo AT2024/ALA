@@ -61,7 +61,8 @@ sudo docker-compose -f azure/docker-compose.azure.yml up -d --build
 ```
 
 ### Step 6: Test from Phone
-Open browser: **http://20.217.84.100:3000**
+Open browser: **https://ala-app.israelcentral.cloudapp.azure.com**
+Test user: **test@example.com** (code: **123456**)
 
 ## 🔄 Future Updates
 
@@ -99,7 +100,9 @@ azure/
 ✅ Passwords generated on VM only
 ✅ Environment variables for sensitive data
 ✅ Non-root containers (UID 1001)
-✅ Firewall configured (ports 22, 3000, 5000 only)
+✅ Firewall configured (ports 22, 80, 443, 5000 only)
+✅ HTTPS enabled with SSL certificates
+✅ HTTP automatically redirects to HTTPS
 
 ## 🎯 Benefits of This Approach
 
@@ -126,9 +129,11 @@ azure/
 ## 🎉 Success Criteria
 
 When everything is working:
-- ✅ Phone can access http://20.217.84.100:3000
-- ✅ No "cannot connect to server" errors
+- ✅ Phone can access https://ala-app.israelcentral.cloudapp.azure.com
+- ✅ HTTPS connection is secure with valid certificate
+- ✅ No "cannot connect to server" or "Mixed Content" errors
 - ✅ Application loads and functions properly
+- ✅ Test user (test@example.com) can login with applicators available
 - ✅ Updates deploy automatically via GitHub
 
 ---

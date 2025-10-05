@@ -15,7 +15,8 @@
       "mcp__mcp-as-a-judge__*",
       "mcp__context7__*",
       "mcp__playwright__*",
-      "Task"
+      "Task",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

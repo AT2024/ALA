@@ -17,7 +17,7 @@ docker-compose restart backend
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
 
-### Azure Production (HTTP)
+### Azure Production (HTTPS)
 ```bash
 # Check services and health
 ssh azureuser@20.217.84.100 "docker ps && curl -s localhost:5000/api/health"
@@ -26,26 +26,15 @@ ssh azureuser@20.217.84.100 "docker ps && curl -s localhost:5000/api/health"
 ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
 
 # Check frontend
-curl http://20.217.84.100:3000 | grep -o "<title>[^<]*</title>"
+curl https://ala-app.israelcentral.cloudapp.azure.com | grep -o "<title>[^<]*</title>"
 
 # Check API health
-curl http://20.217.84.100:5000/api/health
+curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
+
+# Verify HTTP to HTTPS redirect
+curl -I http://ala-app.israelcentral.cloudapp.azure.com  # Should return 301 redirect
 ```
 
-### Azure Production (HTTPS)
-```bash
-# Check services with HTTPS
-ssh azureuser@20.217.84.100 "docker ps && curl -k -s https://localhost:5000/api/health"
-
-# Frontend with self-signed cert
-curl -k https://20.217.84.100:3000
-
-# API with self-signed cert
-curl -k https://20.217.84.100:5000/api/health
-
-# Check redirect from HTTP to HTTPS
-curl -I http://20.217.84.100:3000  # Should return 301/302
-```
 
 ## Common Issues and Solutions
 

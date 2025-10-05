@@ -3,16 +3,18 @@
 ## Environment Details
 - **VM IP**: 20.217.84.100 (ATM-ISR-Docker resource group)
 - **SSH Access**: `ssh azureuser@20.217.84.100`
-- **Frontend URL**: http://20.217.84.100:3000 (HTTPS: https://20.217.84.100:3000)
-- **Backend API**: http://20.217.84.100:5000/api/health (HTTPS: https://20.217.84.100:5000/api/health)
+- **Production URL**: https://ala-app.israelcentral.cloudapp.azure.com
+- **Backend API**: https://ala-app.israelcentral.cloudapp.azure.com/api/health
 - **Container Names**: ala-frontend-azure, ala-api-azure, ala-db-azure
+- **HTTPS Status**: ✅ Enabled with SSL certificates
+- **Test User**: test@example.com (code: 123456)
 
 ## Quick Deployment
 
 ### Automated Deployment (Recommended)
 ```bash
-# Deploy with automatic rollback on failure
-ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy.sh"
+# Deploy with HTTPS enabled
+ssh azureuser@20.217.84.100 "cd ala-improved && bash deployment/azure/deploy-https.sh"
 ```
 
 ## HTTP Deployment
@@ -189,11 +191,11 @@ ssh azureuser@20.217.84.100 "docker-compose -f deployment/azure/docker-compose.h
 
 ### Health Checks
 ```bash
-# HTTP health check
-curl http://20.217.84.100:5000/api/health
+# HTTPS health check (production)
+curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 
-# HTTPS health check (with self-signed cert)
-curl -k https://20.217.84.100:5000/api/health
+# Check frontend
+curl -I https://ala-app.israelcentral.cloudapp.azure.com
 
 # Check from within VM
 ssh azureuser@20.217.84.100 "docker ps && curl -s localhost:5000/api/health"

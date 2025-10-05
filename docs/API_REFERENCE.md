@@ -8,9 +8,10 @@
 - **WebSocket**: ws://localhost:5000
 
 ### Production (Azure)
-- **Frontend**: http://20.217.84.100:3000 (HTTPS: https://20.217.84.100:3000)
-- **Backend API**: http://20.217.84.100:5000 (HTTPS: https://20.217.84.100:5000)
-- **WebSocket**: ws://20.217.84.100:5000 (WSS: wss://20.217.84.100:5000)
+- **Frontend**: https://ala-app.israelcentral.cloudapp.azure.com
+- **Backend API**: https://ala-app.israelcentral.cloudapp.azure.com/api
+- **WebSocket**: wss://ala-app.israelcentral.cloudapp.azure.com
+- **HTTP Access**: Automatically redirects to HTTPS
 
 ## Authentication Endpoints
 
