@@ -70,6 +70,7 @@ interface TreatmentContextType {
   procedureType: 'insertion' | 'removal' | null;
   setProcedureType: (type: 'insertion' | 'removal') => void;
   setTreatment: (treatment: Treatment) => void;
+  setApplicators: (applicators: Applicator[]) => void;
   addApplicator: (applicator: Applicator) => void;
   addAvailableApplicator: (applicator: Applicator) => void;
   processApplicator: (applicator: Applicator) => void;
@@ -120,6 +121,10 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setApplicators([]);
     setAvailableApplicators([]);
     setProcessedApplicators([]);
+  };
+
+  const setApplicatorsData = (newApplicators: Applicator[]) => {
+    setApplicators(newApplicators);
   };
 
   const addApplicator = (applicator: Applicator) => {
@@ -355,6 +360,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         procedureType,
         setProcedureType,
         setTreatment,
+        setApplicators: setApplicatorsData,
         addApplicator,
         addAvailableApplicator,
         processApplicator,

@@ -517,8 +517,8 @@ The unversioned `/api/...` endpoints will always point to v1 for backward compat
 ## CORS Configuration
 
 ### Allowed Origins (Production)
-- https://20.217.84.100:3000
-- http://20.217.84.100:3000
+- https://ala-app.israelcentral.cloudapp.azure.com
+- http://ala-app.israelcentral.cloudapp.azure.com (redirects to HTTPS)
 
 ### Allowed Methods
 - GET, POST, PUT, DELETE, OPTIONS

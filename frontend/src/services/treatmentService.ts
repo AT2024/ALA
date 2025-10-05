@@ -116,7 +116,27 @@ export const treatmentService = {
   // Get applicators for a treatment
   async getApplicators(treatmentId: string): Promise<Applicator[]> {
     const response = await api.get(`/treatments/${treatmentId}/applicators`);
-    return response.data;
+
+    // Transform data to ensure all fields are properly set
+    if (response.data && Array.isArray(response.data)) {
+      return response.data.map((app: any) => ({
+        id: app.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+        serialNumber: app.serialNumber,
+        seedQuantity: app.seedQuantity || app.INTDATA2 || 0,
+        usageType: app.usageType || 'full',
+        insertionTime: app.insertionTime || new Date().toISOString(),
+        comments: app.comments || '',
+        image: app.image || null,
+        isRemoved: app.isRemoved === true,
+        removalComments: app.removalComments || '',
+        removalImage: app.removalImage || null,
+        removalTime: app.removalTime || null,
+        applicatorType: app.applicatorType || 'Unknown Applicator',
+        insertedSeedsQty: app.insertedSeedsQty || app.seedQuantity || 0
+      }));
+    }
+
+    return response.data || [];
   },
 
   // Validate applicator barcode

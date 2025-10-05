@@ -123,3 +123,7 @@ ssl-certs/
 
 # Generated documentation
 docs/generated/
+
+# Test scripts (local development only)
+test-removal*.js
+test-removal.sh

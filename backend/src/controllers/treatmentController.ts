@@ -133,14 +133,65 @@ export const updateTreatmentStatus = asyncHandler(async (req: Request, res: Resp
 // @access  Private
 export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to this treatment
   if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
     res.status(403);
     throw new Error('Not authorized to access this treatment');
   }
-  
-  const applicators = await applicatorService.getApplicators(req.params.id);
+
+  logger.info(`Getting applicators for treatment ${req.params.id}, type: ${treatment.type}, user: ${req.user.email}`);
+
+  // For test user removals, load applicators from test data
+  // Check both priorityId and subjectId fields for the treatment number
+  const treatmentNumber = treatment.priorityId || treatment.subjectId;
+
+  if (req.user.email === 'test@example.com' && treatment.type === 'removal' && treatmentNumber) {
+    logger.info(`Test user removal treatment - loading from test data for order ${treatmentNumber}`);
+
+    try {
+      // Get applicators from test data using Priority service
+      // Pass email instead of ID so test data detection works correctly
+      const testApplicators = await priorityService.getOrderSubform(
+        treatmentNumber,
+        req.user.email,
+        treatment.type
+      );
+
+      if (testApplicators && testApplicators.length > 0) {
+        logger.info(`Found ${testApplicators.length} applicators from test data`);
+
+        // Transform test data to match our applicator format
+        const formattedApplicators = testApplicators.map((app: any) => ({
+          id: app.SIBD_REPPRODPAL || `${treatmentNumber}-${app.SERNUM}`,
+          serialNumber: app.SERNUM,
+          treatmentId: req.params.id,
+          seedQuantity: app.INTDATA2 || 0,
+          usageType: app.USINGTYPE || 'full',
+          insertionTime: app.INSERTIONDATE || new Date().toISOString(),
+          comments: app.INSERTIONCOMMENTS || '',
+          image: app.EXTFILENAME || null,
+          addedBy: app.INSERTEDREPORTEDBY || req.user.id,
+          isRemoved: false,
+          removalComments: null,
+          removalImage: null,
+          removedBy: null,
+          removalTime: null,
+          applicatorType: app.PARTDES || app.PARTNAME || 'Unknown Applicator',
+          insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2 || 0
+        }));
+
+        res.status(200).json(formattedApplicators);
+        return;
+      }
+    } catch (error) {
+      logger.error(`Error loading test data applicators: ${error}`);
+      // Fall back to database query
+    }
+  }
+
+  // Standard flow - get from database
+  const applicators = await applicatorService.getApplicators(req.params.id, treatment.type);
   res.status(200).json(applicators);
 });
 

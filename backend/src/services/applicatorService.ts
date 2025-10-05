@@ -25,13 +25,58 @@ export interface ApplicatorValidationResult {
 
 export const applicatorService = {
   // Get applicators for a treatment
-  async getApplicators(treatmentId: string) {
+  async getApplicators(treatmentId: string, treatmentType?: string) {
     try {
+      logger.info(`Getting applicators for treatment ${treatmentId}, type: ${treatmentType || 'unknown'}`);
+
+      // Get the treatment to check its type
+      const treatment = await Treatment.findByPk(treatmentId);
+      if (!treatment) {
+        logger.warn(`Treatment not found: ${treatmentId}`);
+        return [];
+      }
+
+      // For removal treatments, we need to get applicators from the original insertion
+      // For test data, the applicators are stored with the same order ID
+      if (treatment.type === 'removal') {
+        logger.info(`Treatment ${treatmentId} is a removal, looking for insertion applicators`);
+
+        // Try to find a matching insertion treatment
+        // The treatment number could be in either priorityId or subjectId field
+        const treatmentNumber = treatment.priorityId || treatment.subjectId;
+
+        const insertionTreatment = await Treatment.findOne({
+          where: {
+            type: 'insertion',
+            site: treatment.site,
+            // Look for insertion treatment with matching treatment number in either field
+            [Op.or]: [
+              { priorityId: treatmentNumber },
+              { subjectId: treatmentNumber }
+            ]
+          }
+        });
+
+        if (insertionTreatment) {
+          logger.info(`Found related insertion treatment: ${insertionTreatment.id}`);
+          const applicators = await Applicator.findAll({
+            where: { treatmentId: insertionTreatment.id },
+            order: [['insertionTime', 'ASC']],
+          });
+          return applicators;
+        }
+
+        // If no insertion treatment found, return empty array
+        // The controller will handle loading from test data for test users
+        logger.info(`No insertion treatment found for removal ${treatmentId}`);
+      }
+
+      // Standard flow for insertion treatments or if no special handling needed
       const applicators = await Applicator.findAll({
         where: { treatmentId },
         order: [['insertionTime', 'ASC']],
       });
-      
+
       return applicators;
     } catch (error) {
       logger.error(`Error fetching applicators: ${error}`);
