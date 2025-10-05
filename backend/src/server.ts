@@ -30,6 +30,7 @@ dotenv.config();
 
 // Initialize express app
 const app = express();
+app.set('trust proxy', true); // Trust nginx proxy headers
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
