@@ -143,8 +143,11 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
   logger.info(`Getting applicators for treatment ${req.params.id}, type: ${treatment.type}, user: ${req.user.email}`);
 
   // For test user removals, load applicators from test data
-  // Check both priorityId and subjectId fields for the treatment number
-  const treatmentNumber = treatment.priorityId || treatment.subjectId;
+  // For removal treatments with test user, prioritize subjectId as it contains the original order
+  // This handles cases where priorityId might have been auto-generated
+  const treatmentNumber = (req.user.email === 'test@example.com' && treatment.type === 'removal')
+    ? (treatment.subjectId || treatment.priorityId)
+    : (treatment.priorityId || treatment.subjectId);
 
   if (req.user.email === 'test@example.com' && treatment.type === 'removal' && treatmentNumber) {
     logger.info(`Test user removal treatment - loading from test data for order ${treatmentNumber}`);

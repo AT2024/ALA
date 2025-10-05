@@ -1263,6 +1263,19 @@ export const priorityService = {
   // Send treatment data to Priority
   async updatePriorityWithTreatment(treatmentData: any) {
     try {
+      // Skip Priority sync for test data mode
+      // Check if we're in test mode and the treatment is for test data
+      if (process.env.ENABLE_TEST_DATA === 'true' && treatmentData.subjectId && treatmentData.subjectId.startsWith('SO')) {
+        // For test treatments, use the subject ID as the priority ID
+        // This ensures consistency between local and Azure environments
+        logger.info(`Test mode: Using subject ID ${treatmentData.subjectId} as priority ID`);
+        return {
+          success: true,
+          priorityId: treatmentData.subjectId,
+          message: 'Test mode - using subject ID as priority ID',
+        };
+      }
+
       // Map treatment data to Priority format
       const priorityData = {
         CUSTNAME: treatmentData.site,
