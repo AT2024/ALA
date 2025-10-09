@@ -68,30 +68,59 @@ export const updateTreatment = asyncHandler(async (req: Request, res: Response) 
 // @access  Private
 export const completeTreatment = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to complete this treatment
   if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
     res.status(403);
     throw new Error('Not authorized to complete this treatment');
   }
-  
-  // Update treatment status in Priority system first
-  const statusResult = await applicatorService.updateTreatmentStatusInPriority(
-    req.params.id, 
-    treatment.type === 'removal' ? 'Removed' : 'Performed'
-  );
-  
-  if (!statusResult.success) {
-    res.status(500);
-    throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+
+  let priorityUpdateStatus = null;
+
+  // For removal treatments, only update Priority if we have a valid Priority ID
+  // Test data and local removals might not have Priority orders
+  if (treatment.type === 'removal' && (!treatment.priorityId || treatment.priorityId === treatment.id)) {
+    logger.info(`Skipping Priority update for removal treatment ${req.params.id} - no valid Priority order`);
+    priorityUpdateStatus = 'Priority update skipped (local removal)';
+  } else {
+    // Try to update treatment status in Priority system
+    try {
+      const statusResult = await applicatorService.updateTreatmentStatusInPriority(
+        req.params.id,
+        treatment.type === 'removal' ? 'Removed' : 'Performed'
+      );
+
+      if (statusResult.success) {
+        priorityUpdateStatus = statusResult.message;
+      } else {
+        // For removal treatments, log the error but continue
+        if (treatment.type === 'removal') {
+          logger.warn(`Failed to update Priority status for removal ${req.params.id}: ${statusResult.message}`);
+          priorityUpdateStatus = 'Priority update failed (continuing with local completion)';
+        } else {
+          // For insertion treatments, fail if Priority update fails
+          res.status(500);
+          throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+        }
+      }
+    } catch (error: any) {
+      // For removal treatments, log error and continue
+      if (treatment.type === 'removal') {
+        logger.error(`Error updating Priority for removal ${req.params.id}:`, error);
+        priorityUpdateStatus = 'Priority update failed (continuing with local completion)';
+      } else {
+        // For insertion treatments, propagate the error
+        throw error;
+      }
+    }
   }
-  
+
   // Complete treatment locally
   const completedTreatment = await treatmentService.completeTreatment(req.params.id, req.user.id);
-  
+
   res.status(200).json({
     ...completedTreatment,
-    priorityStatus: statusResult.message
+    priorityStatus: priorityUpdateStatus
   });
 });
 
