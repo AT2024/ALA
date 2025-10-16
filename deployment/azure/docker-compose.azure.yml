@@ -72,6 +72,7 @@ services:
         - VITE_PRIORITY_API_URL=${VITE_PRIORITY_API_URL}
         - VITE_OFFLINE_STORAGE=true
         - VITE_USE_HTTPS=${VITE_USE_HTTPS:-false}
+        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.staging.conf}
     container_name: ala-frontend-azure
     env_file:
       - .env.azure
@@ -100,7 +101,8 @@ services:
       # Nginx config selection based on USE_HTTPS
       # HTTP:  nginx.azure.conf
       # HTTPS: nginx.https.azure.conf
-      - ../../frontend/${NGINX_CONFIG:-nginx.azure.conf}:/etc/nginx/conf.d/default.conf:ro
+      # NOTE: Nginx config is baked into Docker image via Dockerfile COPY, not mounted
+      # - ../../frontend/${NGINX_CONFIG:-nginx.azure.conf}:/etc/nginx/conf.d/default.conf:ro
     labels:
       - "ala.service=frontend"
       - "ala.version=production"
