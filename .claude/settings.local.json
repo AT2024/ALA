@@ -21,7 +21,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(docker logs:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }
