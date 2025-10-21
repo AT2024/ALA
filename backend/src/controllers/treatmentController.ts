@@ -68,30 +68,59 @@ export const updateTreatment = asyncHandler(async (req: Request, res: Response) 
 // @access  Private
 export const completeTreatment = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to complete this treatment
   if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
     res.status(403);
     throw new Error('Not authorized to complete this treatment');
   }
-  
-  // Update treatment status in Priority system first
-  const statusResult = await applicatorService.updateTreatmentStatusInPriority(
-    req.params.id, 
-    treatment.type === 'removal' ? 'Removed' : 'Performed'
-  );
-  
-  if (!statusResult.success) {
-    res.status(500);
-    throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+
+  let priorityUpdateStatus = null;
+
+  // For removal treatments, only update Priority if we have a valid Priority ID
+  // Test data and local removals might not have Priority orders
+  if (treatment.type === 'removal' && (!treatment.priorityId || treatment.priorityId === treatment.id)) {
+    logger.info(`Skipping Priority update for removal treatment ${req.params.id} - no valid Priority order`);
+    priorityUpdateStatus = 'Priority update skipped (local removal)';
+  } else {
+    // Try to update treatment status in Priority system
+    try {
+      const statusResult = await applicatorService.updateTreatmentStatusInPriority(
+        req.params.id,
+        treatment.type === 'removal' ? 'Removed' : 'Performed'
+      );
+
+      if (statusResult.success) {
+        priorityUpdateStatus = statusResult.message;
+      } else {
+        // For removal treatments, log the error but continue
+        if (treatment.type === 'removal') {
+          logger.warn(`Failed to update Priority status for removal ${req.params.id}: ${statusResult.message}`);
+          priorityUpdateStatus = 'Priority update failed (continuing with local completion)';
+        } else {
+          // For insertion treatments, fail if Priority update fails
+          res.status(500);
+          throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+        }
+      }
+    } catch (error: any) {
+      // For removal treatments, log error and continue
+      if (treatment.type === 'removal') {
+        logger.error(`Error updating Priority for removal ${req.params.id}:`, error);
+        priorityUpdateStatus = 'Priority update failed (continuing with local completion)';
+      } else {
+        // For insertion treatments, propagate the error
+        throw error;
+      }
+    }
   }
-  
+
   // Complete treatment locally
   const completedTreatment = await treatmentService.completeTreatment(req.params.id, req.user.id);
-  
+
   res.status(200).json({
     ...completedTreatment,
-    priorityStatus: statusResult.message
+    priorityStatus: priorityUpdateStatus
   });
 });
 
@@ -133,14 +162,68 @@ export const updateTreatmentStatus = asyncHandler(async (req: Request, res: Resp
 // @access  Private
 export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to this treatment
   if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
     res.status(403);
     throw new Error('Not authorized to access this treatment');
   }
-  
-  const applicators = await applicatorService.getApplicators(req.params.id);
+
+  logger.info(`Getting applicators for treatment ${req.params.id}, type: ${treatment.type}, user: ${req.user.email}`);
+
+  // For test user removals, load applicators from test data
+  // For removal treatments with test user, prioritize subjectId as it contains the original order
+  // This handles cases where priorityId might have been auto-generated
+  const treatmentNumber = (req.user.email === 'test@example.com' && treatment.type === 'removal')
+    ? (treatment.subjectId || treatment.priorityId)
+    : (treatment.priorityId || treatment.subjectId);
+
+  if (req.user.email === 'test@example.com' && treatment.type === 'removal' && treatmentNumber) {
+    logger.info(`Test user removal treatment - loading from test data for order ${treatmentNumber}`);
+
+    try {
+      // Get applicators from test data using Priority service
+      // Pass email instead of ID so test data detection works correctly
+      const testApplicators = await priorityService.getOrderSubform(
+        treatmentNumber,
+        req.user.email,
+        treatment.type
+      );
+
+      if (testApplicators && testApplicators.length > 0) {
+        logger.info(`Found ${testApplicators.length} applicators from test data`);
+
+        // Transform test data to match our applicator format
+        const formattedApplicators = testApplicators.map((app: any) => ({
+          id: app.SIBD_REPPRODPAL || `${treatmentNumber}-${app.SERNUM}`,
+          serialNumber: app.SERNUM,
+          treatmentId: req.params.id,
+          seedQuantity: app.INTDATA2 || 0,
+          usageType: app.USINGTYPE || 'full',
+          insertionTime: app.INSERTIONDATE || new Date().toISOString(),
+          comments: app.INSERTIONCOMMENTS || '',
+          image: app.EXTFILENAME || null,
+          addedBy: app.INSERTEDREPORTEDBY || req.user.id,
+          isRemoved: false,
+          removalComments: null,
+          removalImage: null,
+          removedBy: null,
+          removalTime: null,
+          applicatorType: app.PARTDES || app.PARTNAME || 'Unknown Applicator',
+          insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2 || 0
+        }));
+
+        res.status(200).json(formattedApplicators);
+        return;
+      }
+    } catch (error) {
+      logger.error(`Error loading test data applicators: ${error}`);
+      // Fall back to database query
+    }
+  }
+
+  // Standard flow - get from database
+  const applicators = await applicatorService.getApplicators(req.params.id, treatment.type);
   res.status(200).json(applicators);
 });
 

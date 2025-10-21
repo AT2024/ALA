@@ -154,7 +154,13 @@ const generateTestDataForDate = (requestedDate: string) => {
 
 // Helper function to check if we should use test data for development
 const shouldUseTestData = (identifier: string): boolean => {
-  return (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_DATA === 'true') && identifier === 'test@example.com';
+  // Support both email and UUID for test user
+  const testUserEmail = 'test@example.com';
+  const testUserUUID = '47605b24-e71b-479b-93c5-8b7ce1c17098'; // Known test user UUID
+
+  const isTestUser = identifier === testUserEmail || identifier === testUserUUID;
+
+  return (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_DATA === 'true') && isTestUser;
 };
 
 // Helper function to check if an email is in the bypass list
@@ -952,10 +958,10 @@ export const priorityService = {
   },
 
   // Get order details using SIBD_APPLICATUSELIST_SUBFORM endpoint
-  async getOrderSubform(orderName: string, userId?: string) {
+  async getOrderSubform(orderName: string, userId?: string, treatmentType?: string) {
     try {
-      logger.info(`Getting order subform for order ${orderName}`);
-      
+      logger.info(`Getting order subform for order ${orderName}, type: ${treatmentType || 'unknown'}`);
+
       // For development mode with test@example.com, prioritize test data
       if (userId && shouldUseTestData(userId)) {
         logger.info(`Development mode: Using test subform data for user ${userId} and order ${orderName}`);
@@ -964,13 +970,40 @@ export const priorityService = {
           // Handle expanded order names (SO25000010_Y, SO25000010_T, SO25000010_M)
           // Extract the base order name by removing the suffix
           const baseOrderName = orderName.replace(/_(Y|T|M)$/, '');
-          
+
+          // For removal treatments, always use the base order name to get insertion applicators
+          const orderToFetch = treatmentType === 'removal' ? baseOrderName : orderName;
+
           if (testData.subform_data[baseOrderName]) {
-            logger.info(`Using test subform data for base order ${baseOrderName} (requested: ${orderName})`);
-            return testData.subform_data[baseOrderName].value || [];
+            logger.info(`Using test subform data for base order ${baseOrderName} (requested: ${orderName}, type: ${treatmentType})`);
+            const applicators = testData.subform_data[baseOrderName].value || [];
+
+            // For removal treatments, ensure applicators show as inserted but not yet removed
+            if (treatmentType === 'removal') {
+              return applicators.map((app: any) => ({
+                ...app,
+                isRemoved: false,
+                removalComments: null,
+                removalTime: null
+              }));
+            }
+
+            return applicators;
           } else if (testData.subform_data[orderName]) {
             logger.info(`Using test subform data for exact order ${orderName}`);
-            return testData.subform_data[orderName].value || [];
+            const applicators = testData.subform_data[orderName].value || [];
+
+            // For removal treatments, ensure applicators show as inserted but not yet removed
+            if (treatmentType === 'removal') {
+              return applicators.map((app: any) => ({
+                ...app,
+                isRemoved: false,
+                removalComments: null,
+                removalTime: null
+              }));
+            }
+
+            return applicators;
           }
         }
       }
@@ -1230,6 +1263,19 @@ export const priorityService = {
   // Send treatment data to Priority
   async updatePriorityWithTreatment(treatmentData: any) {
     try {
+      // Skip Priority sync for test data mode
+      // Check if we're in test mode and the treatment is for test data
+      if (process.env.ENABLE_TEST_DATA === 'true' && treatmentData.subjectId && treatmentData.subjectId.startsWith('SO')) {
+        // For test treatments, use the subject ID as the priority ID
+        // This ensures consistency between local and Azure environments
+        logger.info(`Test mode: Using subject ID ${treatmentData.subjectId} as priority ID`);
+        return {
+          success: true,
+          priorityId: treatmentData.subjectId,
+          message: 'Test mode - using subject ID as priority ID',
+        };
+      }
+
       // Map treatment data to Priority format
       const priorityData = {
         CUSTNAME: treatmentData.site,

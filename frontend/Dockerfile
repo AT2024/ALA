@@ -99,6 +99,9 @@ RUN npm run build
 # =================================================================
 FROM nginx:1.27.5-alpine AS production
 
+# Accept build argument for nginx configuration
+ARG NGINX_CONFIG=nginx.staging.conf
+
 # Install security updates
 RUN apk update && apk upgrade && \
     apk add --no-cache \
@@ -113,8 +116,8 @@ RUN addgroup -g 1001 -S nginx-app && \
 # Copy built assets from build stage
 COPY --from=build --chown=nginx-app:nginx-app /usr/src/app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY --chown=nginx-app:nginx-app nginx.staging.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration (configurable via NGINX_CONFIG ARG)
+COPY --chown=nginx-app:nginx-app ${NGINX_CONFIG} /etc/nginx/conf.d/default.conf
 
 # Create custom nginx configuration with pid file in writable location
 RUN echo "pid /var/cache/nginx/nginx.pid;" > /etc/nginx/nginx.conf && \

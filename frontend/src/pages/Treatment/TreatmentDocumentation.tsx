@@ -515,9 +515,10 @@ const TreatmentDocumentation = () => {
   return (
     <Layout title="Treatment Documentation" showBackButton backPath="/treatment/select">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Mobile-first grid: single column on mobile, 2 columns on md, 3 columns on lg */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Left Column - Treatment Information and Progress */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-4 md:space-y-6 md:col-span-1">
             {/* Treatment Information */}
             <div className="rounded-lg border bg-white p-4 shadow-sm">
               <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
@@ -552,8 +553,8 @@ const TreatmentDocumentation = () => {
             <ProgressTracker />
           </div>
 
-          {/* Right Column - Scanner and Form */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Right Column - Scanner and Form: Full width on mobile, 2 cols on md, 2 cols on lg */}
+          <div className="space-y-4 md:space-y-6 md:col-span-1 lg:col-span-2">
 
         {/* Scanner/Manual Entry Section */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
@@ -563,7 +564,7 @@ const TreatmentDocumentation = () => {
             </h2>
             <button
               onClick={toggleEntryMode}
-              className="text-sm font-medium text-primary hover:text-primary/80"
+              className="min-h-[44px] rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
               disabled={loading}
             >
               {manualEntry ? 'Switch to Scanner' : 'Enter Manually'}
@@ -595,7 +596,7 @@ const TreatmentDocumentation = () => {
                 <button
                   type="button"
                   onClick={() => {setShowApplicatorList(true); setShowSuggestions(false); setASuffixQuery('');}}
-                  className={`px-3 py-1 text-sm rounded-md ${showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                  className={`min-h-[44px] px-4 py-2 text-sm rounded-md ${showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
                 >
                   Choose from List ({patientFilteredApplicators.length})
@@ -603,7 +604,7 @@ const TreatmentDocumentation = () => {
                 <button
                   type="button"
                   onClick={() => {setShowApplicatorList(false); setShowSuggestions(false); setASuffixQuery('');}}
-                  className={`px-3 py-1 text-sm rounded-md ${!showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
+                  className={`min-h-[44px] px-4 py-2 text-sm rounded-md ${!showApplicatorList ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700'}`}
                   disabled={loading}
                 >
                   Manual Entry
@@ -625,7 +626,7 @@ const TreatmentDocumentation = () => {
                         maxLength={10}
                         value={aSuffixQuery}
                         onChange={(e) => setASuffixQuery(e.target.value)}
-                        className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                        className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px]"
                         placeholder="Enter number (e.g., 1, 2, 10) to filter by -A suffix"
                         disabled={loading}
                       />
@@ -633,7 +634,7 @@ const TreatmentDocumentation = () => {
                         <button
                           type="button"
                           onClick={() => setASuffixQuery('')}
-                          className="rounded-md bg-gray-100 px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+                          className="min-h-[44px] rounded-md bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200"
                         >
                           Clear
                         </button>
@@ -717,7 +718,7 @@ const TreatmentDocumentation = () => {
                       maxLength={32}
                       value={formData.serialNumber}
                       onChange={(e) => setFormData(prev => ({ ...prev, serialNumber: e.target.value }))}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px]"
                       placeholder="Enter applicator serial number"
                       autoFocus
                       disabled={loading}
@@ -761,7 +762,7 @@ const TreatmentDocumentation = () => {
                   <button
                     type="submit"
                     disabled={loading || !formData.serialNumber}
-                    className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                    className="w-full min-h-[44px] rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
                   >
                     {loading ? 'Validating...' : 'Validate Serial Number'}
                   </button>
@@ -770,7 +771,8 @@ const TreatmentDocumentation = () => {
             </div>
           ) : (
             <div>
-              <div id="qr-reader" ref={scannerDivRef} className="mx-auto max-w-sm"></div>
+              {/* Scanner: Full viewport width on mobile for better QR scanning, constrained on desktop */}
+              <div id="qr-reader" ref={scannerDivRef} className="mx-auto w-full sm:max-w-sm"></div>
               <p className="mt-4 text-center text-sm text-gray-500">
                 Position the barcode inside the scan area
               </p>
@@ -807,8 +809,8 @@ const TreatmentDocumentation = () => {
         {/* Applicator Details Form */}
         {formData.serialNumber && (
           <div className="rounded-lg border bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-medium mb-4">Applicator Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h2 className="text-base md:text-lg font-medium mb-4">Applicator Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {/* Serial Number (Read-only) */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -818,7 +820,7 @@ const TreatmentDocumentation = () => {
                   type="text"
                   value={formData.serialNumber}
                   readOnly
-                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:text-sm min-h-[44px]"
                 />
               </div>
 
@@ -831,7 +833,7 @@ const TreatmentDocumentation = () => {
                   type="text"
                   value={formData.applicatorType}
                   readOnly
-                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:text-sm min-h-[44px]"
                 />
               </div>
 
@@ -844,7 +846,7 @@ const TreatmentDocumentation = () => {
                   type="text"
                   value={formData.seedsQty}
                   readOnly
-                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:text-sm min-h-[44px]"
                 />
               </div>
 
@@ -857,7 +859,7 @@ const TreatmentDocumentation = () => {
                   <button
                     type="button"
                     onClick={() => adjustTime(-1)}
-                    className="rounded-md bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+                    className="min-h-[44px] min-w-[44px] rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
                     disabled={loading}
                   >
                     -1m
@@ -866,12 +868,12 @@ const TreatmentDocumentation = () => {
                     type="text"
                     value={format(new Date(formData.insertionTime), 'dd.MM.yyyy HH:mm')}
                     readOnly
-                    className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
+                    className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-base md:text-sm min-h-[44px]"
                   />
                   <button
                     type="button"
                     onClick={() => adjustTime(1)}
-                    className="rounded-md bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+                    className="min-h-[44px] min-w-[44px] rounded-md bg-gray-100 px-3 py-2 text-sm hover:bg-gray-200"
                     disabled={loading}
                   >
                     +1m
@@ -893,7 +895,7 @@ const TreatmentDocumentation = () => {
                   id="usingType"
                   value={formData.usingType}
                   onChange={(e) => setFormData(prev => ({ ...prev, usingType: e.target.value }))}
-                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm ${
+                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px] ${
                     isReturnedFromNoUse ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
                   required
@@ -924,7 +926,7 @@ const TreatmentDocumentation = () => {
                     max={formData.seedsQty}
                     value={formData.insertedSeedsQty}
                     onChange={(e) => setFormData(prev => ({ ...prev, insertedSeedsQty: e.target.value }))}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px]"
                     disabled={loading}
                   />
                 ) : (
@@ -932,7 +934,7 @@ const TreatmentDocumentation = () => {
                     type="text"
                     value={formData.insertedSeedsQty}
                     readOnly
-                    className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                    className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:text-sm min-h-[44px]"
                   />
                 )}
               </div>
@@ -948,12 +950,12 @@ const TreatmentDocumentation = () => {
                   rows={2}
                   value={formData.comments}
                   onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
-                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm ${
+                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px] ${
                     formData.usingType === 'Faulty' ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder={
-                    formData.usingType === 'Faulty' 
-                      ? 'Required: Explain why this applicator is faulty...' 
+                    formData.usingType === 'Faulty'
+                      ? 'Required: Explain why this applicator is faulty...'
                       : 'Optional comments...'
                   }
                   disabled={loading}
@@ -972,12 +974,12 @@ const TreatmentDocumentation = () => {
               <button
                 onClick={handleNext}
                 disabled={
-                  loading || 
-                  !formData.serialNumber || 
-                  !formData.usingType || 
+                  loading ||
+                  !formData.serialNumber ||
+                  !formData.usingType ||
                   (formData.usingType === 'Faulty' && (!formData.comments || formData.comments.trim().length === 0))
                 }
-                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                className="flex-1 min-h-[44px] rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Insert'}
               </button>
@@ -992,7 +994,7 @@ const TreatmentDocumentation = () => {
               <button
                 onClick={handleFinalizeClick}
                 disabled={loading}
-                className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                className="w-full min-h-[44px] rounded-md bg-primary px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 sm:w-auto"
               >
                 {loading ? 'Processing...' : 'Finalize / Use List'}
               </button>

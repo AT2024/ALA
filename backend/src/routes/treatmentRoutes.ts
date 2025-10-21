@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import {
   getTreatments,
   getTreatmentById,
@@ -47,6 +47,37 @@ router.route('/:id/applicators')
   .get(validateUUID('id'), databaseHealthCheck, getTreatmentApplicators)
   .post(validateUUID('id'), criticalOperationHealthCheck, addApplicator);
 
-router.patch('/:treatmentId/applicators/:id', validateMultipleUUIDs(['treatmentId', 'id']), criticalOperationHealthCheck, updateApplicator);
+// Custom validation middleware for applicator updates that allows numeric IDs for test user
+const validateApplicatorUpdate = (req: Request, res: Response, next: NextFunction) => {
+  const { treatmentId, id } = req.params;
+
+  // UUID validation regex
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Always validate treatmentId as UUID
+  if (!treatmentId || !UUID_REGEX.test(treatmentId)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid treatmentId format'
+    });
+  }
+
+  // For test user, allow numeric IDs (test data applicators)
+  if (req.user?.email === 'test@example.com' && id && /^\d+$/.test(id)) {
+    return next(); // Skip UUID validation for numeric test IDs
+  }
+
+  // For all other cases, validate as UUID
+  if (!id || !UUID_REGEX.test(id)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid applicator ID format'
+    });
+  }
+
+  next();
+};
+
+router.patch('/:treatmentId/applicators/:id', validateApplicatorUpdate, criticalOperationHealthCheck, updateApplicator);
 
 export default router;

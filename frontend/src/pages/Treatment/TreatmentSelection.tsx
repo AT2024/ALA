@@ -638,7 +638,7 @@ const TreatmentSelection = () => {
                 maxLength={32}
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                 required
               />
             </div>
@@ -659,7 +659,7 @@ const TreatmentSelection = () => {
                   id="site"
                   value={formData.site}
                   onChange={(e) => setFormData(prev => ({ ...prev, site: e.target.value }))}
-                  className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                   required
                 >
                   <option value="">Select Site</option>
@@ -676,7 +676,7 @@ const TreatmentSelection = () => {
                   id="site"
                   value={formData.site}
                   readOnly
-                  className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
                 />
               )}
             </div>
@@ -687,33 +687,36 @@ const TreatmentSelection = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date
                 </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleDateChange('yesterday')}
-                    className={`rounded-md px-3 py-2 text-sm ${isDateActive('yesterday') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
-                  >
-                    Yesterday
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDateChange('today')}
-                    className={`rounded-md px-3 py-2 text-sm ${isDateActive('today') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
-                  >
-                    Today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDateChange('tomorrow')}
-                    className={`rounded-md px-3 py-2 text-sm ${isDateActive('tomorrow') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
-                  >
-                    Tomorrow
-                  </button>
+                {/* Mobile-first: Stack vertically on mobile, horizontal on sm+ */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDateChange('yesterday')}
+                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive('yesterday') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    >
+                      Yesterday
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDateChange('today')}
+                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive('today') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDateChange('tomorrow')}
+                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive('tomorrow') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    >
+                      Tomorrow
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={formData.date}
                     readOnly
-                    className="block rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
+                    className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm sm:w-auto"
                   />
                 </div>
               </div>
@@ -724,13 +727,13 @@ const TreatmentSelection = () => {
                 <label htmlFor="treatmentNumber" className="block text-sm font-medium text-gray-700 mb-2">
                   Treatment Number *
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-2">
                   <input
                     type="text"
                     id="treatmentNumber"
                     value={formData.treatmentNumber}
                     onChange={(e) => setFormData(prev => ({ ...prev, treatmentNumber: e.target.value }))}
-                    className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                     placeholder="Enter treatment number"
                     required
                   />
@@ -738,10 +741,10 @@ const TreatmentSelection = () => {
                     type="button"
                     onClick={searchTreatmentForRemoval}
                     disabled={searchingTreatment || !formData.site || !formData.treatmentNumber.trim()}
-                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="min-h-[44px] whitespace-nowrap rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
                   >
                     {searchingTreatment ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                         Searching...
                       </div>
@@ -813,7 +816,7 @@ const TreatmentSelection = () => {
                     id="patientId"
                     value={formData.patientId}
                     onChange={(e) => handlePatientSelection(e.target.value)}
-                    className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                     required
                   >
                     <option value="">Select Patient ID</option>
@@ -829,7 +832,7 @@ const TreatmentSelection = () => {
                       type="text"
                       value={availablePatients[0].id}
                       readOnly
-                      className="block w-full max-w-md rounded-md border border-green-300 bg-green-50 px-3 py-2 shadow-sm sm:text-sm"
+                      className="block w-full rounded-md border border-green-300 bg-green-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
                     />
                     <p className="text-sm text-green-600">
                       ✓ Patient automatically selected (only one available)
@@ -854,7 +857,7 @@ const TreatmentSelection = () => {
                   id="patientId"
                   value={formData.patientId}
                   readOnly
-                  className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
                 />
               </div>
             )}
@@ -868,7 +871,7 @@ const TreatmentSelection = () => {
                 id="seedQty"
                 value={formData.seedQty}
                 readOnly
-                className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
                 placeholder="Auto-filled after selecting Patient ID"
               />
             </div>
@@ -883,7 +886,7 @@ const TreatmentSelection = () => {
                 id="activityPerSeed"
                 value={formData.activityPerSeed}
                 readOnly
-                className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
                 placeholder="Auto-filled after selecting Patient ID"
               />
             </div>
@@ -900,7 +903,7 @@ const TreatmentSelection = () => {
                   maxLength={100}
                   value={formData.surgeon}
                   onChange={(e) => setFormData(prev => ({ ...prev, surgeon: e.target.value }))}
-                  className="block w-full max-w-md rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                   placeholder="Enter surgeon name"
                   required
                 />
@@ -918,7 +921,7 @@ const TreatmentSelection = () => {
                   id="surgeon"
                   value={formData.surgeon}
                   readOnly
-                  className="block w-full max-w-md rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
                 />
               </div>
             )}
@@ -927,7 +930,7 @@ const TreatmentSelection = () => {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="w-full max-w-md rounded-md bg-primary py-3 px-4 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-md bg-primary py-3 px-4 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] md:max-w-md"
                 disabled={
                   isLoading ||
                   !formData.email ||

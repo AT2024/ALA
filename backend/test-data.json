@@ -989,6 +989,20 @@
           "INSERTIONDATE": "2025-07-01T11:15:00Z",
           "SIBD_REPPRODPAL": 2010,
           "ORDNAME": "SO25000017FLEX"
+        },
+        {
+          "SERNUM": "SO25000017-A11",
+          "PARTNAME": "FLEX-00103-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
+          "INTDATA2": 3,
+          "INSERTEDSEEDSQTY": 3,
+          "USINGTYPE": "full",
+          "INSERTIONCOMMENTS": "Initial insertion completed successfully",
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": "Dr. Smith",
+          "INSERTIONDATE": "2025-07-01T11:20:00Z",
+          "SIBD_REPPRODPAL": 2011,
+          "ORDNAME": "SO25000017FLEX"
         }
       ]
     },
@@ -1091,6 +1105,20 @@
           "INSERTEDREPORTEDBY": "Dr. Johnson",
           "INSERTIONDATE": "2025-06-25T09:30:00Z",
           "SIBD_REPPRODPAL": 2026,
+          "ORDNAME": "SO25000018FLEX"
+        },
+        {
+          "SERNUM": "SO25000018-A8",
+          "PARTNAME": "FLEX-00103-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
+          "INTDATA2": 3,
+          "INSERTEDSEEDSQTY": 3,
+          "USINGTYPE": "full",
+          "INSERTIONCOMMENTS": "Initial insertion completed successfully",
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": "Dr. Johnson",
+          "INSERTIONDATE": "2025-06-25T09:35:00Z",
+          "SIBD_REPPRODPAL": 2027,
           "ORDNAME": "SO25000018FLEX"
         }
       ]
@@ -1222,6 +1250,20 @@
           "INSERTEDREPORTEDBY": "Dr. Williams",
           "INSERTIONDATE": "2025-06-30T14:40:00Z",
           "SIBD_REPPRODPAL": 2048,
+          "ORDNAME": "SO25000019FLEX"
+        },
+        {
+          "SERNUM": "SO25000019-A10",
+          "PARTNAME": "FLEX-00103-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
+          "INTDATA2": 3,
+          "INSERTEDSEEDSQTY": 3,
+          "USINGTYPE": "full",
+          "INSERTIONCOMMENTS": "Initial insertion completed successfully",
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": "Dr. Williams",
+          "INSERTIONDATE": "2025-06-30T14:45:00Z",
+          "SIBD_REPPRODPAL": 2049,
           "ORDNAME": "SO25000019FLEX"
         }
       ]

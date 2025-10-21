@@ -63,9 +63,10 @@ treatment_id, added_by, removed_by, etc.
 
 ### 🌐 Production URLs
 
-- **Frontend**: http://20.217.84.100:3000
-- **Backend API**: http://20.217.84.100:5000/api/health
-- **Login Page**: http://20.217.84.100:3000/login
+- **Production URL (HTTPS)**: https://ala-app.israelcentral.cloudapp.azure.com
+- **Backend API**: https://ala-app.israelcentral.cloudapp.azure.com/api/health
+- **Login Page**: https://ala-app.israelcentral.cloudapp.azure.com/login
+- **Direct IP (Emergency/HTTP only)**: http://20.217.84.100:8080
 
 ### 🔄 Quick Recovery Instructions
 
@@ -82,7 +83,7 @@ ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f azure/docker-c
 ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f azure/docker-compose.azure.yml --env-file azure/.env.azure up -d --build"
 
 # 3. Verify working status
-curl http://20.217.84.100:5000/api/health
+curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 # Should return: {"databaseConnected":true}
 ```
 
@@ -90,7 +91,7 @@ curl http://20.217.84.100:5000/api/health
 
 ```bash
 # Backend health (should show databaseConnected: true)
-curl http://20.217.84.100:5000/api/health
+curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 
 # Check all tables exist
 ssh azureuser@20.217.84.100 "docker exec ala-db-azure psql -U ala_user -d ala_production -c '\\dt'"
@@ -98,15 +99,16 @@ ssh azureuser@20.217.84.100 "docker exec ala-db-azure psql -U ala_user -d ala_pr
 # Check containers running
 ssh azureuser@20.217.84.100 "docker ps | grep ala-"
 
-# Test user authentication 
-curl -X POST http://20.217.84.100:5000/api/auth/request-code \
+# Test user authentication
+curl -X POST https://ala-app.israelcentral.cloudapp.azure.com/api/auth/request-code \
   -H "Content-Type: application/json" \
-  -d '{"identifier":"alexs@alphatau.com"}'
+  -d '{"identifier":"test@example.com"}'
 ```
 
 ### ⚠️ Important Notes
 
-- This version uses HTTP (not HTTPS) and works correctly on Azure VM
+- Current production uses HTTPS with SSL certificates at https://ala-app.israelcentral.cloudapp.azure.com
+- This tag version originally used HTTP but has been upgraded to HTTPS in production
 - Database has `underscored: true` setting requiring field mappings
 - All Priority API integrations functional
 - Bypass authentication works for `alexs@alphatau.com`

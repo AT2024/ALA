@@ -12,6 +12,8 @@ yarn-error.log*
 # Build output
 dist/
 build/
+backend/dist/
+frontend/dist/
 
 # Vite
 .vite/
@@ -61,6 +63,9 @@ backups/
 # Docker
 *.pid
 docker-compose.override.yml
+# Root-level docker-compose files (use deployment/ directory instead)
+/docker-compose.yml
+/docker-compose.*.yml
 
 # OS
 .DS_Store
@@ -123,3 +128,8 @@ ssl-certs/
 
 # Generated documentation
 docs/generated/
+
+# Test scripts (local development only)
+test-removal*.js
+test-removal.sh
+test-azure*.js

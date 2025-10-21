@@ -10,6 +10,7 @@ const SeedRemoval = () => {
   const {
     currentTreatment,
     applicators,
+    setApplicators,
     updateApplicator,
     totalSeeds,
     getApplicatorGroups,
@@ -60,9 +61,12 @@ const SeedRemoval = () => {
 
     try {
       const data = await treatmentService.getApplicators(currentTreatment.id);
-      // This would normally update the state in the TreatmentContext
-      // But for demo purposes, we're just logging
       console.log('Fetched applicators:', data);
+
+      // Update the context with the fetched applicators
+      if (data && data.length > 0) {
+        setApplicators(data);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch applicators');
     } finally {

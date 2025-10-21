@@ -21,7 +21,7 @@ services:
   # =================================================================
   api:
     build:
-      context: ./backend
+      context: ../../backend
       dockerfile: Dockerfile
       # Use development target by default
       target: development
@@ -46,11 +46,11 @@ services:
       - ala-network
     volumes:
       # Mount source code for hot reload
-      - ./backend:/usr/src/app
+      - ../../backend:/usr/src/app
       # Preserve node_modules (performance optimization)
       - /usr/src/app/node_modules
       # Mount logs for easier debugging
-      - ./backend/logs:/usr/src/app/logs
+      - ../../backend/logs:/usr/src/app/logs
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/health"]
       interval: 30s
@@ -63,7 +63,7 @@ services:
   # =================================================================
   frontend:
     build:
-      context: ./frontend
+      context: ../../frontend
       dockerfile: Dockerfile
       # Use development target by default
       target: development
@@ -86,7 +86,7 @@ services:
       - ala-network
     volumes:
       # Mount source code for hot reload
-      - ./frontend:/usr/src/app
+      - ../../frontend:/usr/src/app
       # Preserve node_modules (performance optimization)
       - /usr/src/app/node_modules
     healthcheck:
