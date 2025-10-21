@@ -258,6 +258,18 @@ _For full context, see [Architectural Decision Records](docs/architecture/adr/)_
 - **Solution**: Verify DATABASE_URL format and network access
 - **Prevention**: Health check endpoint monitors DB connectivity
 
+**Pitfall**: Nginx config change not taking effect after env var update
+- **Root Cause**: Nginx config is BAKED into Docker image at build time (Dockerfile line 120: `COPY ${NGINX_CONFIG}`)
+- **Symptoms**: Environment says `NGINX_CONFIG=nginx.https.azure.conf` but container runs HTTP-only config
+- **Example**: Changing from HTTP to HTTPS by updating `.env.azure.https` without rebuilding image
+- **Solution**: ALWAYS rebuild frontend image after changing nginx config: `docker-compose build --no-cache frontend`
+- **Prevention**: Pre-deployment validation script to verify config file exists and nginx syntax is valid
+- **Critical**: Image caches old config - must rebuild to bake in new config
+- **Detection**: Check running container config: `docker exec ala-frontend-azure cat /etc/nginx/conf.d/default.conf`
+- **Recovery**: Rebuild with correct config, restart container with new image
+- **Lesson**: Docker ARG values are resolved at BUILD time, not RUN time - config changes require image rebuild
+- **Date**: 2025-10-21 - Production HTTPS outage due to missing image rebuild after nginx config update
+
 _Document new pitfalls in [docs/learnings/](docs/learnings/) as they're discovered_
 
 ## Testing Patterns
