@@ -1,18 +1,24 @@
 # ALA Environment Configuration System
 
-This directory contains all environment configuration files for the ALA (Accountability Log Application) project. The system is designed for security, maintainability, and ease of use across different deployment environments.
+This directory contains all environment configuration files for the ALA (Alpha Tau Medical Treatment Tracking) project. The system is designed for security, maintainability, and ease of use across different deployment environments.
 
-## 📁 File Structure
+## 📁 File Structure (After Cleanup - October 2025)
 
 ```
 environments/
-├── .env.development     # Development environment settings
-├── .env.production      # Production environment settings  
-├── .env.example         # Template with all available options
-├── .env.local.template  # Template for personal overrides
-├── azure.env           # Azure deployment configuration
-└── README.md           # This documentation
+├── .env.development        # ✅ ACTIVE: Local Docker development
+├── .env.example            # 📄 Template with all available options
+├── .env.local.template     # 📄 Template for personal overrides
+├── .env.staging.template   # 📄 Template for staging environment
+└── README.md              # This documentation
+
+../azure/
+├── .env.azure.https        # ✅ ACTIVE: Azure production (HTTPS)
+├── .env.azure.https.template  # 📄 Template for Azure HTTPS
+└── .env.staging.template   # 📄 Template for staging
 ```
+
+**Note:** Cleanup performed on 2025-10-21 - Removed 7 confusing/duplicate files
 
 ## 🔄 Environment Loading Priority
 
@@ -101,12 +107,18 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/ala_db
 
 ### Priority System Integration
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PRIORITY_URL` | Priority API endpoint | `https://priority.example.com/odata/...` |
+| Variable | Description | Current Value (Production) |
+|----------|-------------|---------------------------|
+| `PRIORITY_URL` | Priority API endpoint | `https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24` |
 | `PRIORITY_USERNAME` | Priority API username | `API` |
-| `PRIORITY_PASSWORD` | Priority API password | `your-password` |
-| `SYNC_WITH_PRIORITY` | Enable Priority sync | `true` or `false` |
+| `PRIORITY_PASSWORD` | Priority API password | `Ap@123456` |
+| `SYNC_WITH_PRIORITY` | Enable Priority sync | `true` |
+| `BYPASS_PRIORITY_EMAILS` | Bypass Priority for test users | `test@example.com` |
+
+**⚠️ Important Priority Notes:**
+- ✅ **Current (working):** `https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24`
+- ❌ **Old (broken):** `https://priority.alphatau1.com/odata/Priority/tabula.ini/a100722/` - DO NOT USE
+- Test user `test@example.com` (code: `123456`) bypasses Priority API for development
 
 ### Frontend Configuration (Vite)
 
@@ -128,21 +140,38 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/ala_db
 
 ## 🛠️ Environment Management Tools
 
-### Setup Script
+### Docker Commands (Current System)
+
+**Local Development:**
+```bash
+cd deployment/docker
+docker-compose -f docker-compose.dev.yml up -d
+docker logs ala-api-docker --tail 50
+docker-compose -f docker-compose.dev.yml down
+```
+
+**Azure Production:**
+```bash
+ssh azureuser@20.217.84.100
+cd ~/ala-improved/deployment/azure
+docker-compose -f docker-compose.azure.yml --env-file .env.azure.https up -d --build
+docker logs ala-api-azure --tail 50
+```
+
+**Reload Environment Variables (Important!):**
+```bash
+# MUST recreate containers, not just restart
+docker-compose -f docker-compose.dev.yml up -d --force-recreate api
+```
+
+### Setup Script (Legacy - May Not Exist)
 
 ```bash
 # Interactive setup for development
 node scripts/setup.js setup
 
-# Switch between environments  
-node scripts/setup.js switch development
-node scripts/setup.js switch production
-
 # Validate current configuration
 node scripts/setup.js validate
-
-# Check system dependencies
-node scripts/setup.js check
 ```
 
 ### NPM Scripts (after updating package.json)

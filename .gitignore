@@ -23,6 +23,9 @@ logs/
 *.log
 
 # Environment variables - ignore all except templates and examples
+# After cleanup (2025-10-21): Only 2 active env files should exist:
+#   - deployment/environments/.env.development (local)
+#   - deployment/azure/.env.azure.https (production)
 .env
 .env.*
 !.env.*.template
@@ -34,16 +37,22 @@ environments/.env*
 !environments/.env.*.template
 !environments/.env.template
 !environments/.env.example
+deployment/environments/.env.development
+deployment/environments/.env*
+!deployment/environments/.env.*.template
+!deployment/environments/.env.example
 
-# Backend environment files
+# Backend environment files (all should be ignored - Docker uses deployment/environments)
 backend/.env*
 !backend/.env.template
 !backend/.env.example
 
-# Azure environment files
+# Azure environment files (only .env.azure.https should exist in production)
 azure/.env*
+deployment/azure/.env*
 !azure/.env.*.template
 !azure/.env.template
+!deployment/azure/.env.*.template
 
 # Environment file backups
 .env.backup.*

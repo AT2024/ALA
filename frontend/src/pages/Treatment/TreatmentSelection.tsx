@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, addDays, subDays } from 'date-fns';
+import { Combobox } from '@headlessui/react';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { useAuth } from '@/context/AuthContext';
@@ -82,6 +83,7 @@ const TreatmentSelection = () => {
 
   const [availablePatients, setAvailablePatients] = useState<PriorityPatient[]>([]);
   const [availableSites, setAvailableSites] = useState<PrioritySite[]>([]);
+  const [siteQuery, setSiteQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -607,6 +609,14 @@ const TreatmentSelection = () => {
     }
   };
 
+  // Filter sites based on search query (search by name or code)
+  const filteredSites = siteQuery === ''
+    ? availableSites
+    : availableSites.filter((site) =>
+        site.custDes.toLowerCase().includes(siteQuery.toLowerCase()) ||
+        site.custName.toLowerCase().includes(siteQuery.toLowerCase())
+      );
+
   return (
     <Layout title="Treatment Selection" showBackButton={true}>
       <div className="space-y-6">
@@ -654,21 +664,51 @@ const TreatmentSelection = () => {
                   <span className="text-sm text-gray-500">Loading sites...</span>
                 </div>
               ) : user?.fullAccess ? (
-                // ATM users: choose from scrolling list of all sites
-                <select
-                  id="site"
+                // ATM users: searchable combobox for all sites
+                <Combobox
                   value={formData.site}
-                  onChange={(e) => setFormData(prev => ({ ...prev, site: e.target.value }))}
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
-                  required
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, site: value || '' }));
+                    setSiteQuery('');
+                  }}
                 >
-                  <option value="">Select Site</option>
-                  {availableSites.map((site) => (
-                    <option key={site.custName} value={site.custName}>
-                      {site.custDes} ({site.custName})
-                    </option>
-                  ))}
-                </select>
+                  <div className="relative">
+                    <Combobox.Input
+                      className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
+                      onChange={(event) => setSiteQuery(event.target.value)}
+                      displayValue={(custName: string) => {
+                        const site = availableSites.find(s => s.custName === custName);
+                        return site ? `${site.custDes} (${site.custName})` : '';
+                      }}
+                      placeholder="Search sites..."
+                    />
+                    <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg border border-gray-300 focus:outline-none text-base md:text-sm">
+                      {filteredSites.length === 0 && siteQuery !== '' ? (
+                        <div className="relative cursor-default select-none px-4 py-2 text-gray-700">
+                          No sites found.
+                        </div>
+                      ) : (
+                        filteredSites.map((site) => (
+                          <Combobox.Option
+                            key={site.custName}
+                            value={site.custName}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-2 px-3 ${
+                                active ? 'bg-primary text-white' : 'text-gray-900'
+                              }`
+                            }
+                          >
+                            {({ selected }) => (
+                              <span className={selected ? 'font-semibold' : 'font-normal'}>
+                                {site.custDes} ({site.custName})
+                              </span>
+                            )}
+                          </Combobox.Option>
+                        ))
+                      )}
+                    </Combobox.Options>
+                  </div>
+                </Combobox>
               ) : (
                 // Site users: filled automatically from their assigned site (read-only)
                 <input
