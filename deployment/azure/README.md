@@ -1,5 +1,24 @@
 # ALA Application - Azure VM Production Deployment Guide
 
+⚠️ **DEPRECATED - October 2025**
+
+**This documentation is DEPRECATED.** The deployment system has been radically simplified.
+
+**For current deployment instructions, see:**
+- [deployment/README.md](../README.md) - Current deployment guide
+- [deployment/deploy](../deploy) - Simplified deployment script
+
+**To deploy now:**
+```bash
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
+```
+
+---
+
+## Legacy Documentation (Archived)
+
+The content below describes the OLD deployment system and is preserved for historical reference only.
+
 ## 🚀 Quick Start (First Time Setup)
 
 This guide explains the **correct production approach** for deploying the ALA medical application to Azure VM.

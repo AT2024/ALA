@@ -28,8 +28,8 @@ cd frontend && npm run test:e2e      # Playwright E2E tests
 
 ### Production (Azure VM)
 ```bash
-# Quick deployment
-ssh azureuser@20.217.84.100 "cd ala-improved && bash deployment/azure/deploy-https.sh"
+# Quick deployment (radically simplified - October 2025)
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 
 # Health check
 curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
@@ -38,6 +38,8 @@ curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 # Frontend: https://ala-app.israelcentral.cloudapp.azure.com
 # Test user: test@example.com (code: 123456)
 ```
+
+See [deployment/README.md](deployment/README.md) for complete deployment guide.
 
 ## 📁 Project Structure
 

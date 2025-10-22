@@ -1,5 +1,34 @@
 # Azure VM Production Deployment Guide
 
+⚠️ **UPDATED October 2025** - Deployment system radically simplified from 1,500+ lines to 120 lines
+
+## Quick Deployment (Current Method)
+
+The deployment system has been radically simplified to **one command**:
+
+```bash
+ssh azureuser@20.217.84.100
+cd ~/ala-improved/deployment
+./deploy
+```
+
+That's it. No confusion. No multiple scripts. **One command.**
+
+## What It Does Automatically
+
+1. ✅ Backs up the database to `~/ala-improved/backups/`
+2. ✅ Pulls latest code from git
+3. ✅ Builds containers with `--no-cache`
+4. ✅ Starts services with health checks
+5. ✅ Waits 60 seconds for health verification
+6. ✅ Checks backend `/api/health` endpoint
+7. ✅ **Automatically rolls back if any step fails**
+8. ✅ Keeps last 10 backups, deletes older ones
+
+**Downtime:** ~2-3 minutes | **Risk:** Minimal (automatic rollback)
+
+See [../../deployment/README.md](../../deployment/README.md) for complete documentation.
+
 ## Environment Details
 - **VM IP**: 20.217.84.100 (ATM-ISR-Docker resource group)
 - **SSH Access**: `ssh azureuser@20.217.84.100`
@@ -9,10 +38,21 @@
 - **HTTPS Status**: ✅ Enabled with SSL certificates
 - **Test User**: test@example.com (code: 123456)
 
-## Quick Deployment
+---
 
-### Automated Deployment (Recommended)
+## Legacy Documentation (Archived - October 2025)
+
+⚠️ **The sections below describe the OLD deployment system (before simplification).**
+
+They are preserved for historical reference only. **Do not use these methods.**
+
+For current deployment, use `cd ~/ala-improved/deployment && ./deploy` as shown above.
+
+---
+
+### Old Automated Deployment (DEPRECATED)
 ```bash
+# OLD METHOD - DO NOT USE
 # Deploy with HTTPS enabled
 ssh azureuser@20.217.84.100 "cd ala-improved && bash deployment/azure/deploy-https.sh"
 ```

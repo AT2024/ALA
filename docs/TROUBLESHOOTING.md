@@ -162,15 +162,14 @@ ssh azureuser@20.217.84.100 "cd ala-improved && \
   --env-file deployment/azure/.env.azure up -d --build"
 ```
 
-#### Containers Not Starting (Azure HTTPS)
+#### Containers Not Starting (Azure Production)
 ```bash
-# Clean restart with HTTPS
-ssh azureuser@20.217.84.100 "cd ala-improved && \
-  docker-compose -f deployment/azure/docker-compose.https.azure.yml down && \
+# Clean restart (uses simplified deployment system)
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && \
+  docker-compose down && \
   docker system prune -f"
 
-ssh azureuser@20.217.84.100 "cd ala-improved && \
-  ~/ala-improved/deployment/scripts/deploy-https.sh"
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 ```
 
 ### Database Issues
@@ -299,9 +298,8 @@ docker exec -it postgres psql -U admin -d medical_app \
 git fetch --tags
 git checkout v1.0-working-production-2025-09-10
 
-# Redeploy on Azure
-ssh azureuser@20.217.84.100 "cd ala-improved && \
-  ~/ala-improved/deployment/scripts/deploy.sh"
+# Redeploy on Azure (uses simplified deployment system)
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 ```
 
 ### Database Recovery
@@ -419,6 +417,6 @@ ssh azureuser@20.217.84.100 "docker restart ala-db-azure"
 # Local
 docker-compose down && docker-compose up -d --build
 
-# Azure
-ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy.sh"
+# Azure (uses simplified deployment system)
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 ```

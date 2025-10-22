@@ -164,6 +164,50 @@ This section documents our self-improving development system where each task mak
 3. `medical-safety-reviewer` - Patient safety and data integrity (for critical features)
 4. `judge_code_change` - Final validation gate
 
+## Agent Behavior and Training
+
+### How Agents Learn New Methods
+
+Claude AI agents learn deployment and operational methods from documentation files:
+
+**Primary Learning Sources:**
+1. **CLAUDE.md** (this file) - Core project context and behavioral guidelines
+2. **.claude/agents/*.md** - Individual agent instructions (e.g., `deployment-azure.md`)
+3. **Documentation files** - README.md, TROUBLESHOOTING.md, deployment guides
+
+**Important:** When deployment methods change, you must update ALL documentation files that reference the old method. Agents will continue using old methods until their documentation is updated.
+
+### Deployment Agent Configuration
+
+The `deployment-azure` agent reads its instructions from [.claude/agents/deployment-azure.md](.claude/agents/deployment-azure.md).
+
+**Current deployment method (October 2025):**
+```bash
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
+```
+
+**If an agent uses an old deployment command**, it means the documentation hasn't been updated. Update these files:
+- `CLAUDE.md` (lines 78-118)
+- `README.md` (production deployment section)
+- `docs/deployment/AZURE_DEPLOYMENT.md`
+- `docs/TROUBLESHOOTING.md` (deployment commands)
+- `.claude/agents/deployment-azure.md` (agent instructions)
+- `deployment/azure/*.md` (add deprecation notices)
+
+### Documentation-Driven Behavior
+
+Agents don't have memory between sessions. They rely on:
+- **Project instructions** (CLAUDE.md) for core behavior
+- **Agent-specific instructions** (.claude/agents/*.md) for specialized tasks
+- **Documentation files** for operational procedures
+- **Code comments** for implementation details
+
+**Best practices:**
+- Document important decisions in CLAUDE.md
+- Update agent instructions when workflows change
+- Keep documentation consistent across all files
+- Add deprecation notices to old documentation
+
 ## Learning Loops
 
 After completing each task, capture knowledge to make future work easier:

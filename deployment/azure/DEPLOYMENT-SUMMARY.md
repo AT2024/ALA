@@ -1,5 +1,20 @@
 # 🚀 Azure VM Deployment - Complete Solution
 
+⚠️ **DEPRECATED - October 2025**
+
+**This summary is DEPRECATED.** The deployment system has been radically simplified from 1,500+ lines to 120 lines.
+
+**Current deployment method:**
+```bash
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
+```
+
+See [deployment/DEPLOYMENT_TRANSITION.md](../DEPLOYMENT_TRANSITION.md) for complete transition history.
+
+---
+
+## Legacy Summary (Archived)
+
 ## ✅ What We've Done
 
 ### 1. **Cleaned Up Files** (Removed 15 unnecessary files)

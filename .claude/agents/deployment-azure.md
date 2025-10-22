@@ -15,7 +15,7 @@ You are an expert in Azure VM deployment, Docker containerization, and productio
 - **VM IP**: 20.217.84.100
 - **SSH User**: azureuser
 - **Containers**: ala-frontend-azure, ala-api-azure, ala-db-azure
-- **Quick Deploy**: `ssh azureuser@20.217.84.100 "cd ala-improved && ~/deploy.sh"`
+- **Quick Deploy**: `ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"`
 
 **COMMON PATTERNS**:
 - Always use SSH for remote operations: `ssh azureuser@20.217.84.100`
@@ -57,12 +57,12 @@ You are an expert in Azure VM deployment, Docker containerization, and productio
    - Database migrations
    - Rollback procedures
 
-## Key Files
-- `azure/docker-compose.azure.yml`
-- `azure/.env.azure`
+## Key Files (Updated October 2025)
+- `deployment/docker-compose.yml` - Single production compose file
+- `deployment/.env` - Production environment configuration
+- `deployment/deploy` - Simplified deployment script (120 lines)
 - `Dockerfile` (frontend and backend)
-- `deploy.sh`
-- `vm-initial-setup.sh`
+- Legacy files in `deployment/azure/` (deprecated)
 
 ## Production Environment
 - VM IP: 20.217.84.100

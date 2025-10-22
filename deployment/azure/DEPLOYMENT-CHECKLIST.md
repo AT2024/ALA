@@ -1,5 +1,20 @@
 # ✅ Azure VM Deployment Checklist
 
+⚠️ **DEPRECATED - October 2025**
+
+**This checklist is DEPRECATED.** The deployment system has been radically simplified.
+
+**To deploy now:**
+```bash
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
+```
+
+See [deployment/README.md](../README.md) for current deployment documentation.
+
+---
+
+## Legacy Checklist (Archived)
+
 ## 🎯 Goal: Deploy ALA Application to Azure VM (20.217.84.100)
 
 ---
