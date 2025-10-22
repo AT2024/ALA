@@ -1,0 +1,101 @@
+version: '3.8'
+
+# ======================================================================
+# ALA Medical Application - Production Docker Compose
+# ======================================================================
+# Single compose file for production deployment
+# Simple, reliable, boring deployment
+#
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose logs -f        # View logs
+#   docker-compose down           # Stop all services
+#
+# Environment: Configure via .env file (see .env.production.template)
+
+services:
+  # ===================================================================
+  # PostgreSQL Database
+  # ===================================================================
+  db:
+    image: postgres:15-alpine
+    container_name: ala-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ala_production}
+      POSTGRES_USER: ${POSTGRES_USER:-ala_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-ala_user}", "-d", "${POSTGRES_DB:-ala_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ===================================================================
+  # Backend API (Express + TypeScript)
+  # ===================================================================
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: ala-api
+    restart: always
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NODE_ENV: production
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET}
+      PRIORITY_API_URL: ${PRIORITY_API_URL}
+      PRIORITY_API_USERNAME: ${PRIORITY_API_USERNAME}
+      PRIORITY_API_PASSWORD: ${PRIORITY_API_PASSWORD}
+      PRIORITY_API_COMPANY: ${PRIORITY_API_COMPANY}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===================================================================
+  # Frontend (React + Vite + Nginx)
+  # ===================================================================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.https.azure.conf}
+    container_name: ala-frontend
+    restart: always
+    ports:
+      - "80:8080"
+      - "443:8443"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ======================================================================
+# Volumes
+# ======================================================================
+volumes:
+  postgres-data:
+    driver: local

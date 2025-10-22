@@ -75,27 +75,47 @@ For detailed information, consult these specialized documents:
 - **Test User**: test@example.com (code: 123456)
 - **Admin User**: alexs@alphatau.com (Position 99)
 
-## Critical Deployment Information
+## Deployment (Radically Simplified - October 2025)
 
 ### Production Deployment (Azure VM)
-**ALWAYS use the HTTPS environment file for production:**
+**One command. That's it.**
 ```bash
-cd ~/ala-improved/deployment/azure
-docker-compose -f docker-compose.azure.yml --env-file .env.azure.https up -d --build
+cd ~/ala-improved/deployment
+./deploy
 ```
 
-**Critical Configuration:**
-- Environment file: `.env.azure.https` (ONLY file to use for production)
-- Nginx config: `nginx.https.azure.conf` (ports 8080/8443 for non-root user)
-- Port mappings: Host 80→Container 8080, Host 443→Container 8443
-- Set `NGINX_CONFIG=nginx.https.azure.conf` in environment file
-- Set port variables: `NGINX_HTTP_PORT=8080`, `NGINX_HTTPS_PORT=8443`
+**What it does automatically:**
+- ✅ Backs up database
+- ✅ Pulls latest code
+- ✅ Builds and starts containers
+- ✅ Verifies health checks
+- ✅ Rolls back on any failure
 
-**DO NOT:**
-- Use `.env.azure` - this file has been removed to prevent confusion
-- Use `nginx.staging.conf` - this is for staging only (port 8080 only)
-- Guess which environment file to use - always use `.env.azure.https`
-- Modify port mappings without understanding nginx listen ports
+### Setup (First Time Only)
+1. SSH to Azure VM: `ssh azureuser@20.217.84.100`
+2. Copy environment template: `cp deployment/.env.production.template deployment/.env`
+3. Edit `.env` file and fill in your secrets (database password, JWT secret, Priority API credentials)
+4. Deploy: `cd deployment && ./deploy`
+
+### Local Development
+Same docker-compose.yml, just create `.env` with local settings:
+```bash
+cd deployment
+cp .env.production.template .env
+# Edit .env for local URLs (localhost instead of production domain)
+docker-compose up
+```
+
+### Files You Need
+```
+deployment/
+├── docker-compose.yml          # Single compose file
+├── deploy                      # Single deployment script
+├── .env                       # Your secrets (git-ignored)
+└── .env.production.template   # Template for .env
+```
+
+**That's it.** No azure/, no scripts/, no multiple configs. Simple.
 
 ---
 
@@ -240,35 +260,30 @@ _For full context, see [Architectural Decision Records](docs/architecture/adr/)_
 - **Critical**: Always have rollback plan
 
 ### Deployment Issues
-**Pitfall**: Using wrong environment file or nginx configuration
-- **Root Cause**: Multiple environment files causing confusion, wrong nginx config in Docker cache
-- **Symptoms**: Site not accessible (ERR_CONNECTION_REFUSED), containers unhealthy, wrong ports
-- **Solution**: ALWAYS use `.env.azure.https` for production HTTPS deployment
-- **Prevention**: Removed confusing `.env.azure` file, documented correct config in CLAUDE.md
-- **Critical**: Nginx uses ports 8080/8443 (non-root), Docker maps 80→8080, 443→8443
-- **Fix**: Set `NGINX_CONFIG=nginx.https.azure.conf`, `NGINX_HTTP_PORT=8080`, `NGINX_HTTPS_PORT=8443`
-- **Lesson**: Never change deployment without understanding current state, verify port mappings match nginx config
 
-**Pitfall**: Container startup failures due to missing env vars
-- **Solution**: Validate .env file before deployment
-- **Prevention**: deployment-azure agent checks configuration
-- **Pattern**: [Deployment checklist](docs/deployment/DEPLOYMENT_CHECKLIST.md)
+**October 2025: Deployment System Radically Simplified**
+- **Old Problem**: 5+ deployment scripts, 7+ env files, constant confusion
+- **Solution**: ONE deploy script, ONE docker-compose.yml, ONE .env template
+- **Result**: Impossible to use wrong script/config (only one of each exists)
+- **See**: `deployment/archive/README.md` for history of the simplification
 
-**Pitfall**: Database connection failures after deployment
-- **Solution**: Verify DATABASE_URL format and network access
-- **Prevention**: Health check endpoint monitors DB connectivity
+**Pitfall**: Missing or misconfigured .env file
+- **Symptom**: Deployment fails with "POSTGRES_PASSWORD not set" or similar
+- **Solution**: Copy `.env.production.template` to `.env` and fill in secrets
+- **Prevention**: deploy script checks for `.env` file existence before proceeding
+- **Quick Fix**: `cd deployment && cp .env.production.template .env && vim .env`
 
-**Pitfall**: Nginx config change not taking effect after env var update
-- **Root Cause**: Nginx config is BAKED into Docker image at build time (Dockerfile line 120: `COPY ${NGINX_CONFIG}`)
-- **Symptoms**: Environment says `NGINX_CONFIG=nginx.https.azure.conf` but container runs HTTP-only config
-- **Example**: Changing from HTTP to HTTPS by updating `.env.azure.https` without rebuilding image
-- **Solution**: ALWAYS rebuild frontend image after changing nginx config: `docker-compose build --no-cache frontend`
-- **Prevention**: Pre-deployment validation script to verify config file exists and nginx syntax is valid
-- **Critical**: Image caches old config - must rebuild to bake in new config
-- **Detection**: Check running container config: `docker exec ala-frontend-azure cat /etc/nginx/conf.d/default.conf`
-- **Recovery**: Rebuild with correct config, restart container with new image
-- **Lesson**: Docker ARG values are resolved at BUILD time, not RUN time - config changes require image rebuild
-- **Date**: 2025-10-21 - Production HTTPS outage due to missing image rebuild after nginx config update
+**Pitfall**: Container startup failures
+- **Symptom**: Health checks fail, deployment rolls back automatically
+- **Solution**: Check logs: `cd deployment && docker-compose logs`
+- **Common Causes**: Database password mismatch, incorrect API URLs
+- **Prevention**: Docker health checks catch issues early, automatic rollback prevents bad deployments
+
+**Pitfall**: Nginx config not taking effect
+- **Root Cause**: Nginx config is baked into Docker image at build time
+- **Solution**: The deploy script always rebuilds with `--no-cache`, so nginx config changes take effect
+- **Manual Rebuild**: `cd deployment && docker-compose build --no-cache frontend`
+- **Lesson**: Accept Docker's immutability - rebuild instead of fighting it
 
 _Document new pitfalls in [docs/learnings/](docs/learnings/) as they're discovered_
 
