@@ -53,13 +53,16 @@ const ProgressTracker = () => {
     </div>
   );
 
-  const ApplicatorTypeIndicator = ({ seedCount, count }: {
+  const ApplicatorTypeIndicator = ({ seedCount, used, total }: {
     seedCount: number;
-    count: number;
+    used: number;
+    total: number;
   }) => (
     <div className="flex items-center gap-2">
       <div className="w-3 h-3 rounded-full bg-purple-400" />
-      <span className="text-sm text-gray-700">Applicator {seedCount} seeds: {count}</span>
+      <span className="text-sm text-gray-700">
+        Applicator {seedCount} seeds: {used > 0 ? `${used}/${total} used` : total}
+      </span>
     </div>
   );
 
@@ -127,11 +130,12 @@ const ProgressTracker = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-700">Available Applicators by Type</h4>
             <div className="grid grid-cols-1 gap-2">
-              {getApplicatorTypeBreakdown().map(({ seedCount, count }) => (
-                <ApplicatorTypeIndicator 
+              {getApplicatorTypeBreakdown().map(({ seedCount, used, total }) => (
+                <ApplicatorTypeIndicator
                   key={seedCount}
                   seedCount={seedCount}
-                  count={count}
+                  used={used}
+                  total={total}
                 />
               ))}
             </div>

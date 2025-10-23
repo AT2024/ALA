@@ -86,7 +86,7 @@ interface TreatmentContextType {
   getUsageTypeDistribution: () => { full: number; faulty: number; none: number };
   getActualTotalSeeds: () => number;
   getActualInsertedSeeds: () => number;
-  getApplicatorTypeBreakdown: () => { seedCount: number; count: number }[];
+  getApplicatorTypeBreakdown: () => { seedCount: number; used: number; total: number }[];
   getFilteredAvailableApplicators: () => Applicator[];
   getApplicatorGroups: () => ApplicatorGroup[];
   getRemovalProgress: () => RemovalProgress;
@@ -260,16 +260,36 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const getApplicatorTypeBreakdown = () => {
-    const filteredAvailable = getFilteredAvailableApplicators();
-    const breakdown: { [seedCount: number]: number } = {};
+    if (!currentTreatment) return [];
 
+    const breakdown: { [seedCount: number]: { total: number; used: number } } = {};
+
+    // Count remaining available applicators (already filtered by current patient)
+    const filteredAvailable = getFilteredAvailableApplicators();
     filteredAvailable.forEach(app => {
-      breakdown[app.seedQuantity] = (breakdown[app.seedQuantity] || 0) + 1;
+      if (!breakdown[app.seedQuantity]) {
+        breakdown[app.seedQuantity] = { total: 0, used: 0 };
+      }
+      breakdown[app.seedQuantity].total++;
+    });
+
+    // Count used applicators and add to total
+    // processedApplicators is already scoped to current treatment
+    processedApplicators.forEach(app => {
+      if (!breakdown[app.seedQuantity]) {
+        breakdown[app.seedQuantity] = { total: 0, used: 0 };
+      }
+      breakdown[app.seedQuantity].total++;  // Add to total
+      breakdown[app.seedQuantity].used++;   // Increment used
     });
 
     // Convert to sorted array (highest seed count first)
     return Object.entries(breakdown)
-      .map(([seedCount, count]) => ({ seedCount: parseInt(seedCount), count }))
+      .map(([seedCount, counts]) => ({
+        seedCount: parseInt(seedCount),
+        used: counts.used,
+        total: counts.total
+      }))
       .sort((a, b) => b.seedCount - a.seedCount);
   };
 
