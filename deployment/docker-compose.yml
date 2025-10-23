@@ -27,8 +27,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Database secured - no external port exposure
+    # For admin access, use SSH tunnel: ssh -L 5432:localhost:5432 azureuser@20.217.84.100
+    # Backend connects via internal Docker network (db:5432)
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-ala_user}", "-d", "${POSTGRES_DB:-ala_production}"]
       interval: 10s
