@@ -96,7 +96,9 @@ services:
       db:
         condition: service_healthy
     networks:
-      - app-network
+      app-network:
+        aliases:
+          - api  # DNS alias for frontend to resolve
     # No external port exposure - traffic goes through proxy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
@@ -165,7 +167,9 @@ services:
       db:
         condition: service_healthy
     networks:
-      - app-network
+      app-network:
+        aliases:
+          - api  # DNS alias for frontend to resolve
     # No external port exposure - traffic goes through proxy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
