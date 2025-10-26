@@ -2,6 +2,29 @@
 
 > **Deployment should be boring.** - DHH
 
+---
+
+## 🆕 **NEW: Blue-Green Deployment Available**
+
+**Zero-downtime deployments with instant rollback** are now available on a feature branch!
+
+- **Branch**: `feature/blue-green-deployment`
+- **Documentation**: [BLUE_GREEN_DEPLOYMENT.md](./BLUE_GREEN_DEPLOYMENT.md)
+- **Status**: Ready for testing, not yet merged to main
+
+**To use**:
+```bash
+git checkout feature/blue-green-deployment
+cd deployment
+./init-bluegreen          # First time setup
+./deploy-zero-downtime    # Zero-downtime deployment
+./rollback                # Instant rollback
+```
+
+**Current main branch continues using simple deployment below.**
+
+---
+
 This is a radically simplified deployment system. One command deploys to production.
 
 ## Quick Start

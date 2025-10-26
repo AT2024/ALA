@@ -56,6 +56,10 @@ services:
       PRIORITY_API_USERNAME: ${PRIORITY_API_USERNAME}
       PRIORITY_API_PASSWORD: ${PRIORITY_API_PASSWORD}
       PRIORITY_API_COMPANY: ${PRIORITY_API_COMPANY}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      USE_HTTPS: ${USE_HTTPS}
+      DOMAIN: ${DOMAIN}
+      ENABLE_TEST_DATA: ${ENABLE_TEST_DATA}
     depends_on:
       db:
         condition: service_healthy
@@ -84,6 +88,10 @@ services:
     ports:
       - "80:8080"
       - "443:8443"
+    volumes:
+      # SSL certificates
+      - ../ssl-certs/certs:/etc/ssl/certs:ro
+      - ../ssl-certs/private:/etc/ssl/private:ro
     depends_on:
       api:
         condition: service_healthy
