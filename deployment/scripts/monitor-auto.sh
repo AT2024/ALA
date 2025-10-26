@@ -59,7 +59,7 @@ while true; do
     fi
 
     # Check database connectivity
-    if ! docker exec ala-db-azure pg_isready -U ala_user -d ala_production > /dev/null 2>&1; then
+    if ! docker exec ala-db pg_isready -U ala_user -d ala_production > /dev/null 2>&1; then
         failure_count[database]=$((failure_count[database] + 1))
         log "WARNING: Database health check failed (${failure_count[database]}/$MAX_FAILURES)"
         if [ ${failure_count[database]} -ge $MAX_FAILURES ]; then

@@ -7,29 +7,141 @@ Medical treatment tracking application for seed applicator procedures with Prior
 - **Tech Stack**: React/TypeScript/Tailwind frontend, Express/TypeScript backend, PostgreSQL database
 - **Key Integration**: Priority ERP for patient data, site access, and applicator validation
 
+## Quick Decision Framework
+
+⚠️ **Evaluate before responding to ANY request**
+
+### Pattern Matching (check in order):
+
+1. **Is this codebase exploration?**
+   - Keywords: "where is", "how does", "find", "show me structure", "explain the architecture"
+   - Action: Use `Task` tool with `subagent_type=Explore`
+   - Skip: Known file path ("show me src/app.ts" → use Read directly)
+
+2. **Does it match a specialist agent domain?**
+   - Database, testing, deployment, Priority API, frontend, performance, security
+   - Action: Use the matching specialist agent (see list below)
+   - Examples: "fix failing tests" → testing-specialist, "deployment failing" → deployment-azure
+
+3. **Is this multi-file or high-risk?**
+   - Multi-file features, database schema changes, auth changes, medical features
+   - Action: Start with `set_coding_task`, then use specialist agents
+   - Skip: One-line changes, typos, simple comments
+
+4. **Is this complex analysis?**
+   - Architectural decisions, trade-offs, "should we use X or Y?"
+   - Action: Use `mcp__sequential__sequentialthinking`
+   - Skip: Simple questions with obvious answers
+
+5. **Is this simple and direct?**
+   - Known file, single-line change, direct question
+   - Action: Handle directly with Read, Edit, explain
+
+### Critical Paths (MANDATORY agents - no exceptions):
+
+- **Medical/patient safety** → medical-safety-reviewer (bug cost >> agent cost)
+- **Database schema** → database-specialist (prevents data integrity issues)
+- **Priority API** → priority-integration + priority-api-reviewer
+- **Production deployment** → deployment-azure (prevents downtime)
+
 ## Core Behavioral Guidelines
 
 ### Code Modification Approach
-- **Substantial changes** (features, bugs, refactoring): Start with `mcp__mcp-as-a-judge__set_coding_task`
-- **Multi-step tasks**: Use `TodoWrite` to track progress and maintain visibility
-- **Complex analysis**: Consider `mcp__sequential__sequentialthinking` for thorough problem-solving
-- Skip formal workflows for: explanations, research-only tasks, documentation reading
+
+**Task Classification:**
+- **Simple** (direct tools): Known file, one-line change, typo fix, add comment
+- **Complex** (use agents): Multi-file, unknown location, specialized domain
+- **Critical** (mandatory workflow): Medical features, database schema, auth, deployment
+
+**Guidelines:**
+- **Multi-file features** → `set_coding_task` → specialist agents (database, frontend, etc.)
+- **Codebase exploration** → `Explore` agent (saves search iterations)
+- **Specialized domains** → Match to specialist agent (see Quick Decision Framework)
+- **Complex reasoning** → `sequential thinking` (transparent logic for trade-offs)
+- **Simple/direct tasks** → Handle directly with Read, Edit, explain (don't over-engineer)
+- **Multi-step tasks** → Use `TodoWrite` to track progress and maintain visibility
+
+**Critical Paths (MANDATORY workflow - no shortcuts):**
+- Medical/safety features → `set_coding_task` + `medical-safety-reviewer`
+- Database schema changes → `database-specialist` (prevents data integrity issues)
+- Priority API modifications → `priority-integration` + `priority-api-reviewer`
+- Production deployment → `deployment-azure` (prevents downtime)
 
 ### Specialized Agent Usage
 
-**Implementation Agents** (write code):
-- **Testing tasks**: `testing-specialist` for test creation, debugging, coverage
-- **Priority ERP issues**: `priority-integration` for OData, applicator validation
-- **UI/React work**: `frontend-ui` for components, state management, Tailwind
-- **Deployment**: `deployment-azure` for Docker, Azure VM, production issues
-- **Database work**: `database-specialist` for PostgreSQL, migrations, Sequelize
-- **Performance**: `performance-optimization` for bottlenecks, slow queries
-- **Security**: `security-audit` for auth, JWT, vulnerability assessment
+**Anthropic Best Practice:** "Only delegate to subagents when the task clearly benefits from a separate agent with a new context window"
 
-**Reviewer Agents** (review code quality):
-- **Code quality**: `ala-code-reviewer` for standards, patterns, TypeScript best practices
-- **Priority integration**: `priority-api-reviewer` for OData queries, applicator validation patterns
-- **Medical safety**: `medical-safety-reviewer` for patient safety, data integrity, audit trails
+**How it works:** Agent descriptions use "PROACTIVELY handle" to signal when they should be auto-invoked. When user request matches those keywords, use that agent immediately.
+
+**Decision rule:**
+- ✅ Use agents for: Multi-file coordination, unknown locations, specialized domains, critical paths
+- ❌ Skip agents for: Single file with known path, trivial changes, simple direct questions
+
+**Implementation Agents** (write code):
+
+- **testing-specialist** - PROACTIVELY handle test creation, failures, coverage
+  - Auto-triggers: "test", "coverage", "Jest", "Vitest", "Playwright", "mock", "E2E", "failing test"
+  - Example: "Fix failing tests" → Immediately use testing-specialist
+
+- **priority-integration** - PROACTIVELY handle Priority ERP integration, OData API
+  - Auto-triggers: "Priority", "OData", "applicator", "PHONEBOOK", "ORDERS", "SIBD"
+  - Example: "Applicator not validating" → Immediately use priority-integration
+
+- **frontend-ui** - PROACTIVELY handle React components, TypeScript, Tailwind, state management
+  - Auto-triggers: "React", "component", "UI", "frontend", "Tailwind", "state", "hooks"
+  - Example: "Add user preferences component" → Immediately use frontend-ui
+
+- **deployment-azure** - PROACTIVELY handle Azure VM, Docker, production deployment
+  - Auto-triggers: "deploy", "Azure", "Docker", "production", "container", "VM", "SSH"
+  - Example: "Deployment failing" → Immediately use deployment-azure
+
+- **database-specialist** - PROACTIVELY handle PostgreSQL, Sequelize, migrations, schema
+  - Auto-triggers: "database", "PostgreSQL", "Sequelize", "migration", "schema", "table", "query"
+  - Example: "Add new database table" → Immediately use database-specialist
+
+- **performance-optimization** - PROACTIVELY handle bottlenecks, slow queries, optimization
+  - Auto-triggers: "slow", "performance", "bottleneck", "optimize", "memory leak", "latency"
+  - Example: "API endpoint is slow" → Immediately use performance-optimization
+
+- **security-audit** - PROACTIVELY handle auth, JWT, vulnerabilities, input validation
+  - Auto-triggers: "security", "vulnerability", "auth", "JWT", "validation", "CORS", "XSS"
+  - Example: "Check for security issues" → Immediately use security-audit
+
+**Reviewer Agents** (review code quality - use AFTER implementation):
+
+- **ala-code-reviewer** - General code quality, standards, TypeScript best practices
+  - Use after: Any significant code changes for quality check
+
+- **priority-api-reviewer** - OData queries, applicator validation patterns
+  - Use after: Any Priority API integration changes
+
+- **medical-safety-reviewer** - Patient safety, data integrity, audit trails
+  - MANDATORY after: Any medical/treatment workflow changes
+
+### MCP Tool Guidance
+
+**set_coding_task (mcp-as-a-judge):**
+- **When to use:** Multi-file features, high-risk changes, database schema, auth, medical features
+- **Why:** Validation gates prevent rework (saves 50,000+ tokens debugging mistakes)
+- **Cost:** ~2000 tokens | **ROI:** Highly positive for substantial changes
+- **Skip:** Trivial changes (typos, comments, documentation-only)
+
+**sequential thinking:**
+- **When to use:** Complex analysis, architectural decisions, multiple trade-offs
+- **Why:** Transparent reasoning prevents wrong decisions
+- **Cost:** ~800 tokens | **ROI:** Positive for genuinely complex questions
+- **Skip:** Simple questions with obvious answers
+
+**Context7 (library docs):**
+- **When to use:** External library documentation needed
+- **Example YES:** "How to use React Query?" → Use Context7 for latest docs
+- **Example NO:** "How does TreatmentContext work?" → Read the file instead (internal code)
+
+**Explore agent:**
+- **When to use:** "where is X?", "how does Y work?", "find Z pattern", "explain structure"
+- **Why:** Saves 3-5 manual search iterations
+- **Cost:** ~500-1000 tokens | **ROI:** Positive for open-ended exploration
+- **Skip:** Known file paths ("show me src/app.ts" → use Read directly)
 
 ### Priority Integration Context
 - **Position Code 99**: Full admin access to all 100+ sites (e.g., alexs@alphatau.com)

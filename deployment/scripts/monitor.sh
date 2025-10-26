@@ -72,7 +72,7 @@ check_http() {
 
 # Check Docker containers
 check_containers() {
-    local containers=("ala-api-azure" "ala-frontend-azure" "ala-db-azure")
+    local containers=("ala-api" "ala-frontend" "ala-db")
     local all_healthy=true
     
     for container in "${containers[@]}"; do
