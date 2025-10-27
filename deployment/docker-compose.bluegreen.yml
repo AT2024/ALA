@@ -117,7 +117,7 @@ services:
       target: production
       args:
         - VITE_API_URL=${VITE_API_URL}
-        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.https.azure.conf}
+        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.http-bluegreen.conf}
     container_name: ala-frontend-blue
     restart: always
     environment:
@@ -188,7 +188,7 @@ services:
       target: production
       args:
         - VITE_API_URL=${VITE_API_URL}
-        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.https.azure.conf}
+        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.http-bluegreen.conf}
     container_name: ala-frontend-green
     restart: "no"  # Start manually during deployment
     environment:
