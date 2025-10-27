@@ -441,6 +441,14 @@ _For full context, see [Architectural Decision Records](docs/architecture/adr/)_
 - **Manual Rebuild**: `cd deployment && docker-compose build --no-cache frontend`
 - **Lesson**: Accept Docker's immutability - rebuild instead of fighting it
 
+**Pitfall**: Testing deployment system changes on production (2025-10-27 CRITICAL INCIDENT)
+- **Symptom**: Production outage while testing "zero-downtime" blue-green deployment
+- **Root Cause**: Tested deployment infrastructure changes directly on live system without local verification
+- **Solution**: ALWAYS test deployment changes locally FIRST with complete workflow verification
+- **Prevention**: Pre-deployment checklist enforcement - see [incident report](docs/learnings/errors/2025-10-27-blue-green-production-outage.md)
+- **Critical**: Production is NEVER a test environment, especially for deployment infrastructure
+- **Impact**: 30-minute production outage, violated core medical application reliability principle
+
 _Document new pitfalls in [docs/learnings/](docs/learnings/) as they're discovered_
 
 ## Testing Patterns

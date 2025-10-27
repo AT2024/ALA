@@ -12,10 +12,31 @@
 - **Documentation**: [BLUE_GREEN_DEPLOYMENT.md](./BLUE_GREEN_DEPLOYMENT.md)
 - **Status**: Ready for testing, not yet merged to main
 
-**To use**:
+### ⚠️ **CRITICAL: Testing Requirements**
+
+**NEVER test blue-green deployment on production without completing local testing first.**
+
+**Required before production deployment:**
+1. ✅ Complete local testing with docker-compose
+2. ✅ All containers start successfully
+3. ✅ Health checks passing in local environment
+4. ✅ Zero-downtime traffic switching verified locally
+5. ✅ Rollback procedure tested and working
+6. ✅ Application fully functional after switch
+
+**Incident**: On 2025-10-27, testing blue-green on production caused a 30-minute outage. See [incident report](../docs/learnings/errors/2025-10-27-blue-green-production-outage.md) for details.
+
+**To use** (ONLY after completing local testing):
 ```bash
+# First: Test everything locally
 git checkout feature/blue-green-deployment
 cd deployment
+docker-compose -f docker-compose.bluegreen.yml up
+
+# Then: Deploy to production (ONLY if local tests pass)
+ssh azureuser@20.217.84.100
+cd ~/ala-improved/deployment
+git checkout feature/blue-green-deployment
 ./init-bluegreen          # First time setup
 ./deploy-zero-downtime    # Zero-downtime deployment
 ./rollback                # Instant rollback
