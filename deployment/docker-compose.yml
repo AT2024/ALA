@@ -84,6 +84,10 @@ services:
     ports:
       - "80:8080"
       - "443:8443"
+    volumes:
+      # Mount SSL certificates from host for HTTPS
+      - ../ssl-certs/certs/fullchain.crt:/etc/ssl/certs/fullchain.crt:ro
+      - ../ssl-certs/private/private.key:/etc/ssl/private/private.key:ro
     depends_on:
       api:
         condition: service_healthy
