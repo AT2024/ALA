@@ -116,9 +116,11 @@ RUN addgroup -g 1001 -S nginx-app && \
 # Copy built assets from build stage
 COPY --from=build --chown=nginx-app:nginx-app /usr/src/app/dist /usr/share/nginx/html
 
-# Copy SSL certificates for HTTPS (from host's Let's Encrypt directory)
-COPY --chown=nginx-app:nginx-app ../ssl-certs/certs/fullchain.crt /etc/ssl/certs/fullchain.crt
-COPY --chown=nginx-app:nginx-app ../ssl-certs/private/private.key /etc/ssl/private/private.key
+# SSL certificates provided via Docker volume mounts at runtime
+# See docker-compose.yml volumes section for SSL certificate mounts
+# Certificates are mounted from host's Let's Encrypt directory:
+#   ~/ala-improved/ssl-certs/certs/fullchain.crt -> /etc/ssl/certs/fullchain.crt
+#   ~/ala-improved/ssl-certs/private/private.key -> /etc/ssl/private/private.key
 
 # Copy nginx configuration (configurable via NGINX_CONFIG ARG)
 COPY --chown=nginx-app:nginx-app ${NGINX_CONFIG} /etc/nginx/conf.d/default.conf
