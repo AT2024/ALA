@@ -98,17 +98,27 @@ const UseList = () => {
     try {
       // TODO: Update ORDSTATUSDES= "Performed" FROM ORDERS WHERE Details=Patient ID
       // This would be implemented with the Priority system integration
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       setSuccess('Process completed successfully!');
-      
+
+      // Clear sessionStorage after successful finalization
+      try {
+        sessionStorage.removeItem('currentTreatment');
+        sessionStorage.removeItem('processedApplicators');
+        sessionStorage.removeItem('availableApplicators');
+        sessionStorage.removeItem('individualSeedsRemoved');
+      } catch (storageError) {
+        console.error('Failed to clear sessionStorage:', storageError);
+      }
+
       // Navigate back to procedure selection after a brief delay
       setTimeout(() => {
         navigate('/procedure-type');
       }, 2000);
-      
+
     } catch (err: any) {
       setError(err.message || 'Failed to finalize treatment');
     } finally {
