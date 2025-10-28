@@ -56,6 +56,7 @@ services:
       PRIORITY_API_USERNAME: ${PRIORITY_API_USERNAME}
       PRIORITY_API_PASSWORD: ${PRIORITY_API_PASSWORD}
       PRIORITY_API_COMPANY: ${PRIORITY_API_COMPANY}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     depends_on:
       db:
         condition: service_healthy
