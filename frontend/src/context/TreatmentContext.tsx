@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, ReactNode } from 'react';
+import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 interface Treatment {
@@ -100,12 +100,54 @@ const TreatmentContext = createContext<TreatmentContextType | undefined>(undefin
 export function TreatmentProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
 
-  const [currentTreatment, setCurrentTreatment] = useState<Treatment | null>(null);
+  const [currentTreatment, setCurrentTreatment] = useState<Treatment | null>(() => {
+    // Restore treatment from sessionStorage on mount
+    try {
+      const stored = sessionStorage.getItem('currentTreatment');
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.error('Failed to restore treatment from sessionStorage:', error);
+      return null;
+    }
+  });
+
   const [applicators, setApplicators] = useState<Applicator[]>([]);
-  const [availableApplicators, setAvailableApplicators] = useState<Applicator[]>([]);
-  const [processedApplicators, setProcessedApplicators] = useState<Applicator[]>([]);
+
+  const [availableApplicators, setAvailableApplicators] = useState<Applicator[]>(() => {
+    // Restore available applicators from sessionStorage on mount
+    try {
+      const stored = sessionStorage.getItem('availableApplicators');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Failed to restore available applicators from sessionStorage:', error);
+      return [];
+    }
+  });
+
+  const [processedApplicators, setProcessedApplicators] = useState<Applicator[]>(() => {
+    // Restore processed applicators from sessionStorage on mount
+    try {
+      const stored = sessionStorage.getItem('processedApplicators');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Failed to restore processed applicators from sessionStorage:', error);
+      return [];
+    }
+  });
+
   const [currentApplicator, setCurrentApplicator] = useState<Applicator | null>(null);
-  const [individualSeedsRemoved, setIndividualSeedsRemoved] = useState<number>(0);
+
+  const [individualSeedsRemoved, setIndividualSeedsRemoved] = useState<number>(() => {
+    // Restore individual seeds removed from sessionStorage on mount
+    try {
+      const stored = sessionStorage.getItem('individualSeedsRemoved');
+      return stored ? JSON.parse(stored) : 0;
+    } catch (error) {
+      console.error('Failed to restore individual seeds removed from sessionStorage:', error);
+      return 0;
+    }
+  });
+
   const [procedureType, setProcedureType] = useState<'insertion' | 'removal' | null>(() => {
     const urlParams = new URLSearchParams(location.search);
     const urlType = urlParams.get('type') as 'insertion' | 'removal' | null;
@@ -114,6 +156,46 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('procedureType');
     return stored as 'insertion' | 'removal' | null;
   });
+
+  // Persist treatment state to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (currentTreatment) {
+        sessionStorage.setItem('currentTreatment', JSON.stringify(currentTreatment));
+      } else {
+        sessionStorage.removeItem('currentTreatment');
+      }
+    } catch (error) {
+      console.error('Failed to persist treatment to sessionStorage:', error);
+    }
+  }, [currentTreatment]);
+
+  // Persist processed applicators to sessionStorage whenever they change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('processedApplicators', JSON.stringify(processedApplicators));
+    } catch (error) {
+      console.error('Failed to persist processed applicators to sessionStorage:', error);
+    }
+  }, [processedApplicators]);
+
+  // Persist available applicators to sessionStorage whenever they change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('availableApplicators', JSON.stringify(availableApplicators));
+    } catch (error) {
+      console.error('Failed to persist available applicators to sessionStorage:', error);
+    }
+  }, [availableApplicators]);
+
+  // Persist individual seeds removed to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('individualSeedsRemoved', JSON.stringify(individualSeedsRemoved));
+    } catch (error) {
+      console.error('Failed to persist individual seeds removed to sessionStorage:', error);
+    }
+  }, [individualSeedsRemoved]);
 
   const setTreatment = (treatment: Treatment) => {
     setCurrentTreatment(treatment);
@@ -194,6 +276,16 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     setCurrentApplicator(null);
     setIndividualSeedsRemoved(0);
     setProcedureType(null);
+
+    // Clear sessionStorage when treatment is cleared
+    try {
+      sessionStorage.removeItem('currentTreatment');
+      sessionStorage.removeItem('processedApplicators');
+      sessionStorage.removeItem('availableApplicators');
+      sessionStorage.removeItem('individualSeedsRemoved');
+    } catch (error) {
+      console.error('Failed to clear sessionStorage:', error);
+    }
   };
 
   // Centralized filtering function - single source of truth
