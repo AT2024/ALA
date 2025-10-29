@@ -4,6 +4,40 @@
 
 ---
 
+## 🆕 **NEW: Staging Environment with Image Promotion**
+
+**Fast, safe deployments with staging isolation** are now available!
+
+- **Staging URL**: http://20.217.84.100:8080
+- **Documentation**: [IMAGE_PROMOTION_WORKFLOW.md](./docs/IMAGE_PROMOTION_WORKFLOW.md)
+- **Status**: Ready to use
+
+### Quick Start
+
+```bash
+# 1. Deploy to staging first (test environment)
+ssh azureuser@20.217.84.100
+cd ~/ala-improved/deployment
+./deploy-staging
+
+# 2. Test at http://20.217.84.100:8080
+# Login as test@example.com (code: 123456)
+
+# 3. If tests pass, promote to production (30 seconds!)
+./promote-to-production
+```
+
+### Benefits
+
+✅ **50% faster**: Staging build (10 min) + instant promotion (30 sec)
+✅ **Safer**: Test in staging before production
+✅ **Isolated**: Test data never touches production
+✅ **Visual**: Impossible to confuse environments (color-coded banners)
+
+See full documentation: [IMAGE_PROMOTION_WORKFLOW.md](./docs/IMAGE_PROMOTION_WORKFLOW.md)
+
+---
+
 ## 🆕 **NEW: Blue-Green Deployment Available**
 
 **Zero-downtime deployments with instant rollback** are now available on a feature branch!
