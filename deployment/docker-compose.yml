@@ -41,6 +41,7 @@ services:
   # Backend API (Express + TypeScript)
   # ===================================================================
   api:
+    image: ala-api:production  # Tagged for image promotion workflow
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -73,6 +74,7 @@ services:
   # Frontend (React + Vite + Nginx)
   # ===================================================================
   frontend:
+    image: ala-frontend:production  # Tagged for image promotion workflow
     build:
       context: ../frontend
       dockerfile: Dockerfile
