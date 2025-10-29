@@ -1,0 +1,82 @@
+version: '3.8'
+
+# ======================================================================
+# ALA Medical Application - Staging Environment Overrides
+# ======================================================================
+# This file extends docker-compose.yml for staging deployment
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#
+# Key Features:
+# - Separate ports (8080 HTTP, 8443 HTTPS, 5433 PostgreSQL)
+# - Test data enabled (ENABLE_TEST_DATA=true)
+# - Separate database volume (no production data mixing)
+# - Image tagging for promotion workflow
+#
+# Environment: Configure via .env.staging file
+
+services:
+  # ===================================================================
+  # PostgreSQL Database - Staging
+  # ===================================================================
+  db:
+    container_name: ala-db-staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ala_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-ala_staging_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data-staging:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # External staging port (internal stays 5432)
+
+  # ===================================================================
+  # Backend API - Staging
+  # ===================================================================
+  api:
+    image: ala-api:staging  # Tagged for image promotion
+    container_name: ala-api-staging
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NODE_ENV: staging
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET}
+      PRIORITY_API_URL: ${PRIORITY_API_URL}
+      PRIORITY_API_USERNAME: ${PRIORITY_API_USERNAME}
+      PRIORITY_API_PASSWORD: ${PRIORITY_API_PASSWORD}
+      PRIORITY_API_COMPANY: ${PRIORITY_API_COMPANY}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      # KEY DIFFERENCE: Enable test data
+      ENABLE_TEST_DATA: "true"
+    ports:
+      - "5010:5000"  # Staging backend port
+
+  # ===================================================================
+  # Frontend - Staging
+  # ===================================================================
+  frontend:
+    image: ala-frontend:staging  # Tagged for image promotion
+    container_name: ala-frontend-staging
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # Staging API URL (port 5010)
+        - VITE_API_URL=${VITE_API_URL:-http://20.217.84.100:5010/api}
+        - NGINX_CONFIG=${NGINX_CONFIG:-nginx.staging.conf}
+    ports:
+      - "8080:8080"   # Staging HTTP port
+      - "8443:8443"   # Staging HTTPS port (optional)
+    # Note: SSL certificates optional for staging
+    # volumes:
+    #   - ~/ala-improved/ssl-certs/certs/fullchain.crt:/etc/ssl/certs/fullchain.crt:ro
+    #   - ~/ala-improved/ssl-certs/private/private.key:/etc/ssl/private/private.key:ro
+
+# ======================================================================
+# Volumes - Staging (separate from production)
+# ======================================================================
+volumes:
+  postgres-data-staging:
+    driver: local
