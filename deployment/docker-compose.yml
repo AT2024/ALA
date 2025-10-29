@@ -58,6 +58,7 @@ services:
       PRIORITY_API_PASSWORD: ${PRIORITY_API_PASSWORD}
       PRIORITY_API_COMPANY: ${PRIORITY_API_COMPANY}
       CORS_ORIGIN: ${CORS_ORIGIN}
+      ENABLE_TEST_DATA: ${ENABLE_TEST_DATA:-false}
     depends_on:
       db:
         condition: service_healthy
