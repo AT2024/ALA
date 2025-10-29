@@ -4,6 +4,7 @@ import { lazy, Suspense } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { TreatmentProvider } from '@/context/TreatmentContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { EnvironmentBanner } from '@/components/EnvironmentBanner';
 
 // Eager load authentication pages (needed immediately)
 import LoginPage from '@/pages/Auth/LoginPage';
@@ -34,8 +35,13 @@ function App() {
     <AuthProvider>
       <TreatmentProvider>
         <div className="min-h-screen bg-background">
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+          {/* Environment banner - always visible at top */}
+          <EnvironmentBanner />
+
+          {/* Main content with padding for banner */}
+          <div className="pt-16">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/verify" element={<VerificationPage />} />
               <Route path="/docs" element={<ProjectDocPage />} /> {/* New docs page - accessible without login */}
@@ -50,10 +56,11 @@ function App() {
                 <Route path="/admin/dashboard" element={<Dashboard />} />
               </Route>
 
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Suspense>
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
         </div>
       </TreatmentProvider>
     </AuthProvider>
