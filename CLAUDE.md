@@ -482,6 +482,76 @@ frontend/tests/e2e/*.spec.ts - E2E tests (Playwright)
 
 _Document successful test patterns in [docs/patterns/testing/](docs/patterns/testing/)_
 
+## Security Scanning
+
+### GitHub CodeQL (Source Code Analysis)
+
+**Purpose**: Automated security vulnerability detection in TypeScript/JavaScript source code
+
+**When it runs**:
+- Every push to `main` and `develop` branches
+- Every pull request
+- Weekly scheduled scan (Saturdays at 2 AM UTC)
+- Manual trigger via GitHub Actions
+
+**What it scans for**:
+- SQL injection vulnerabilities (Priority API OData queries)
+- Cross-site scripting (XSS)
+- Authentication/authorization bypasses
+- Sensitive data exposure
+- Input validation gaps
+- Common security anti-patterns
+
+**Configuration**:
+- Workflow: [.github/workflows/codeql.yml](.github/workflows/codeql.yml)
+- Config: [.github/codeql/codeql-config.yml](.github/codeql/codeql-config.yml)
+- Query suite: `security-extended` (thorough analysis)
+- Excluded: Test files, mocks, build outputs, dependencies
+
+**View results**:
+- GitHub Security tab: `https://github.com/AT2024/ALA/security/code-scanning`
+- PR comments show new issues introduced by changes
+- SARIF files uploaded as workflow artifacts
+
+**Medical app focus areas**:
+1. **Priority API integration** ([backend/src/services/priorityService.ts](backend/src/services/priorityService.ts))
+   - SQL injection in OData query construction
+   - Authentication token handling
+2. **Patient data handling** (backend/src/models/*)
+   - Data validation before database operations
+   - Sensitive data exposure in logs/errors
+3. **Treatment workflows** ([frontend/src/contexts/TreatmentContext.tsx](frontend/src/contexts/TreatmentContext.tsx))
+   - State management security
+   - Authorization checks
+4. **Scanner component** ([frontend/src/components/Scanner.tsx](frontend/src/components/Scanner.tsx))
+   - Input validation
+   - Error message information disclosure
+
+**Triage process**:
+1. Review findings in Security tab
+2. Prioritize by severity: Critical > High > Medium > Low
+3. For medical app, review ALL findings (not just critical)
+4. Create issues for confirmed vulnerabilities
+5. Fix critical issues before merging to main
+6. Document false positives in CodeQL config
+
+**Complements existing security**:
+- CodeQL: Source code analysis (this)
+- Trivy: Container vulnerability scanning ([.github/workflows/docker-security.yml](.github/workflows/docker-security.yml))
+- `security-audit` agent: Manual, conversational security review
+- `medical-safety-reviewer`: Medical workflow safety validation
+
+### Container Security (Trivy)
+
+**Purpose**: Vulnerability scanning of Docker images
+
+**When it runs**:
+- During test-and-build workflow
+- On pull requests to main/develop
+- Results uploaded to GitHub Security tab
+
+**Configuration**: [.github/workflows/test-and-build.yml](.github/workflows/test-and-build.yml) (security-scan job)
+
 ## Quality Gates
 
 Every substantial change must pass through these gates:

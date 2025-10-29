@@ -1,0 +1,96 @@
+# =================================================================
+# CodeQL Configuration for ALA Medical Application
+# =================================================================
+#
+# Purpose: Customize CodeQL analysis for medical app context
+#
+# Key Optimizations:
+# 1. Exclude test files, mocks, and build outputs from scanning
+# 2. Focus on production source code (backend/frontend)
+# 3. Use security-extended queries for thorough analysis
+# 4. Optimize scan performance by excluding irrelevant paths
+#
+# =================================================================
+
+name: "ALA Medical App CodeQL Config"
+
+# Disable default query suites (we'll specify our own)
+disable-default-queries: false
+
+# Query packs to run
+queries:
+  - uses: security-extended
+    # security-extended includes:
+    # - All security queries
+    # - Additional quality and correctness queries
+    # - Medical app relevant: SQL injection, XSS, auth bypass, data leaks
+
+# Paths to include in analysis
+paths:
+  - backend/src
+  - frontend/src
+
+# Paths to explicitly exclude from analysis
+paths-ignore:
+  # Test files (not production code)
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/tests/**"
+  - "**/test/**"
+  - "**/__tests__/**"
+
+  # Mock data and fixtures (not production code)
+  - "**/mocks/**"
+  - "**/mock/**"
+  - "**/fixtures/**"
+  - "**/stubs/**"
+
+  # Build outputs and generated files
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/coverage/**"
+  - "**/.next/**"
+  - "**/out/**"
+
+  # Dependencies (analyzed separately by Dependabot)
+  - "**/node_modules/**"
+  - "**/vendor/**"
+
+  # Configuration and tooling
+  - "**/*.config.js"
+  - "**/*.config.ts"
+  - "**/scripts/**"
+  - "**/deployment/**"
+
+  # Documentation
+  - "**/docs/**"
+  - "**/*.md"
+
+# Query filters (customize severity reporting)
+# query-filters:
+#   - include:
+#       kind: problem
+#       severity: high
+#   - exclude:
+#       precision: low
+
+# Medical app specific notes:
+#
+# Areas of focus for manual review of CodeQL findings:
+# 1. Priority API integration (backend/src/services/priorityService.ts)
+#    - SQL injection in OData query construction
+#    - Authentication token handling
+#
+# 2. Patient data handling (backend/src/models/*)
+#    - Data validation before database operations
+#    - Sensitive data exposure in logs/errors
+#
+# 3. Treatment workflows (frontend/src/contexts/TreatmentContext.tsx)
+#    - State management security
+#    - Authorization checks
+#
+# 4. Scanner component (frontend/src/components/Scanner.tsx)
+#    - Input validation
+#    - Error message information disclosure
