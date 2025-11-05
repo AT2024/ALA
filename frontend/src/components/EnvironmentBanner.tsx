@@ -22,7 +22,7 @@ export function EnvironmentBanner() {
   const currentPort = window.location.port;
 
   // Detect staging environment based on API URL port or current HTTPS port
-  const isStaging = apiUrl.includes(':5010') || currentPort === '8443' || currentPort === '8080';
+  const isStaging = apiUrl.includes(':5010') || currentPort === '9443' || currentPort === '9080';
 
   useEffect(() => {
     // Update browser tab title to match environment

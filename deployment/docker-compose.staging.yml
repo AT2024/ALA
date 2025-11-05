@@ -9,10 +9,11 @@ version: '3.8'
 #   docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d
 #
 # Key Features:
-# - Separate ports (8080 HTTP, 8443 HTTPS, 5433 PostgreSQL)
+# - Separate ports (9080 HTTP, 9443 HTTPS, 5010 API, 5433 PostgreSQL)
 # - Test data enabled (ENABLE_TEST_DATA=true)
 # - Separate database volume (no production data mixing)
 # - Image tagging for promotion workflow
+# - HTTPS enabled (same SSL cert as production, different ports)
 #
 # Environment: Configure via .env.staging file
 
@@ -67,8 +68,8 @@ services:
         - VITE_API_URL=${VITE_API_URL:-https://20.217.84.100:5010/api}
         - NGINX_CONFIG=${NGINX_CONFIG:-nginx.https.azure.conf}
     ports:
-      - "8080:8080"   # Staging HTTP port (redirects to HTTPS)
-      - "8443:8443"   # Staging HTTPS port
+      - "9080:8080"   # Staging HTTP port (redirects to HTTPS)
+      - "9443:8443"   # Staging HTTPS port
     # SSL certificates for HTTPS
     volumes:
       - ~/ala-improved/ssl-certs/certs/fullchain.crt:/etc/ssl/certs/fullchain.crt:ro
