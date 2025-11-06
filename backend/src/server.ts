@@ -1,20 +1,29 @@
+// CRITICAL: Load environment variables FIRST, before any other imports
+// This ensures all modules have access to process.env when they initialize
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Validate environment variables immediately after loading
+import { validateEnvironment } from './config/validateEnv';
+validateEnvironment();
+
+// Now safe to import modules that depend on environment variables
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import { errorHandler } from './middleware/errorMiddleware';
 import { notFound } from './middleware/notFoundMiddleware';
-import { 
-  apiRateLimit, 
-  authRateLimit, 
+import {
+  apiRateLimit,
+  authRateLimit,
   codeRequestRateLimit,
   verifyRateLimit,
   tokenValidateRateLimit,
-  httpsRedirect, 
-  securityHeaders, 
-  corsOptions, 
-  requestLogger 
+  httpsRedirect,
+  securityHeaders,
+  corsOptions,
+  requestLogger
 } from './middleware/securityMiddleware';
 import authRoutes from './routes/authRoutes';
 import treatmentRoutes from './routes/treatmentRoutes';
@@ -24,9 +33,6 @@ import priorityRoutes from './routes/priorityRoutes';
 import { initializeDatabase } from './config/database';
 import './models'; // Import models to ensure they're loaded before database sync
 import logger from './utils/logger';
-
-// Load environment variables
-dotenv.config();
 
 // Initialize express app
 const app = express();

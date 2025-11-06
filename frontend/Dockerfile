@@ -100,7 +100,7 @@ RUN npm run build
 FROM nginx:1.27.5-alpine AS production
 
 # Accept build argument for nginx configuration
-ARG NGINX_CONFIG=nginx.staging.conf
+ARG NGINX_CONFIG=nginx.https.local.conf
 
 # Install security updates
 RUN apk update && apk upgrade && \

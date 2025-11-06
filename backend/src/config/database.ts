@@ -1,44 +1,51 @@
 import { Sequelize } from 'sequelize';
 import logger from '../utils/logger';
 
-// Database connection config
-const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ala_db';
+// Lazy getter for database URL
+function getDatabaseUrl(): string {
+  return process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ala_db';
+}
 
-// Create Sequelize instance with connection pooling
-const sequelize = new Sequelize(DATABASE_URL, {
-  dialect: 'postgres',
-  logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  dialectOptions: {
-    ssl: process.env.ENABLE_SSL === 'true' ? {
-      require: true,
-      rejectUnauthorized: false
-    } : false
-  },
-  pool: {
-    max: parseInt(process.env.DB_POOL_MAX || '10', 10), // Maximum number of connections
-    min: parseInt(process.env.DB_POOL_MIN || '2', 10),  // Minimum number of connections
-    acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10), // Max time to get connection (30s)
-    idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10), // Max idle time (10s)
-    evict: parseInt(process.env.DB_POOL_EVICT || '1000', 10) // Check for idle connections every 1s
-  },
-  retry: {
-    max: 3, // Maximum retry attempts
-    timeout: 5000, // Query timeout
-    match: [
-      /SequelizeConnectionError/,
-      /SequelizeConnectionRefusedError/,
-      /SequelizeHostNotFoundError/,
-      /SequelizeHostNotReachableError/,
-      /SequelizeInvalidConnectionError/,
-      /SequelizeConnectionTimedOutError/,
-      /TimeoutError/
-    ]
-  },
-  define: {
-    underscored: true,
-    timestamps: true
-  }
-});
+// Lazy getter for Sequelize configuration
+function getSequelizeConfig() {
+  return {
+    dialect: 'postgres' as const,
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    dialectOptions: {
+      ssl: process.env.ENABLE_SSL === 'true' ? {
+        require: true,
+        rejectUnauthorized: false
+      } : false
+    },
+    pool: {
+      max: parseInt(process.env.DB_POOL_MAX || '10', 10), // Maximum number of connections
+      min: parseInt(process.env.DB_POOL_MIN || '2', 10),  // Minimum number of connections
+      acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10), // Max time to get connection (30s)
+      idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10), // Max idle time (10s)
+      evict: parseInt(process.env.DB_POOL_EVICT || '1000', 10) // Check for idle connections every 1s
+    },
+    retry: {
+      max: 3, // Maximum retry attempts
+      timeout: 5000, // Query timeout
+      match: [
+        /SequelizeConnectionError/,
+        /SequelizeConnectionRefusedError/,
+        /SequelizeHostNotFoundError/,
+        /SequelizeHostNotReachableError/,
+        /SequelizeInvalidConnectionError/,
+        /SequelizeConnectionTimedOutError/,
+        /TimeoutError/
+      ]
+    },
+    define: {
+      underscored: true,
+      timestamps: true
+    }
+  };
+}
+
+// Create Sequelize instance with lazy-loaded configuration
+const sequelize = new Sequelize(getDatabaseUrl(), getSequelizeConfig());
 
 // Circuit breaker state
 interface CircuitBreakerState {

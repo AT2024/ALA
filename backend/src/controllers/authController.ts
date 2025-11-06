@@ -6,15 +6,18 @@ import logger from '../utils/logger';
 import priorityService from '../services/priorityService';
 import { shouldEnforceHttps } from '../config/https';
 
-// JWT Secret from environment variables - REQUIRED for security
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required for security');
+// Lazy getter for JWT secret with runtime validation
+function getJwtSecret(): string {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required but not set');
+  }
+  return JWT_SECRET;
 }
 
 // Generate JWT token
 const generateToken = (id: string) => {
-  return jwt.sign({ id }, JWT_SECRET, {
+  return jwt.sign({ id }, getJwtSecret(), {
     expiresIn: '30d',
   });
 };

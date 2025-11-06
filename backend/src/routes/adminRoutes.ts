@@ -71,7 +71,7 @@ router.get('/users', (req, res) => {
 // System configuration
 router.get('/config', (req, res) => {
   res.status(200).json({
-    priorityUrl: process.env.PRIORITY_URL,
+    priorityUrl: process.env.PRIORITY_API_URL,
     verificationCodeExpiry: 600, // 10 minutes
     maxFailedAttempts: 3,
     minDaysForRemoval: 14,

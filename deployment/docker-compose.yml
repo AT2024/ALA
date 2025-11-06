@@ -1,5 +1,3 @@
-version: '3.8'
-
 # ======================================================================
 # ALA Medical Application - Production Docker Compose
 # ======================================================================
@@ -86,10 +84,10 @@ services:
     container_name: ala-frontend
     restart: always
     ports:
-      - "80:8080"
-      - "443:8443"
+      - "80:8080"    # Host 80 → Container 8080 (HTTP redirect to HTTPS)
+      - "443:8443"   # Host 443 → Container 8443 (HTTPS)
+    # SSL certificates for HTTPS (Let's Encrypt)
     volumes:
-      # Mount SSL certificates from host (Let's Encrypt) - read-only
       - ~/ala-improved/ssl-certs/certs/fullchain.crt:/etc/ssl/certs/fullchain.crt:ro
       - ~/ala-improved/ssl-certs/private/private.key:/etc/ssl/private/private.key:ro
     depends_on:

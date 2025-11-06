@@ -232,22 +232,29 @@ const generateDynamicDates = () => {
   };
 };
 
-// Priority API credentials
-const PRIORITY_URL =
-  process.env.PRIORITY_URL ||
-  'https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24';
-const PRIORITY_USERNAME = process.env.PRIORITY_USERNAME || 'API';
-const PRIORITY_PASSWORD = process.env.PRIORITY_PASSWORD || 'Ap@123456';
+// Lazy getters for Priority API credentials
+function getPriorityUrl(): string {
+  return process.env.PRIORITY_API_URL ||
+    'https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24';
+}
 
-// Create axios instance with authentication
+function getPriorityUsername(): string {
+  return process.env.PRIORITY_API_USERNAME || 'API';
+}
+
+function getPriorityPassword(): string {
+  return process.env.PRIORITY_API_PASSWORD || 'Ap@123456';
+}
+
+// Create axios instance with lazy-loaded authentication
 const priorityApi = axios.create({
-  baseURL: PRIORITY_URL,
+  baseURL: getPriorityUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
   auth: {
-    username: PRIORITY_USERNAME,
-    password: PRIORITY_PASSWORD,
+    username: getPriorityUsername(),
+    password: getPriorityPassword(),
   },
 });
 
@@ -256,7 +263,7 @@ export const priorityService = {
   async debugPriorityConnection() {
     try {
       // Test basic connectivity
-      logger.info('Testing connection to Priority API at:', PRIORITY_URL);
+      logger.info('Testing connection to Priority API at:', getPriorityUrl());
       const phonebookResponse = await priorityApi.get(`/PHONEBOOK`, {
         timeout: 10000, // 10 second timeout
       });
@@ -864,7 +871,7 @@ export const priorityService = {
       logger.info(`  🏥 Site Filter: CUSTNAME eq '${custName}'`);
       logger.info(`  📅 Date Filter: ${filterDate ? `Applied for ${filterDate}` : 'None applied'}`);
       logger.info(`  🔍 Complete Filter: ${filterParam}`);
-      logger.info(`  🌐 API Endpoint: ${PRIORITY_URL}/ORDERS`);
+      logger.info(`  🌐 API Endpoint: ${getPriorityUrl()}/ORDERS`);
       
       const response = await priorityApi.get('/ORDERS', {
         params: {
@@ -879,7 +886,7 @@ export const priorityService = {
       logger.info(`  🏥 Site: ${custName}`);
       logger.info(`  📅 Date Filter Applied: ${filterDate || 'None'}`);
       logger.info(`  📊 Total Orders Returned: ${response.data.value.length}`);
-      logger.info(`  🌐 Request URL: ${PRIORITY_URL}ORDERS?$filter=${encodeURIComponent(filterParam)}`);
+      logger.info(`  🌐 Request URL: ${getPriorityUrl()}ORDERS?$filter=${encodeURIComponent(filterParam)}`);
       
       // Enhanced DEBUG: Log every single order returned by Priority API with clear data source indication
       logger.info('=== 🔍 PRIORITY API SERVICE LEVEL DEBUG ===');

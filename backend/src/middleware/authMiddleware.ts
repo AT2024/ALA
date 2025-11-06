@@ -11,11 +11,13 @@ declare global {
   }
 }
 
-// JWT Secret from environment variables - no fallback for security
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required');
+// Lazy getter for JWT secret with runtime validation
+function getJwtSecret(): string {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required but not set');
+  }
+  return JWT_SECRET;
 }
 
 // Middleware to protect routes
@@ -28,8 +30,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
-      const decoded: any = jwt.verify(token, JWT_SECRET);
+      // Verify token (JWT_SECRET validated at runtime)
+      const decoded: any = jwt.verify(token, getJwtSecret());
 
       // Get user from the token
       const user = await User.findByPk(decoded.id, {

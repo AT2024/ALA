@@ -1,3 +1,8 @@
+// CRITICAL: Load environment variables FIRST
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Now safe to import modules that depend on environment variables
 import { initializeDatabase } from './config/database';
 import { User, Treatment, Applicator } from './models';
 import logger from './utils/logger';

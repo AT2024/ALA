@@ -4,7 +4,7 @@ import { lazy, Suspense } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { TreatmentProvider } from '@/context/TreatmentContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { EnvironmentBanner } from '@/components/EnvironmentBanner';
+import { EnvironmentBanner, useIsStaging } from '@/components/EnvironmentBanner';
 
 // Eager load authentication pages (needed immediately)
 import LoginPage from '@/pages/Auth/LoginPage';
@@ -31,15 +31,17 @@ const PageLoader = () => (
 );
 
 function App() {
+  const isStaging = useIsStaging();
+
   return (
     <AuthProvider>
       <TreatmentProvider>
         <div className="min-h-screen bg-background">
-          {/* Environment banner - always visible at top */}
+          {/* Environment banner - only shows in staging */}
           <EnvironmentBanner />
 
-          {/* Main content with padding for banner */}
-          <div className="pt-16">
+          {/* Main content - conditional padding only when banner is visible */}
+          <div className={isStaging ? 'pt-16' : ''}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
               <Route path="/login" element={<LoginPage />} />
