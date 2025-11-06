@@ -66,6 +66,7 @@ services:
       args:
         # Staging API URL (port 5010) - HTTPS enabled
         - VITE_API_URL=${VITE_API_URL:-https://20.217.84.100:5010/api}
+        - VITE_ENVIRONMENT=staging  # Hardcoded to staging - shows banner
         - NGINX_CONFIG=${NGINX_CONFIG:-nginx.https.azure.conf}
     ports:
       - "9080:8080"   # Staging HTTP port (redirects to HTTPS)

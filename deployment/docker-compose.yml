@@ -80,6 +80,7 @@ services:
       target: production
       args:
         - VITE_API_URL=${VITE_API_URL}
+        - VITE_ENVIRONMENT=${VITE_ENVIRONMENT:-production}
         - NGINX_CONFIG=${NGINX_CONFIG:-nginx.https.azure.conf}
     container_name: ala-frontend
     restart: always

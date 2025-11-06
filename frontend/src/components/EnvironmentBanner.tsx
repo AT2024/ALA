@@ -11,19 +11,21 @@ import { useEffect } from 'react';
  * - No banner for production/local (clean UI)
  * - Always visible in staging, cannot be dismissed
  * - Updates browser tab title to match environment
- * - Detects environment based on API URL port
+ * - Uses explicit VITE_ENVIRONMENT variable for reliable detection
  * - Provides isStaging flag for conditional padding in parent components
  *
  * Environment Detection:
- * - Staging: API URL contains ":5010" (staging backend port) or window location port 9443/9080 (staging HTTPS/HTTP)
- * - Production/Local: All other URLs (standard ports 443/5000 or localhost)
+ * - Staging: VITE_ENVIRONMENT === 'staging'
+ * - Production: VITE_ENVIRONMENT === 'production' (or unset)
+ * - Development/Local: VITE_ENVIRONMENT === 'development' (or unset)
  */
 
 // Export helper function to detect staging environment
 export function useIsStaging(): boolean {
-  const apiUrl = import.meta.env.VITE_API_URL || '';
-  const currentPort = window.location.port;
-  return apiUrl.includes(':5010') || currentPort === '9443' || currentPort === '9080';
+  // Use explicit environment variable for reliable detection
+  // Defaults to 'production' if not set for safety
+  const environment = import.meta.env.VITE_ENVIRONMENT || 'production';
+  return environment === 'staging';
 }
 
 export function EnvironmentBanner() {

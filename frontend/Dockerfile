@@ -69,7 +69,7 @@ FROM base AS build
 
 # Accept build arguments for environment variables
 ARG VITE_API_URL=http://localhost:5000/api
-ARG VITE_ENVIRONMENT=development
+ARG VITE_ENVIRONMENT=production
 ARG VITE_PRIORITY_API_URL
 ARG VITE_OFFLINE_STORAGE=true
 
