@@ -11,7 +11,6 @@ export const useWorkflowNavigation = () => {
     insertion: [
       '/treatment/select',
       '/treatment/scan',
-      '/treatment/applicator',
       '/treatment/list'
     ],
     removal: [

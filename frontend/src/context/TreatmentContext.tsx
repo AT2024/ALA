@@ -71,11 +71,13 @@ interface TreatmentContextType {
   setProcedureType: (type: 'insertion' | 'removal') => void;
   setTreatment: (treatment: Treatment) => void;
   setApplicators: (applicators: Applicator[]) => void;
+  setProcessedApplicators: (applicators: Applicator[]) => void;
   addApplicator: (applicator: Applicator) => void;
   addAvailableApplicator: (applicator: Applicator) => void;
   processApplicator: (applicator: Applicator) => void;
   updateApplicator: (id: string, data: Partial<Applicator>) => void;
   setCurrentApplicator: (applicator: Applicator | null) => void;
+  clearCurrentApplicator: () => void;
   removeApplicator: (id: string) => void;
   clearTreatment: () => void;
   totalSeeds: number;
@@ -266,6 +268,10 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
 
   const removeApplicator = (id: string) => {
     setApplicators((prev) => prev.filter((app) => app.id !== id));
+  };
+
+  const clearCurrentApplicator = () => {
+    setCurrentApplicator(null);
   };
 
   const clearTreatment = () => {
@@ -473,11 +479,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         setProcedureType,
         setTreatment,
         setApplicators: setApplicatorsData,
+        setProcessedApplicators,
         addApplicator,
         addAvailableApplicator,
         processApplicator,
         updateApplicator,
         setCurrentApplicator,
+        clearCurrentApplicator,
         removeApplicator,
         clearTreatment,
         totalSeeds,

@@ -12,16 +12,23 @@ import ProgressTracker from '@/components/ProgressTracker';
 import { generateUUID } from '@/utils/uuid';
 
 const TreatmentDocumentation = () => {
-  const { 
-    currentTreatment, 
-    processApplicator, 
+  const {
+    currentTreatment,
+    processApplicator,
     processedApplicators,
-    progressStats, 
+    progressStats,
     addAvailableApplicator,
-    getFilteredAvailableApplicators
+    getFilteredAvailableApplicators,
+    currentApplicator,
+    clearCurrentApplicator,
+    setProcessedApplicators
   } = useTreatment();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Edit mode detection
+  const isEditMode = !!currentApplicator;
+  const editingSerialNumber = currentApplicator?.serialNumber;
 
   const [scannedApplicators, setScannedApplicators] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +104,28 @@ const TreatmentDocumentation = () => {
       loadAvailableApplicators();
     }
   }, [currentTreatment]);
+
+  // Pre-populate form when in edit mode
+  useEffect(() => {
+    if (isEditMode && currentApplicator) {
+      const usageTypeLabel = currentApplicator.usageType === 'full' ? 'Full use' :
+                             currentApplicator.usageType === 'faulty' ? 'Faulty' :
+                             currentApplicator.usageType === 'none' ? 'No Use' : '';
+
+      setFormData({
+        serialNumber: currentApplicator.serialNumber,
+        applicatorType: currentApplicator.applicatorType || '',
+        seedsQty: currentApplicator.seedQuantity?.toString() || '',
+        insertionTime: currentApplicator.insertionTime || new Date().toISOString(),
+        usingType: usageTypeLabel,
+        insertedSeedsQty: currentApplicator.insertedSeedsQty?.toString() || '0',
+        comments: currentApplicator.comments || ''
+      });
+
+      setManualEntry(true); // Disable scanner in edit mode
+      setIsReturnedFromNoUse(currentApplicator.returnedFromNoUse || false);
+    }
+  }, [isEditMode, currentApplicator]);
 
   const loadAvailableApplicators = async () => {
     if (!currentTreatment) return;
@@ -422,12 +451,12 @@ const TreatmentDocumentation = () => {
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
         comments: formData.comments
       };
-      
-      console.log('Saving applicator data to Priority:', applicatorData);
-      
+
+      console.log(isEditMode ? 'Updating applicator data in Priority:' : 'Saving applicator data to Priority:', applicatorData);
+
       // Save applicator data to Priority system
       const saveResult = await applicatorService.saveApplicatorData(currentTreatment.id, applicatorData);
-      
+
       console.log('Save result:', saveResult);
 
       if (!saveResult.success) {
@@ -436,9 +465,9 @@ const TreatmentDocumentation = () => {
         return;
       }
 
-      // Add applicator to local treatment context
+      // Create applicator object
       const applicator = {
-        id: generateUUID(),
+        id: currentApplicator?.id || generateUUID(),
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
@@ -448,9 +477,20 @@ const TreatmentDocumentation = () => {
         comments: formData.comments
       };
 
-      console.log('Processing applicator in context:', applicator);
-      processApplicator(applicator);
-      setScannedApplicators(prev => [...prev, formData.serialNumber]);
+      if (isEditMode) {
+        // UPDATE existing applicator in processedApplicators array
+        console.log('Updating existing applicator in context:', applicator);
+        const updatedApplicators = processedApplicators.map(app =>
+          app.serialNumber === editingSerialNumber ? applicator : app
+        );
+        setProcessedApplicators(updatedApplicators);
+        clearCurrentApplicator();
+      } else {
+        // ADD new applicator to context
+        console.log('Processing new applicator in context:', applicator);
+        processApplicator(applicator);
+        setScannedApplicators(prev => [...prev, formData.serialNumber]);
+      }
 
       // Clear form for next applicator
       setFormData({
@@ -471,14 +511,20 @@ const TreatmentDocumentation = () => {
       const insertedSeeds = progressStats.insertedSeeds;
       const remainingApplicators = progressStats.applicatorsRemaining;
       const completionPercentage = progressStats.completionPercentage;
-      
-      setSuccess(
-        `Applicator data saved to Priority system! ` +
-        `Progress: ${insertedSeeds}/${totalSeeds} seeds (${completionPercentage}%) - ` +
-        `${remainingApplicators} applicators remaining.`
-      );
+
+      if (isEditMode) {
+        setSuccess(`Applicator ${editingSerialNumber} updated successfully!`);
+        // Navigate back to Use List after editing
+        setTimeout(() => navigate('/treatment/list'), 1500);
+      } else {
+        setSuccess(
+          `Applicator data saved to Priority system! ` +
+          `Progress: ${insertedSeeds}/${totalSeeds} seeds (${completionPercentage}%) - ` +
+          `${remainingApplicators} applicators remaining.`
+        );
+      }
       setError(null);
-      console.log('Applicator successfully added and form cleared');
+      console.log(isEditMode ? 'Applicator successfully updated' : 'Applicator successfully added and form cleared');
     } catch (error: any) {
       console.error('Error saving applicator:', error);
       console.error('Error details:', {
@@ -556,19 +602,38 @@ const TreatmentDocumentation = () => {
           {/* Right Column - Scanner and Form: Full width on mobile, 2 cols on md, 2 cols on lg */}
           <div className="space-y-4 md:space-y-6 md:col-span-1 lg:col-span-2">
 
+        {/* Edit Mode Banner */}
+        {isEditMode && (
+          <div className="rounded-lg border-2 border-blue-500 bg-blue-50 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-blue-900">Editing Applicator</p>
+                <p className="text-sm text-blue-700 font-mono">{editingSerialNumber}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Scanner/Manual Entry Section */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">
-              {manualEntry ? 'Enter Serial Number Manually' : 'Scan Applicator Barcode'}
+              {isEditMode ? 'Edit Applicator Details' : manualEntry ? 'Enter Serial Number Manually' : 'Scan Applicator Barcode'}
             </h2>
-            <button
-              onClick={toggleEntryMode}
-              className="min-h-[44px] rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
-              disabled={loading}
-            >
-              {manualEntry ? 'Switch to Scanner' : 'Enter Manually'}
-            </button>
+            {!isEditMode && (
+              <button
+                onClick={toggleEntryMode}
+                className="min-h-[44px] rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+                disabled={loading}
+              >
+                {manualEntry ? 'Switch to Scanner' : 'Enter Manually'}
+              </button>
+            )}
           </div>
 
           {error && (
@@ -589,7 +654,16 @@ const TreatmentDocumentation = () => {
             </div>
           )}
 
-          {manualEntry ? (
+          {isEditMode ? (
+            <div className="rounded-md bg-gray-50 border border-gray-300 p-4">
+              <p className="text-sm text-gray-700 flex items-center gap-2">
+                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Serial number cannot be changed when editing an existing applicator. You can modify other fields below.
+              </p>
+            </div>
+          ) : manualEntry ? (
             <div className="space-y-4">
               {/* Applicator Selection Mode Toggle */}
               <div className="flex gap-2 flex-wrap">
@@ -981,7 +1055,7 @@ const TreatmentDocumentation = () => {
                 }
                 className="flex-1 min-h-[44px] rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Insert'}
+                {loading ? 'Saving...' : isEditMode ? 'Update Applicator' : 'Insert'}
               </button>
             </div>
           </div>
