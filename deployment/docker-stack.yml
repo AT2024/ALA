@@ -58,6 +58,15 @@ services:
       - ala-network
     environment:
       - NODE_ENV=${NODE_ENV:-production}
+    volumes:
+      - type: bind
+        source: /home/azureuser/ala-improved/ssl-certs/certs/fullchain.crt
+        target: /etc/ssl/certs/certificate.crt
+        read_only: true
+      - type: bind
+        source: /home/azureuser/ala-improved/ssl-certs/private/private.key
+        target: /etc/ssl/private/private.key
+        read_only: true
     deploy:
       replicas: 2
       update_config:
