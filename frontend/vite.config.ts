@@ -25,13 +25,12 @@ export default defineConfig({
     sourcemap: false // Disable source maps in production for size
   },
   server: {
-    host: '0.0.0.0', // This is critical for Docker - allows connections from outside the container
+    host: '0.0.0.0',
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://api:5000', // Use the Docker service name, not localhost
+        target: 'http://127.0.0.1:5000', // For local dev: proxy to backend Docker container (127.0.0.1 for Windows Docker)
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

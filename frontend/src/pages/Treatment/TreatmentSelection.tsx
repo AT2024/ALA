@@ -43,6 +43,8 @@ interface PriorityPatient {
   activityPerSeed: number;
   ordName?: string;
   reference?: string;
+  patientName?: string;
+  details?: string;
 }
 
 interface RemovalCandidate {
@@ -58,6 +60,7 @@ interface RemovalCandidate {
   activity: number;
   isEligible: boolean;
   reason?: string;
+  patientName?: string;
 }
 
 interface PrioritySite {
@@ -256,7 +259,9 @@ const TreatmentSelection = () => {
           seedQty: parseInt(order.SBD_SEEDQTY) || 0,
           activityPerSeed: parseFloat(order.SBD_PREFACTIV) || 0,
           ordName: order.ORDNAME,
-          reference: order.REFERENCE || null
+          reference: order.REFERENCE || null,
+          patientName: order.DETAILS || null,
+          details: order.DETAILS || null
         }));
       
       // Helper function to follow reference chain and find root order
@@ -559,6 +564,9 @@ const TreatmentSelection = () => {
       let treatmentData;
 
       if (procedureType === 'insertion') {
+        // Get patientName from selected patient
+        const selectedPatient = availablePatients.find(p => p.id === formData.patientId);
+
         // Create new insertion treatment
         treatmentData = {
           type: 'insertion' as const,
@@ -568,20 +576,28 @@ const TreatmentSelection = () => {
           email: formData.email,
           seedQuantity: parseInt(formData.seedQty) || 0,
           activityPerSeed: parseFloat(formData.activityPerSeed) || 0,
-          surgeon: formData.surgeon
+          surgeon: formData.surgeon,
+          patientName: selectedPatient?.patientName || selectedPatient?.details
         };
       } else {
         // Create removal treatment linked to original insertion
+        if (!removalCandidate) {
+          setError('Removal candidate not found');
+          setIsLoading(false);
+          return;
+        }
+
         treatmentData = {
           type: 'removal' as const,
-          subjectId: removalCandidate!.subjectId,
+          subjectId: removalCandidate.subjectId,
           site: formData.site,
           date: formData.date,
           email: formData.email,
-          seedQuantity: removalCandidate!.seedQuantity,
-          activityPerSeed: removalCandidate!.activityPerSeed,
-          surgeon: removalCandidate!.surgeon,
-          originalTreatmentId: removalCandidate!.id
+          seedQuantity: removalCandidate.seedQuantity,
+          activityPerSeed: removalCandidate.activityPerSeed,
+          surgeon: removalCandidate.surgeon,
+          originalTreatmentId: removalCandidate.id,
+          patientName: removalCandidate.patientName
         };
       }
 
@@ -810,7 +826,13 @@ const TreatmentSelection = () => {
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Patient Number:</span> {removalCandidate.subjectId}
+                    <span className="font-medium">Patient ID:</span> {removalCandidate.patientName ? (
+                      <span>{removalCandidate.patientName}</span>
+                    ) : (
+                      <span className="text-amber-600" title="Using order number (patient name not available)">
+                        Order: {removalCandidate.subjectId}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="font-medium">Insertion Date:</span> {new Date(removalCandidate.date).toLocaleDateString()}
@@ -862,7 +884,7 @@ const TreatmentSelection = () => {
                     <option value="">Select Patient ID</option>
                     {availablePatients.map((patient, index) => (
                       <option key={patient.id || `patient-${index}`} value={patient.id}>
-                        {patient.id}
+                        {patient.patientName ? patient.patientName : `Order: ${patient.id}`}
                       </option>
                     ))}
                   </select>
@@ -870,12 +892,18 @@ const TreatmentSelection = () => {
                   <div className="space-y-2">
                     <input
                       type="text"
-                      value={availablePatients[0].id}
+                      value={availablePatients[0].patientName ? availablePatients[0].patientName : `Order: ${availablePatients[0].id}`}
                       readOnly
-                      className="block w-full rounded-md border border-green-300 bg-green-50 px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px]"
+                      className={`block w-full rounded-md border px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px] ${
+                        availablePatients[0].patientName
+                          ? 'border-green-300 bg-green-50'
+                          : 'border-amber-300 bg-amber-50'
+                      }`}
                     />
-                    <p className="text-sm text-green-600">
-                      ✓ Patient automatically selected (only one available)
+                    <p className={`text-sm ${availablePatients[0].patientName ? 'text-green-600' : 'text-amber-600'}`}>
+                      {availablePatients[0].patientName
+                        ? '✓ Patient automatically selected (only one available)'
+                        : '⚠ Using order number (patient name not available)'}
                     </p>
                   </div>
                 ) : (

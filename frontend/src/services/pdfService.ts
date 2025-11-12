@@ -10,6 +10,7 @@ interface Treatment {
   date: string;
   surgeon?: string;
   activityPerSeed?: number;
+  patientName?: string;
 }
 
 interface Applicator {
@@ -60,7 +61,7 @@ export class PDFService {
     
     doc.setFontSize(12);
     const treatmentInfo = [
-      ['Patient ID:', treatment.subjectId],
+      ['Patient ID:', treatment.patientName || treatment.subjectId],
       ['Site:', treatment.site],
       ['Treatment Type:', treatment.type.charAt(0).toUpperCase() + treatment.type.slice(1)],
       ['Treatment Date:', treatment.date],
@@ -199,7 +200,7 @@ export class PDFService {
     
     // Generate filename with patient ID and timestamp
     const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
-    const filename = `Treatment_Report_${treatment.subjectId}_${timestamp}.pdf`;
+    const filename = `Treatment_Report_${treatment.patientName || treatment.subjectId}_${timestamp}.pdf`;
     
     // Download the PDF
     doc.save(filename);

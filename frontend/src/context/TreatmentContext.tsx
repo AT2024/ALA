@@ -13,6 +13,7 @@ interface Treatment {
   activityPerSeed?: number;
   surgeon?: string;
   daysSinceInsertion?: number;
+  patientName?: string;
 }
 
 interface Applicator {

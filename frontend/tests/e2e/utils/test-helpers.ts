@@ -21,6 +21,7 @@ export interface TestTreatment {
   id: string;
   type: 'insertion' | 'removal';
   subjectId: string;
+  patientName?: string;
   site: string;
   date: string;
   seedQuantity?: number;
@@ -53,10 +54,12 @@ export class MockDataGenerator {
 
   static generateTestTreatment(overrides: Partial<TestTreatment> = {}): TestTreatment {
     const yesterday = subDays(new Date(), 1);
+    const patNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     return {
       id: `TREAT-${Date.now()}`,
       type: 'removal',
-      subjectId: `PAT-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+      subjectId: `PAT-${patNum}`,
+      patientName: `Patient Test-${patNum}`,
       site: 'Test Hospital A',
       date: format(yesterday, 'yyyy-MM-dd'),
       seedQuantity: 85,

@@ -188,8 +188,14 @@ const SeedRemoval = () => {
           <h2 className='mb-4 text-lg font-medium'>Treatment Information</h2>
           <div className='grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4'>
             <div>
-              <p className='text-sm text-gray-500'>Patient Number</p>
-              <p className='font-medium'>{currentTreatment.subjectId}</p>
+              <p className='text-sm text-gray-500'>Patient ID</p>
+              {currentTreatment.patientName ? (
+                <p className='font-medium'>{currentTreatment.patientName}</p>
+              ) : (
+                <p className='font-medium text-amber-600' title="Using order number (patient name not available)">
+                  Order: {currentTreatment.subjectId}
+                </p>
+              )}
             </div>
             <div>
               <p className='text-sm text-gray-500'>Date of Insertion</p>

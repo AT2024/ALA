@@ -8,6 +8,7 @@ interface Treatment {
   date: string;
   surgeon?: string;
   activityPerSeed?: number;
+  patientName?: string;
 }
 
 interface Applicator {
@@ -101,7 +102,7 @@ export class JSONExportService {
       // Create download link
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Treatment_Data_${treatment.subjectId}_${timestamp}.json`;
+      link.download = `Treatment_Data_${treatment.patientName || treatment.subjectId}_${timestamp}.json`;
       
       // Trigger download
       document.body.appendChild(link);

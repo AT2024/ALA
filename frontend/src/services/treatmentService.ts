@@ -17,6 +17,7 @@ export interface Treatment {
   originalTreatmentId?: string; // For removal treatments - links to original insertion
   createdAt?: string;
   updatedAt?: string;
+  patientName?: string;
 }
 
 export interface Applicator {
@@ -81,6 +82,7 @@ export const treatmentService = {
     activityPerSeed?: number;
     surgeon?: string;
     originalTreatmentId?: string; // For removal treatments
+    patientName?: string; // Patient identifier from Priority DETAILS field
   }): Promise<Treatment> {
     const response = await api.post('/treatments', treatmentData);
     return response.data;

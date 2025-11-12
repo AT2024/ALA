@@ -166,7 +166,15 @@ const ProgressTracker = () => {
 
         {/* Treatment Info */}
         <div className="text-xs text-gray-500 border-t pt-3">
-          <p>Patient: {currentTreatment.subjectId}</p>
+          <p>
+            Patient: {currentTreatment.patientName ? (
+              <span>{currentTreatment.patientName}</span>
+            ) : (
+              <span className="text-amber-600" title="Using order number (patient name not available)">
+                Order: {currentTreatment.subjectId}
+              </span>
+            )}
+          </p>
           <p>Type: {currentTreatment.type}</p>
           <p>Site: {currentTreatment.site}</p>
           <p>Expected Seeds: {actualTotalSeeds || 'N/A'}</p>

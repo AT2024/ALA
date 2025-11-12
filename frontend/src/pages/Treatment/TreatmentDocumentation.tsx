@@ -572,7 +572,13 @@ const TreatmentDocumentation = () => {
                 <div className="space-y-3 text-sm">
                   <div>
                     <p className="text-gray-500">Patient ID</p>
-                    <p className="font-medium">{currentTreatment.subjectId}</p>
+                    {currentTreatment.patientName ? (
+                      <p className="font-medium">{currentTreatment.patientName}</p>
+                    ) : (
+                      <p className="font-medium text-amber-600" title="Using order number (patient name not available)">
+                        Order: {currentTreatment.subjectId}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-gray-500">Site</p>

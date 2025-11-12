@@ -144,7 +144,13 @@ const UseList = () => {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div>
               <p className="text-sm text-gray-500">Patient ID</p>
-              <p className="font-medium">{currentTreatment.subjectId}</p>
+              {currentTreatment.patientName ? (
+                <p className="font-medium">{currentTreatment.patientName}</p>
+              ) : (
+                <p className="font-medium text-amber-600" title="Using order number (patient name not available)">
+                  Order: {currentTreatment.subjectId}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-sm text-gray-500">Site</p>
