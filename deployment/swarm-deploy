@@ -166,6 +166,19 @@ main() {
     echo ""
 
     cd "$SCRIPT_DIR"
+
+    # Load .env file and export variables for docker stack
+    if [ -f .env ]; then
+        log "Loading environment variables from .env..."
+        set -a  # automatically export all variables
+        source .env
+        set +a
+        success "Environment variables loaded"
+    else
+        error ".env file not found!"
+        exit 1
+    fi
+
     VERSION=$VERSION docker stack deploy -c docker-stack.yml ala
 
     success "Deployment initiated!"
