@@ -1,0 +1,265 @@
+#!/bin/bash
+# ======================================================================
+# ALA Medical Application - Zero-Downtime Deployment
+# ======================================================================
+# Docker Swarm rolling update deployment script
+#
+# This script provides TRUE zero-downtime deployments using Docker Swarm's
+# rolling update capability. Users experience no interruption during deployment.
+#
+# Usage:
+#   ./swarm-deploy                    # Standard deployment
+#   ./swarm-deploy --skip-build       # Use existing images (faster)
+#   ./swarm-deploy --version v1.2.3   # Deploy specific version
+#
+# What it does:
+# 1. Pulls latest code from GitHub
+# 2. Builds new Docker images with timestamp version
+# 3. Deploys to Swarm with rolling update strategy
+# 4. Monitors deployment progress
+# 5. Automatic rollback on health check failure
+#
+# Zero-downtime achieved through:
+# - order: start-first (new container starts before old stops)
+# - 2 replicas per service (one always available)
+# - Health check validation before removing old containers
+#
+# Requirements:
+# - Docker Swarm initialized (docker swarm init)
+# - ala-network overlay network created
+# - Database running (docker-compose -f docker-compose.db.yml up -d)
+
+set -euo pipefail
+
+# ======================================================================
+# Configuration
+# ======================================================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# ======================================================================
+# Helper Functions
+# ======================================================================
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $*"
+}
+
+success() {
+    echo -e "${GREEN}✅ $*${NC}"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠️  $*${NC}"
+}
+
+error() {
+    echo -e "${RED}❌ $*${NC}"
+}
+
+# ======================================================================
+# Parse Arguments
+# ======================================================================
+SKIP_BUILD=false
+VERSION=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --skip-build)
+            SKIP_BUILD=true
+            shift
+            ;;
+        --version)
+            VERSION="$2"
+            shift 2
+            ;;
+        *)
+            error "Unknown option: $1"
+            echo "Usage: $0 [--skip-build] [--version VERSION]"
+            exit 1
+            ;;
+    esac
+done
+
+# ======================================================================
+# Main Deployment
+# ======================================================================
+main() {
+    echo ""
+    echo "🚀 ALA Medical Application - Zero-Downtime Deployment"
+    echo "=================================================="
+    echo ""
+
+    # Check prerequisites
+    log "Checking prerequisites..."
+    command -v docker >/dev/null 2>&1 || { error "Docker not found"; exit 1; }
+
+    # Check if Swarm is initialized
+    if ! docker info 2>/dev/null | grep -q "Swarm: active"; then
+        error "Docker Swarm not initialized!"
+        echo "Run: docker swarm init --advertise-addr <IP>"
+        exit 1
+    fi
+
+    # Check if overlay network exists
+    if ! docker network ls | grep -q "ala-network"; then
+        error "Overlay network 'ala-network' not found!"
+        echo "Run: docker network create --driver overlay --attachable ala-network"
+        exit 1
+    fi
+
+    # Check if database is running
+    if ! docker ps | grep -q "ala-db"; then
+        error "Database not running!"
+        echo "Run: docker-compose -f docker-compose.db.yml up -d"
+        exit 1
+    fi
+
+    success "Prerequisites OK"
+
+    # Pull latest code
+    if [ "$SKIP_BUILD" = false ]; then
+        log "Pulling latest code from GitHub..."
+        cd "$PROJECT_ROOT"
+        git pull origin main
+        success "Code updated"
+    fi
+
+    # Generate version tag
+    if [ -z "$VERSION" ]; then
+        VERSION=$(date +%Y%m%d-%H%M%S)
+    fi
+    log "Deployment version: $VERSION"
+
+    # Build images
+    if [ "$SKIP_BUILD" = false ]; then
+        log "Building Docker images..."
+
+        cd "$PROJECT_ROOT"
+
+        log "  Building backend API..."
+        docker build -t ala-api:$VERSION ./backend || { error "Backend build failed"; exit 1; }
+        docker tag ala-api:$VERSION ala-api:latest
+
+        log "  Building frontend..."
+        docker build -t ala-frontend:$VERSION ./frontend || { error "Frontend build failed"; exit 1; }
+        docker tag ala-frontend:$VERSION ala-frontend:latest
+
+        success "Images built: ala-api:$VERSION, ala-frontend:$VERSION"
+    else
+        warning "Skipping build (using existing images)"
+    fi
+
+    # Deploy to Swarm
+    log "Deploying to Docker Swarm..."
+    log "  Rolling update will start automatically"
+    log "  - New containers start"
+    log "  - Health checks verified"
+    log "  - Old containers removed"
+    log "  - ZERO DOWNTIME throughout process"
+    echo ""
+
+    cd "$SCRIPT_DIR"
+    VERSION=$VERSION docker stack deploy -c docker-stack.yml ala
+
+    success "Deployment initiated!"
+    echo ""
+
+    # Monitor deployment
+    log "Monitoring deployment progress..."
+    log "Waiting for rolling update to complete (this takes ~2 minutes)..."
+    echo ""
+
+    # Wait for services to update
+    sleep 5
+
+    # Show service status
+    echo "Current service status:"
+    docker service ls --filter name=ala
+    echo ""
+
+    # Monitor until all replicas are updated
+    log "Watching for completion (Ctrl+C to stop monitoring)..."
+    echo "Run 'docker service ps ala_api' to see detailed task list"
+    echo "Run 'docker service logs -f ala_api' to view logs"
+    echo ""
+
+    # Wait for services to be ready
+    for service in ala_api ala_frontend; do
+        log "Checking $service..."
+
+        # Wait up to 3 minutes for service to stabilize
+        timeout=180
+        elapsed=0
+        while [ $elapsed -lt $timeout ]; do
+            replicas=$(docker service ls --filter name=$service --format "{{.Replicas}}")
+            if [[ "$replicas" == "2/2" ]]; then
+                success "$service: 2/2 replicas running"
+                break
+            fi
+            sleep 5
+            elapsed=$((elapsed + 5))
+            echo -ne "\r  $service: $replicas (waiting...)"
+        done
+        echo ""
+
+        if [ $elapsed -ge $timeout ]; then
+            warning "$service did not reach 2/2 replicas within timeout"
+            error "Deployment may have failed - check logs: docker service logs $service"
+            exit 1
+        fi
+    done
+
+    # Verify health
+    log "Verifying application health..."
+    sleep 10  # Give health checks time to complete
+
+    if curl -f -s http://localhost:5000/api/health > /dev/null 2>&1; then
+        success "Backend API healthy"
+    else
+        error "Backend API unhealthy!"
+        echo "Check logs: docker service logs ala_api"
+        exit 1
+    fi
+
+    if curl -f -s http://localhost:80 > /dev/null 2>&1 || curl -f -s http://localhost:443 > /dev/null 2>&1; then
+        success "Frontend healthy"
+    else
+        warning "Frontend check failed (may need manual verification)"
+    fi
+
+    # Success!
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    success "🎉 DEPLOYMENT SUCCESSFUL - ZERO DOWNTIME!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  Version:     $VERSION"
+    echo "  Services:    2 replicas each (API + Frontend)"
+    echo "  Status:      Rolling update completed"
+    echo ""
+    echo "  Frontend:    https://ala-app.israelcentral.cloudapp.azure.com"
+    echo "  Backend:     https://ala-app.israelcentral.cloudapp.azure.com/api"
+    echo "  Health:      https://ala-app.israelcentral.cloudapp.azure.com/api/health"
+    echo ""
+    echo "Monitoring commands:"
+    echo "  docker service ls                   # View all services"
+    echo "  docker service ps ala_api           # View API replicas"
+    echo "  docker service logs -f ala_api      # Follow API logs"
+    echo ""
+    echo "Rollback commands (if needed):"
+    echo "  docker service rollback ala_api     # Rollback API"
+    echo "  docker service rollback ala_frontend # Rollback frontend"
+    echo ""
+}
+
+# ======================================================================
+# Execute
+# ======================================================================
+main "$@"

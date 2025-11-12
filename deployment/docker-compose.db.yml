@@ -1,0 +1,75 @@
+version: '3.8'
+
+# ALA Medical Application - Database Service
+# ==========================================
+# Database-only Docker Compose for hybrid Swarm architecture
+#
+# Why separate?
+# - Database rarely changes (doesn't need rolling updates)
+# - Persistent data requires single instance (not replicated)
+# - Simpler backup/restore procedures
+# - Medical data stability (Swarm adds unnecessary complexity)
+#
+# Usage:
+#   docker-compose -f docker-compose.db.yml up -d      # Start database
+#   docker-compose -f docker-compose.db.yml logs -f    # View logs
+#   docker-compose -f docker-compose.db.yml down       # Stop database
+#
+# Environment: Configure via .env file (see .env.production.template)
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ala-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ala_production}
+      POSTGRES_USER: ${POSTGRES_USER:-ala_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # Exposed for:
+                     # 1. Swarm services to connect (via ala-network)
+                     # 2. Local development tools (VSCode, pgAdmin)
+                     # 3. SSH tunnel access: ssh -L 5433:localhost:5432 azureuser@20.217.84.100
+                     # Note: Azure firewall blocks external access (only 80, 443, 22 allowed)
+    networks:
+      - ala-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-ala_user}", "-d", "${POSTGRES_DB:-ala_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres-data:
+    # Persistent volume for PostgreSQL data
+    # Location: /var/lib/docker/volumes/deployment_postgres-data/_data
+    # Backup: docker exec ala-db pg_dump -U ala_user ala_production > backup.sql
+    # Restore: cat backup.sql | docker exec -i ala-db psql -U ala_user -d ala_production
+
+networks:
+  ala-network:
+    external: true
+    # This network is shared with Swarm services
+    # Created with: docker network create --driver overlay --attachable ala-network
+
+# Database Management Commands:
+#
+# Backup:
+#   docker exec ala-db pg_dump -U ala_user ala_production > ~/backups/ala_db_$(date +%Y%m%d_%H%M%S).sql
+#
+# Restore:
+#   cat ~/backups/ala_db_YYYYMMDD_HHMMSS.sql | docker exec -i ala-db psql -U ala_user -d ala_production
+#
+# Shell access:
+#   docker exec -it ala-db psql -U ala_user -d ala_production
+#
+# View schema:
+#   docker exec -it ala-db psql -U ala_user -d ala_production -c "\d treatments"
+#
+# Run migration:
+#   docker cp migration.sql ala-db:/tmp/
+#   docker exec -it ala-db psql -U ala_user -d ala_production -f /tmp/migration.sql

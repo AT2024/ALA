@@ -1,0 +1,101 @@
+version: '3.8'
+
+# ALA Medical Application - Docker Swarm Stack
+# Zero-Downtime Deployment Configuration
+#
+# This stack manages API and Frontend services with rolling updates.
+# Database runs separately in Docker Compose (docker-compose.db.yml)
+#
+# Deploy with: docker stack deploy -c docker-stack.yml ala
+
+services:
+  api:
+    image: ala-api:${VERSION:-latest}
+    networks:
+      - ala-network
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ala-db:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - PRIORITY_API_URL=${PRIORITY_API_URL}
+      - PRIORITY_USERNAME=${PRIORITY_USERNAME}
+      - PRIORITY_PASSWORD=${PRIORITY_PASSWORD}
+      - ENABLE_TEST_DATA=${ENABLE_TEST_DATA:-false}
+    deploy:
+      replicas: 2
+      update_config:
+        # Rolling update configuration - achieves zero downtime
+        parallelism: 1              # Update 1 replica at a time
+        delay: 30s                  # Wait 30s between updates
+        failure_action: rollback    # Auto-rollback on failure
+        order: start-first          # Start new before stopping old (KEY for zero downtime!)
+        monitor: 30s                # Monitor health for 30s after update
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        monitor: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == manager     # Run on manager node (single VM setup)
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    ports:
+      - "5000:5000"
+
+  frontend:
+    image: ala-frontend:${VERSION:-latest}
+    networks:
+      - ala-network
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+        order: start-first          # Zero downtime: new container before old removed
+        monitor: 30s
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        monitor: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    ports:
+      - "80:8080"
+      - "443:8443"
+
+networks:
+  ala-network:
+    external: true
+
+# Notes:
+# - Database runs in separate Docker Compose (docker-compose.db.yml)
+# - order: start-first ensures zero downtime (new replica starts before old stops)
+# - 2 replicas provide redundancy during updates
+# - Automatic health check validation before old containers removed
+# - Automatic rollback if health checks fail
