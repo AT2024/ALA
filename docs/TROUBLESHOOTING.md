@@ -38,6 +38,66 @@ curl -I http://ala-app.israelcentral.cloudapp.azure.com  # Should return 301 red
 
 ## Common Issues and Solutions
 
+### Localhost Not Working (Windows/WSL)
+
+#### Symptoms
+- `http://localhost:3000` fails with connection reset
+- Frontend loads but API calls fail
+- Docker containers are healthy but can't access application
+- Works with `127.0.0.1:3000` but not `localhost:3000`
+
+#### Root Cause
+Windows resolves `localhost` to IPv6 `::1`, and WSLrelay.exe intercepts IPv6 connections on port 3000, causing connection resets.
+
+#### Solutions
+
+**Quick Fix (Immediate):**
+Use IP address instead of hostname:
+- `http://127.0.0.1` (if using port 80)
+- `http://127.0.0.1:3000` (if using port 3000)
+
+**Permanent Fix (Recommended):**
+Use port 80 for local development (avoids WSLrelay interference):
+
+```bash
+# In deployment/docker-compose.yml
+ports:
+  - "80:8080"     # Use port 80, not 3000
+  - "443:8443"
+
+# Rebuild containers
+cd deployment
+docker-compose down
+docker-compose up --build -d
+
+# Access via http://localhost (no port needed)
+```
+
+**Alternative Fix:**
+Check Windows hosts file (`C:\Windows\System32\drivers\etc\hosts`):
+```
+127.0.0.1 localhost
+```
+
+**Diagnostic Commands:**
+```bash
+# Check which process is using port 3000
+netstat -ano | findstr :3000
+
+# Test IPv4 vs IPv6
+curl http://127.0.0.1:3000     # Should work
+curl http://localhost:3000     # May fail due to IPv6
+
+# Verify container health
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+**Why Port 80 Works Better:**
+- Standard HTTP port (cleaner URLs)
+- No WSLrelay interference
+- No need to specify port in browser
+- Matches production port mapping philosophy
+
 ### Priority API Issues
 
 #### Empty Results from Priority API
@@ -171,6 +231,48 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && \
 
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 ```
+
+#### Disk Space Full (Azure VM)
+
+**⚠️ RESOLVED**: As of November 2025, the deployment script automatically cleans up disk space. This section is for reference only.
+
+**Symptoms:**
+- Deployment fails with "no space left on device"
+- Docker build fails
+- VM disk usage > 90%
+
+**Automatic Prevention (Current):**
+Both `deployment/deploy` and `deployment/deploy-staging` scripts now automatically:
+- Warn if disk usage > 85% before deployment
+- Clean up after successful deployment:
+  - `docker image prune -f` (removes dangling images)
+  - `docker builder prune -f --keep-storage 1GB` (clears build cache)
+- Show disk usage before/after cleanup
+- Save 1-3GB per production deployment, 200-500MB per staging deployment
+
+**Note**: Cleanup code is intentionally duplicated in both scripts for simplicity.
+
+**Manual Check (if needed):**
+```bash
+# Check disk usage
+ssh azureuser@20.217.84.100 "df -h /"
+
+# Check Docker disk usage
+ssh azureuser@20.217.84.100 "docker system df"
+
+# Manual cleanup (emergency only - deployment handles this now)
+ssh azureuser@20.217.84.100 "docker system prune -f"
+```
+
+**What Gets Cleaned:**
+- ✅ Dangling images (`<none>` tagged) - old build artifacts
+- ✅ Unused build cache beyond 1GB
+- ❌ Active containers (preserved)
+- ❌ Volumes with medical data (preserved)
+- ❌ Tagged images for staging/rollback (preserved)
+
+**Root Cause (Historical):**
+Each `docker-compose build --no-cache` created 1-2GB of new images. Old images accumulated as dangling (`<none>`) images but weren't automatically removed. Fixed in deployment script update (2025-11-10).
 
 ### Database Issues
 

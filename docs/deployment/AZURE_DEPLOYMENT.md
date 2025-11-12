@@ -16,16 +16,35 @@ That's it. No confusion. No multiple scripts. **One command.**
 
 ## What It Does Automatically
 
-1. ✅ Backs up the database to `~/ala-improved/backups/`
-2. ✅ Pulls latest code from git
-3. ✅ Builds containers with `--no-cache`
-4. ✅ Starts services with health checks
-5. ✅ Waits 60 seconds for health verification
-6. ✅ Checks backend `/api/health` endpoint
-7. ✅ **Automatically rolls back if any step fails**
-8. ✅ Keeps last 10 backups, deletes older ones
+1. ✅ Checks disk space and warns if > 85% full
+2. ✅ Backs up the database to `~/ala-improved/backups/`
+3. ✅ Pulls latest code from git
+4. ✅ Builds containers with `--no-cache`
+5. ✅ Starts services with health checks
+6. ✅ Waits 60 seconds for health verification
+7. ✅ Checks backend `/api/health` endpoint
+8. ✅ **Cleans up old Docker images and build cache (saves 1-3GB)**
+9. ✅ **Automatically rolls back if any step fails**
+10. ✅ Keeps last 10 backups, deletes older ones
 
 **Downtime:** ~2-3 minutes | **Risk:** Minimal (automatic rollback)
+
+### Automated Disk Space Management
+
+Both production and staging deployment scripts automatically:
+- **Monitor disk usage** before deployment (warns if > 85%)
+- **Clean up after successful deployment**:
+  - `docker image prune -f` - Removes dangling images (`<none>` tagged)
+  - `docker builder prune -f --keep-storage 1GB` - Clears old build cache
+- **Show disk usage** before and after cleanup
+- **Preserve**: Active containers, volumes (postgres-data), and tagged images for both environments
+
+**Impact**:
+- Production deployments: Saves 1-3GB per deployment
+- Staging deployments: Saves 200-500MB per deployment
+- Total: 1-3.5GB freed per full deployment cycle
+
+This prevents disk space issues that previously required manual intervention. The cleanup logic is intentionally duplicated in both scripts for simplicity and reliability.
 
 See [../../deployment/README.md](../../deployment/README.md) for complete documentation.
 

@@ -201,6 +201,7 @@ cd ~/ala-improved/deployment
 - ✅ Pulls latest code
 - ✅ Builds and starts containers
 - ✅ Verifies health checks
+- ✅ Cleans up old Docker images and build cache (saves 1-3GB per deployment)
 - ✅ Rolls back on any failure
 
 ### Setup (First Time Only)
@@ -448,6 +449,16 @@ _For full context, see [Architectural Decision Records](docs/architecture/adr/)_
 - **Prevention**: Pre-deployment checklist enforcement - see [incident report](docs/learnings/errors/2025-10-27-blue-green-production-outage.md)
 - **Critical**: Production is NEVER a test environment, especially for deployment infrastructure
 - **Impact**: 30-minute production outage, violated core medical application reliability principle
+
+**Pitfall**: Azure VM disk space fills up over time (RESOLVED 2025-11-10)
+- **Symptom**: Disk space fills up causing deployment failures and production issues
+- **Root Cause**: Docker images accumulate with each build (1-2GB per production deployment, 200-500MB per staging), old images not cleaned up
+- **Solution**: Automated cleanup added to both `deploy` and `deploy-staging` scripts - runs after successful deployment
+- **Cleanup actions**: `docker image prune -f` (removes dangling images), `docker builder prune -f --keep-storage 1GB` (controls build cache)
+- **Prevention**: Disk usage warning shows before deployment, automatic cleanup frees 1-3.5GB per deployment cycle
+- **Safe**: Only removes unused resources, preserves active containers/volumes/tagged images for both environments
+- **Manual cleanup**: `docker system prune -f` if emergency space needed (but both deployment scripts handle this now)
+- **Implementation note**: Cleanup code is intentionally duplicated in both scripts for simplicity (5 lines each, aligns with "radically simplified" philosophy)
 
 _Document new pitfalls in [docs/learnings/](docs/learnings/) as they're discovered_
 

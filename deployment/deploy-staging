@@ -73,6 +73,15 @@ main() {
     }
     success "Prerequisites OK"
 
+    # Check disk space before deployment
+    DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+    if [ "$DISK_USAGE" -gt 85 ]; then
+        warning "Disk usage is ${DISK_USAGE}% - deployment may fail if space runs out"
+        log "Automatic cleanup will run after successful deployment..."
+    else
+        log "Disk usage: ${DISK_USAGE}%"
+    fi
+
     # Pull latest code from current branch
     log "Pulling latest code from current branch..."
     current_branch=$(git branch --show-current)
@@ -118,6 +127,15 @@ main() {
         warning "Frontend check failed on port 8080"
         warning "Check logs: docker-compose -f docker-compose.yml -f docker-compose.staging.yml logs frontend"
     fi
+
+    # Clean up Docker resources after successful deployment
+    # Note: Intentionally duplicated from deploy script for simplicity
+    log "Cleaning up Docker resources..."
+    DISK_BEFORE=$(df -h / | awk 'NR==2 {print $5}')
+    docker image prune -f
+    docker builder prune -f --keep-storage 1GB
+    DISK_AFTER=$(df -h / | awk 'NR==2 {print $5}')
+    success "Docker cleanup complete (disk usage: $DISK_BEFORE → $DISK_AFTER)"
 
     # Success!
     echo ""

@@ -74,6 +74,15 @@ main() {
     [ -f .env ] || { error ".env file not found. Copy from .env.production.template"; exit 1; }
     success "Prerequisites OK"
 
+    # Check disk space before deployment
+    DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+    if [ "$DISK_USAGE" -gt 85 ]; then
+        warning "Disk usage is ${DISK_USAGE}% - deployment may fail if space runs out"
+        log "Automatic cleanup will run after successful deployment..."
+    else
+        log "Disk usage: ${DISK_USAGE}%"
+    fi
+
     # If using staging images, check they exist
     if [ "$USE_STAGING_IMAGES" = true ]; then
         if ! docker images | grep -q "ala-api.*staging"; then
@@ -135,6 +144,15 @@ main() {
     else
         warning "Frontend check failed (non-critical, may be nginx port config)"
     fi
+
+    # Clean up Docker resources after successful deployment
+    # Note: Intentionally duplicated in deploy-staging for simplicity
+    log "Cleaning up Docker resources..."
+    DISK_BEFORE=$(df -h / | awk 'NR==2 {print $5}')
+    docker image prune -f
+    docker builder prune -f --keep-storage 1GB
+    DISK_AFTER=$(df -h / | awk 'NR==2 {print $5}')
+    success "Docker cleanup complete (disk usage: $DISK_BEFORE → $DISK_AFTER)"
 
     # Success!
     echo ""
