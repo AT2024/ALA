@@ -44,6 +44,18 @@ export const getTreatmentById = asyncHandler(async (req: Request, res: Response)
 // @access  Private
 export const createTreatment = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.createTreatment(req.body, req.user.id);
+
+  // AUDIT LOG: Log patient identifier source for safety tracking
+  logger.info('Treatment created with patient identifier', {
+    treatmentId: treatment.id,
+    subjectId: treatment.subjectId,
+    patientName: treatment.patientName || 'NULL',
+    identifierSource: treatment.patientName ? 'DETAILS' : 'ORDNAME_FALLBACK',
+    userId: req.user.id,
+    site: treatment.site,
+    type: treatment.type
+  });
+
   res.status(201).json(treatment);
 });
 
@@ -594,7 +606,7 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
         const candidateResponse = {
           treatmentId: candidate.ORDNAME.replace(/_(Y|T|M)$/, ''), // Return base order name without suffix
           subjectId: candidate.ORDNAME.replace(/_(Y|T|M)$/, ''), // Add this for frontend compatibility
-          patientName: candidate.PNAME || 'Test Patient',
+          patientName: candidate.patientName || candidate.DETAILS || candidate.PNAME || 'Test Patient', // Use patientName from mapping or fallback to DETAILS/PNAME
           insertionDate: candidate.SIBD_TREATDAY || candidate.CURDATE,
           daysSinceInsertion,
           status: candidate.ORDSTATUSDES,

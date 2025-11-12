@@ -6,6 +6,7 @@ interface TreatmentAttributes {
   id: string;
   type: 'insertion' | 'removal';
   subjectId: string;
+  patientName?: string; // Patient identifier from Priority DETAILS field
   site: string;
   date: Date;
   isComplete: boolean;
@@ -20,12 +21,13 @@ interface TreatmentAttributes {
 }
 
 // For creating a new treatment
-interface TreatmentCreationAttributes extends Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon'> {}
+interface TreatmentCreationAttributes extends Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName'> {}
 
 class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> implements TreatmentAttributes {
   public id!: string;
   public type!: 'insertion' | 'removal';
   public subjectId!: string;
+  public patientName?: string;
   public site!: string;
   public date!: Date;
   public isComplete!: boolean;
@@ -61,6 +63,11 @@ Treatment.init(
       type: DataTypes.STRING,
       allowNull: false,
       field: 'subject_id', // Map to database column name
+    },
+    patientName: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'patient_name', // Map to database column name
     },
     site: {
       type: DataTypes.STRING,
