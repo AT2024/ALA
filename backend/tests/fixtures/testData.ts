@@ -86,6 +86,7 @@ export const mockTreatmentData = {
   id: 'test-treatment-uuid-001',
   type: 'insertion' as 'insertion' | 'removal',
   subjectId: 'PAT-2025-015',
+  patientName: 'Patient Test-015',
   site: '100078',
   date: '2025-07-10',
   isComplete: false,

@@ -828,10 +828,18 @@ export const priorityService = {
           // Log detailed test data results
           logger.info(`🧪 TEST DATA FINAL RESULTS: Retrieved ${filteredOrders.length} orders for site ${custName}`);
           filteredOrders.forEach((order: any, index: number) => {
-            logger.info(`  📋 TEST ORDER ${index + 1}: ${order.ORDNAME} | Seeds: ${order.SBD_SEEDQTY} | Date: ${order.SIBD_TREATDAY} | Ref: ${order.REFERENCE || 'None'}`);
+            logger.info(`  📋 TEST ORDER ${index + 1}: ${order.ORDNAME} | Seeds: ${order.SBD_SEEDQTY} | Date: ${order.SIBD_TREATDAY} | Ref: ${order.REFERENCE || 'None'} | Patient: ${order.DETAILS || 'None'}`);
           });
-          
-          return filteredOrders;
+
+          // Map DETAILS field to patientName for test data consistency with validation
+          const mappedTestOrders = filteredOrders.map((order: any) => ({
+            ...order,
+            patientName: (order.DETAILS && typeof order.DETAILS === 'string' && order.DETAILS.trim())
+              ? order.DETAILS.trim()
+              : null
+          }));
+
+          return mappedTestOrders;
         } else {
           logger.warn(`🧪 TEST DATA: Failed to load test data for user ${userId}`);
         }
@@ -887,7 +895,7 @@ export const priorityService = {
       logger.info(`  📅 Date Filter Applied: ${filterDate || 'None'}`);
       logger.info(`  📊 Total Orders Returned: ${response.data.value.length}`);
       logger.info(`  🌐 Request URL: ${getPriorityUrl()}ORDERS?$filter=${encodeURIComponent(filterParam)}`);
-      
+
       // Enhanced DEBUG: Log every single order returned by Priority API with clear data source indication
       logger.info('=== 🔍 PRIORITY API SERVICE LEVEL DEBUG ===');
       logger.info(`🎯 Data Source: REAL Priority API (not test data)`);
@@ -895,7 +903,7 @@ export const priorityService = {
       logger.info(`📅 Date Filter: ${filterDate || 'None'}`);
       logger.info(`🔍 Filter used: ${filterParam}`);
       logger.info(`📊 Total orders returned: ${response.data.value.length}`);
-      
+
       response.data.value.forEach((order: any, index: number) => {
         logger.info(`🏥 PRIORITY API ORDER ${index + 1}:`);
         logger.info(`  📋 ORDNAME: ${order.ORDNAME}`);
@@ -905,15 +913,24 @@ export const priorityService = {
         logger.info(`  📅 CURDATE: ${order.CURDATE}`);
         logger.info(`  🌱 SBD_SEEDQTY: ${order.SBD_SEEDQTY}`);
         logger.info(`  ⚡ SBD_PREFACTIV: ${order.SBD_PREFACTIV}`);
+        logger.info(`  👤 DETAILS (Patient): ${order.DETAILS}`);
         logger.info(`  📄 Full order data:`, JSON.stringify(order, null, 2));
       });
       logger.info('=== 🔍 END PRIORITY API SERVICE DEBUG ===');
-      
+
       if (response.data.value.length > 0) {
         logger.info(`📄 Sample order data:`, response.data.value[0]);
       }
-      
-      return response.data.value;
+
+      // Map DETAILS field to patientName for treatment creation with validation
+      const mappedOrders = response.data.value.map((order: any) => ({
+        ...order,
+        patientName: (order.DETAILS && typeof order.DETAILS === 'string' && order.DETAILS.trim())
+          ? order.DETAILS.trim()
+          : null
+      }));
+
+      return mappedOrders;
     } catch (error: any) {
       logger.error(`Error getting orders for site ${custName}: ${error}`);
       
@@ -953,7 +970,16 @@ export const priorityService = {
           }
           
           logger.info(`🧪 TEST USER FALLBACK: Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
-          return filteredOrders;
+
+          // Map DETAILS field to patientName for fallback test data consistency with validation
+          const mappedFallbackOrders = filteredOrders.map((order: any) => ({
+            ...order,
+            patientName: (order.DETAILS && typeof order.DETAILS === 'string' && order.DETAILS.trim())
+              ? order.DETAILS.trim()
+              : null
+          }));
+
+          return mappedFallbackOrders;
         }
       }
       
@@ -1067,7 +1093,13 @@ export const priorityService = {
         const orderDetails = testData.orders.find((order: any) => order.ORDNAME === orderName);
         if (orderDetails) {
           logger.info(`Using test data for order details ${orderName}`);
-          return orderDetails;
+          // Map DETAILS field to patientName for test data with validation
+          return {
+            ...orderDetails,
+            patientName: (orderDetails.DETAILS && typeof orderDetails.DETAILS === 'string' && orderDetails.DETAILS.trim())
+              ? orderDetails.DETAILS.trim()
+              : null
+          };
         }
       }
       
@@ -1079,7 +1111,16 @@ export const priorityService = {
       });
 
       logger.info(`Retrieved detailed order information for ${orderName}`);
-      return response.data;
+
+      // Map DETAILS field to patientName with validation
+      const orderWithPatientName = {
+        ...response.data,
+        patientName: (response.data.DETAILS && typeof response.data.DETAILS === 'string' && response.data.DETAILS.trim())
+          ? response.data.DETAILS.trim()
+          : null
+      };
+
+      return orderWithPatientName;
     } catch (error: any) {
       logger.error(`Error getting order details for ${orderName}: ${error}`);
       
@@ -1089,7 +1130,13 @@ export const priorityService = {
         const orderDetails = testData.orders.find((order: any) => order.ORDNAME === orderName);
         if (orderDetails) {
           logger.info(`Using test data fallback for order details ${orderName}`);
-          return orderDetails;
+          // Map DETAILS field to patientName for test data fallback with validation
+          return {
+            ...orderDetails,
+            patientName: (orderDetails.DETAILS && typeof orderDetails.DETAILS === 'string' && orderDetails.DETAILS.trim())
+              ? orderDetails.DETAILS.trim()
+              : null
+          };
         }
       }
       
@@ -1109,7 +1156,7 @@ export const priorityService = {
         const response = await priorityApi.get('/ORDERS', {
           params: {
             $filter: orderFilter,
-            $select: 'ORDNAME,CUSTNAME,ORDNAME,CURDATE,REFERENCE',
+            $select: 'ORDNAME,CUSTNAME,CURDATE,REFERENCE,DETAILS',
           },
         });
 
@@ -1118,6 +1165,7 @@ export const priorityService = {
           id: item.ORDNAME,
           type: params.type || 'insertion',
           subjectId: item.REFERENCE || 'Unknown',
+          patientName: item.DETAILS || null,
           site: item.CUSTNAME,
           date: item.CURDATE || new Date().toISOString().split('T')[0],
           isComplete: false,
