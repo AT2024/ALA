@@ -789,6 +789,80 @@ export const priorityService = {
     }
   },
 
+  // Helper function to combine multiple treatments for the same patient/date/site (pancreas treatments)
+  combineMultipleTreatments(orders: any[]): any[] {
+    logger.info(`🔍 combineMultipleTreatments called with ${orders.length} orders`);
+
+    // Group orders by patient ID, site, and treatment day
+    const grouped = new Map<string, any[]>();
+
+    orders.forEach(order => {
+      // Create grouping key: site + patient + date
+      const patientId = order.patientName || order.DETAILS || '';
+      const site = order.CUSTNAME || '';
+      const treatDay = order.SIBD_TREATDAY || order.CURDATE || '';
+
+      logger.info(`📦 Order ${order.ORDNAME}:`);
+      logger.info(`   - patientName: "${order.patientName}"`);
+      logger.info(`   - DETAILS: "${order.DETAILS}"`);
+      logger.info(`   - patientId (used): "${patientId}"`);
+      logger.info(`   - CUSTNAME: "${order.CUSTNAME}"`);
+      logger.info(`   - site (used): "${site}"`);
+      logger.info(`   - SIBD_TREATDAY: "${order.SIBD_TREATDAY}"`);
+      logger.info(`   - CURDATE: "${order.CURDATE}"`);
+      logger.info(`   - treatDay (used): "${treatDay}"`);
+
+      // Only group if we have valid patient ID (skip orders without patient identifier)
+      if (!patientId) {
+        const key = `UNGROUPED_${order.ORDNAME}`;
+        logger.info(`   ⚠️  No patient ID, using ungrouped key: "${key}"`);
+        grouped.set(key, [order]);
+        return;
+      }
+
+      const key = `${site}|${patientId}|${treatDay}`;
+      logger.info(`   🔑 Grouping key: "${key}"`);
+
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+        logger.info(`   ➕ Created new group for key: "${key}"`);
+      } else {
+        logger.info(`   ✅ Adding to existing group for key: "${key}"`);
+      }
+      grouped.get(key)!.push(order);
+    });
+
+    logger.info(`\n📊 Grouping summary: ${grouped.size} groups created`);
+
+    // Combine groups with 2+ orders, keep single orders as-is
+    const combined: any[] = [];
+
+    grouped.forEach((group, key) => {
+      if (group.length === 1) {
+        // Single order, keep as-is
+        combined.push(group[0]);
+      } else {
+        // Multiple orders for same patient/date/site - combine them
+        logger.info(`🔗 Combining ${group.length} treatments for patient ${group[0].patientName || group[0].DETAILS} at ${group[0].CUSTNAME}`);
+
+        const combinedOrder = {
+          ...group[0], // Use first order as base
+          ORDNAME: group.map(o => o.ORDNAME).join('+'), // "ORDER1+ORDER2+ORDER3"
+          SBD_SEEDQTY: group.reduce((sum, o) => sum + (o.SBD_SEEDQTY || 0), 0), // Sum seed quantities
+          SBD_PREFACTIV: group.reduce((sum, o) => sum + (o.SBD_PREFACTIV || 0), 0) / group.length, // Average activity
+          _priorityIds: group.map(o => o.ORDNAME), // Track original order IDs
+          _isCombined: true, // Flag to indicate this is a combined treatment
+          _combinedCount: group.length // Number of orders combined
+        };
+
+        combined.push(combinedOrder);
+        logger.info(`✅ Combined order: ${combinedOrder.ORDNAME} with ${combinedOrder.SBD_SEEDQTY} total seeds`);
+      }
+    });
+
+    return combined;
+  },
+
   // Get orders for site using exact Priority API format with optional date filtering
   async getOrdersForSiteWithFilter(custName: string, userId?: string, filterDate?: string) {
     try {
@@ -930,7 +1004,10 @@ export const priorityService = {
           : null
       }));
 
-      return mappedOrders;
+      // Detect and combine pancreas treatments (multiple orders for same patient/date/site)
+      const combinedOrders = this.combineMultipleTreatments(mappedOrders);
+
+      return combinedOrders;
     } catch (error: any) {
       logger.error(`Error getting orders for site ${custName}: ${error}`);
       
@@ -979,7 +1056,10 @@ export const priorityService = {
               : null
           }));
 
-          return mappedFallbackOrders;
+          // Detect and combine pancreas treatments (multiple orders for same patient/date/site)
+          const combinedFallbackOrders = this.combineMultipleTreatments(mappedFallbackOrders);
+
+          return combinedFallbackOrders;
         }
       }
       
@@ -993,6 +1073,22 @@ export const priorityService = {
   // Get order details using SIBD_APPLICATUSELIST_SUBFORM endpoint
   async getOrderSubform(orderName: string, userId?: string, treatmentType?: string) {
     try {
+      // Handle combined orders (pancreas) - split and merge results
+      if (orderName.includes('+')) {
+        logger.info(`🔗 Combined order detected: ${orderName} - splitting and fetching individually`);
+        const orderIds = orderName.split('+');
+        const allApplicators: any[] = [];
+        for (const orderId of orderIds) {
+          const applicators: any = await this.getOrderSubform(orderId.trim(), userId, treatmentType);
+          if (applicators && applicators.length > 0) {
+            allApplicators.push(...applicators);
+            logger.info(`  ✅ Added ${applicators.length} applicators from ${orderId.trim()}`);
+          }
+        }
+        logger.info(`📊 Total applicators from combined order: ${allApplicators.length}`);
+        return allApplicators;
+      }
+
       logger.info(`Getting order subform for order ${orderName}, type: ${treatmentType || 'unknown'}`);
 
       // For development mode with test@example.com, prioritize test data

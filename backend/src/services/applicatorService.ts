@@ -390,29 +390,36 @@ export const applicatorService = {
   /**
    * Update treatment order status in Priority
    * Updates ORDSTATUSDES field in ORDERS table
+   * @param treatmentId - Local treatment ID
+   * @param status - Status to set ('Performed' or 'Removed')
+   * @param specificOrderId - Optional specific Priority order ID for combined treatments
    */
   async updateTreatmentStatusInPriority(
-    treatmentId: string, 
-    status: 'Performed' | 'Removed'
+    treatmentId: string,
+    status: 'Performed' | 'Removed',
+    specificOrderId?: string
   ): Promise<{ success: boolean; message?: string }> {
     try {
       const treatment = await Treatment.findByPk(treatmentId);
       if (!treatment) {
         throw new Error('Treatment not found');
       }
-      
-      const priorityOrderId = treatment.priorityId || treatmentId;
-      
+
+      // Use specific order ID if provided (for pancreas treatments)
+      // Otherwise fall back to treatment's priorityId
+      const priorityOrderId = specificOrderId || treatment.priorityId || treatmentId;
+
+      logger.info(`Updating Priority order ${priorityOrderId} to status ${status}`);
       const result = await priorityService.updateTreatmentStatus(priorityOrderId, status);
-      
+
       return {
         success: true,
-        message: `Treatment status updated to "${status}" in Priority system.`
+        message: `Treatment status updated to "${status}" in Priority system for order ${priorityOrderId}.`
       };
-      
+
     } catch (error: any) {
       logger.error('Error updating treatment status in Priority:', error);
-      
+
       return {
         success: false,
         message: error.message || 'Failed to update treatment status in Priority system.'
