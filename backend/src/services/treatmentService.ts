@@ -300,11 +300,21 @@ export const treatmentService = {
   // Create a new treatment
   async createTreatment(data: any, userId: string) {
     try {
+      // Handle combined pancreas treatments - store multiple Priority IDs as JSON array
+      let priorityId = data.priorityId;
+
+      // Check if this is a combined treatment from Priority service
+      if (data._priorityIds && Array.isArray(data._priorityIds)) {
+        priorityId = JSON.stringify(data._priorityIds); // Store as JSON array string
+        logger.info(`Creating combined pancreas treatment with ${data._priorityIds.length} orders: ${priorityId}`);
+      }
+
       const treatment = await Treatment.create({
         ...data,
+        priorityId, // Will be JSON array for pancreas, single ID for regular
         userId,
       });
-      
+
       // Update Priority system if needed
       if (process.env.SYNC_WITH_PRIORITY === 'true') {
         try {
@@ -312,7 +322,7 @@ export const treatmentService = {
             ...data,
             id: treatment.id
           });
-          
+
           // Update treatment with Priority ID
           if (priorityResult.success) {
             await treatment.update({
@@ -324,7 +334,7 @@ export const treatmentService = {
           // Proceed without Priority sync in case of error
         }
       }
-      
+
       return treatment;
     } catch (error) {
       logger.error(`Error creating treatment: ${error}`);

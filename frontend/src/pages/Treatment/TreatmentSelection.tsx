@@ -331,12 +331,19 @@ const TreatmentSelection = () => {
         // Per CLAUDE.md rules: "Only show root orders (no reference OR seedQty > 0)"
         // This means: show orders that either have no reference OR have seeds > 0
         // The current order should be evaluated, not what it references
-        
-        if (patient.reference && patient.seedQty <= 0) {
-          // Filter out only orders that BOTH have a reference AND have 0 seeds
+
+        // EXCEPTION: Combined pancreas treatments (detected by '+' in ORDNAME) should never be filtered
+        const isCombinedOrder = orderName.includes('+');
+
+        if (patient.reference && patient.seedQty <= 0 && !isCombinedOrder) {
+          // Filter out only orders that BOTH have a reference AND have 0 seeds AND are not combined
           console.log(`❌ FILTERED OUT: ${orderName} - Order has reference AND 0 seeds (${patient.seedQty})`);
           console.groupEnd();
           return;
+        }
+
+        if (isCombinedOrder) {
+          console.log(`✅ VALID: ${orderName} - Combined pancreas treatment (${patient.seedQty} total seeds)`);
         }
         
         // If order has seeds > 0, it's valid regardless of having a reference

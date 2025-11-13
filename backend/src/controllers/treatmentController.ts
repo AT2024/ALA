@@ -89,30 +89,71 @@ export const completeTreatment = asyncHandler(async (req: Request, res: Response
 
   let priorityUpdateStatus = null;
 
+  // Parse priorityId - it could be a single ID or a JSON array for combined pancreas treatments
+  let orderIds: string[] = [];
+  if (treatment.priorityId) {
+    try {
+      const parsed = JSON.parse(treatment.priorityId);
+      orderIds = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      // Not JSON, treat as single ID
+      orderIds = [treatment.priorityId];
+    }
+  }
+
+  logger.info(`Completing treatment with ${orderIds.length} Priority order(s): ${orderIds.join(', ')}`);
+
   // For removal treatments, only update Priority if we have a valid Priority ID
   // Test data and local removals might not have Priority orders
   if (treatment.type === 'removal' && (!treatment.priorityId || treatment.priorityId === treatment.id)) {
     logger.info(`Skipping Priority update for removal treatment ${req.params.id} - no valid Priority order`);
     priorityUpdateStatus = 'Priority update skipped (local removal)';
   } else {
-    // Try to update treatment status in Priority system
+    // Try to update treatment status in Priority system for ALL orders
     try {
-      const statusResult = await applicatorService.updateTreatmentStatusInPriority(
-        req.params.id,
-        treatment.type === 'removal' ? 'Removed' : 'Performed'
-      );
+      const status = treatment.type === 'removal' ? 'Removed' : 'Performed';
+      const updatedOrders: string[] = [];
+      const failedOrders: string[] = [];
 
-      if (statusResult.success) {
-        priorityUpdateStatus = statusResult.message;
-      } else {
-        // For removal treatments, log the error but continue
-        if (treatment.type === 'removal') {
-          logger.warn(`Failed to update Priority status for removal ${req.params.id}: ${statusResult.message}`);
-          priorityUpdateStatus = 'Priority update failed (continuing with local completion)';
-        } else {
-          // For insertion treatments, fail if Priority update fails
+      // Update each Priority order
+      for (const orderId of orderIds) {
+        try {
+          logger.info(`Updating Priority order ${orderId} to status ${status}`);
+          const statusResult = await applicatorService.updateTreatmentStatusInPriority(
+            req.params.id,
+            status,
+            orderId  // Pass specific order ID for pancreas treatments
+          );
+
+          if (statusResult.success) {
+            updatedOrders.push(orderId);
+            logger.info(`✅ Successfully updated Priority order ${orderId}`);
+          } else {
+            failedOrders.push(orderId);
+            logger.warn(`Failed to update Priority order ${orderId}: ${statusResult.message}`);
+          }
+        } catch (orderError: any) {
+          failedOrders.push(orderId);
+          logger.error(`Error updating Priority order ${orderId}:`, orderError);
+        }
+      }
+
+      // Determine overall success
+      if (updatedOrders.length === orderIds.length) {
+        priorityUpdateStatus = `All ${orderIds.length} Priority order(s) updated successfully`;
+      } else if (updatedOrders.length > 0) {
+        priorityUpdateStatus = `Partial update: ${updatedOrders.length}/${orderIds.length} orders updated. Failed: ${failedOrders.join(', ')}`;
+        // For insertion treatments with partial failure, this is still an error
+        if (treatment.type === 'insertion' && failedOrders.length > 0) {
           res.status(500);
-          throw new Error(statusResult.message || 'Failed to update treatment status in Priority');
+          throw new Error(`Failed to update ${failedOrders.length} Priority order(s): ${failedOrders.join(', ')}`);
+        }
+      } else {
+        // No orders updated successfully
+        priorityUpdateStatus = `Failed to update all ${orderIds.length} Priority order(s)`;
+        if (treatment.type === 'insertion') {
+          res.status(500);
+          throw new Error(`Failed to update all Priority orders`);
         }
       }
     } catch (error: any) {
@@ -183,6 +224,76 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
 
   logger.info(`Getting applicators for treatment ${req.params.id}, type: ${treatment.type}, user: ${req.user.email}`);
 
+  // Parse priorityId - it could be a single ID or a JSON array for combined pancreas treatments
+  let orderIds: string[] = [];
+  if (treatment.priorityId) {
+    try {
+      const parsed = JSON.parse(treatment.priorityId);
+      orderIds = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      // Not JSON, treat as single ID
+      orderIds = [treatment.priorityId];
+    }
+  }
+
+  logger.info(`Treatment has ${orderIds.length} Priority order(s): ${orderIds.join(', ')}`);
+
+  // For combined treatments (pancreas), fetch applicators from Priority API for ALL orders
+  if (orderIds.length > 1) {
+    logger.info(`🔗 Combined treatment detected - fetching applicators from ${orderIds.length} Priority orders`);
+
+    try {
+      const allApplicators = [];
+      for (const orderId of orderIds) {
+        logger.info(`Fetching applicators from Priority order: ${orderId}`);
+        const orderApplicators = await priorityService.getOrderSubform(
+          orderId,
+          req.user.email,
+          treatment.type
+        );
+
+        if (orderApplicators && orderApplicators.length > 0) {
+          logger.info(`Found ${orderApplicators.length} applicators in order ${orderId}`);
+          allApplicators.push(...orderApplicators);
+        } else {
+          logger.info(`No applicators found in order ${orderId}`);
+        }
+      }
+
+      if (allApplicators.length > 0) {
+        logger.info(`✅ Total applicators from combined treatment: ${allApplicators.length}`);
+
+        // Transform Priority data to match our applicator format
+        const formattedApplicators = allApplicators.map((app: any) => ({
+          id: app.SIBD_REPPRODPAL || `${treatment.priorityId}-${app.SERNUM}`,
+          serialNumber: app.SERNUM,
+          treatmentId: req.params.id,
+          seedQuantity: app.INTDATA2 || 0,
+          usageType: app.USINGTYPE || 'full',
+          insertionTime: app.INSERTIONDATE || new Date().toISOString(),
+          comments: app.INSERTIONCOMMENTS || '',
+          image: app.EXTFILENAME || null,
+          addedBy: app.INSERTEDREPORTEDBY || req.user.id,
+          isRemoved: false,
+          removalComments: null,
+          removalImage: null,
+          removedBy: null,
+          removalTime: null,
+          applicatorType: app.PARTDES || app.PARTNAME || 'Unknown Applicator',
+          insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2 || 0
+        }));
+
+        res.status(200).json(formattedApplicators);
+        return;
+      } else {
+        logger.warn(`⚠️  No applicators found in any of the ${orderIds.length} Priority orders`);
+      }
+    } catch (error) {
+      logger.error(`Error fetching applicators for combined treatment: ${error}`);
+      // Fall through to database query
+    }
+  }
+
   // For test user removals, load applicators from test data
   // For removal treatments with test user, prioritize subjectId as it contains the original order
   // This handles cases where priorityId might have been auto-generated
@@ -194,19 +305,25 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
     logger.info(`Test user removal treatment - loading from test data for order ${treatmentNumber}`);
 
     try {
-      // Get applicators from test data using Priority service
-      // Pass email instead of ID so test data detection works correctly
-      const testApplicators = await priorityService.getOrderSubform(
-        treatmentNumber,
-        req.user.email,
-        treatment.type
-      );
+      // For combined treatments, fetch applicators from all orders
+      const allApplicators = [];
+      for (const orderId of orderIds) {
+        const testApplicators = await priorityService.getOrderSubform(
+          orderId,
+          req.user.email,
+          treatment.type
+        );
 
-      if (testApplicators && testApplicators.length > 0) {
-        logger.info(`Found ${testApplicators.length} applicators from test data`);
+        if (testApplicators && testApplicators.length > 0) {
+          allApplicators.push(...testApplicators);
+        }
+      }
+
+      if (allApplicators.length > 0) {
+        logger.info(`Found ${allApplicators.length} applicators from test data (${orderIds.length} order(s))`);
 
         // Transform test data to match our applicator format
-        const formattedApplicators = testApplicators.map((app: any) => ({
+        const formattedApplicators = allApplicators.map((app: any) => ({
           id: app.SIBD_REPPRODPAL || `${treatmentNumber}-${app.SERNUM}`,
           serialNumber: app.SERNUM,
           treatmentId: req.params.id,

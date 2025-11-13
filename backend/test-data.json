@@ -111,6 +111,30 @@
       "DETAILS": "Patient Test-016"
     },
     {
+      "ORDNAME": "PANC-HEAD-001",
+      "CUSTNAME": "100026",
+      "CUSTDES": "University Cancer & Diagnostic Centers",
+      "REFERENCE": "PAT-2025-PANC-001",
+      "CURDATE": "2025-11-13T00:00:00Z",
+      "SIBD_TREATDAY": "2025-11-13T00:00:00Z",
+      "ORDSTATUSDES": "Open",
+      "SBD_SEEDQTY": 30,
+      "SBD_PREFACTIV": 2.5,
+      "DETAILS": "PANC-09-01-005"
+    },
+    {
+      "ORDNAME": "PANC-TAIL-001",
+      "CUSTNAME": "100026",
+      "CUSTDES": "University Cancer & Diagnostic Centers",
+      "REFERENCE": "PAT-2025-PANC-001",
+      "CURDATE": "2025-11-13T00:00:00Z",
+      "SIBD_TREATDAY": "2025-11-13T00:00:00Z",
+      "ORDSTATUSDES": "Open",
+      "SBD_SEEDQTY": 25,
+      "SBD_PREFACTIV": 2.5,
+      "DETAILS": "PANC-09-01-005"
+    },
+    {
       "ORDNAME": "SO25000043",
       "CUSTNAME": "100078",
       "CUSTDES": "Main Test Hospital",
@@ -464,6 +488,100 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1951,
           "ORDNAME": "SO25000016FLEX"
+        }
+      ]
+    },
+    "PANC-HEAD-001": {
+      "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-HEAD-001')/SIBD_APPLICATUSELIST_SUBFORM",
+      "value": [
+        {
+          "SERNUM": "PANC-HEAD-A1",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2001,
+          "ORDNAME": "PANC-HEAD-001FLEX"
+        },
+        {
+          "SERNUM": "PANC-HEAD-A2",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2002,
+          "ORDNAME": "PANC-HEAD-001FLEX"
+        },
+        {
+          "SERNUM": "PANC-HEAD-A3",
+          "PARTNAME": "FLEX-00103-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
+          "INTDATA2": 3,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2003,
+          "ORDNAME": "PANC-HEAD-001FLEX"
+        }
+      ]
+    },
+    "PANC-TAIL-001": {
+      "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-TAIL-001')/SIBD_APPLICATUSELIST_SUBFORM",
+      "value": [
+        {
+          "SERNUM": "PANC-TAIL-A1",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2011,
+          "ORDNAME": "PANC-TAIL-001FLEX"
+        },
+        {
+          "SERNUM": "PANC-TAIL-A2",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2012,
+          "ORDNAME": "PANC-TAIL-001FLEX"
+        },
+        {
+          "SERNUM": "PANC-TAIL-A3",
+          "PARTNAME": "FLEX-00101-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
+          "INTDATA2": 1,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2013,
+          "ORDNAME": "PANC-TAIL-001FLEX"
         }
       ]
     },
