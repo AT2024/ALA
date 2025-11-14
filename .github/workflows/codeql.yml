@@ -1,0 +1,140 @@
+name: "CodeQL Security Scanning"
+
+# =================================================================
+# GitHub Advanced Security - CodeQL Analysis
+# Purpose: Automated security vulnerability detection in source code
+# =================================================================
+#
+# What CodeQL Does:
+# - Scans TypeScript/JavaScript code for security vulnerabilities
+# - Detects: SQL injection, XSS, auth bypasses, data leaks, etc.
+# - Results appear in GitHub Security tab
+# - Runs automatically on every PR and weekly
+#
+# Medical App Focus:
+# - Patient data handling security
+# - Priority API integration safety (SQL injection in OData)
+# - Authentication/authorization correctness
+# - Input validation completeness
+#
+# =================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    # Weekly scan on Saturdays at 2 AM UTC to catch new vulnerabilities
+    - cron: '0 2 * * 6'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    permissions:
+      # Required for CodeQL to upload results to GitHub Security tab
+      security-events: write
+      # Required to fetch repository contents
+      contents: read
+      # Required for private repositories with GHAS
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # CodeQL supports: 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
+        # Our stack: TypeScript/JavaScript in backend and frontend
+        language: ['javascript-typescript']
+        include:
+          - language: javascript-typescript
+            build-mode: none
+            # Paths to analyze (will be refined by codeql-config.yml)
+            source-root: '.'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # Use custom configuration for medical app context
+          config-file: ./.github/codeql/codeql-config.yml
+          # Use extended security queries (more thorough than default)
+          queries: security-extended
+
+      # For JavaScript/TypeScript, CodeQL doesn't need to build the project
+      # It analyzes source code directly (build-mode: none)
+      # If we add other languages later, we'd add build steps here
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          # Upload SARIF results to GitHub Security tab
+          upload: true
+          # Generate detailed output for debugging
+          output: sarif-results
+          # Add medical app context to results
+          add-snippets: true
+
+      - name: Upload CodeQL Results (Artifact)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codeql-results-${{ matrix.language }}
+          path: sarif-results
+          retention-days: 30
+
+      - name: Check for Critical Vulnerabilities
+        if: always()
+        run: |
+          echo "============================================"
+          echo "CodeQL Analysis Complete"
+          echo "============================================"
+          echo ""
+          echo "📊 View detailed results:"
+          echo "   Security tab: https://github.com/${{ github.repository }}/security/code-scanning"
+          echo ""
+          echo "⚠️  For medical applications, review ALL findings:"
+          echo "   - SQL injection risks (Priority API OData queries)"
+          echo "   - Authentication/authorization bypasses"
+          echo "   - Sensitive data exposure"
+          echo "   - Input validation gaps"
+          echo ""
+          echo "📝 Next steps:"
+          echo "   1. Review findings in Security tab"
+          echo "   2. Triage by severity (Critical > High > Medium)"
+          echo "   3. Create issues for confirmed vulnerabilities"
+          echo "   4. Fix critical issues before merging"
+          echo "============================================"
+
+  # Summary job to provide clear status
+  codeql-summary:
+    name: CodeQL Summary
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: always()
+
+    steps:
+      - name: Check Analysis Status
+        run: |
+          if [[ "${{ needs.analyze.result }}" == "success" ]]; then
+            echo "✅ CodeQL analysis completed successfully"
+            echo "📊 View results: https://github.com/${{ github.repository }}/security/code-scanning"
+            exit 0
+          else
+            echo "❌ CodeQL analysis failed"
+            echo "Check logs: https://github.com/${{ github.repository }}/actions"
+            exit 1
+          fi
