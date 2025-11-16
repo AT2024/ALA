@@ -61,7 +61,7 @@ services:
     volumes:
       - type: bind
         source: /home/azureuser/ala-improved/ssl-certs/certs/fullchain.crt
-        target: /etc/ssl/certs/certificate.crt
+        target: /etc/ssl/certs/fullchain.crt
         read_only: true
       - type: bind
         source: /home/azureuser/ala-improved/ssl-certs/private/private.key
@@ -89,7 +89,7 @@ services:
         constraints:
           - node.role == manager
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -108,3 +108,4 @@ networks:
 # - 2 replicas provide redundancy during updates
 # - Automatic health check validation before old containers removed
 # - Automatic rollback if health checks fail
+# - SSL certificates mounted via bind volumes from ~/ala-improved/ssl-certs/

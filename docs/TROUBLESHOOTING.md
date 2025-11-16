@@ -357,6 +357,127 @@ ssh azureuser@20.217.84.100 "chmod +x \
   ~/ala-improved/deployment/azure/*.sh"
 ```
 
+### Docker Swarm Deployment Issues
+
+#### Service Shows Old Tag But App Works Fine
+
+**Symptom**:
+```bash
+docker service ls
+# Shows: ala_frontend: ala-frontend:cors-fixed
+# Expected: ala_frontend: ala-frontend:20251113-140140 (or similar timestamp)
+```
+
+**What it means**:
+- Latest deployment attempt failed and rolled back
+- Service stayed on previous successful tag
+- That "old tag" may already contain recent code from earlier deployment
+- **Application is still working** - zero downtime maintained
+
+**Verification steps**:
+```bash
+# 1. Check when the image was actually built
+docker image inspect ala-frontend:cors-fixed --format '{{.Created}}'
+# If recent (< 1 week) → contains recent code
+
+# 2. Check actual assets in running container
+docker exec $(docker ps -q --filter name=ala_frontend.1) \
+  ls -la /usr/share/nginx/html/assets/ | grep Treatment
+# Look for recent file modification dates
+
+# 3. Test application
+# Open browser, check features work, verify asset hashes in DevTools
+```
+
+**Resolution**:
+- **If app works correctly**: Not urgent - code is current despite old tag name
+- **If features are missing**: Investigate deployment failure and redeploy
+  ```bash
+  # Check for failed tasks
+  docker service ps ala_frontend | grep Failed
+
+  # Review error logs
+  docker service logs ala_frontend --since 30m | grep -i error
+
+  # Fix issue and redeploy
+  cd ~/ala-improved/deployment && ./swarm-deploy
+  ```
+
+**See**: [deployment/TAG_TRACKING.md](../deployment/TAG_TRACKING.md) for full explanation of tag vs. code distinction
+
+#### Deployment Fails with "task: non-zero exit (1)"
+
+**Symptom**:
+```bash
+docker service ps ala_frontend
+# Shows: Failed  ... "task: non-zero exit (1)"
+```
+
+**Common causes**:
+
+1. **SSL Certificate Path Mismatch** (most common):
+   ```bash
+   # Check nginx error in logs
+   docker service logs ala_frontend | grep -i "cannot load certificate"
+
+   # Fix: Ensure nginx config matches mounted cert paths
+   # nginx.https.local.conf should reference: /etc/ssl/certs/fullchain.crt
+   # docker-stack.yml mounts to: /etc/ssl/certs/fullchain.crt
+   ```
+
+2. **Missing Environment Variables**:
+   ```bash
+   # Check .env file exists and has all required variables
+   ssh azureuser@20.217.84.100 "cat ~/ala-improved/deployment/.env | grep -E 'POSTGRES_|JWT_|PRIORITY_'"
+   ```
+
+3. **Health Check Failures**:
+   ```bash
+   # Check health check endpoint
+   curl -f http://localhost:8080/health  # Frontend
+   curl -f http://localhost:5000/api/health  # API
+
+   # If health check fails, container is removed and deployment rolls back
+   ```
+
+**Resolution**:
+1. Identify root cause from logs
+2. Fix the issue
+3. Commit and push changes
+4. Redeploy: `cd ~/ala-improved/deployment && ./swarm-deploy`
+
+#### Mismatched Service Tags After Deployment
+
+**Symptom**:
+```bash
+docker service inspect ala_api --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+# Output: ala-api:20251113-140140
+
+docker service inspect ala_frontend --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+# Output: ala-frontend:cors-fixed  (different!)
+```
+
+**What it means**:
+- API deployment succeeded
+- Frontend deployment failed and rolled back
+- Users may see old frontend with new API (potential compatibility issues)
+
+**Immediate action**:
+```bash
+# 1. Check for frontend failures
+docker service ps ala_frontend | grep Failed
+
+# 2. Review error logs
+docker service logs ala_frontend --since 30m | grep -i error
+
+# 3. Fix issue and redeploy to align versions
+```
+
+**Prevention**:
+- Always check both service tags after deployment
+- Fix deployment failures promptly to keep versions aligned
+- Monitor health checks during deployment
+
 ### Authentication Issues
 
 #### Login Code Not Received

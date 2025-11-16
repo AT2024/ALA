@@ -187,6 +187,86 @@ curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 }
 ```
 
+### Verifying Deployment Success
+
+**IMPORTANT: Always verify after running swarm-deploy**
+
+#### 1. Check Service Image Tags
+
+```bash
+# Both services should show matching timestamped versions
+docker service inspect ala_api --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+docker service inspect ala_frontend --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+```
+
+**Expected**: Both show same version tag (e.g., `ala-api:20251113-140140` and `ala-frontend:20251113-140140`)
+
+**If mismatched**: One service failed to deploy and rolled back - investigate!
+
+#### 2. Check for Failed Tasks
+
+```bash
+# Look for recent deployment failures
+docker service ps ala_frontend --format 'table {{.Name}}\t{{.Image}}\t{{.CurrentState}}\t{{.Error}}'
+docker service ps ala_api --format 'table {{.Name}}\t{{.Image}}\t{{.CurrentState}}\t{{.Error}}'
+```
+
+**Look for**:
+- "Failed" in CurrentState column
+- Error messages like "task: non-zero exit (1)"
+- Recent timestamps (within last few minutes)
+
+**If found**: Deployment failed and rolled back - check logs and fix issue
+
+#### 3. Check Running Containers
+
+```bash
+# Verify all containers are healthy with current version
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+```
+
+**Expected**:
+- All containers show latest version tag
+- Status shows "(healthy)"
+- No containers in "restarting" or "unhealthy" state
+
+#### 4. Test Application
+
+**Best real-world verification:**
+1. Open application in browser: https://ala-app.israelcentral.cloudapp.azure.com
+2. Log in with test account
+3. Verify new features work
+4. Open browser DevTools → Network tab
+5. Check asset filenames (e.g., `TreatmentSelection-<hash>.js`)
+6. Hash should change with each deployment
+
+### Understanding Tag Mismatches
+
+**Situation**: Service shows old tag (e.g., `cors-fixed`) but app works fine
+
+**What happened**:
+- Latest deployment failed and rolled back
+- Service stayed on previous successful tag
+- That "old tag" may contain recent code from earlier deployment
+
+**How to verify**:
+```bash
+# Check when image was actually built
+docker image inspect ala-frontend:cors-fixed --format '{{.Created}}'
+# If recent (< 1 week) → contains recent code
+
+# Check actual assets in running container
+docker exec $(docker ps -q --filter name=ala_frontend.1) \
+  ls -la /usr/share/nginx/html/assets/ | grep Treatment
+# Check file modification dates
+```
+
+**Action**:
+- If app works correctly: Not urgent, fix deployment issue when convenient
+- If features missing: Investigate error, fix, and redeploy immediately
+
+**See [TAG_TRACKING.md](./TAG_TRACKING.md) for comprehensive guide on tag vs. code distinction**
+
 ### Resource Usage
 
 ```bash

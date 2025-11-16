@@ -187,31 +187,64 @@ For detailed information, consult these specialized documents:
 - **Test User**: test@example.com (code: 123456)
 - **Admin User**: alexs@alphatau.com (Position 99)
 
-## Deployment (Radically Simplified - October 2025)
+## Deployment (Docker Swarm - Zero Downtime)
 
 ### Production Deployment (Azure VM)
-**One command. That's it.**
+**One command for zero-downtime deployment:**
 ```bash
-cd ~/ala-improved/deployment
-./deploy
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 ```
 
 **What it does automatically:**
-- ✅ Backs up database
-- ✅ Pulls latest code
-- ✅ Builds and starts containers
-- ✅ Verifies health checks
+- ✅ Pulls latest code from GitHub
+- ✅ Builds Docker images with timestamped tags (e.g., `20251113-140140`)
+- ✅ Rolling updates (one replica at a time - TRUE zero downtime)
+- ✅ Health check validation before removing old containers
+- ✅ Automatic rollback on health check failure
 - ✅ Cleans up old Docker images and build cache (saves 1-3GB per deployment)
-- ✅ Rolls back on any failure
+
+**Zero-Downtime Mechanism:**
+- 2 replicas per service (API + Frontend)
+- `order: start-first` - new container starts before old stops
+- Users never experience interruption during deployment
+- If new version fails health checks, old version keeps running
+
+### Verifying Deployment Success
+
+**IMPORTANT: Always verify deployment after running swarm-deploy**
+
+```bash
+# 1. Check service image tags (should match deployment version)
+docker service inspect ala_api --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+docker service inspect ala_frontend --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
+# Both should show same version (e.g., ala-api:20251113-140140)
+
+# 2. Check for failed tasks
+docker service ps ala_frontend --format 'table {{.Name}}\t{{.Image}}\t{{.CurrentState}}\t{{.Error}}'
+# Look for "Failed" state or error messages
+
+# 3. Test application functionality
+# Log into app, check new features work, verify in browser console
+```
+
+**Understanding Tags vs. Code:**
+- Image tags (e.g., `cors-fixed`, `20251113-140140`) are labels for tracking
+- If deployment fails and rolls back, tag may show old version (e.g., `cors-fixed`)
+- That "old tag" may contain recent code from a previous successful deployment
+- **Always verify actual functionality, not just tags**
+- See [deployment/TAG_TRACKING.md](deployment/TAG_TRACKING.md) for details
 
 ### Setup (First Time Only)
 1. SSH to Azure VM: `ssh azureuser@20.217.84.100`
-2. Copy environment template: `cp deployment/.env.production.template deployment/.env`
-3. Edit `.env` file and fill in your secrets (database password, JWT secret, Priority API credentials)
-4. Deploy: `cd deployment && ./deploy`
+2. Initialize Swarm: `docker swarm init`
+3. Create overlay network: `docker network create --driver overlay --attachable ala-network`
+4. Copy environment template: `cp deployment/.env.production.template deployment/.env`
+5. Edit `.env` file and fill in your secrets
+6. Deploy database: `cd deployment && docker-compose -f docker-compose.db.yml up -d`
+7. Deploy services: `./swarm-deploy`
 
 ### Local Development
-Same docker-compose.yml, just create `.env` with local settings:
+Use Docker Compose (not Swarm) for local development:
 ```bash
 cd deployment
 cp .env.production.template .env
@@ -219,16 +252,18 @@ cp .env.production.template .env
 docker-compose up
 ```
 
-### Files You Need
+### Key Files
 ```
 deployment/
-├── docker-compose.yml          # Single compose file
-├── deploy                      # Single deployment script
+├── docker-stack.yml            # Swarm stack (API + Frontend, 2 replicas each)
+├── docker-compose.db.yml       # Database only (separate from Swarm)
+├── swarm-deploy                # Zero-downtime deployment script
+├── deploy                      # Legacy Docker Compose deployment (for local dev)
 ├── .env                       # Your secrets (git-ignored)
-└── .env.production.template   # Template for .env
+└── TAG_TRACKING.md            # Understanding tag vs. code distinction
 ```
 
-**That's it.** No azure/, no scripts/, no multiple configs. Simple.
+**See [deployment/SWARM_OPERATIONS.md](deployment/SWARM_OPERATIONS.md) for daily operations guide.**
 
 ---
 

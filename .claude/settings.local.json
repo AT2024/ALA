@@ -25,7 +25,20 @@
       "Bash(npm run build:*)",
       "Bash(chmod:*)",
       "Bash(docker context:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(git log:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(docker ps:*)",
+      "Bash(openssl genrsa:*)",
+      "Bash(test:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(netsh advfirewall firewall show rule:*)",
+      "Bash(ipconfig:*)",
+      "Bash(docker inspect:*)"
     ],
     "deny": []
   }
