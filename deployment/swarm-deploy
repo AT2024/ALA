@@ -148,7 +148,7 @@ main() {
         docker tag ala-api:$VERSION ala-api:latest
 
         log "  Building frontend..."
-        docker build -t ala-frontend:$VERSION ./frontend || { error "Frontend build failed"; exit 1; }
+        docker build --build-arg NGINX_CONFIG=nginx.swarm.conf -t ala-frontend:$VERSION ./frontend || { error "Frontend build failed"; exit 1; }
         docker tag ala-frontend:$VERSION ala-frontend:latest
 
         success "Images built: ala-api:$VERSION, ala-frontend:$VERSION"

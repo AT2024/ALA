@@ -869,3 +869,18 @@ export const exportTreatment = asyncHandler(async (req: Request, res: Response) 
     throw new Error('Unsupported export format');
   }
 });
+
+// Default export for test compatibility
+export default {
+  getTreatments,
+  getTreatmentById,
+  createTreatment,
+  updateTreatment,
+  completeTreatment,
+  updateTreatmentStatus,
+  getTreatmentApplicators,
+  addApplicator,
+  debugTreatment,
+  getRemovalCandidates,
+  exportTreatment
+};

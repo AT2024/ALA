@@ -318,7 +318,7 @@ describe('Treatment Controller', () => {
       const applicatorService = require('../../src/services/applicatorService').default;
 
       Treatment.findByPk.mockResolvedValue(mockTreatmentData);
-      sequelize.transaction.mockImplementation((callback) => callback(mockTransaction));
+      sequelize.transaction.mockImplementation((callback: any) => callback(mockTransaction));
       applicatorService.addApplicatorWithTransaction.mockResolvedValue(mockApplicatorData);
 
       const newApplicatorData = {
@@ -349,7 +349,7 @@ describe('Treatment Controller', () => {
       const applicatorService = require('../../src/services/applicatorService').default;
 
       Treatment.findByPk.mockResolvedValue(mockTreatmentData);
-      sequelize.transaction.mockImplementation((callback) => callback(mockTransaction));
+      sequelize.transaction.mockImplementation((callback: any) => callback(mockTransaction));
       applicatorService.addApplicatorWithTransaction.mockRejectedValue(new Error('Validation failed'));
 
       const response = await request(app)
@@ -430,7 +430,7 @@ describe('Treatment Controller', () => {
       const incompletetreatment = {
         ...mockTreatmentData,
         isComplete: false,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn<Promise<boolean>, []>().mockResolvedValue(true)
       };
 
       Treatment.findByPk.mockResolvedValue(incompletetreatment);
@@ -472,7 +472,7 @@ describe('Treatment Controller', () => {
       const incompletetreatment = {
         ...mockTreatmentData,
         isComplete: false,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn<Promise<boolean>, []>().mockResolvedValue(true)
       };
 
       Treatment.findByPk.mockResolvedValue(incompletetreatment);
@@ -497,7 +497,7 @@ describe('Treatment Controller', () => {
         ...mockTreatmentData,
         type: 'removal',
         isComplete: false,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn<Promise<boolean>, []>().mockResolvedValue(true)
       };
 
       Treatment.findByPk.mockResolvedValue(removalTreatment);
@@ -523,7 +523,7 @@ describe('Treatment Controller', () => {
 
       const treatmentToUpdate = {
         ...mockTreatmentData,
-        update: jest.fn().mockResolvedValue(true)
+        update: jest.fn<Promise<boolean>, [any]>().mockResolvedValue(true)
       };
 
       Treatment.findByPk.mockResolvedValue(treatmentToUpdate);
@@ -579,7 +579,7 @@ describe('Treatment Controller', () => {
 
       const treatmentToDelete = {
         ...mockTreatmentData,
-        destroy: jest.fn().mockResolvedValue(true)
+        destroy: jest.fn<Promise<boolean>, []>().mockResolvedValue(true)
       };
 
       Treatment.findByPk.mockResolvedValue(treatmentToDelete);
@@ -738,7 +738,7 @@ describe('Treatment Controller', () => {
 
       Treatment.findByPk.mockResolvedValue({
         ...mockTreatmentData,
-        update: jest.fn().mockRejectedValue(concurrencyError)
+        update: jest.fn<Promise<boolean>, [any]>().mockRejectedValue(concurrencyError)
       });
 
       const response = await request(app)

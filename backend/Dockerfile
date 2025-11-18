@@ -103,8 +103,9 @@ COPY --chown=nodejs:nodejs package*.json ./
 # Copy test data file for development testing
 COPY --chown=nodejs:nodejs test-data.json ./
 
-# Create logs directory
+# Create logs and uploads directories
 RUN mkdir -p logs && chown -R nodejs:nodejs logs
+RUN mkdir -p uploads/zips uploads/temp && chown -R nodejs:nodejs uploads
 
 # Change ownership to nodejs user
 RUN chown -R nodejs:nodejs /usr/src/app

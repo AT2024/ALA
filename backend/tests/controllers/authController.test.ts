@@ -68,7 +68,7 @@ describe('Auth Controller', () => {
       User.findOne.mockResolvedValue(null); // New user
       User.create.mockResolvedValue({
         ...mockUser,
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       priorityService.getUserSiteAccess.mockResolvedValue({
@@ -103,8 +103,8 @@ describe('Auth Controller', () => {
 
       const existingUser = {
         ...mockUser,
-        generateVerificationCode: jest.fn().mockResolvedValue('123456'),
-        save: jest.fn().mockResolvedValue(true),
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456'),
+        save: jest.fn<Promise<boolean>, []>().mockResolvedValue(true),
         metadata: {}
       };
 
@@ -139,7 +139,7 @@ describe('Auth Controller', () => {
         ...mockUser,
         email: null,
         phoneNumber: '555-123-4567',
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       priorityService.getUserSiteAccess.mockResolvedValue({
@@ -207,7 +207,7 @@ describe('Auth Controller', () => {
       User.create.mockResolvedValue({
         ...mockUser,
         role: 'admin',
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       priorityService.getUserSiteAccess.mockResolvedValue({
@@ -244,7 +244,7 @@ describe('Auth Controller', () => {
 
       const userWithCode = {
         ...mockUser,
-        verifyCode: jest.fn().mockResolvedValue(true),
+        verifyCode: jest.fn<Promise<boolean>, [string]>().mockResolvedValue(true),
         failedAttempts: 0
       };
 
@@ -274,7 +274,7 @@ describe('Auth Controller', () => {
 
       const userWithCode = {
         ...mockUser,
-        verifyCode: jest.fn().mockResolvedValue(false),
+        verifyCode: jest.fn<Promise<boolean>, [string]>().mockResolvedValue(false),
         failedAttempts: 1
       };
 
@@ -321,7 +321,7 @@ describe('Auth Controller', () => {
 
       const userWithFailedAttempts = {
         ...mockUser,
-        verifyCode: jest.fn().mockResolvedValue(false),
+        verifyCode: jest.fn<Promise<boolean>, [string]>().mockResolvedValue(false),
         failedAttempts: 3
       };
 
@@ -345,7 +345,7 @@ describe('Auth Controller', () => {
         ...mockUser,
         email: null,
         phoneNumber: '555-123-4567',
-        verifyCode: jest.fn().mockResolvedValue(true)
+        verifyCode: jest.fn<Promise<boolean>, [string]>().mockResolvedValue(true)
       };
 
       User.findOne.mockResolvedValue(phoneUser);
@@ -369,7 +369,7 @@ describe('Auth Controller', () => {
 
       const existingUser = {
         ...mockUser,
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       };
 
       User.findOne.mockResolvedValue(existingUser);
@@ -391,7 +391,7 @@ describe('Auth Controller', () => {
       User.findOne.mockResolvedValue(null);
       User.create.mockResolvedValue({
         ...mockUser,
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       priorityService.getUserSiteAccess.mockResolvedValue({
@@ -548,10 +548,10 @@ describe('Auth Controller', () => {
 
       User.findOne.mockResolvedValue(null);
 
-      const createCall = jest.fn().mockResolvedValue({
+      const createCall = jest.fn<Promise<any>, [any]>().mockResolvedValue({
         ...mockUser,
         role: 'admin',
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       User.create.mockImplementation(createCall);
@@ -583,10 +583,10 @@ describe('Auth Controller', () => {
 
       User.findOne.mockResolvedValue(null);
 
-      const createCall = jest.fn().mockResolvedValue({
+      const createCall = jest.fn<Promise<any>, [any]>().mockResolvedValue({
         ...mockUser,
         role: 'hospital',
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       User.create.mockImplementation(createCall);
@@ -620,9 +620,9 @@ describe('Auth Controller', () => {
 
       User.findOne.mockResolvedValue(null);
 
-      const createCall = jest.fn().mockResolvedValue({
+      const createCall = jest.fn<Promise<any>, [any]>().mockResolvedValue({
         ...mockUser,
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       User.create.mockImplementation(createCall);
@@ -661,8 +661,8 @@ describe('Auth Controller', () => {
       const existingUser = {
         ...mockUser,
         metadata: { oldData: 'should be updated' },
-        save: jest.fn().mockResolvedValue(true),
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        save: jest.fn<Promise<boolean>, []>().mockResolvedValue(true),
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       };
 
       User.findOne.mockResolvedValue(existingUser);

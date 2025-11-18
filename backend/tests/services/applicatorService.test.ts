@@ -276,7 +276,7 @@ describe('Applicator Service', () => {
         { id: 'SO25000011', site: '100078', patientId: 'PAT-2025-002', date: '2025-07-10' }
       ]);
 
-      priorityService.getApplicatorsForTreatment.mockImplementation((treatmentId) => {
+      priorityService.getApplicatorsForTreatment.mockImplementation((treatmentId: string) => {
         if (treatmentId === 'SO25000010') {
           return Promise.resolve([
             {
@@ -537,12 +537,12 @@ describe('Applicator Service', () => {
     test('should update applicator for removal treatment', async () => {
       const { Applicator, Treatment } = require('../../src/models');
 
-      const removalApplicator = { ...mockApplicator, isRemoved: false };
+      const removalApplicator: any = { ...mockApplicator, isRemoved: false };
       const removalTreatment = { ...mockTreatment, type: 'removal' };
 
       Applicator.findByPk.mockResolvedValue(removalApplicator);
       Treatment.findByPk.mockResolvedValue(removalTreatment);
-      removalApplicator.update = jest.fn().mockResolvedValue(removalApplicator);
+      removalApplicator.update = jest.fn().mockResolvedValue(removalApplicator as any) as any;
 
       const result = await applicatorService.updateApplicatorForRemoval(
         'test-applicator-uuid-001',

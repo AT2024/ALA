@@ -31,6 +31,10 @@ interface Applicator {
   removalImage?: string;
   returnedFromNoUse?: boolean;
   patientId?: string;
+  // Upload/sync fields
+  attachmentFileCount?: number;
+  attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
+  attachmentFilename?: string;
 }
 
 interface ProgressStats {

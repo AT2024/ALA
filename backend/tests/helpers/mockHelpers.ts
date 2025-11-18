@@ -70,7 +70,7 @@ export const mockTreatment = {
 };
 
 // Mock Applicator model
-export const mockApplicator = {
+export const mockApplicator: any = {
   id: 'test-applicator-uuid-001',
   serialNumber: 'APP001-2025-001',
   applicatorType: 'Standard Applicator Type A',

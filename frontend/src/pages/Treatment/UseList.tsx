@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { PDFService } from '@/services/pdfService';
-import { JSONExportService } from '@/services/jsonExportService';
 
 const UseList = () => {
   const navigate = useNavigate();
@@ -42,7 +41,7 @@ const UseList = () => {
     const applicator = processedApplicators.find(app => app.serialNumber === applicatorSerialNumber);
     if (applicator) {
       setCurrentApplicator(applicator);
-      navigate('/treatment/scan'); // Takes to Treatment Documentation screen
+      navigate('/treatment/scan'); // Back to treatment scan page with applicator details
     }
   };
 
@@ -72,17 +71,10 @@ const UseList = () => {
         summaryWithActivity
       );
 
-      // Automatically export JSON data with PDF
-      JSONExportService.exportTreatmentData(
-        currentTreatment,
-        processedApplicators,
-        summaryWithActivity
-      );
-
-      setSuccess('PDF and JSON data downloaded successfully!');
+      setSuccess('PDF downloaded successfully!');
     } catch (error: any) {
       console.error('Error generating files:', error);
-      setError('Failed to generate PDF and JSON files. Please try again.');
+      setError('Failed to generate PDF. Please try again.');
     }
   };
 
@@ -214,6 +206,9 @@ const UseList = () => {
                       Comments
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Uploads
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Action
                     </th>
                   </tr>
@@ -268,6 +263,24 @@ const UseList = () => {
                           <span className="truncate">{applicator.comments}</span>
                         ) : (
                           <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm">
+                        {(applicator.attachmentFileCount ?? 0) > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
+                              applicator.attachmentSyncStatus === 'synced' ? 'bg-green-100 text-green-800' :
+                              applicator.attachmentSyncStatus === 'syncing' ? 'bg-blue-100 text-blue-800' :
+                              applicator.attachmentSyncStatus === 'failed' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {applicator.attachmentFileCount ?? 0} file{(applicator.attachmentFileCount ?? 0) > 1 ? 's' : ''}
+                              {applicator.attachmentSyncStatus === 'synced' && ' ✓'}
+                              {applicator.attachmentSyncStatus === 'failed' && ' ✗'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No files</span>
                         )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">

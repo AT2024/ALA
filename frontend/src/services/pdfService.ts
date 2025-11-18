@@ -2,6 +2,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
+// PDF Document Configuration
+const PDF_DOCUMENT_NUMBER = 'QSR-4001-01-E';
+const PDF_VERSION = 'V.01';
+
 interface Treatment {
   id: string;
   type: 'insertion' | 'removal';
@@ -45,16 +49,22 @@ export class PDFService {
     
     // Set font
     doc.setFont('helvetica');
-    
-    // Header
+
+    // Header with Document Number and Version
+    doc.setFontSize(10);
+    doc.text(PDF_DOCUMENT_NUMBER, 105, 15, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.text(PDF_VERSION, 105, 20, { align: 'center' });
+
     doc.setFontSize(20);
-    doc.text('Medical Treatment Report', 105, 20, { align: 'center' });
-    
+    doc.text('Medical Treatment Report', 105, 32, { align: 'center' });
+
     doc.setFontSize(12);
-    doc.text(`Generated: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`, 105, 30, { align: 'center' });
-    
+    doc.text(`Generated: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`, 105, 42, { align: 'center' });
+
     // Treatment Information Section
-    let yPosition = 50;
+    let yPosition = 58;
     doc.setFontSize(16);
     doc.text('Treatment Information', 20, yPosition);
     yPosition += 10;

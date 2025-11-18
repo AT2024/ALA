@@ -99,11 +99,11 @@ export const applicatorService = {
   async saveApplicatorData(
     treatmentId: string,
     applicatorData: ApplicatorData
-  ): Promise<{ success: boolean; message?: string }> {
+  ): Promise<{ success: boolean; message?: string; applicator?: any }> {
     try {
       console.log('Saving applicator data:', applicatorData);
-      
-      await api.post(`/treatments/${treatmentId}/applicators`, {
+
+      const response = await api.post(`/treatments/${treatmentId}/applicators`, {
         serialNumber: applicatorData.serialNumber,
         applicatorType: applicatorData.applicatorType,
         seedQuantity: applicatorData.seedQuantity,
@@ -112,15 +112,16 @@ export const applicatorService = {
         insertedSeedsQty: applicatorData.insertedSeedsQty,
         comments: applicatorData.comments
       });
-      
+
       return {
         success: true,
-        message: 'Applicator data saved successfully.'
+        message: 'Applicator data saved successfully.',
+        applicator: response.data // Return the complete applicator object from backend
       };
-      
+
     } catch (error: any) {
       console.error('Error saving applicator data:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to save applicator data. Please try again.'

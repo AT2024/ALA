@@ -13,7 +13,6 @@ import VerificationPage from '@/pages/Auth/VerificationPage';
 // Lazy load feature pages (loaded on demand)
 const TreatmentSelection = lazy(() => import('@/pages/Treatment/TreatmentSelection'));
 const TreatmentDocumentation = lazy(() => import('@/pages/Treatment/TreatmentDocumentation'));
-const ApplicatorInformation = lazy(() => import('@/pages/Treatment/ApplicatorInformation'));
 const UseList = lazy(() => import('@/pages/Treatment/UseList'));
 const SeedRemoval = lazy(() => import('@/pages/Treatment/SeedRemoval'));
 const Dashboard = lazy(() => import('@/pages/Admin/Dashboard'));
@@ -52,7 +51,6 @@ function App() {
                 <Route path="/procedure-type" element={<ProcedureTypePage />} />
                 <Route path="/treatment/select" element={<TreatmentSelection />} />
                 <Route path="/treatment/scan" element={<TreatmentDocumentation />} />
-                <Route path="/treatment/applicator" element={<ApplicatorInformation />} />
                 <Route path="/treatment/list" element={<UseList />} />
                 <Route path="/treatment/removal" element={<SeedRemoval />} />
                 <Route path="/admin/dashboard" element={<Dashboard />} />

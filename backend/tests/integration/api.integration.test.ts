@@ -73,7 +73,7 @@ describe('API Integration Tests', () => {
       User.findOne.mockResolvedValueOnce(null); // New user
       User.create.mockResolvedValueOnce({
         ...mockUserData,
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       priorityService.getUserSiteAccess.mockResolvedValue({
@@ -96,7 +96,7 @@ describe('API Integration Tests', () => {
       // Step 2: Verify code
       User.findOne.mockResolvedValueOnce({
         ...mockUserData,
-        verifyCode: jest.fn().mockResolvedValue(true)
+        verifyCode: jest.fn<Promise<boolean>, [string]>().mockResolvedValue(true)
       });
 
       const verifyResponse = await request(app)
@@ -168,7 +168,7 @@ describe('API Integration Tests', () => {
         ...mockUserData,
         email: 'test@bypass.com',
         role: 'admin',
-        generateVerificationCode: jest.fn().mockResolvedValue('123456')
+        generateVerificationCode: jest.fn<Promise<string>, []>().mockResolvedValue('123456')
       });
 
       const response = await request(app)
@@ -210,7 +210,7 @@ describe('API Integration Tests', () => {
 
       // Step 2: Add applicators
       Treatment.findByPk.mockResolvedValue(mockTreatmentData);
-      sequelize.transaction.mockImplementation((callback) =>
+      sequelize.transaction.mockImplementation((callback: any) =>
         callback({ commit: jest.fn(), rollback: jest.fn() })
       );
       applicatorService.addApplicatorWithTransaction.mockResolvedValue(mockApplicatorData);
@@ -248,7 +248,7 @@ describe('API Integration Tests', () => {
       const treatmentToComplete = {
         ...mockTreatmentData,
         isComplete: false,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn<Promise<boolean>, []>().mockResolvedValue(true)
       };
 
       Treatment.findByPk.mockResolvedValue(treatmentToComplete);
@@ -422,7 +422,7 @@ describe('API Integration Tests', () => {
     test('should handle Priority API rate limiting', async () => {
       const priorityService = require('../../src/services/priorityService').default;
 
-      const rateLimitError = new Error('Too Many Requests');
+      const rateLimitError: any = new Error('Too Many Requests');
       rateLimitError.response = { status: 429 };
 
       priorityService.getUserSiteAccess.mockRejectedValue(rateLimitError);

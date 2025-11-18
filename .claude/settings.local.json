@@ -38,7 +38,9 @@
       "Bash(findstr:*)",
       "Bash(netsh advfirewall firewall show rule:*)",
       "Bash(ipconfig:*)",
-      "Bash(docker inspect:*)"
+      "Bash(docker inspect:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }

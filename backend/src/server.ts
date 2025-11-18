@@ -133,7 +133,7 @@ const startServer = async () => {
       isDatabaseConnected = await initializeDatabase();
       if (!isDatabaseConnected) {
         logger.warn('Server started without database connection. Some features may not work.');
-        
+
         // Schedule periodic retry attempts
         setInterval(async () => {
           logger.info('Attempting to reconnect to database...');
@@ -142,11 +142,25 @@ const startServer = async () => {
             logger.info('Successfully reconnected to database!');
           }
         }, 30000); // Retry every 30 seconds
+      } else {
+        logger.info('Database connected successfully');
       }
     } catch (dbError) {
       logger.error(`Database initialization error: ${dbError}`);
       logger.warn('Server started without database connection. Some features may not work.');
     }
+
+    // Graceful shutdown handler
+    const gracefulShutdown = () => {
+      logger.info('Received shutdown signal...');
+      server.close(() => {
+        logger.info('Server closed gracefully');
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
     
     return server;
   } catch (error) {

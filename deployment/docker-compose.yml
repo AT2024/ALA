@@ -58,6 +58,8 @@ services:
       PRIORITY_API_COMPANY: ${PRIORITY_API_COMPANY}
       CORS_ORIGIN: ${CORS_ORIGIN}
       ENABLE_TEST_DATA: ${ENABLE_TEST_DATA:-false}
+    volumes:
+      - uploads-data:/usr/src/app/uploads  # Persistent storage for applicator file uploads
     depends_on:
       db:
         condition: service_healthy
@@ -108,3 +110,7 @@ services:
 volumes:
   postgres-data:
     driver: local
+  uploads-data:
+    driver: local
+    # Persistent storage for applicator file uploads
+    # Contains temp uploads and ZIP files until synced to Priority
