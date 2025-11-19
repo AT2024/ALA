@@ -334,6 +334,11 @@ export const applicatorService = {
   /**
    * Save applicator data to Priority system
    * Updates SIBD_APPLICATUSELIST table with usage information
+   *
+   * Now supports status-based workflow:
+   * - If status is provided, derives usageType from status
+   * - If status is null, falls back to usingType (backward compatibility)
+   * - Only syncs to Priority when reaching terminal state
    */
   async saveApplicatorToPriority(
     treatmentId: string,
@@ -343,20 +348,41 @@ export const applicatorService = {
       usingType: 'full' | 'partial' | 'faulty' | 'none';
       insertedSeedsQty: number;
       comments?: string;
+      status?: string | null; // New: optional status field
     }
   ): Promise<{ success: boolean; message?: string }> {
     try {
       logger.info('Saving applicator data to Priority:', applicatorData);
-      
+
       // Get treatment details for Priority update
       const treatment = await Treatment.findByPk(treatmentId);
       if (!treatment) {
         throw new Error('Treatment not found');
       }
-      
+
+      // Determine usageType based on status or fall back to usingType
+      let usageTypeToSync: 'full' | 'partial' | 'faulty' | 'none' | null;
+
+      if (applicatorData.status) {
+        // New workflow: derive usageType from status
+        usageTypeToSync = this.mapStatusToUsageType(applicatorData.status);
+
+        // Don't sync to Priority for intermediate states
+        if (usageTypeToSync === null) {
+          logger.info(`Skipping Priority sync for intermediate status: ${applicatorData.status}`);
+          return {
+            success: true,
+            message: `Applicator status updated to ${applicatorData.status} (not synced to Priority - intermediate state)`
+          };
+        }
+      } else {
+        // Backward compatibility: use existing usingType field
+        usageTypeToSync = applicatorData.usingType;
+      }
+
       // Map our usage types to Priority expected values
-      const priorityUsageType = this.mapUsageTypeToPriority(applicatorData.usingType);
-      
+      const priorityUsageType = this.mapUsageTypeToPriority(usageTypeToSync);
+
       // Update Priority SIBD_APPLICATUSELIST table
       const priorityUpdateData = {
         serialNumber: applicatorData.serialNumber,
@@ -369,17 +395,17 @@ export const applicatorService = {
         comments: applicatorData.comments || '',
         date: treatment.date
       };
-      
+
       const result = await priorityService.updateApplicatorInPriority(priorityUpdateData);
-      
+
       return {
         success: true,
         message: 'Applicator data saved to Priority system successfully.'
       };
-      
+
     } catch (error: any) {
       logger.error('Error saving applicator to Priority:', error);
-      
+
       return {
         success: false,
         message: error.message || 'Failed to save applicator data to Priority system.'
@@ -433,12 +459,119 @@ export const applicatorService = {
   mapUsageTypeToPriority(usageType: string): string {
     const mapping: Record<string, string> = {
       'full': 'Full use',
-      'partial': 'Partial Use', 
+      'partial': 'Partial Use',
       'faulty': 'Faulty',
       'none': 'No Use'
     };
-    
+
     return mapping[usageType] || usageType;
+  },
+
+  /**
+   * Map internal applicator status to Priority ERP usageType
+   * Implements 9-state workflow mapping to Priority values
+   *
+   * Status mappings:
+   * - INSERTED → 'full' (applicator successfully used)
+   * - FAULTY, DEPLOYMENT_FAILURE → 'faulty' (applicator has issues)
+   * - DISPOSED, DISCHARGED, UNACCOUNTED → 'none' (applicator not used)
+   * - SEALED, OPENED, LOADED → null (intermediate states, don't sync yet)
+   *
+   * @param status - Internal applicator status
+   * @returns Priority usageType or null for intermediate states
+   */
+  mapStatusToUsageType(status: string | null): 'full' | 'faulty' | 'none' | null {
+    if (!status) {
+      return null; // No status = backward compatibility mode
+    }
+
+    const statusMapping: Record<string, 'full' | 'faulty' | 'none' | null> = {
+      // Terminal state - successful insertion
+      'INSERTED': 'full',
+
+      // Terminal states - faulty applicator
+      'FAULTY': 'faulty',
+      'DEPLOYMENT_FAILURE': 'faulty',
+
+      // Terminal states - not used
+      'DISPOSED': 'none',
+      'DISCHARGED': 'none',
+      'UNACCOUNTED': 'none',
+
+      // Intermediate states - don't sync to Priority yet
+      'SEALED': null,
+      'OPENED': null,
+      'LOADED': null,
+    };
+
+    return statusMapping[status] ?? null;
+  },
+
+  /**
+   * Validate status transition for applicator state machine
+   * Implements 9-state workflow with strict transition rules
+   *
+   * Allowed transitions:
+   * - SEALED → [OPENED, FAULTY, UNACCOUNTED]
+   * - OPENED → [LOADED, FAULTY, DISPOSED, UNACCOUNTED]
+   * - LOADED → [INSERTED, FAULTY, DEPLOYMENT_FAILURE, UNACCOUNTED]
+   * - INSERTED → [DISCHARGED, DISPOSED] (can only dispose after insertion)
+   * - FAULTY → [DISPOSED, DISCHARGED]
+   * - DEPLOYMENT_FAILURE → [DISPOSED, FAULTY]
+   * - Terminal states (DISPOSED, DISCHARGED, UNACCOUNTED) → [] (no transitions allowed)
+   *
+   * @param currentStatus - Current applicator status
+   * @param newStatus - Requested new status
+   * @returns Validation result with error message if invalid
+   */
+  validateStatusTransition(
+    currentStatus: string | null,
+    newStatus: string
+  ): { valid: boolean; error?: string } {
+    // If no current status, any initial status is allowed (backward compatibility)
+    if (!currentStatus) {
+      return { valid: true };
+    }
+
+    // Define allowed transitions for each state
+    const allowedTransitions: Record<string, string[]> = {
+      'SEALED': ['OPENED', 'FAULTY', 'UNACCOUNTED'],
+      'OPENED': ['LOADED', 'FAULTY', 'DISPOSED', 'UNACCOUNTED'],
+      'LOADED': ['INSERTED', 'FAULTY', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED'],
+      'INSERTED': ['DISCHARGED', 'DISPOSED'],
+      'FAULTY': ['DISPOSED', 'DISCHARGED'],
+      'DEPLOYMENT_FAILURE': ['DISPOSED', 'FAULTY'],
+      'DISPOSED': [], // Terminal state
+      'DISCHARGED': [], // Terminal state
+      'UNACCOUNTED': [], // Terminal state
+    };
+
+    // Check if current status is valid
+    if (!allowedTransitions[currentStatus]) {
+      return {
+        valid: false,
+        error: `Invalid current status: ${currentStatus}`
+      };
+    }
+
+    // Check if transition is allowed
+    const allowedNextStates = allowedTransitions[currentStatus];
+
+    if (allowedNextStates.length === 0) {
+      return {
+        valid: false,
+        error: `Cannot transition from terminal state ${currentStatus}`
+      };
+    }
+
+    if (!allowedNextStates.includes(newStatus)) {
+      return {
+        valid: false,
+        error: `Invalid transition from ${currentStatus} to ${newStatus}. Allowed: ${allowedNextStates.join(', ')}`
+      };
+    }
+
+    return { valid: true };
   },
 
   // Add an applicator to a treatment with validation
