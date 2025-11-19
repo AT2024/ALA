@@ -177,21 +177,70 @@ export const updateApplicator = asyncHandler(async (req: Request, res: Response)
 // @access  Private
 export const getSeedStatus = asyncHandler(async (req: Request, res: Response) => {
   const { treatmentId } = req.params;
-  
+
   // Verify the treatment exists and user has access
   const treatment = await treatmentService.getTreatmentById(treatmentId);
-  
+
   if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
     res.status(403);
     throw new Error('Not authorized to access this treatment');
   }
-  
+
   if (treatment.type !== 'removal') {
     res.status(400);
     throw new Error('Seed status is only relevant for removal treatments');
   }
-  
+
   const seedStatus = await applicatorService.calculateSeedCountStatus(treatmentId);
-  
+
   res.status(200).json(seedStatus);
+});
+
+// @desc    Create a package of 4 applicators with P# label
+// @route   POST /api/treatments/:treatmentId/package
+// @access  Private
+export const createPackage = asyncHandler(async (req: Request, res: Response) => {
+  const { treatmentId } = req.params;
+  const { applicatorIds } = req.body;
+
+  // Validation: applicatorIds must be an array
+  if (!applicatorIds || !Array.isArray(applicatorIds)) {
+    res.status(400);
+    throw new Error('applicatorIds must be an array');
+  }
+
+  // Verify the treatment exists and user has access
+  const treatment = await treatmentService.getTreatmentById(treatmentId);
+
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to modify this treatment');
+  }
+
+  const updatedApplicators = await applicatorService.createPackage(treatmentId, applicatorIds);
+
+  res.status(200).json({
+    success: true,
+    packageLabel: updatedApplicators[0].packageLabel,
+    applicators: updatedApplicators
+  });
+});
+
+// @desc    Get all packages for a treatment
+// @route   GET /api/treatments/:treatmentId/packages
+// @access  Private
+export const getPackages = asyncHandler(async (req: Request, res: Response) => {
+  const { treatmentId } = req.params;
+
+  // Verify the treatment exists and user has access
+  const treatment = await treatmentService.getTreatmentById(treatmentId);
+
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to access this treatment');
+  }
+
+  const packages = await applicatorService.getPackages(treatmentId);
+
+  res.status(200).json(packages);
 });

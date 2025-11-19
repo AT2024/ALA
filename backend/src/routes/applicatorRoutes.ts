@@ -6,7 +6,9 @@ import {
   getApplicatorBySerialNumber,
   updateApplicator,
   updateTreatmentStatus,
-  getSeedStatus
+  getSeedStatus,
+  createPackage,
+  getPackages
 } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
 import { validateUUID, validateMultipleUUIDs } from '../middleware/uuidValidationMiddleware';
@@ -31,5 +33,9 @@ router.get('/treatment/:treatmentId/seed-status', validateUUID('treatmentId'), d
 router.post('/treatments/:treatmentId/applicators', validateUUID('treatmentId'), criticalOperationHealthCheck, addApplicator);
 router.patch('/treatments/:treatmentId/applicators/:id', validateMultipleUUIDs(['treatmentId', 'id']), criticalOperationHealthCheck, updateApplicator);
 router.patch('/treatments/:treatmentId/status', validateUUID('treatmentId'), criticalOperationHealthCheck, updateTreatmentStatus);
+
+// Packaging routes (for pancreas/prostate combined treatments)
+router.post('/treatments/:treatmentId/package', validateUUID('treatmentId'), criticalOperationHealthCheck, createPackage);
+router.get('/treatments/:treatmentId/packages', validateUUID('treatmentId'), databaseHealthCheck, getPackages);
 
 export default router;

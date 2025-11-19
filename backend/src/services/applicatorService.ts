@@ -937,16 +937,194 @@ export const applicatorService = {
   async updateApplicator(id: string, data: any) {
     try {
       const applicator = await Applicator.findByPk(id);
-      
+
       if (!applicator) {
         throw new Error('Applicator not found');
       }
-      
+
       await applicator.update(data);
-      
+
       return applicator;
     } catch (error) {
       logger.error(`Error updating applicator: ${error}`);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a package of 4 applicators with P# label
+   * ONLY for pancreas and prostate treatments (combined treatments)
+   *
+   * @param treatmentId - Treatment ID
+   * @param applicatorIds - Array of exactly 4 applicator IDs
+   * @returns Updated applicators with package_label assigned
+   */
+  async createPackage(treatmentId: string, applicatorIds: string[]) {
+    try {
+      logger.info(`Creating package for treatment ${treatmentId}`, { applicatorIds });
+
+      // Validation 1: Exactly 4 applicators required
+      if (applicatorIds.length !== 4) {
+        throw new Error(`Package must contain exactly 4 applicators (received ${applicatorIds.length})`);
+      }
+
+      // Validation 2: Verify treatment exists
+      const treatment = await Treatment.findByPk(treatmentId);
+      if (!treatment) {
+        throw new Error(`Treatment not found: ${treatmentId}`);
+      }
+
+      // Fetch all 4 applicators
+      const applicators = await Applicator.findAll({
+        where: {
+          id: applicatorIds
+        }
+      });
+
+      // Validation 3: All 4 applicators must exist
+      if (applicators.length !== 4) {
+        throw new Error(`Found ${applicators.length} applicators, expected 4`);
+      }
+
+      // Validation 4: All applicators must belong to the same treatment
+      const invalidTreatment = applicators.find(app => app.treatmentId !== treatmentId);
+      if (invalidTreatment) {
+        throw new Error(
+          `Applicator ${invalidTreatment.serialNumber} belongs to different treatment (${invalidTreatment.treatmentId})`
+        );
+      }
+
+      // Validation 5: All applicators must be in ready status
+      // LOADED is part of the 9-state workflow (not yet fully implemented)
+      // For now, we accept SCANNED (current 6-state model) or null (backward compatibility)
+      // When 9-state workflow is fully implemented, this should check for 'LOADED' specifically
+      const acceptableStatuses = ['SCANNED', null]; // null = status not set (backward compatibility)
+      const notReadyApplicator = applicators.find(app => !acceptableStatuses.includes(app.status));
+      if (notReadyApplicator) {
+        throw new Error(
+          `All applicators must be in ready status (SCANNED or pending). Applicator ${notReadyApplicator.serialNumber} is ${notReadyApplicator.status}`
+        );
+      }
+
+      // Validation 6: All applicators must have same seed quantity (same type)
+      const firstSeedQty = applicators[0].seedQuantity;
+      const differentSeedQty = applicators.find(app => app.seedQuantity !== firstSeedQty);
+      if (differentSeedQty) {
+        throw new Error(
+          `All applicators must have same seed quantity. Found ${firstSeedQty} and ${differentSeedQty.seedQuantity}`
+        );
+      }
+
+      // Get next available package label (P1, P2, P3, etc.)
+      const nextLabel = await this.getNextPackageLabel(treatmentId);
+
+      // Update all 4 applicators with package label
+      const updatedApplicators: Applicator[] = [];
+      for (const applicator of applicators) {
+        await applicator.update({ packageLabel: nextLabel });
+        updatedApplicators.push(applicator);
+      }
+
+      logger.info(`Package ${nextLabel} created successfully for treatment ${treatmentId}`, {
+        packageLabel: nextLabel,
+        applicatorCount: updatedApplicators.length,
+        seedQuantity: firstSeedQty
+      });
+
+      return updatedApplicators;
+    } catch (error: any) {
+      logger.error(`Error creating package: ${error.message}`, { treatmentId, applicatorIds });
+      throw error;
+    }
+  },
+
+  /**
+   * Get next available package label for a treatment
+   *
+   * @param treatmentId - Treatment ID
+   * @returns Next package label (P1, P2, P3, etc.)
+   */
+  async getNextPackageLabel(treatmentId: string): Promise<string> {
+    try {
+      // Find all applicators with package labels for this treatment
+      const applicatorsWithLabels = await Applicator.findAll({
+        where: {
+          treatmentId,
+          packageLabel: { [Op.ne]: null }
+        },
+        attributes: ['packageLabel'],
+        order: [['packageLabel', 'DESC']],
+        limit: 1
+      });
+
+      // If no packages exist, start with P1
+      if (applicatorsWithLabels.length === 0) {
+        return 'P1';
+      }
+
+      // Extract highest package number and increment
+      const highestLabel = applicatorsWithLabels[0].packageLabel;
+      if (!highestLabel) {
+        return 'P1';
+      }
+
+      // Parse number from label (P1 -> 1, P2 -> 2, etc.)
+      const match = highestLabel.match(/^P(\d+)$/);
+      if (!match) {
+        logger.warn(`Invalid package label format: ${highestLabel}, defaulting to P1`);
+        return 'P1';
+      }
+
+      const currentNumber = parseInt(match[1], 10);
+      const nextNumber = currentNumber + 1;
+
+      return `P${nextNumber}`;
+    } catch (error: any) {
+      logger.error(`Error getting next package label: ${error.message}`, { treatmentId });
+      throw error;
+    }
+  },
+
+  /**
+   * Get all packages for a treatment
+   * Groups applicators by package_label
+   *
+   * @param treatmentId - Treatment ID
+   * @returns Array of packages with their applicators
+   */
+  async getPackages(treatmentId: string) {
+    try {
+      // Get all applicators with package labels
+      const applicators = await Applicator.findAll({
+        where: {
+          treatmentId,
+          packageLabel: { [Op.ne]: null }
+        },
+        order: [['packageLabel', 'ASC'], ['insertionTime', 'ASC']]
+      });
+
+      // Group by package label
+      const packagesMap = new Map<string, Applicator[]>();
+
+      for (const applicator of applicators) {
+        const label = applicator.packageLabel!;
+        if (!packagesMap.has(label)) {
+          packagesMap.set(label, []);
+        }
+        packagesMap.get(label)!.push(applicator);
+      }
+
+      // Convert to array format
+      const packages = Array.from(packagesMap.entries()).map(([label, applicators]) => ({
+        label,
+        applicators
+      }));
+
+      logger.info(`Retrieved ${packages.length} packages for treatment ${treatmentId}`);
+
+      return packages;
+    } catch (error: any) {
+      logger.error(`Error getting packages: ${error.message}`, { treatmentId });
       throw error;
     }
   },
