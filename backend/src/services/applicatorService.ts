@@ -1014,8 +1014,8 @@ export const applicatorService = {
           applicator.status,
           data.status,
           userId || 'system',
-          data.comments || null,
-          null // No transaction for standalone updates
+          data.comments || undefined,
+          undefined // No requestId
         );
       }
 

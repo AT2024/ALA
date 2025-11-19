@@ -176,8 +176,7 @@ export const updateApplicator = asyncHandler(async (req: Request, res: Response)
       applicatorId: id,
       oldStatus: applicator.status,
       newStatus: req.body.status,
-      userId: req.user.id,
-      requestId: req.id
+      userId: req.user.id
     });
   }
 
