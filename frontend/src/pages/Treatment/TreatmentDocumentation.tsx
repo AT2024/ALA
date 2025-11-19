@@ -10,6 +10,7 @@ import applicatorService, { ApplicatorValidationResult } from '@/services/applic
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 import { generateUUID } from '@/utils/uuid';
+import { getAllowedNextStatuses, type ApplicatorStatus } from '@/utils/applicatorStatus';
 
 const TreatmentDocumentation = () => {
   const {
@@ -60,6 +61,20 @@ const TreatmentDocumentation = () => {
 
   // Use centralized filtering function - single source of truth
   const patientFilteredApplicators = getFilteredAvailableApplicators();
+
+  // Get allowed statuses based on current applicator status (for smart dropdown)
+  const allowedStatuses = isEditMode && currentApplicator?.status
+    ? getAllowedNextStatuses(currentApplicator.status as ApplicatorStatus)
+    : null; // null = new applicator, show all statuses
+
+  // Helper function to check if a status should be shown in dropdown
+  const shouldShowStatus = (status: string): boolean => {
+    // New applicators (not in edit mode) can select any status
+    if (!allowedStatuses) return true;
+
+    // In edit mode, only show allowed transitions
+    return allowedStatuses.includes(status as ApplicatorStatus);
+  };
 
   useEffect(() => {
     if (!currentTreatment) {
@@ -324,7 +339,7 @@ const TreatmentDocumentation = () => {
     });
 
     if (returnedFromNoUse) {
-      setSuccess(`Applicator ${serialNumber} validated successfully! This applicator was previously marked as "No Use" - you can select any status.`);
+      setSuccess(`Applicator ${serialNumber} validated successfully! This applicator was previously marked as SEALED (unused) - you can select any status.`);
     } else {
       setSuccess(`Applicator ${serialNumber} validated successfully! Status set to SEALED - select appropriate status below.`);
     }
@@ -425,7 +440,7 @@ const TreatmentDocumentation = () => {
     });
 
     if (isReturnedFromNoUse) {
-      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as "No Use" - you can select any status.`);
+      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as SEALED (unused) - you can select any status.`);
     } else {
       setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Status set to SEALED - select appropriate status below.`);
     }
@@ -1018,15 +1033,15 @@ const TreatmentDocumentation = () => {
                   disabled={loading}
                 >
                   <option value="">Select Status</option>
-                  <option value="SEALED" className="text-gray-800">Sealed (unopened)</option>
-                  <option value="OPENED" className="text-red-600">Opened (package opened)</option>
-                  <option value="LOADED" className="text-yellow-600">Loaded (ready for insertion)</option>
-                  <option value="INSERTED" className="text-green-600">Inserted (successfully deployed)</option>
-                  <option value="FAULTY" className="text-gray-800">Faulty (defective equipment)</option>
-                  <option value="DISPOSED" className="text-gray-800">Disposed (discarded)</option>
-                  <option value="DISCHARGED" className="text-gray-800">Discharged (seeds expelled)</option>
-                  <option value="DEPLOYMENT_FAILURE" className="text-gray-800">Deployment Failure</option>
-                  <option value="UNACCOUNTED" className="text-gray-800">Unaccounted (lost/missing)</option>
+                  {shouldShowStatus('SEALED') && <option value="SEALED" className="text-gray-800">Sealed (unopened)</option>}
+                  {shouldShowStatus('OPENED') && <option value="OPENED" className="text-red-600">Opened (package opened)</option>}
+                  {shouldShowStatus('LOADED') && <option value="LOADED" className="text-yellow-600">Loaded (ready for insertion)</option>}
+                  {shouldShowStatus('INSERTED') && <option value="INSERTED" className="text-green-600">Inserted (successfully deployed)</option>}
+                  {shouldShowStatus('FAULTY') && <option value="FAULTY" className="text-gray-800">Faulty (defective equipment)</option>}
+                  {shouldShowStatus('DISPOSED') && <option value="DISPOSED" className="text-gray-800">Disposed (discarded)</option>}
+                  {shouldShowStatus('DISCHARGED') && <option value="DISCHARGED" className="text-gray-800">Discharged (seeds expelled)</option>}
+                  {shouldShowStatus('DEPLOYMENT_FAILURE') && <option value="DEPLOYMENT_FAILURE" className="text-gray-800">Deployment Failure</option>}
+                  {shouldShowStatus('UNACCOUNTED') && <option value="UNACCOUNTED" className="text-gray-800">Unaccounted (lost/missing)</option>}
                 </select>
                 {isReturnedFromNoUse && (
                   <p className="mt-1 text-xs text-red-600">

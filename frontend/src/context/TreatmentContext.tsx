@@ -478,6 +478,57 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     return type.includes('pancreas') || type.includes('prostate');
   };
 
+  // Get applicator summary by seed quantity (for table views)
+  const getApplicatorSummary = () => {
+    const summaryMap: {
+      [key: number]: {
+        seedQuantity: number;
+        inserted: number;
+        available: number;
+        loaded: number;
+        packaged: number;
+      };
+    } = {};
+
+    processedApplicators.forEach((app) => {
+      if (!summaryMap[app.seedQuantity]) {
+        summaryMap[app.seedQuantity] = {
+          seedQuantity: app.seedQuantity,
+          inserted: 0,
+          available: 0,
+          loaded: 0,
+          packaged: 0,
+        };
+      }
+
+      // Determine effective status (new 9-state or backward compatible)
+      const status = app.status || (app.usageType === 'full' ? 'INSERTED' :
+                                     app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+
+      // Count inserted applicators
+      if (status === 'INSERTED') {
+        summaryMap[app.seedQuantity].inserted++;
+      }
+
+      // Count available applicators (active states only)
+      if (['SEALED', 'OPENED', 'LOADED'].includes(status)) {
+        summaryMap[app.seedQuantity].available++;
+      }
+
+      // Count loaded applicators
+      if (status === 'LOADED') {
+        summaryMap[app.seedQuantity].loaded++;
+      }
+
+      // Count packaged applicators
+      if (app.package_label) {
+        summaryMap[app.seedQuantity].packaged++;
+      }
+    });
+
+    return Object.values(summaryMap).sort((a, b) => a.seedQuantity - b.seedQuantity);
+  };
+
   // Calculate totals for removal treatment
   const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
   const removedSeeds = applicators.reduce((sum, app) =>
@@ -536,6 +587,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         getActualTotalSeeds,
         getActualInsertedSeeds,
         getApplicatorTypeBreakdown,
+        getApplicatorSummary,
         getFilteredAvailableApplicators,
         getApplicatorGroups,
         getRemovalProgress,

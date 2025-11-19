@@ -193,6 +193,54 @@
       "SBD_SEEDQTY": 18,
       "SBD_PREFACTIV": 2.2,
       "DETAILS": "Patient Gamma-019 (Awaiting removal procedure)"
+    },
+    {
+      "ORDNAME": "PANC-HEAD-002",
+      "CUSTNAME": "100078",
+      "CUSTDES": "Main Test Hospital",
+      "REFERENCE": "PAT-2025-PANC-TEST-001",
+      "CURDATE": "2025-07-10T00:00:00Z",
+      "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
+      "ORDSTATUSDES": "Open",
+      "SBD_SEEDQTY": 28,
+      "SBD_PREFACTIV": 2.5,
+      "DETAILS": "PANC-TEST-001"
+    },
+    {
+      "ORDNAME": "PANC-TAIL-002",
+      "CUSTNAME": "100078",
+      "CUSTDES": "Main Test Hospital",
+      "REFERENCE": "PAT-2025-PANC-TEST-001",
+      "CURDATE": "2025-07-10T00:00:00Z",
+      "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
+      "ORDSTATUSDES": "Open",
+      "SBD_SEEDQTY": 22,
+      "SBD_PREFACTIV": 2.5,
+      "DETAILS": "PANC-TEST-001"
+    },
+    {
+      "ORDNAME": "PROST-LEFT-001",
+      "CUSTNAME": "100078",
+      "CUSTDES": "Main Test Hospital",
+      "REFERENCE": "PAT-2025-PROST-TEST-001",
+      "CURDATE": "2025-07-10T00:00:00Z",
+      "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
+      "ORDSTATUSDES": "Open",
+      "SBD_SEEDQTY": 18,
+      "SBD_PREFACTIV": 2.3,
+      "DETAILS": "PROST-TEST-001"
+    },
+    {
+      "ORDNAME": "PROST-RIGHT-001",
+      "CUSTNAME": "100078",
+      "CUSTDES": "Main Test Hospital",
+      "REFERENCE": "PAT-2025-PROST-TEST-001",
+      "CURDATE": "2025-07-10T00:00:00Z",
+      "SIBD_TREATDAY": "2025-07-10T00:00:00Z",
+      "ORDSTATUSDES": "Open",
+      "SBD_SEEDQTY": 18,
+      "SBD_PREFACTIV": 2.3,
+      "DETAILS": "PROST-TEST-001"
     }
   ],
   "subform_data": {
@@ -1383,6 +1431,194 @@
           "INSERTIONDATE": "2025-06-30T14:45:00Z",
           "SIBD_REPPRODPAL": 2049,
           "ORDNAME": "SO25000019FLEX"
+        }
+      ]
+    },
+    "PANC-HEAD-002": {
+      "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-HEAD-002')/SIBD_APPLICATUSELIST_SUBFORM",
+      "value": [
+        {
+          "SERNUM": "PANC-HEAD-002-A1",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2070,
+          "ORDNAME": "PANC-HEAD-002FLEX"
+        },
+        {
+          "SERNUM": "PANC-HEAD-002-A2",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2071,
+          "ORDNAME": "PANC-HEAD-002FLEX"
+        },
+        {
+          "SERNUM": "PANC-HEAD-002-A3",
+          "PARTNAME": "FLEX-00103-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
+          "INTDATA2": 3,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2072,
+          "ORDNAME": "PANC-HEAD-002FLEX"
+        }
+      ]
+    },
+    "PANC-TAIL-002": {
+      "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-TAIL-002')/SIBD_APPLICATUSELIST_SUBFORM",
+      "value": [
+        {
+          "SERNUM": "PANC-TAIL-002-A1",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2080,
+          "ORDNAME": "PANC-TAIL-002FLEX"
+        },
+        {
+          "SERNUM": "PANC-TAIL-002-A2",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2081,
+          "ORDNAME": "PANC-TAIL-002FLEX"
+        },
+        {
+          "SERNUM": "PANC-TAIL-002-A3",
+          "PARTNAME": "FLEX-00101-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
+          "INTDATA2": 1,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2082,
+          "ORDNAME": "PANC-TAIL-002FLEX"
+        }
+      ]
+    },
+    "PROST-LEFT-001": {
+      "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PROST-LEFT-001')/SIBD_APPLICATUSELIST_SUBFORM",
+      "value": [
+        {
+          "SERNUM": "PROST-LEFT-001-A1",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2090,
+          "ORDNAME": "PROST-LEFT-001FLEX"
+        },
+        {
+          "SERNUM": "PROST-LEFT-001-A2",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2091,
+          "ORDNAME": "PROST-LEFT-001FLEX"
+        },
+        {
+          "SERNUM": "PROST-LEFT-001-A3",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2092,
+          "ORDNAME": "PROST-LEFT-001FLEX"
+        }
+      ]
+    },
+    "PROST-RIGHT-001": {
+      "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PROST-RIGHT-001')/SIBD_APPLICATUSELIST_SUBFORM",
+      "value": [
+        {
+          "SERNUM": "PROST-RIGHT-001-A1",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2100,
+          "ORDNAME": "PROST-RIGHT-001FLEX"
+        },
+        {
+          "SERNUM": "PROST-RIGHT-001-A2",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2101,
+          "ORDNAME": "PROST-RIGHT-001FLEX"
+        },
+        {
+          "SERNUM": "PROST-RIGHT-001-A3",
+          "PARTNAME": "FLEX-00102-FG",
+          "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
+          "INTDATA2": 2,
+          "INSERTEDSEEDSQTY": 0,
+          "USINGTYPE": null,
+          "INSERTIONCOMMENTS": null,
+          "EXTFILENAME": null,
+          "INSERTEDREPORTEDBY": null,
+          "INSERTIONDATE": null,
+          "SIBD_REPPRODPAL": 2102,
+          "ORDNAME": "PROST-RIGHT-001FLEX"
         }
       ]
     }

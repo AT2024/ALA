@@ -6,7 +6,7 @@ const ProgressTracker = () => {
     progressStats,
     getActualTotalSeeds,
     getActualInsertedSeeds,
-    getApplicatorTypeBreakdown
+    getApplicatorSummary
   } = useTreatment();
 
   if (!currentTreatment) {
@@ -53,18 +53,6 @@ const ProgressTracker = () => {
     </div>
   );
 
-  const ApplicatorTypeIndicator = ({ seedCount, used, total }: {
-    seedCount: number;
-    used: number;
-    total: number;
-  }) => (
-    <div className="flex items-center gap-2">
-      <div className="w-3 h-3 rounded-full bg-purple-400" />
-      <span className="text-sm text-gray-700">
-        Applicator {seedCount} seeds: {used > 0 ? `${used}/${total} used` : total}
-      </span>
-    </div>
-  );
 
   return (
     <div className="rounded-lg border bg-white p-4 shadow-sm">
@@ -101,23 +89,23 @@ const ProgressTracker = () => {
           </div>
         )}
 
-        {/* Usage Type Distribution - Updated to use status-based colors */}
+        {/* Status Distribution - Uses 9-state workflow status labels */}
         {progressStats.usedApplicators > 0 && (
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-700">Usage Type Distribution</h4>
+            <h4 className="text-sm font-medium text-gray-700">Status Distribution</h4>
             <div className="grid grid-cols-1 gap-2">
               <UsageTypeIndicator
-                type="Full Use (INSERTED)"
+                type="INSERTED"
                 count={progressStats.usageTypeDistribution.full}
                 color="bg-green-400"
               />
               <UsageTypeIndicator
-                type="Faulty (FAULTY/DISPOSED)"
+                type="FAULTY/DISPOSED"
                 count={progressStats.usageTypeDistribution.faulty}
                 color="bg-gray-700"
               />
               <UsageTypeIndicator
-                type="No Use (SEALED)"
+                type="SEALED"
                 count={progressStats.usageTypeDistribution.none}
                 color="bg-gray-400"
               />
@@ -125,19 +113,53 @@ const ProgressTracker = () => {
           </div>
         )}
 
-        {/* Applicator Type Breakdown */}
-        {getApplicatorTypeBreakdown().length > 0 && (
+        {/* Applicator Summary Table */}
+        {getApplicatorSummary().length > 0 && (
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-700">Available Applicators by Type</h4>
-            <div className="grid grid-cols-1 gap-2">
-              {getApplicatorTypeBreakdown().map(({ seedCount, used, total }) => (
-                <ApplicatorTypeIndicator
-                  key={seedCount}
-                  seedCount={seedCount}
-                  used={used}
-                  total={total}
-                />
-              ))}
+            <h4 className="text-sm font-medium text-gray-700">Applicator Summary</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Inserted
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Available
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Loaded
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Package
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {getApplicatorSummary().map((item) => (
+                    <tr key={item.seedQuantity}>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                        {item.seedQuantity} seed{item.seedQuantity !== 1 ? 's' : ''}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {item.inserted}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {item.available}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {item.loaded}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {Math.floor(item.packaged / 4)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
