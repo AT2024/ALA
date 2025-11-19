@@ -5,9 +5,61 @@ import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { PDFService } from '@/services/pdfService';
 
+// Get status color classes based on status for table rows
+const getStatusColor = (status: string | undefined | null): string => {
+  // If status is null/undefined, return default/white (backward compatibility)
+  if (!status) {
+    return 'bg-white';
+  }
+
+  switch (status) {
+    case 'SEALED':
+      return 'bg-white';
+    case 'OPENED':
+      return 'bg-red-50';
+    case 'LOADED':
+      return 'bg-yellow-50';
+    case 'INSERTED':
+      return 'bg-green-50';
+    case 'FAULTY':
+    case 'DISPOSED':
+    case 'DISCHARGED':
+    case 'DEPLOYMENT_FAILURE':
+    case 'UNACCOUNTED':
+      return 'bg-gray-900 text-white';
+    default:
+      return 'bg-white';
+  }
+};
+
+// Get status badge color classes
+const getStatusBadgeColor = (status: string | undefined | null, usageType: string): string => {
+  // Use status if available, otherwise fallback to usageType
+  const effectiveStatus = status || (usageType === 'full' ? 'INSERTED' : usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+
+  switch (effectiveStatus) {
+    case 'SEALED':
+      return 'bg-white border-gray-300 text-gray-800';
+    case 'OPENED':
+      return 'bg-red-50 border-red-300 text-red-800';
+    case 'LOADED':
+      return 'bg-yellow-50 border-yellow-300 text-yellow-800';
+    case 'INSERTED':
+      return 'bg-green-50 border-green-300 text-green-800';
+    case 'FAULTY':
+    case 'DISPOSED':
+    case 'DISCHARGED':
+    case 'DEPLOYMENT_FAILURE':
+    case 'UNACCOUNTED':
+      return 'bg-gray-900 text-white';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
 const UseList = () => {
   const navigate = useNavigate();
-  const { currentTreatment, processedApplicators, setCurrentApplicator } = useTreatment();
+  const { currentTreatment, processedApplicators, setCurrentApplicator, sortApplicatorsByStatus } = useTreatment();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,10 +266,14 @@ const UseList = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {processedApplicators
-                    .sort((a, b) => b.seedQuantity - a.seedQuantity) // Sort by Seeds Qty as specified
-                    .map((applicator) => (
-                    <tr key={applicator.id || applicator.serialNumber} className="hover:bg-gray-50">
+                  {sortApplicatorsByStatus(processedApplicators)
+                    .map((applicator) => {
+                      // Get effective status for color coding (fallback to usageType if status is null)
+                      const effectiveStatus = applicator.status || (applicator.usageType === 'full' ? 'INSERTED' : applicator.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+                      const rowColor = getStatusColor(effectiveStatus);
+
+                      return (
+                    <tr key={applicator.id || applicator.serialNumber} className={`hover:opacity-90 ${rowColor}`}>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                         {applicator.serialNumber}
                         {/* TODO: Add asterisk if applicator was intended for another treatment */}
@@ -235,19 +291,14 @@ const UseList = () => {
                         }
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
-                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                          applicator.usageType === 'full'
-                            ? 'bg-green-100 text-green-800'
-                            : applicator.usageType === 'faulty'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {applicator.usageType === 'full'
-                            ? 'Full use'
-                            : applicator.usageType === 'faulty'
-                            ? 'Faulty'
-                            : 'No Use'
-                          }
+                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 border ${getStatusBadgeColor(applicator.status, applicator.usageType)}`}>
+                          {applicator.status || (
+                            applicator.usageType === 'full'
+                              ? 'INSERTED'
+                              : applicator.usageType === 'faulty'
+                              ? 'FAULTY'
+                              : 'SEALED'
+                          )}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
@@ -292,7 +343,8 @@ const UseList = () => {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -372,7 +424,10 @@ const UseList = () => {
           <h3 className="text-sm font-medium text-gray-700 mb-2">Information</h3>
           <ul className="text-xs text-gray-600 space-y-1">
             <li>• Only processed applicators are shown in the list</li>
-            <li>• Applicators are sorted by Seeds Qty. as specified</li>
+            <li>• Active applicators (SEALED, OPENED, LOADED) are sorted to top</li>
+            <li>• Finished applicators (INSERTED, FAULTY, etc.) are sorted to bottom</li>
+            <li>• Within groups, sorted by seed quantity (highest first)</li>
+            <li>• Row colors indicate status: Red (OPENED), Yellow (LOADED), Green (INSERTED), Black (Terminal states)</li>
             <li>• Use 'Edit' to modify processed applicator details</li>
             <li>• Use 'Back to Treatment' to scan and process another applicator</li>
             <li>• Use 'Finalize' to complete the treatment</li>

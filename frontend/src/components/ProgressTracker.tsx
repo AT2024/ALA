@@ -1,9 +1,9 @@
 import { useTreatment } from '@/context/TreatmentContext';
 
 const ProgressTracker = () => {
-  const { 
-    currentTreatment, 
-    progressStats, 
+  const {
+    currentTreatment,
+    progressStats,
     getActualTotalSeeds,
     getActualInsertedSeeds,
     getApplicatorTypeBreakdown
@@ -101,25 +101,25 @@ const ProgressTracker = () => {
           </div>
         )}
 
-        {/* Usage Type Distribution */}
+        {/* Usage Type Distribution - Updated to use status-based colors */}
         {progressStats.usedApplicators > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-700">Usage Type Distribution</h4>
             <div className="grid grid-cols-1 gap-2">
-              <UsageTypeIndicator 
-                type="Full Use" 
+              <UsageTypeIndicator
+                type="Full Use (INSERTED)"
                 count={progressStats.usageTypeDistribution.full}
                 color="bg-green-400"
               />
-              <UsageTypeIndicator 
-                type="Faulty" 
+              <UsageTypeIndicator
+                type="Faulty (FAULTY/DISPOSED)"
                 count={progressStats.usageTypeDistribution.faulty}
-                color="bg-yellow-400"
+                color="bg-gray-700"
               />
-              <UsageTypeIndicator 
-                type="No Use" 
+              <UsageTypeIndicator
+                type="No Use (SEALED)"
                 count={progressStats.usageTypeDistribution.none}
-                color="bg-red-400"
+                color="bg-gray-400"
               />
             </div>
           </div>

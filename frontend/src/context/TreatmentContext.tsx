@@ -102,6 +102,7 @@ interface TreatmentContextType {
   individualSeedsRemoved: number;
   setIndividualSeedsRemoved: (count: number) => void;
   getIndividualSeedsRemoved: () => number;
+  sortApplicatorsByStatus: (applicators: Applicator[]) => Applicator[];
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
@@ -446,9 +447,30 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     return individualSeedsRemoved;
   };
 
+  // Sort applicators by status - active states first, then terminal states
+  const sortApplicatorsByStatus = (applicators: Applicator[]): Applicator[] => {
+    const activeStates = ['SEALED', 'OPENED', 'LOADED'];
+
+    return [...applicators].sort((a, b) => {
+      // Get status from status field, fallback to usageType for backward compatibility
+      const statusA = a.status || (a.usageType === 'full' ? 'INSERTED' : a.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+      const statusB = b.status || (b.usageType === 'full' ? 'INSERTED' : b.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+
+      const aIsActive = activeStates.includes(statusA);
+      const bIsActive = activeStates.includes(statusB);
+
+      // Active states go to top
+      if (aIsActive && !bIsActive) return -1;
+      if (!aIsActive && bIsActive) return 1;
+
+      // Within same group (both active or both terminal), sort by seedQuantity descending
+      return b.seedQuantity - a.seedQuantity;
+    });
+  };
+
   // Calculate totals for removal treatment
   const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
-  const removedSeeds = applicators.reduce((sum, app) => 
+  const removedSeeds = applicators.reduce((sum, app) =>
     app.isRemoved ? sum + app.seedQuantity : sum, 0
   );
 
@@ -509,7 +531,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         getRemovalProgress,
         individualSeedsRemoved,
         setIndividualSeedsRemoved,
-        getIndividualSeedsRemoved
+        getIndividualSeedsRemoved,
+        sortApplicatorsByStatus
       }}
     >
       {children}
