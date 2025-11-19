@@ -1,13 +1,15 @@
-import { Applicator, Treatment } from '../models';
-import { Op } from 'sequelize';
+import { Applicator, Treatment, ApplicatorAuditLog } from '../models';
+import { Op, Transaction } from 'sequelize';
+import sequelize from '../config/database';
 import logger from '../utils/logger';
 import priorityService from './priorityService';
-import { 
-  transformPriorityApplicatorData, 
-  validatePriorityDataStructure, 
+import {
+  transformPriorityApplicatorData,
+  validatePriorityDataStructure,
   transformToPriorityFormat,
-  PriorityApplicatorData 
+  PriorityApplicatorData
 } from '../utils/priorityDataTransformer';
+import { ApplicatorStatus } from '../models/Applicator';
 
 export interface ApplicatorValidationResult {
   isValid: boolean;
@@ -21,6 +23,61 @@ export interface ApplicatorValidationResult {
     intendedPatientId?: string;
     previousTreatmentId?: string;
   };
+}
+
+/**
+ * Log status change to audit trail
+ * CRITICAL: Required for regulatory compliance and data integrity
+ *
+ * @param applicatorId - Applicator ID
+ * @param oldStatus - Previous status (null for initial creation)
+ * @param newStatus - New status
+ * @param changedBy - User email who made the change
+ * @param reason - Optional reason for change
+ * @param requestId - Optional request ID for tracing
+ * @param transaction - Optional transaction to use
+ */
+async function logStatusChange(
+  applicatorId: string,
+  oldStatus: ApplicatorStatus | null,
+  newStatus: ApplicatorStatus,
+  changedBy: string,
+  reason?: string,
+  requestId?: string,
+  transaction?: Transaction
+): Promise<void> {
+  try {
+    await ApplicatorAuditLog.create(
+      {
+        applicatorId,
+        oldStatus,
+        newStatus,
+        changedBy,
+        changedAt: new Date(),
+        reason: reason || null,
+        requestId: requestId || null,
+      },
+      { transaction }
+    );
+
+    logger.info(`Audit log: Applicator ${applicatorId} status change`, {
+      applicatorId,
+      oldStatus,
+      newStatus,
+      changedBy,
+      requestId,
+    });
+  } catch (error: any) {
+    logger.error(`Failed to log status change for applicator ${applicatorId}`, {
+      applicatorId,
+      oldStatus,
+      newStatus,
+      changedBy,
+      error: error.message,
+    });
+    // Don't throw - audit logging failure shouldn't block the operation
+    // But log it for investigation
+  }
 }
 
 export const applicatorService = {
@@ -933,13 +990,25 @@ export const applicatorService = {
     }
   },
   
-  // Regular update function
-  async updateApplicator(id: string, data: any) {
+  // Regular update function with audit logging
+  async updateApplicator(id: string, data: any, userId?: string) {
     try {
       const applicator = await Applicator.findByPk(id);
 
       if (!applicator) {
         throw new Error('Applicator not found');
+      }
+
+      // CRITICAL: Log status transition to audit trail
+      if (data.status && data.status !== applicator.status) {
+        await this.logStatusChange(
+          id,
+          applicator.status,
+          data.status,
+          userId || 'system',
+          data.comments || null,
+          null // No transaction for standalone updates
+        );
       }
 
       await applicator.update(data);
@@ -955,13 +1024,22 @@ export const applicatorService = {
    * Create a package of 4 applicators with P# label
    * ONLY for pancreas and prostate treatments (combined treatments)
    *
+   * CRITICAL FIX: Now uses transaction to ensure atomicity
+   * If any update fails, all changes are rolled back
+   *
    * @param treatmentId - Treatment ID
    * @param applicatorIds - Array of exactly 4 applicator IDs
+   * @param userId - User email for audit trail
    * @returns Updated applicators with package_label assigned
    */
-  async createPackage(treatmentId: string, applicatorIds: string[]) {
+  async createPackage(treatmentId: string, applicatorIds: string[], userId?: string) {
+    const requestId = `createPackage_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Start transaction for atomic operation
+    const transaction = await sequelize.transaction();
+
     try {
-      logger.info(`Creating package for treatment ${treatmentId}`, { applicatorIds });
+      logger.info(`[${requestId}] Creating package for treatment ${treatmentId}`, { applicatorIds });
 
       // Validation 1: Exactly 4 applicators required
       if (applicatorIds.length !== 4) {
@@ -969,16 +1047,17 @@ export const applicatorService = {
       }
 
       // Validation 2: Verify treatment exists
-      const treatment = await Treatment.findByPk(treatmentId);
+      const treatment = await Treatment.findByPk(treatmentId, { transaction });
       if (!treatment) {
         throw new Error(`Treatment not found: ${treatmentId}`);
       }
 
-      // Fetch all 4 applicators
+      // Fetch all 4 applicators within transaction
       const applicators = await Applicator.findAll({
         where: {
           id: applicatorIds
-        }
+        },
+        transaction
       });
 
       // Validation 3: All 4 applicators must exist
@@ -996,13 +1075,13 @@ export const applicatorService = {
 
       // Validation 5: All applicators must be in ready status
       // LOADED is part of the 9-state workflow (not yet fully implemented)
-      // For now, we accept SCANNED (current 6-state model) or null (backward compatibility)
+      // For now, we accept OPENED or null (backward compatibility)
       // When 9-state workflow is fully implemented, this should check for 'LOADED' specifically
-      const acceptableStatuses = ['SCANNED', null]; // null = status not set (backward compatibility)
+      const acceptableStatuses = ['OPENED', null]; // null = status not set (backward compatibility)
       const notReadyApplicator = applicators.find(app => !acceptableStatuses.includes(app.status));
       if (notReadyApplicator) {
         throw new Error(
-          `All applicators must be in ready status (SCANNED or pending). Applicator ${notReadyApplicator.serialNumber} is ${notReadyApplicator.status}`
+          `All applicators must be in ready status (OPENED or pending). Applicator ${notReadyApplicator.serialNumber} is ${notReadyApplicator.status}`
         );
       }
 
@@ -1018,22 +1097,65 @@ export const applicatorService = {
       // Get next available package label (P1, P2, P3, etc.)
       const nextLabel = await this.getNextPackageLabel(treatmentId);
 
-      // Update all 4 applicators with package label
+      // Validation 7: Check no applicator already has this package label (prevent duplicates)
+      const existingLabelApplicator = applicators.find(app => app.packageLabel === nextLabel);
+      if (existingLabelApplicator) {
+        throw new Error(
+          `Applicator ${existingLabelApplicator.serialNumber} already has package label ${nextLabel}`
+        );
+      }
+
+      // Update all 4 applicators with package label within transaction
       const updatedApplicators: Applicator[] = [];
       for (const applicator of applicators) {
-        await applicator.update({ packageLabel: nextLabel });
+        const oldStatus = applicator.status;
+
+        // Update to LOADED status and assign package label
+        await applicator.update(
+          {
+            packageLabel: nextLabel,
+            status: 'LOADED',  // Applicators are now loaded into package
+          },
+          { transaction }
+        );
+
+        // Log status change to audit trail
+        if (userId && oldStatus !== 'LOADED') {
+          await logStatusChange(
+            applicator.id,
+            oldStatus,
+            'LOADED',
+            userId,
+            `Loaded into package ${nextLabel}`,
+            requestId,
+            transaction
+          );
+        }
+
         updatedApplicators.push(applicator);
       }
 
-      logger.info(`Package ${nextLabel} created successfully for treatment ${treatmentId}`, {
+      // Commit transaction - all updates succeed or all fail
+      await transaction.commit();
+
+      logger.info(`[${requestId}] Package ${nextLabel} created successfully for treatment ${treatmentId}`, {
         packageLabel: nextLabel,
         applicatorCount: updatedApplicators.length,
-        seedQuantity: firstSeedQty
+        seedQuantity: firstSeedQty,
+        requestId
       });
 
       return updatedApplicators;
     } catch (error: any) {
-      logger.error(`Error creating package: ${error.message}`, { treatmentId, applicatorIds });
+      // Rollback transaction on any error
+      await transaction.rollback();
+
+      logger.error(`[${requestId}] Error creating package (rolled back):`, {
+        treatmentId,
+        applicatorIds,
+        error: error.message,
+        requestId
+      });
       throw error;
     }
   },

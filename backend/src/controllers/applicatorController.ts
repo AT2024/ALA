@@ -154,19 +154,40 @@ export const updateApplicator = asyncHandler(async (req: Request, res: Response)
   
   // Get the applicator to verify it belongs to the specified treatment
   const applicator = await applicatorService.getApplicatorById(id);
-  
+
   if (applicator.treatmentId !== treatmentId) {
     res.status(400);
     throw new Error('Applicator does not belong to the specified treatment');
   }
-  
+
+  // CRITICAL: Validate status transition if status is being changed
+  if (req.body.status && req.body.status !== applicator.status) {
+    const validation = applicatorService.validateStatusTransition(
+      applicator.status,
+      req.body.status
+    );
+
+    if (!validation.valid) {
+      res.status(400);
+      throw new Error(validation.error || 'Invalid status transition');
+    }
+
+    logger.info('Status transition validated', {
+      applicatorId: id,
+      oldStatus: applicator.status,
+      newStatus: req.body.status,
+      userId: req.user.id,
+      requestId: req.id
+    });
+  }
+
   // Use different update method based on treatment type
   let updatedApplicator;
-  
+
   if (treatment.type === 'removal') {
     updatedApplicator = await applicatorService.updateApplicatorForRemoval(id, req.body, req.user.id);
   } else {
-    updatedApplicator = await applicatorService.updateApplicator(id, req.body);
+    updatedApplicator = await applicatorService.updateApplicator(id, req.body, req.user.id);
   }
   
   res.status(200).json(updatedApplicator);

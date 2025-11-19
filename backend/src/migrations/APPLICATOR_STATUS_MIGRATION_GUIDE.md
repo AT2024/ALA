@@ -4,13 +4,24 @@
 
 This migration adds `status` and `package_label` fields to the `applicators` table to implement the 9-state applicator workflow. This is Step 1 of the file upload feature implementation.
 
+**IMPORTANT**: This guide now documents the CORRECT 9-state model. Previous versions incorrectly listed only 6 states.
+
 ## Field Details
 
 ### Status Field
 - **Database Column**: `status` (snake_case - no mapping needed)
 - **Sequelize Model**: `status` (same name)
 - **Type**: VARCHAR(50), nullable
-- **Values**: `'SEALED' | 'SCANNED' | 'INSERTED' | 'REMOVED' | 'DISPOSED' | 'FAULTY'`
+- **Values**: 9 states (see workflow below)
+  - `'SEALED'` - Initial state, unopened package
+  - `'OPENED'` - Package opened, not yet loaded
+  - `'LOADED'` - Loaded into delivery device
+  - `'INSERTED'` - Successfully inserted into patient
+  - `'FAULTY'` - Faulty applicator
+  - `'DISPOSED'` - Disposed without use
+  - `'DISCHARGED'` - Discharged after use
+  - `'DEPLOYMENT_FAILURE'` - Failed deployment
+  - `'UNACCOUNTED'` - Lost or unaccounted for
 - **Purpose**: Track applicator workflow state throughout its lifecycle
 - **Backward Compatibility**: Nullable, with automatic backfill from `usageType`
 
@@ -25,17 +36,47 @@ This migration adds `status` and `package_label` fields to the `applicators` tab
 ## 9-State Workflow
 
 ```
-SEALED → SCANNED → INSERTED → REMOVED → DISPOSED
-                 ↓
-               FAULTY
+SEALED → OPENED → LOADED → INSERTED → [DISCHARGED | DISPOSED]
+           ↓         ↓           ↓
+         FAULTY  DEPLOYMENT_FAILURE  UNACCOUNTED
 ```
 
+### State Descriptions
+
 1. **SEALED**: Applicator in unopened package (initial state)
-2. **SCANNED**: Package scanned, applicators ready for use
-3. **INSERTED**: Applicator inserted into patient
-4. **REMOVED**: Applicator removed from patient (end of treatment)
-5. **DISPOSED**: Applicator properly disposed of (terminal state)
-6. **FAULTY**: Applicator marked as faulty (terminal state)
+   - Transition to: OPENED, FAULTY, UNACCOUNTED
+
+2. **OPENED**: Package opened, applicators visible but not loaded
+   - Transition to: LOADED, FAULTY, DISPOSED, UNACCOUNTED
+
+3. **LOADED**: Loaded into delivery device, ready for insertion
+   - Transition to: INSERTED, FAULTY, DEPLOYMENT_FAILURE, UNACCOUNTED
+
+4. **INSERTED**: Successfully inserted into patient (terminal success state)
+   - Transition to: DISCHARGED, DISPOSED
+
+5. **FAULTY**: Applicator marked as faulty (terminal state)
+   - Transition to: DISPOSED, DISCHARGED
+
+6. **DEPLOYMENT_FAILURE**: Failed deployment attempt (terminal state)
+   - Transition to: DISPOSED, FAULTY
+
+7. **DISPOSED**: Properly disposed of (terminal state)
+   - No further transitions
+
+8. **DISCHARGED**: Discharged after use (terminal state)
+   - No further transitions
+
+9. **UNACCOUNTED**: Lost or unaccounted for (terminal state)
+   - No further transitions
+
+### Terminal States
+
+Once an applicator reaches a terminal state, no further status transitions are allowed:
+- **INSERTED** (success path)
+- **DISPOSED** (disposed path)
+- **DISCHARGED** (discharged path)
+- **UNACCOUNTED** (lost path)
 
 ## Data Migration Strategy
 
@@ -317,15 +358,90 @@ describe('Applicator with status field', () => {
 - [ ] Add comprehensive tests for status transitions
 - [ ] Implement status transition validation logic
 
+## Audit Trail System
+
+### Overview
+
+The `applicator_audit_log` table tracks ALL status transitions for regulatory compliance and data integrity.
+
+### Schema
+
+```sql
+CREATE TABLE applicator_audit_log (
+    id UUID PRIMARY KEY,
+    applicator_id UUID NOT NULL REFERENCES applicators(id),
+    old_status VARCHAR(50),          -- NULL for initial creation
+    new_status VARCHAR(50) NOT NULL,
+    changed_by VARCHAR(255) NOT NULL, -- User email
+    changed_at TIMESTAMP NOT NULL,
+    reason TEXT,                      -- Optional reason
+    request_id VARCHAR(100),          -- For tracing
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+```
+
+### Setup Instructions
+
+1. **Apply Migration**:
+   ```bash
+   docker exec -it deployment_db_1 psql -U postgres -d ala_db
+   \i /app/migrations/20251119000001-create-audit-log.sql
+   ```
+
+2. **Verify Table Created**:
+   ```sql
+   \d applicator_audit_log
+   ```
+
+3. **Check Indexes**:
+   ```sql
+   SELECT indexname, indexdef
+   FROM pg_indexes
+   WHERE tablename = 'applicator_audit_log';
+   ```
+
+### Usage in Code
+
+The audit logging is automatic when using `applicatorService` functions:
+
+```typescript
+import { ApplicatorAuditLog } from '../models';
+
+// Query audit trail for an applicator
+const auditLogs = await ApplicatorAuditLog.findAll({
+  where: { applicatorId: applicator.id },
+  order: [['changedAt', 'DESC']],
+  include: [{ model: Applicator, as: 'applicator' }]
+});
+
+// Get timeline of status changes
+const timeline = auditLogs.map(log => ({
+  timestamp: log.changedAt,
+  from: log.oldStatus,
+  to: log.newStatus,
+  by: log.changedBy,
+  reason: log.reason
+}));
+```
+
+### Critical Requirements
+
+- **ALWAYS log status changes**: Every status transition MUST be logged
+- **User identification**: Always pass user email to `logStatusChange()`
+- **Transaction support**: Audit logs should be part of the same transaction
+- **Non-blocking**: Audit log failures should log error but not block operation
+
 ## Next Steps (File Upload Feature)
 
 This migration is **Step 1** of the 9-state workflow implementation. Remaining steps:
 
 - **Step 2**: API endpoint for file upload and batch applicator creation
 - **Step 3**: Frontend component for file upload
-- **Step 4**: Status transition validation and business logic
+- **Step 4**: Status transition validation and business logic (DONE - see validateStatusTransition)
 - **Step 5**: Priority ERP sync updates for new workflow
 - **Step 6**: Comprehensive testing and documentation
+- **Step 7**: Audit trail integration (DONE - see ApplicatorAuditLog)
 
 ## Important Notes
 

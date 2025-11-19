@@ -1,6 +1,7 @@
 import User from './User';
 import Treatment from './Treatment';
 import Applicator from './Applicator';
+import ApplicatorAuditLog from './ApplicatorAuditLog';
 
 // Define model associations
 User.hasMany(Treatment, {
@@ -40,4 +41,15 @@ Applicator.belongsTo(User, {
   as: 'removedByUser',
 });
 
-export { User, Treatment, Applicator };
+// Applicator audit log associations
+Applicator.hasMany(ApplicatorAuditLog, {
+  foreignKey: 'applicatorId',
+  as: 'auditLogs',
+  onDelete: 'CASCADE',
+});
+ApplicatorAuditLog.belongsTo(Applicator, {
+  foreignKey: 'applicatorId',
+  as: 'applicator',
+});
+
+export { User, Treatment, Applicator, ApplicatorAuditLog };
