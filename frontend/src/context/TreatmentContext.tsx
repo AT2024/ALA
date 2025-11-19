@@ -35,6 +35,8 @@ interface Applicator {
   attachmentFileCount?: number;
   attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
   attachmentFilename?: string;
+  // 9-state workflow field (replaces usageType)
+  status?: 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | 'UNACCOUNTED';
 }
 
 interface ProgressStats {

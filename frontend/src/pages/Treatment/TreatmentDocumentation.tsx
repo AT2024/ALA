@@ -49,7 +49,8 @@ const TreatmentDocumentation = () => {
     applicatorType: '',
     seedsQty: '',
     insertionTime: new Date().toISOString(),
-    usingType: '',
+    usingType: '', // Deprecated - keeping for backward compatibility
+    status: '', // New 9-state workflow field
     insertedSeedsQty: '',
     comments: ''
   });
@@ -118,6 +119,7 @@ const TreatmentDocumentation = () => {
         seedsQty: currentApplicator.seedQuantity?.toString() || '',
         insertionTime: currentApplicator.insertionTime || new Date().toISOString(),
         usingType: usageTypeLabel,
+        status: currentApplicator.status || '', // Load existing status if available
         insertedSeedsQty: currentApplicator.insertedSeedsQty?.toString() || '0',
         comments: currentApplicator.comments || ''
       });
@@ -169,11 +171,38 @@ const TreatmentDocumentation = () => {
     }
   };
 
-  // Handle Using Type change with smart auto-fill
+  // Handle Status change with smart auto-fill (9-state workflow)
   useEffect(() => {
     const seedsQty = parseInt(formData.seedsQty) || 0;
-    
-    switch (formData.usingType) {
+
+    // Use status field if available, otherwise fall back to usingType for backward compatibility
+    const currentStatus = formData.status || formData.usingType;
+
+    switch (currentStatus) {
+      // New 9-state workflow
+      case 'INSERTED':
+        // Auto-fill with full seed quantity
+        setFormData(prev => ({ ...prev, insertedSeedsQty: seedsQty.toString() }));
+        break;
+      case 'FAULTY':
+      case 'DEPLOYMENT_FAILURE':
+        // Allow manual entry (starts at 0) - some seeds may have been inserted before failure
+        setFormData(prev => ({ ...prev, insertedSeedsQty: '0' }));
+        break;
+      case 'SEALED':
+      case 'OPENED':
+      case 'LOADED':
+        // Not yet inserted
+        setFormData(prev => ({ ...prev, insertedSeedsQty: '0' }));
+        break;
+      case 'DISPOSED':
+      case 'DISCHARGED':
+      case 'UNACCOUNTED':
+        // Terminal states - no seeds inserted
+        setFormData(prev => ({ ...prev, insertedSeedsQty: '0' }));
+        break;
+
+      // Backward compatibility with old usingType values
       case 'Full use':
         // Auto-fill with full seed quantity from Priority PARTS table
         setFormData(prev => ({ ...prev, insertedSeedsQty: seedsQty.toString() }));
@@ -189,7 +218,7 @@ const TreatmentDocumentation = () => {
       default:
         setFormData(prev => ({ ...prev, insertedSeedsQty: '' }));
     }
-  }, [formData.usingType, formData.seedsQty]);
+  }, [formData.status, formData.usingType, formData.seedsQty]);
 
   const onScanSuccess = async (decodedText: string) => {
     await handleBarcodeScanned(decodedText);
@@ -282,21 +311,22 @@ const TreatmentDocumentation = () => {
     // Set the returned from no use flag
     setIsReturnedFromNoUse(returnedFromNoUse);
 
-    // Fill form with validated applicator data - default to Full use for consistency
+    // Fill form with validated applicator data - default to SEALED for new 9-state workflow
     setFormData({
       serialNumber,
       applicatorType,
       seedsQty: seedQuantity.toString(),
       insertionTime: new Date().toISOString(),
-      usingType: 'Full use', // Default to Full use for all applicators
-      insertedSeedsQty: seedQuantity.toString(), // Auto-filled from Priority PARTS
+      usingType: 'Full use', // Keep for backward compatibility
+      status: 'SEALED', // Default to SEALED for 9-state workflow
+      insertedSeedsQty: '0', // SEALED means no seeds inserted yet
       comments: ''
     });
 
     if (returnedFromNoUse) {
-      setSuccess(`Applicator ${serialNumber} validated successfully! This applicator was previously marked as "No Use" - you can select any usage type.`);
+      setSuccess(`Applicator ${serialNumber} validated successfully! This applicator was previously marked as "No Use" - you can select any status.`);
     } else {
-      setSuccess(`Applicator ${serialNumber} validated successfully! Seeds auto-filled for Full use.`);
+      setSuccess(`Applicator ${serialNumber} validated successfully! Status set to SEALED - select appropriate status below.`);
     }
   };
 
@@ -388,15 +418,16 @@ const TreatmentDocumentation = () => {
       applicatorType: applicator.applicatorType || '',
       seedsQty: applicator.seedQuantity?.toString() || '',
       insertionTime: new Date().toISOString(),
-      usingType: 'Full use', // Default to Full use for all applicators
-      insertedSeedsQty: applicator.seedQuantity?.toString() || '',
+      usingType: 'Full use', // Keep for backward compatibility
+      status: 'SEALED', // Default to SEALED for 9-state workflow
+      insertedSeedsQty: '0', // SEALED means no seeds inserted yet
       comments: ''
     });
 
     if (isReturnedFromNoUse) {
-      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as "No Use" - you can select any usage type.`);
+      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as "No Use" - you can select any status.`);
     } else {
-      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Seeds auto-filled for Full use.`);
+      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Status set to SEALED - select appropriate status below.`);
     }
   };
 
@@ -424,13 +455,17 @@ const TreatmentDocumentation = () => {
   };
 
   const handleNext = async () => {
-    if (!formData.serialNumber || !formData.usingType || !currentTreatment) {
+    // Use status if available, otherwise fall back to usingType for backward compatibility
+    const currentStatus = formData.status || formData.usingType;
+
+    if (!formData.serialNumber || !currentStatus || !currentTreatment) {
       setError('Please fill in all required fields');
       return;
     }
 
-    // Validate comment requirement for faulty applicators
-    if (formData.usingType === 'Faulty' && (!formData.comments || formData.comments.trim().length === 0)) {
+    // Validate comment requirement for faulty applicators (both old and new workflow)
+    if ((currentStatus === 'Faulty' || currentStatus === 'FAULTY' || currentStatus === 'DEPLOYMENT_FAILURE') &&
+        (!formData.comments || formData.comments.trim().length === 0)) {
       setError('Comments are required for faulty applicators. Please explain why it is faulty.');
       return;
     }
@@ -499,6 +534,7 @@ const TreatmentDocumentation = () => {
         seedsQty: '',
         insertionTime: new Date().toISOString(),
         usingType: '',
+        status: '',
         insertedSeedsQty: '',
         comments: ''
       });
@@ -961,10 +997,10 @@ const TreatmentDocumentation = () => {
                 </div>
               </div>
 
-              {/* Using Type */}
+              {/* Status (9-state workflow) */}
               <div>
-                <label htmlFor="usingType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Using Type *
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                  Status *
                   {isReturnedFromNoUse && (
                     <span className="ml-2 text-xs text-red-600 font-normal">
                       (Previously marked as No Use)
@@ -972,23 +1008,29 @@ const TreatmentDocumentation = () => {
                   )}
                 </label>
                 <select
-                  id="usingType"
-                  value={formData.usingType}
-                  onChange={(e) => setFormData(prev => ({ ...prev, usingType: e.target.value }))}
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                   className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px] ${
                     isReturnedFromNoUse ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
                   required
                   disabled={loading}
                 >
-                  <option value="">Select Using Type</option>
-                  <option value="Full use">Full use</option>
-                  <option value="Faulty">Faulty</option>
-                  <option value="No Use">No Use</option>
+                  <option value="">Select Status</option>
+                  <option value="SEALED" className="text-gray-800">Sealed (unopened)</option>
+                  <option value="OPENED" className="text-red-600">Opened (package opened)</option>
+                  <option value="LOADED" className="text-yellow-600">Loaded (ready for insertion)</option>
+                  <option value="INSERTED" className="text-green-600">Inserted (successfully deployed)</option>
+                  <option value="FAULTY" className="text-gray-800">Faulty (defective equipment)</option>
+                  <option value="DISPOSED" className="text-gray-800">Disposed (discarded)</option>
+                  <option value="DISCHARGED" className="text-gray-800">Discharged (seeds expelled)</option>
+                  <option value="DEPLOYMENT_FAILURE" className="text-gray-800">Deployment Failure</option>
+                  <option value="UNACCOUNTED" className="text-gray-800">Unaccounted (lost/missing)</option>
                 </select>
                 {isReturnedFromNoUse && (
                   <p className="mt-1 text-xs text-red-600">
-                    This applicator was previously marked as "No Use". You can now select any usage type.
+                    This applicator was previously marked as "No Use". You can now select any status.
                   </p>
                 )}
               </div>
@@ -998,7 +1040,7 @@ const TreatmentDocumentation = () => {
                 <label htmlFor="insertedSeedsQty" className="block text-sm font-medium text-gray-700 mb-1">
                   Inserted Seeds Qty.
                 </label>
-                {formData.usingType === 'Faulty' ? (
+                {(formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') ? (
                   <input
                     type="number"
                     id="insertedSeedsQty"
@@ -1022,7 +1064,7 @@ const TreatmentDocumentation = () => {
               {/* Comments */}
               <div className="md:col-span-2">
                 <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-1">
-                  Comments {formData.usingType === 'Faulty' && <span className="text-red-500">*</span>}
+                  Comments {(formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   id="comments"
@@ -1031,17 +1073,17 @@ const TreatmentDocumentation = () => {
                   value={formData.comments}
                   onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
                   className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px] ${
-                    formData.usingType === 'Faulty' ? 'border-red-300' : 'border-gray-300'
+                    (formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder={
-                    formData.usingType === 'Faulty'
+                    (formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty')
                       ? 'Required: Explain why this applicator is faulty...'
                       : 'Optional comments...'
                   }
                   disabled={loading}
-                  required={formData.usingType === 'Faulty'}
+                  required={formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty'}
                 />
-                {formData.usingType === 'Faulty' && (
+                {(formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') && (
                   <p className="mt-1 text-sm text-red-600">
                     Comments are required for faulty applicators to continue.
                   </p>
@@ -1056,8 +1098,9 @@ const TreatmentDocumentation = () => {
                 disabled={
                   loading ||
                   !formData.serialNumber ||
-                  !formData.usingType ||
-                  (formData.usingType === 'Faulty' && (!formData.comments || formData.comments.trim().length === 0))
+                  !(formData.status || formData.usingType) ||
+                  ((formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') &&
+                   (!formData.comments || formData.comments.trim().length === 0))
                 }
                 className="flex-1 min-h-[44px] rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               >
