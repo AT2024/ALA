@@ -106,6 +106,13 @@ interface TreatmentContextType {
   getIndividualSeedsRemoved: () => number;
   sortApplicatorsByStatus: (applicators: Applicator[]) => Applicator[];
   isPancreasOrProstate: () => boolean;
+  getApplicatorSummary: () => {
+    seedQuantity: number;
+    inserted: number;
+    available: number;
+    loaded: number;
+    packaged: number;
+  }[];
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
