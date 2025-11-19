@@ -1,12 +1,17 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
 
+// Applicator workflow states (9-state model)
+export type ApplicatorStatus = 'SEALED' | 'SCANNED' | 'INSERTED' | 'REMOVED' | 'DISPOSED' | 'FAULTY';
+
 // Applicator attributes interface
 interface ApplicatorAttributes {
   id: string;
   serialNumber: string;
   seedQuantity: number;
   usageType: 'full' | 'faulty' | 'none';
+  status: ApplicatorStatus | null;
+  packageLabel: string | null;
   insertionTime: Date;
   comments: string | null;
   imagePath: string | null;
@@ -20,13 +25,15 @@ interface ApplicatorAttributes {
 }
 
 // For creating a new applicator
-interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy'> {}
+interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy'> {}
 
 class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttributes> implements ApplicatorAttributes {
   public id!: string;
   public serialNumber!: string;
   public seedQuantity!: number;
   public usageType!: 'full' | 'faulty' | 'none';
+  public status!: ApplicatorStatus | null;
+  public packageLabel!: string | null;
   public insertionTime!: Date;
   public comments!: string | null;
   public imagePath!: string | null;
@@ -66,6 +73,18 @@ Applicator.init(
       allowNull: false,
       defaultValue: 'full',
       field: 'usage_type', // Map to database column name
+    },
+    status: {
+      type: DataTypes.STRING(50),
+      allowNull: true, // Nullable for backward compatibility
+      validate: {
+        isIn: [['SEALED', 'SCANNED', 'INSERTED', 'REMOVED', 'DISPOSED', 'FAULTY']],
+      },
+    },
+    packageLabel: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      field: 'package_label', // Map to database column name
     },
     insertionTime: {
       type: DataTypes.DATE,
@@ -141,6 +160,12 @@ Applicator.init(
       },
       {
         fields: ['treatment_id'], // Use database column name
+      },
+      {
+        fields: ['status'], // Index for workflow state queries
+      },
+      {
+        fields: ['package_label'], // Index for package-level queries
       },
     ],
   }
