@@ -73,7 +73,15 @@ async function logStatusChange(
       oldStatus,
       newStatus,
       changedBy,
-      error: error.message,
+      requestId,
+      error: {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        sqlMessage: error.original?.message,
+        sqlCode: error.original?.code,
+      }
     });
     // Don't throw - audit logging failure shouldn't block the operation
     // But log it for investigation
@@ -1001,7 +1009,7 @@ export const applicatorService = {
 
       // CRITICAL: Log status transition to audit trail
       if (data.status && data.status !== applicator.status) {
-        await this.logStatusChange(
+        await logStatusChange(
           id,
           applicator.status,
           data.status,
