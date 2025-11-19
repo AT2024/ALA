@@ -8,7 +8,7 @@ const PDF_VERSION = 'V.01';
 
 interface Treatment {
   id: string;
-  type: 'insertion' | 'removal';
+  type: 'insertion' | 'removal' | 'pancreas_insertion' | 'prostate_insertion' | 'skin_insertion';
   subjectId: string;
   site: string;
   date: string;

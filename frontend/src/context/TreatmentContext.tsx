@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 interface Treatment {
   id: string;
-  type: 'insertion' | 'removal';
+  type: 'insertion' | 'removal' | 'pancreas_insertion' | 'prostate_insertion' | 'skin_insertion';
   subjectId: string;
   site: string;
   date: string;
@@ -37,6 +37,8 @@ interface Applicator {
   attachmentFilename?: string;
   // 9-state workflow field (replaces usageType)
   status?: 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | 'UNACCOUNTED';
+  // Package label for pancreas/prostate treatments
+  package_label?: string;
 }
 
 interface ProgressStats {
@@ -103,6 +105,7 @@ interface TreatmentContextType {
   setIndividualSeedsRemoved: (count: number) => void;
   getIndividualSeedsRemoved: () => number;
   sortApplicatorsByStatus: (applicators: Applicator[]) => Applicator[];
+  isPancreasOrProstate: () => boolean;
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
@@ -468,6 +471,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Check if treatment is pancreas or prostate (requires packaging)
+  const isPancreasOrProstate = (): boolean => {
+    if (!currentTreatment) return false;
+    const type = currentTreatment.type.toLowerCase();
+    return type.includes('pancreas') || type.includes('prostate');
+  };
+
   // Calculate totals for removal treatment
   const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
   const removedSeeds = applicators.reduce((sum, app) =>
@@ -532,7 +542,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         individualSeedsRemoved,
         setIndividualSeedsRemoved,
         getIndividualSeedsRemoved,
-        sortApplicatorsByStatus
+        sortApplicatorsByStatus,
+        isPancreasOrProstate
       }}
     >
       {children}

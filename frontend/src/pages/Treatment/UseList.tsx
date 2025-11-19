@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { PDFService } from '@/services/pdfService';
+import PackageManager from '@/components/PackageManager';
 
 // Get status color classes based on status for table rows
 const getStatusColor = (status: string | undefined | null): string => {
@@ -59,11 +60,12 @@ const getStatusBadgeColor = (status: string | undefined | null, usageType: strin
 
 const UseList = () => {
   const navigate = useNavigate();
-  const { currentTreatment, processedApplicators, setCurrentApplicator, sortApplicatorsByStatus } = useTreatment();
-  
+  const { currentTreatment, processedApplicators, setCurrentApplicator, sortApplicatorsByStatus, isPancreasOrProstate } = useTreatment();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Calculate treatment summary data using processed applicators
   const treatmentSummary = {
@@ -88,6 +90,13 @@ const UseList = () => {
   // Calculate total activity
   const activityPerSeed = currentTreatment?.activityPerSeed || 0;
   const totalActivity = treatmentSummary.totalDartSeedsInserted * activityPerSeed;
+
+  const handlePackageCreated = () => {
+    // Trigger a re-render to show updated package labels
+    setRefreshKey(prev => prev + 1);
+    setSuccess('Package created successfully!');
+    setTimeout(() => setSuccess(null), 3000);
+  };
 
   const handleEditApplicator = (applicatorSerialNumber: string) => {
     const applicator = processedApplicators.find(app => app.serialNumber === applicatorSerialNumber);
@@ -223,6 +232,17 @@ const UseList = () => {
             {success}
           </div>
         )}
+
+        {/* Package Manager - Only for pancreas/prostate treatments */}
+        {isPancreasOrProstate() && currentTreatment && (
+          <PackageManager
+            key={refreshKey}
+            treatmentId={currentTreatment.id}
+            processedApplicators={processedApplicators}
+            onPackageCreated={handlePackageCreated}
+          />
+        )}
+
         {/* Processed Applicators List */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <h2 className="mb-4 text-lg font-medium">Processed Applicators</h2>
@@ -273,10 +293,19 @@ const UseList = () => {
                       const rowColor = getStatusColor(effectiveStatus);
 
                       return (
-                    <tr key={applicator.id || applicator.serialNumber} className={`hover:opacity-90 ${rowColor}`}>
+                    <tr key={applicator.id || applicator.serialNumber} className={`hover:opacity-90 ${rowColor} relative`}>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                        {applicator.serialNumber}
-                        {/* TODO: Add asterisk if applicator was intended for another treatment */}
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {applicator.serialNumber}
+                            {/* TODO: Add asterisk if applicator was intended for another treatment */}
+                          </span>
+                          {applicator.package_label && (
+                            <span className="ml-2 inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 border border-purple-300">
+                              {applicator.package_label}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {applicator.applicatorType || 'N/A'}
