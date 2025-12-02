@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
+import fs from 'fs';
 import applicatorService from '../services/applicatorService';
 import treatmentService from '../services/treatmentService';
+import priorityService from '../services/priorityService';
+import { zipService } from '../services/zipService';
+import { cleanupTempFiles } from '../middleware/upload';
+import Applicator from '../models/Applicator';
 import logger from '../utils/logger';
 
 // @desc    Validate an applicator barcode
@@ -263,4 +268,92 @@ export const getPackages = asyncHandler(async (req: Request, res: Response) => {
   const packages = await applicatorService.getPackages(treatmentId);
 
   res.status(200).json(packages);
+});
+
+// @desc    Upload files for an applicator
+// @route   POST /api/treatments/:treatmentId/applicators/:applicatorId/upload
+// @access  Private
+export const uploadApplicatorFiles = asyncHandler(async (req: Request, res: Response) => {
+  const { treatmentId, applicatorId } = req.params;
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    res.status(400);
+    throw new Error('No files uploaded');
+  }
+
+  logger.info(`Uploading ${files.length} files for applicator ${applicatorId}`);
+
+  try {
+    // Verify the treatment exists and user has access
+    const treatment = await treatmentService.getTreatmentById(treatmentId);
+
+    if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+      // Cleanup temp files before throwing
+      cleanupTempFiles(files);
+      res.status(403);
+      throw new Error('Not authorized to modify this treatment');
+    }
+
+    // Get the applicator record
+    const applicator = await Applicator.findByPk(applicatorId);
+    if (!applicator) {
+      cleanupTempFiles(files);
+      res.status(404);
+      throw new Error('Applicator not found');
+    }
+
+    // Convert multer disk files to buffer format for zipService
+    // (multer diskStorage saves to disk, so file.buffer is undefined)
+    const filesWithBuffer = files.map((file) => ({
+      filename: file.originalname,
+      buffer: fs.readFileSync(file.path)
+    }));
+
+    // Create ZIP from uploaded files
+    const zipResult = await zipService.createApplicatorZip(applicatorId, filesWithBuffer);
+
+    logger.info(`Created ZIP: ${zipResult.filename} (${zipResult.fileCount} files, ${(zipResult.sizeBytes / 1024).toFixed(2)} KB)`);
+
+    // Update applicator with attachment metadata
+    await applicator.update({
+      attachmentFilename: zipResult.filename,
+      attachmentZipPath: zipResult.zipPath,
+      attachmentFileCount: zipResult.fileCount,
+      attachmentSizeBytes: zipResult.sizeBytes,
+    });
+
+    // Cleanup temp files after ZIP creation
+    cleanupTempFiles(files);
+
+    // Sync to Priority (non-blocking - we return success even if Priority sync fails)
+    let prioritySyncResult = { success: false, message: 'Not attempted' };
+    try {
+      prioritySyncResult = await priorityService.uploadApplicatorAttachment(
+        applicator.serialNumber,
+        treatmentId,
+        zipResult.zipPath
+      );
+      logger.info(`Priority sync result: ${prioritySyncResult.message}`);
+    } catch (priorityError: any) {
+      logger.error(`Priority sync error (non-fatal): ${priorityError.message}`);
+      prioritySyncResult = { success: false, message: priorityError.message };
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Files uploaded successfully',
+      data: {
+        filename: zipResult.filename,
+        fileCount: zipResult.fileCount,
+        sizeBytes: zipResult.sizeBytes,
+        prioritySync: prioritySyncResult
+      }
+    });
+
+  } catch (error: any) {
+    // Cleanup temp files on any error
+    cleanupTempFiles(files);
+    throw error;
+  }
 });
