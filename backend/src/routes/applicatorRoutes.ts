@@ -8,12 +8,14 @@ import {
   updateTreatmentStatus,
   getSeedStatus,
   createPackage,
-  getPackages
+  getPackages,
+  uploadApplicatorFiles
 } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
 import { validateUUID, validateMultipleUUIDs } from '../middleware/uuidValidationMiddleware';
 import { requestLoggingMiddleware } from '../middleware/requestLoggingMiddleware';
 import { databaseHealthCheck, criticalOperationHealthCheck } from '../middleware/databaseHealthMiddleware';
+import { uploadMiddleware } from '../middleware/upload';
 
 const router = express.Router();
 
@@ -37,5 +39,14 @@ router.patch('/treatments/:treatmentId/status', validateUUID('treatmentId'), cri
 // Packaging routes (for pancreas/prostate combined treatments)
 router.post('/treatments/:treatmentId/package', validateUUID('treatmentId'), criticalOperationHealthCheck, createPackage);
 router.get('/treatments/:treatmentId/packages', validateUUID('treatmentId'), databaseHealthCheck, getPackages);
+
+// File upload routes
+router.post(
+  '/treatments/:treatmentId/applicators/:applicatorId/upload',
+  validateMultipleUUIDs(['treatmentId', 'applicatorId']),
+  criticalOperationHealthCheck,
+  uploadMiddleware.array('files', 10),
+  uploadApplicatorFiles
+);
 
 export default router;

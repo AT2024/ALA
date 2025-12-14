@@ -34,10 +34,15 @@ interface ApplicatorAttributes {
   treatmentId: string;
   addedBy: string;
   removedBy: string | null;
+  // File attachment tracking fields (files stored in Priority ERP, not locally)
+  attachmentFilename: string | null;
+  attachmentFileCount: number;
+  attachmentSizeBytes: number;
+  attachmentSyncStatus: 'pending' | 'syncing' | 'synced' | 'failed' | null;
 }
 
 // For creating a new applicator
-interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy'> {}
+interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus'> {}
 
 class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttributes> implements ApplicatorAttributes {
   public id!: string;
@@ -56,6 +61,11 @@ class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttribute
   public treatmentId!: string;
   public addedBy!: string;
   public removedBy!: string | null;
+  // File attachment tracking fields (files stored in Priority ERP, not locally)
+  public attachmentFilename!: string | null;
+  public attachmentFileCount!: number;
+  public attachmentSizeBytes!: number;
+  public attachmentSyncStatus!: 'pending' | 'syncing' | 'synced' | 'failed' | null;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -159,6 +169,29 @@ Applicator.init(
         model: 'users',
         key: 'id',
       },
+    },
+    // File attachment tracking fields (files stored in Priority ERP, not locally)
+    attachmentFilename: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'attachment_filename',
+    },
+    attachmentFileCount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      field: 'attachment_file_count',
+    },
+    attachmentSizeBytes: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      field: 'attachment_size_bytes',
+    },
+    attachmentSyncStatus: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'attachment_sync_status',
     },
   },
   {

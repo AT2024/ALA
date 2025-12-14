@@ -14,6 +14,7 @@ interface Treatment {
   surgeon?: string;
   daysSinceInsertion?: number;
   patientName?: string;
+  priorityId?: string; // Priority order ID (e.g., "PANC-HEAD-001") for workflow detection
 }
 
 interface Applicator {
@@ -313,20 +314,31 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   // Centralized filtering function - single source of truth
+  // Uses status field (9-state workflow) instead of usageType (3-state legacy)
   const getFilteredAvailableApplicators = (): Applicator[] => {
     if (!currentTreatment) return [];
-    
-    // Get serial numbers of applicators that should be excluded from available list
-    // Only exclude non-"No Use" processed applicators
-    const processedNonNoUseSerialNumbers = new Set(
+
+    // Terminal statuses - applicators with these statuses should be REMOVED from "Choose from List"
+    const TERMINAL_STATUSES = ['INSERTED', 'FAULTY', 'DISPOSED', 'DISCHARGED', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED'];
+
+    // Get serial numbers of applicators that have reached a terminal state
+    // In-progress statuses (SEALED, OPENED, LOADED) STAY in the list so user can continue working
+    const terminalApplicatorSerialNumbers = new Set(
       processedApplicators
-        .filter(app => app.usageType !== 'none') // Keep "No Use" applicators available
+        .filter(app => {
+          // Use status field if available, otherwise fall back to usageType mapping
+          const effectiveStatus = app.status ||
+            (app.usageType === 'full' ? 'INSERTED' :
+             app.usageType === 'faulty' ? 'FAULTY' :
+             null);
+          return effectiveStatus && TERMINAL_STATUSES.includes(effectiveStatus);
+        })
         .map(app => app.serialNumber)
     );
-    
-    return availableApplicators.filter(app => 
+
+    return availableApplicators.filter(app =>
       app.patientId === currentTreatment.subjectId && // Current patient only
-      !processedNonNoUseSerialNumbers.has(app.serialNumber) // Exclude processed non-"No Use" applicators
+      !terminalApplicatorSerialNumbers.has(app.serialNumber) // Only exclude terminal status applicators
     );
   };
 
@@ -517,12 +529,12 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         summaryMap[app.seedQuantity].inserted++;
       }
 
-      // Count available applicators (active states only)
+      // Count available applicators (all active states: SEALED + OPENED + LOADED)
       if (['SEALED', 'OPENED', 'LOADED'].includes(status)) {
         summaryMap[app.seedQuantity].available++;
       }
 
-      // Count loaded applicators
+      // Count loaded applicators (subset of available for separate tracking)
       if (status === 'LOADED') {
         summaryMap[app.seedQuantity].loaded++;
       }

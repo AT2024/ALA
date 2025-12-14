@@ -10,7 +10,7 @@ import applicatorService, { ApplicatorValidationResult } from '@/services/applic
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 import { generateUUID } from '@/utils/uuid';
-import { getAllowedNextStatuses, type ApplicatorStatus } from '@/utils/applicatorStatus';
+import { getAllowedNextStatuses, getListItemColor, getStatusEmoji, getStatusLabel, type ApplicatorStatus, type TreatmentContext } from '@/utils/applicatorStatus';
 
 const TreatmentDocumentation = () => {
   const {
@@ -26,6 +26,10 @@ const TreatmentDocumentation = () => {
   } = useTreatment();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit mode detection
   const isEditMode = !!currentApplicator;
@@ -62,17 +66,22 @@ const TreatmentDocumentation = () => {
   // Use centralized filtering function - single source of truth
   const patientFilteredApplicators = getFilteredAvailableApplicators();
 
-  // Get allowed statuses based on current applicator status (for smart dropdown)
+  // Build treatment context for workflow detection (checks multiple fields)
+  const treatmentContext: TreatmentContext = {
+    site: currentTreatment?.site,
+    priorityId: currentTreatment?.priorityId || currentTreatment?.subjectId,
+    patientName: currentTreatment?.patientName,
+    subjectId: currentTreatment?.subjectId
+  };
+
+  // Get allowed statuses based on current applicator status and treatment context
   const allowedStatuses = isEditMode && currentApplicator?.status
-    ? getAllowedNextStatuses(currentApplicator.status as ApplicatorStatus)
-    : null; // null = new applicator, show all statuses
+    ? getAllowedNextStatuses(currentApplicator.status as ApplicatorStatus, treatmentContext)
+    : getAllowedNextStatuses(null, treatmentContext); // New applicator: get initial statuses
 
   // Helper function to check if a status should be shown in dropdown
   const shouldShowStatus = (status: string): boolean => {
-    // New applicators (not in edit mode) can select any status
-    if (!allowedStatuses) return true;
-
-    // In edit mode, only show allowed transitions
+    // Show only allowed statuses (both new applicators and edit mode)
     return allowedStatuses.includes(status as ApplicatorStatus);
   };
 
@@ -515,16 +524,59 @@ const TreatmentDocumentation = () => {
         return;
       }
 
-      // Create applicator object
+      // Upload files if any selected (do this BEFORE creating local applicator object)
+      const savedApplicatorId = saveResult.applicator?.id;
+
+      // Track upload results for local state
+      let uploadFileCount = 0;
+      let uploadSyncStatus: 'pending' | 'syncing' | 'synced' | 'failed' | null = null;
+      let uploadFilename: string | undefined = undefined;
+
+      if (selectedFiles.length > 0 && savedApplicatorId) {
+        console.log(`Uploading ${selectedFiles.length} files to applicator ${savedApplicatorId}`);
+        const uploadResult = await applicatorService.uploadApplicatorFiles(
+          currentTreatment.id,
+          savedApplicatorId,
+          selectedFiles
+        );
+
+        if (!uploadResult.success) {
+          // Files failed but applicator saved - warn user but continue
+          console.error('File upload failed:', uploadResult.message);
+          setError(`Applicator saved, but file upload failed: ${uploadResult.message}`);
+          uploadSyncStatus = 'failed';
+          // Don't return - applicator was saved successfully
+        } else {
+          console.log('Files uploaded successfully:', uploadResult.fileCount);
+          // Capture upload metadata for local state
+          uploadFileCount = uploadResult.fileCount || selectedFiles.length;
+          uploadSyncStatus = (uploadResult.syncStatus as 'synced' | 'failed') || 'synced';
+          uploadFilename = uploadResult.filename || undefined;
+          // Clear selected files on success
+          setSelectedFiles([]);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      }
+
+      // Create applicator object WITH attachment metadata
+      // IMPORTANT: Use savedApplicatorId from database first to ensure consistency
+      // between local state and database (fixes file upload ID mismatch bug)
       const applicator = {
-        id: currentApplicator?.id || generateUUID(),
+        id: savedApplicatorId || currentApplicator?.id || generateUUID(),
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
         usageType: mapUsageType(formData.usingType),
+        status: (formData.status || undefined) as 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | 'UNACCOUNTED' | undefined, // New status field for 9-state workflow
         insertionTime: formData.insertionTime,
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
-        comments: formData.comments
+        comments: formData.comments,
+        // Attachment metadata for UI display (fixes "No files" bug in UseList)
+        attachmentFileCount: uploadFileCount,
+        attachmentSyncStatus: uploadSyncStatus,
+        attachmentFilename: uploadFilename
       };
 
       if (isEditMode) {
@@ -607,6 +659,34 @@ const TreatmentDocumentation = () => {
     setManualEntry(!manualEntry);
     setError(null);
     setSuccess(null);
+  };
+
+  // File upload handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Note: File upload is now integrated into handleNext function
+  // Files are uploaded automatically when the user clicks Insert
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) return '🖼️';
+    if (file.type.startsWith('video/')) return '🎬';
+    if (file.type === 'application/pdf') return '📄';
+    return '📎';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -802,21 +882,37 @@ const TreatmentDocumentation = () => {
                             .sort((a, b) => b.seedQuantity - a.seedQuantity)
                             .map((applicator, index) => {
                             const isNoUseReturned = applicator.returnedFromNoUse;
-                            
+                            const applicatorStatus = applicator.status || 'SEALED';
+                            const statusColor = getListItemColor(applicatorStatus);
+                            const statusEmoji = getStatusEmoji(applicatorStatus);
+                            const statusLabel = getStatusLabel(applicatorStatus);
+
                             return (
                               <button
                                 key={index}
                                 onClick={() => handleApplicatorSelect(applicator)}
-                                className={`w-full text-left p-2 rounded hover:bg-gray-50 border ${
-                                  isNoUseReturned 
-                                    ? 'border-red-300 bg-red-50 hover:bg-red-100' 
-                                    : 'border-gray-200'
+                                className={`w-full text-left p-2 rounded hover:opacity-80 border ${
+                                  isNoUseReturned
+                                    ? 'border-red-300 bg-red-50 hover:bg-red-100'
+                                    : statusColor
                                 }`}
                                 disabled={loading}
                               >
-                                <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
-                                  {applicator.serialNumber}
-                                  {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                                <div className="flex items-center justify-between">
+                                  <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                                    <span className="mr-2">{statusEmoji}</span>
+                                    {applicator.serialNumber}
+                                    {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                                  </div>
+                                  {applicatorStatus !== 'SEALED' && (
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      applicatorStatus === 'OPENED' ? 'bg-red-200 text-red-800' :
+                                      applicatorStatus === 'LOADED' ? 'bg-yellow-200 text-yellow-800' :
+                                      'bg-gray-200 text-gray-800'
+                                    }`}>
+                                      {statusLabel}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className={`text-sm ${isNoUseReturned ? 'text-red-600' : 'text-gray-500'}`}>
                                   {applicator.applicatorType} • {applicator.seedQuantity} seeds
@@ -865,20 +961,36 @@ const TreatmentDocumentation = () => {
                       <div className="space-y-1 p-2">
                         {searchSuggestions.map((suggestion, index) => {
                           const isNoUseReturned = suggestion.returnedFromNoUse;
+                          const suggestionStatus = suggestion.status || 'SEALED';
+                          const statusEmoji = getStatusEmoji(suggestionStatus);
+                          const statusLabel = getStatusLabel(suggestionStatus);
+
                           return (
                             <button
                               key={index}
                               onClick={() => handleSuggestionSelect(suggestion)}
                               className={`w-full text-left p-2 rounded text-sm ${
-                                isNoUseReturned 
-                                  ? 'hover:bg-red-100 bg-red-50' 
-                                  : 'hover:bg-yellow-100'
+                                isNoUseReturned
+                                  ? 'hover:bg-red-100 bg-red-50'
+                                  : getListItemColor(suggestionStatus)
                               }`}
                               disabled={loading}
                             >
-                              <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
-                                {suggestion.serialNumber}
-                                {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                              <div className="flex items-center justify-between">
+                                <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                                  <span className="mr-2">{statusEmoji}</span>
+                                  {suggestion.serialNumber}
+                                  {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
+                                </div>
+                                {suggestionStatus !== 'SEALED' && (
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    suggestionStatus === 'OPENED' ? 'bg-red-200 text-red-800' :
+                                    suggestionStatus === 'LOADED' ? 'bg-yellow-200 text-yellow-800' :
+                                    'bg-gray-200 text-gray-800'
+                                  }`}>
+                                    {statusLabel}
+                                  </span>
+                                )}
                               </div>
                               <div className={`${isNoUseReturned ? 'text-red-600' : 'text-gray-600'}`}>
                                 {suggestion.applicatorType} • {suggestion.seedQuantity} seeds
@@ -1102,6 +1214,83 @@ const TreatmentDocumentation = () => {
                   <p className="mt-1 text-sm text-red-600">
                     Comments are required for faulty applicators to continue.
                   </p>
+                )}
+              </div>
+
+              {/* File Attachments */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Attachments
+                </label>
+
+                {/* Note: Upload errors are shown via the main error state when Insert fails */}
+
+                {/* File Input Area */}
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center hover:border-primary cursor-pointer transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,.pdf"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    disabled={loading}
+                  />
+                  <div className="text-gray-500">
+                    <span className="text-2xl">📎</span>
+                    <p className="mt-1 text-sm">Click to add files</p>
+                    <p className="text-xs text-gray-400">Images, Videos, or PDFs (max 50MB each)</p>
+                  </div>
+                </div>
+
+                {/* Selected Files Preview */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">
+                      Selected files ({selectedFiles.length}):
+                    </p>
+                    <div className="space-y-1">
+                      {selectedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-gray-50 rounded-md p-2 text-sm"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span>{getFileIcon(file)}</span>
+                            <span className="truncate">{file.name}</span>
+                            <span className="text-gray-400 text-xs">({formatFileSize(file.size)})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFile(index);
+                            }}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            disabled={loading}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Info: Files will upload on Insert */}
+                    <p className="text-xs text-gray-500 italic">
+                      📤 Files will be uploaded when you click Insert
+                    </p>
+                  </div>
+                )}
+
+                {/* Existing Attachments Info */}
+                {currentApplicator?.attachmentFileCount && currentApplicator.attachmentFileCount > 0 && (
+                  <div className="mt-2 text-sm text-gray-600 flex items-center gap-1">
+                    <span>📁</span>
+                    <span>{currentApplicator.attachmentFileCount} file(s) already attached</span>
+                  </div>
                 )}
               </div>
             </div>

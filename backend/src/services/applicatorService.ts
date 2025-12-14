@@ -449,9 +449,11 @@ export const applicatorService = {
       const priorityUsageType = this.mapUsageTypeToPriority(usageTypeToSync);
 
       // Update Priority SIBD_APPLICATUSELIST table
+      // Note: treatment.subjectId contains the Priority ORDNAME (e.g., "SO25000015") for old treatments
+      // where priorityId was not set during creation
       const priorityUpdateData = {
         serialNumber: applicatorData.serialNumber,
-        treatmentId: treatment.priorityId || treatmentId,
+        treatmentId: treatment.priorityId || treatment.subjectId || treatmentId,
         patientId: treatment.subjectId,
         site: treatment.site,
         insertionTime: applicatorData.insertionTime,
@@ -497,8 +499,8 @@ export const applicatorService = {
       }
 
       // Use specific order ID if provided (for pancreas treatments)
-      // Otherwise fall back to treatment's priorityId
-      const priorityOrderId = specificOrderId || treatment.priorityId || treatmentId;
+      // Otherwise fall back to treatment's priorityId or subjectId (ORDNAME from Priority)
+      const priorityOrderId = specificOrderId || treatment.priorityId || treatment.subjectId || treatmentId;
 
       logger.info(`Updating Priority order ${priorityOrderId} to status ${status}`);
       const result = await priorityService.updateTreatmentStatus(priorityOrderId, status);

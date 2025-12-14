@@ -105,7 +105,8 @@ const generateTestDataForDate = (requestedDate: string) => {
     logger.info(`🧪 DYNAMIC TEST DATA: Generating orders for requested date: ${targetDateISO}`);
     
     const dynamicOrders: any[] = [];
-    
+    const generatedPatientRecords = new Set<string>(); // Track already-created patient records to avoid duplicates
+
     // Generate main orders with the requested date
     baseTestData.orders.forEach((originalOrder: any) => {
       const dynamicOrder = {
@@ -114,10 +115,12 @@ const generateTestDataForDate = (requestedDate: string) => {
         CURDATE: targetDateISO
       };
       dynamicOrders.push(dynamicOrder);
-      
+
       // Also create the referenced patient record (if it has a reference)
       // This prevents frontend reference chain validation from filtering out valid orders
-      if (originalOrder.REFERENCE) {
+      // IMPORTANT: Only create ONE patient record per unique REFERENCE to avoid duplicate combining
+      if (originalOrder.REFERENCE && !generatedPatientRecords.has(originalOrder.REFERENCE)) {
+        generatedPatientRecords.add(originalOrder.REFERENCE); // Mark as created
         const patientRecord = {
           ORDNAME: originalOrder.REFERENCE,
           CUSTNAME: originalOrder.CUSTNAME,
@@ -913,7 +916,9 @@ export const priorityService = {
               : null
           }));
 
-          return mappedTestOrders;
+          // Detect and combine pancreas/prostate treatments (multiple orders for same patient/date/site)
+          const combinedTestOrders = this.combineMultipleTreatments(mappedTestOrders);
+          return combinedTestOrders;
         } else {
           logger.warn(`🧪 TEST DATA: Failed to load test data for user ${userId}`);
         }
@@ -2196,6 +2201,123 @@ export const priorityService = {
       }
 
       throw new Error(`Failed to update treatment status in Priority: ${error.message}`);
+    }
+  },
+
+  /**
+   * Upload file attachment to applicator in Priority from Buffer (in-memory)
+   * Uses the correct Priority API format with composite key and data URL
+   * No local file storage needed - files go directly to Priority ERP
+   */
+  async uploadApplicatorAttachmentFromBuffer(
+    serialNumber: string,
+    orderId: string,
+    zipBuffer: Buffer
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // Check if Priority saving is enabled
+      const enablePrioritySaving = process.env.ENABLE_PRIORITY_APPLICATOR_SAVE !== 'false';
+
+      if (!enablePrioritySaving) {
+        logger.info(`Priority attachment saving disabled via configuration`);
+        return {
+          success: true,
+          message: 'Attachment upload skipped (Priority saving disabled)'
+        };
+      }
+
+      logger.info(`Uploading attachment buffer for applicator ${serialNumber} to Priority`);
+
+      // Step 1: Handle combined pancreas orders (format: "SO25000275+SO25000274")
+      const orderIds = orderId.includes('+') ? orderId.split('+') : [orderId];
+      logger.info(`Uploading attachment for applicator ${serialNumber} to ${orderIds.length} order(s): ${orderIds.join(', ')}`);
+
+      // Try each order until we find the applicator
+      let applicator: any = null;
+      let foundInOrderId = '';  // Track which base order ID we found the applicator in
+
+      for (const singleOrderId of orderIds) {
+        try {
+          const getEndpoint = `/ORDERS('${singleOrderId}')/SIBD_APPLICATUSELIST_SUBFORM?$filter=SERNUM eq '${serialNumber}'`;
+          logger.info(`Trying order ${singleOrderId}: ${getEndpoint}`);
+
+          const applicatorResponse = await priorityApi.get(getEndpoint);
+
+          if (applicatorResponse.data.value && applicatorResponse.data.value.length > 0) {
+            applicator = applicatorResponse.data.value[0];
+            foundInOrderId = singleOrderId;  // Store the base order ID for PATCH endpoint
+            logger.info(`Found applicator ${serialNumber} in order ${singleOrderId}`);
+            break;
+          }
+        } catch (err: any) {
+          logger.warn(`Applicator not found in order ${singleOrderId}: ${err.message}`);
+        }
+      }
+
+      if (!applicator) {
+        throw new Error(`Applicator ${serialNumber} not found in any Priority order: ${orderIds.join(', ')}`);
+      }
+
+      // Validate composite key fields exist
+      if (!applicator.ORDNAME || applicator.SIBD_REPPRODPAL === undefined) {
+        logger.error(`Missing composite key fields. ORDNAME: ${applicator.ORDNAME}, SIBD_REPPRODPAL: ${applicator.SIBD_REPPRODPAL}`);
+        throw new Error(`Invalid applicator record - missing ORDNAME or SIBD_REPPRODPAL fields`);
+      }
+
+      logger.info(`Found applicator: ORDNAME=${applicator.ORDNAME}, SIBD_REPPRODPAL=${applicator.SIBD_REPPRODPAL}`);
+
+      // Step 2: Convert buffer to data URL format (no file read needed)
+      const base64Zip = zipBuffer.toString('base64');
+      const dataUrl = `data:application/zip;base64,${base64Zip}`;
+
+      logger.info(`Prepared ZIP buffer: ${(zipBuffer.length / 1024).toFixed(2)} KB`);
+
+      // Step 3: Build PATCH endpoint with composite key
+      // Path uses BASE order ID (foundInOrderId), composite key uses FULL ORDNAME (with LOAD suffix)
+      const patchEndpoint = `/ORDERS('${foundInOrderId}')/SIBD_APPLICATUSELIST_SUBFORM(ORDNAME='${applicator.ORDNAME}',SIBD_REPPRODPAL=${applicator.SIBD_REPPRODPAL})`;
+
+      // Step 4: Send PATCH request with data URL format
+      // NOTE: Do NOT include SUFFIX field - it doesn't exist in Priority SIBD_APPLICATUSELIST schema
+      // The data URL format already contains the MIME type (application/zip) which Priority uses
+      const requestBody = {
+        EXTFILENAME: dataUrl
+      };
+
+      logger.info(`Sending PATCH to: ${patchEndpoint}`);
+      logger.info(`Request body fields: EXTFILENAME length=${dataUrl.length}`);
+
+      const response = await priorityApi.patch(patchEndpoint, requestBody);
+
+      if (response.status !== 200 && response.status !== 204) {
+        throw new Error(`Priority API returned status ${response.status}: ${response.statusText}`);
+      }
+
+      logger.info(`✅ Successfully uploaded attachment for applicator ${serialNumber} to Priority`);
+
+      return {
+        success: true,
+        message: 'Attachment uploaded to Priority successfully'
+      };
+
+    } catch (error: any) {
+      logger.error(`❌ Error uploading attachment to Priority: ${error.message}`);
+      // Log detailed error info including full response data for debugging
+      const errorData = error.response?.data;
+      logger.error(`Priority API Error Response Data: ${JSON.stringify(errorData, null, 2)}`);
+      logger.error(`Error details:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: JSON.stringify(errorData),
+        requestUrl: error.config?.url
+      });
+
+      // Always return failure when Priority upload fails
+      // Use ENABLE_PRIORITY_APPLICATOR_SAVE=false to skip Priority uploads entirely (checked at start of function)
+      return {
+        success: false,
+        message: `Failed to upload attachment to Priority: ${error.message}`
+      };
     }
   },
 };

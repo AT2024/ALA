@@ -23,6 +23,10 @@
     {
       "custName": "100065",
       "custDes": "Central Hospital"
+    },
+    {
+      "custName": "100026",
+      "custDes": "University Cancer & Diagnostic Centers"
     }
   ],
   "orders": [
@@ -115,8 +119,8 @@
       "CUSTNAME": "100026",
       "CUSTDES": "University Cancer & Diagnostic Centers",
       "REFERENCE": "PAT-2025-PANC-001",
-      "CURDATE": "2025-11-13T00:00:00Z",
-      "SIBD_TREATDAY": "2025-11-13T00:00:00Z",
+      "CURDATE": "2025-12-10T00:00:00Z",
+      "SIBD_TREATDAY": "2025-12-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 30,
       "SBD_PREFACTIV": 2.5,
@@ -127,8 +131,8 @@
       "CUSTNAME": "100026",
       "CUSTDES": "University Cancer & Diagnostic Centers",
       "REFERENCE": "PAT-2025-PANC-001",
-      "CURDATE": "2025-11-13T00:00:00Z",
-      "SIBD_TREATDAY": "2025-11-13T00:00:00Z",
+      "CURDATE": "2025-12-10T00:00:00Z",
+      "SIBD_TREATDAY": "2025-12-10T00:00:00Z",
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 25,
       "SBD_PREFACTIV": 2.5,

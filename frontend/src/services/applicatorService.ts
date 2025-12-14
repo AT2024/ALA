@@ -172,25 +172,76 @@ export const applicatorService = {
    * Updates ORDSTATUSDES field in ORDERS table
    */
   async updateTreatmentStatus(
-    treatmentId: string, 
+    treatmentId: string,
     status: 'Performed' | 'Removed'
   ): Promise<{ success: boolean; message?: string }> {
     try {
       await api.patch(`/treatments/${treatmentId}/status`, {
         status
       });
-      
+
       return {
         success: true,
         message: `Treatment status updated to "${status}".`
       };
-      
+
     } catch (error: any) {
       console.error('Error updating treatment status:', error);
-      
+
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to update treatment status.'
+      };
+    }
+  },
+
+  /**
+   * Upload files (images, videos, PDFs) for an applicator
+   * Files are zipped on backend and stored with the applicator record
+   */
+  async uploadApplicatorFiles(
+    treatmentId: string,
+    applicatorId: string,
+    files: File[]
+  ): Promise<{ success: boolean; fileCount?: number; filename?: string; syncStatus?: string; message?: string }> {
+    try {
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const response = await api.post(
+        `/applicators/treatments/${treatmentId}/applicators/${applicatorId}/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      // BUGFIX: Backend returns data nested under response.data.data, not response.data
+      // Backend response: { success: true, data: { filename, fileCount, sizeBytes, syncStatus, prioritySync } }
+      const uploadData = response.data.data || response.data;
+      const fileCount = uploadData.fileCount || files.length;
+
+      console.log('Upload response:', response.data);
+      console.log('Parsed upload data:', { fileCount, filename: uploadData.filename, syncStatus: uploadData.syncStatus });
+
+      return {
+        success: true,
+        fileCount: fileCount,
+        filename: uploadData.filename,
+        syncStatus: uploadData.syncStatus,
+        message: `${fileCount} file(s) uploaded successfully.`
+      };
+
+    } catch (error: any) {
+      console.error('Error uploading files:', error);
+
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to upload files. Please try again.'
       };
     }
   }

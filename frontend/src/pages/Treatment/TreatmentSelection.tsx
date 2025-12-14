@@ -578,6 +578,7 @@ const TreatmentSelection = () => {
         treatmentData = {
           type: 'insertion' as const,
           subjectId: formData.patientId,
+          priorityId: selectedPatient?.ordName || formData.patientId,  // Priority order ID for file upload sync
           site: formData.site,
           date: formData.date,
           email: formData.email,

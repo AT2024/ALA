@@ -45,14 +45,16 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
     'video/mpeg',
     'video/quicktime',
     'video/x-msvideo', // AVI
-    'video/x-ms-wmv'   // WMV
+    'video/x-ms-wmv',  // WMV
+    // Documents
+    'application/pdf'
   ];
 
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     logger.warn(`Rejected file upload: invalid MIME type ${file.mimetype}`);
-    cb(new Error(`Invalid file type: ${file.mimetype}. Only images and videos are allowed.`));
+    cb(new Error(`Invalid file type: ${file.mimetype}. Only images, videos, and PDFs are allowed.`));
   }
 };
 
@@ -61,7 +63,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
  *
  * Configuration:
  * - Max file size: 50MB per file
- * - Allowed types: Images (JPEG, PNG, GIF, WebP) and Videos (MP4, MPEG, QuickTime, AVI, WMV)
+ * - Allowed types: Images (JPEG, PNG, GIF, WebP), Videos (MP4, MPEG, QuickTime, AVI, WMV), and PDFs
  * - Storage: Temporary directory (files cleaned up after ZIP creation)
  *
  * Usage:

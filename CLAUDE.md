@@ -183,7 +183,7 @@ For detailed information, consult these specialized documents:
 ## Environment Context
 - **Production VM**: 20.217.84.100 (Azure)
 - **Production URL**: https://ala-app.israelcentral.cloudapp.azure.com
-- **Local Dev**: Docker Compose with hot reload
+- **Local Dev**: Native npm run dev (hot reload enabled)
 - **Test User**: test@example.com (code: 123456)
 - **Admin User**: alexs@alphatau.com (Position 99)
 
@@ -243,14 +243,31 @@ docker service ps ala_frontend --format 'table {{.Name}}\t{{.Image}}\t{{.Current
 6. Deploy database: `cd deployment && docker-compose -f docker-compose.db.yml up -d`
 7. Deploy services: `./swarm-deploy`
 
-### Local Development
-Use Docker Compose (not Swarm) for local development:
+### Local Development (ALWAYS use native dev mode)
+
+⚠️ **NEVER use Docker for local development** - Docker runs production builds without hot reload.
+
+**Start development servers with hot reload:**
 ```bash
-cd deployment
-cp .env.production.template .env
-# Edit .env for local URLs (localhost instead of production domain)
-docker-compose up
+# Terminal 1: Backend (from project root)
+cd backend && npm run dev
+# Runs on http://localhost:5000
+
+# Terminal 2: Frontend (from project root)
+cd frontend && npm run dev
+# Runs on http://localhost:3000
 ```
+
+**Prerequisites:**
+1. PostgreSQL running locally (or use Docker for DB only: `docker-compose -f docker-compose.db.yml up -d`)
+2. Copy environment files: `cp backend/.env.example backend/.env`
+3. Install dependencies: `npm install` in both frontend/ and backend/
+
+**Why not Docker locally?**
+- Docker containers run production builds (no hot reload)
+- Changes require full container rebuild to take effect
+- Real production is on Azure VM - no need to simulate production locally
+- Native dev mode gives instant feedback on code changes
 
 ### Key Files
 ```

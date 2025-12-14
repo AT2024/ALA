@@ -273,6 +273,7 @@ export const getPackages = asyncHandler(async (req: Request, res: Response) => {
 // @desc    Upload files for an applicator
 // @route   POST /api/treatments/:treatmentId/applicators/:applicatorId/upload
 // @access  Private
+// Files are stored in Priority ERP (via EXTFILENAME field), not locally
 export const uploadApplicatorFiles = asyncHandler(async (req: Request, res: Response) => {
   const { treatmentId, applicatorId } = req.params;
   const files = req.files as Express.Multer.File[];
@@ -282,7 +283,7 @@ export const uploadApplicatorFiles = asyncHandler(async (req: Request, res: Resp
     throw new Error('No files uploaded');
   }
 
-  logger.info(`Uploading ${files.length} files for applicator ${applicatorId}`);
+  logger.info(`Uploading ${files.length} files for applicator ${applicatorId} (files stored in Priority ERP)`);
 
   try {
     // Verify the treatment exists and user has access
@@ -310,43 +311,60 @@ export const uploadApplicatorFiles = asyncHandler(async (req: Request, res: Resp
       buffer: fs.readFileSync(file.path)
     }));
 
-    // Create ZIP from uploaded files
-    const zipResult = await zipService.createApplicatorZip(applicatorId, filesWithBuffer);
+    // Create ZIP in memory (no disk storage - goes directly to Priority)
+    const zipResult = await zipService.createApplicatorZipBuffer(applicatorId, filesWithBuffer);
 
-    logger.info(`Created ZIP: ${zipResult.filename} (${zipResult.fileCount} files, ${(zipResult.sizeBytes / 1024).toFixed(2)} KB)`);
+    logger.info(`Created ZIP buffer: ${zipResult.filename} (${zipResult.fileCount} files, ${(zipResult.sizeBytes / 1024).toFixed(2)} KB)`);
 
-    // Update applicator with attachment metadata
-    await applicator.update({
-      attachmentFilename: zipResult.filename,
-      attachmentZipPath: zipResult.zipPath,
-      attachmentFileCount: zipResult.fileCount,
-      attachmentSizeBytes: zipResult.sizeBytes,
-    });
-
-    // Cleanup temp files after ZIP creation
+    // Cleanup temp files immediately (ZIP is in memory now)
     cleanupTempFiles(files);
 
-    // Sync to Priority (non-blocking - we return success even if Priority sync fails)
+    // Upload to Priority ERP (files are stored there, not locally)
+    // IMPORTANT: Priority API expects Priority order ID (e.g., "SO25000001"), NOT PostgreSQL UUID
+    // For old treatments, priorityId may be NULL - fall back to subjectId (which is ORDNAME from Priority)
     let prioritySyncResult = { success: false, message: 'Not attempted' };
-    try {
-      prioritySyncResult = await priorityService.uploadApplicatorAttachment(
-        applicator.serialNumber,
-        treatmentId,
-        zipResult.zipPath
-      );
-      logger.info(`Priority sync result: ${prioritySyncResult.message}`);
-    } catch (priorityError: any) {
-      logger.error(`Priority sync error (non-fatal): ${priorityError.message}`);
-      prioritySyncResult = { success: false, message: priorityError.message };
+    const effectivePriorityId = treatment.priorityId || treatment.subjectId;
+
+    if (!effectivePriorityId) {
+      logger.warn(`Treatment ${treatmentId} has no Priority ID or Subject ID - cannot upload to Priority ERP`);
+      prioritySyncResult = { success: false, message: 'Treatment has no Priority ID - cannot upload to Priority' };
+    } else {
+      try {
+        prioritySyncResult = await priorityService.uploadApplicatorAttachmentFromBuffer(
+          applicator.serialNumber,
+          effectivePriorityId,  // Use Priority order ID (priorityId or subjectId), not PostgreSQL UUID
+          zipResult.buffer
+        );
+        logger.info(`Priority sync result: ${prioritySyncResult.message}`);
+      } catch (priorityError: any) {
+        logger.error(`Priority sync error: ${priorityError.message}`);
+        prioritySyncResult = { success: false, message: priorityError.message };
+      }
     }
+
+    // Determine sync status based on Priority result
+    const syncStatus = prioritySyncResult.success ? 'synced' : 'failed';
+
+    // Update applicator with attachment tracking metadata (not the file itself)
+    await applicator.update({
+      attachmentFilename: zipResult.filename,
+      attachmentFileCount: zipResult.fileCount,
+      attachmentSizeBytes: zipResult.sizeBytes,
+      attachmentSyncStatus: syncStatus,
+    });
+
+    logger.info(`Applicator ${applicatorId} attachment metadata saved. Sync status: ${syncStatus}`);
 
     res.status(200).json({
       success: true,
-      message: 'Files uploaded successfully',
+      message: prioritySyncResult.success
+        ? 'Files uploaded to Priority ERP successfully'
+        : 'Files processed but Priority sync failed',
       data: {
         filename: zipResult.filename,
         fileCount: zipResult.fileCount,
         sizeBytes: zipResult.sizeBytes,
+        syncStatus: syncStatus,
         prioritySync: prioritySyncResult
       }
     });

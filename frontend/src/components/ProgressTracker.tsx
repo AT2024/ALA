@@ -6,7 +6,8 @@ const ProgressTracker = () => {
     progressStats,
     getActualTotalSeeds,
     getActualInsertedSeeds,
-    getApplicatorSummary
+    getApplicatorSummary,
+    isPancreasOrProstate
   } = useTreatment();
 
   if (!currentTreatment) {
@@ -133,9 +134,12 @@ const ProgressTracker = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Loaded
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Package
-                    </th>
+                    {/* Only show Package column for Pancreas/Prostate procedures */}
+                    {isPancreasOrProstate() && (
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Package
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -153,9 +157,12 @@ const ProgressTracker = () => {
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {item.loaded}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {Math.floor(item.packaged / 4)}
-                      </td>
+                      {/* Only show Package cell for Pancreas/Prostate procedures */}
+                      {isPancreasOrProstate() && (
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                          {Math.floor(item.packaged / 4)}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

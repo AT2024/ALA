@@ -31,6 +31,11 @@ export interface Applicator {
   isRemoved?: boolean;
   removalComments?: string;
   removalImage?: string;
+  // File attachment tracking fields (files stored in Priority ERP)
+  attachmentFileCount?: number;
+  attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
+  attachmentFilename?: string;
+  attachmentSizeBytes?: number;
 }
 
 export const treatmentService = {
@@ -83,6 +88,7 @@ export const treatmentService = {
     surgeon?: string;
     originalTreatmentId?: string; // For removal treatments
     patientName?: string; // Patient identifier from Priority DETAILS field
+    priorityId?: string; // Priority order ID (e.g., "PANC-HEAD-001") for workflow detection
   }): Promise<Treatment> {
     const response = await api.post('/treatments', treatmentData);
     return response.data;
@@ -134,7 +140,12 @@ export const treatmentService = {
         removalImage: app.removalImage || null,
         removalTime: app.removalTime || null,
         applicatorType: app.applicatorType || 'Unknown Applicator',
-        insertedSeedsQty: app.insertedSeedsQty || app.seedQuantity || 0
+        insertedSeedsQty: app.insertedSeedsQty || app.seedQuantity || 0,
+        // File attachment tracking fields (files stored in Priority ERP)
+        attachmentFileCount: app.attachmentFileCount || 0,
+        attachmentSyncStatus: app.attachmentSyncStatus || null,
+        attachmentFilename: app.attachmentFilename || null,
+        attachmentSizeBytes: app.attachmentSizeBytes || 0
       }));
     }
 
