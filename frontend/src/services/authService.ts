@@ -31,8 +31,6 @@ export const authService = {
     };
   }> {
     try {
-      console.log('Requesting verification code for:', identifier);
-      
       // Validate identifier format
       const isEmail = identifier.includes('@');
       const isPhone = /^[\d\s\-\+\(\)]+$/.test(identifier.trim());

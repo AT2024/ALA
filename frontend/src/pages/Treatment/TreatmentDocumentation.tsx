@@ -42,7 +42,7 @@ const TreatmentDocumentation = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingValidation, setPendingValidation] = useState<ApplicatorValidationResult | null>(null);
-  const [showApplicatorList, setShowApplicatorList] = useState(false);
+  const [showApplicatorList, setShowApplicatorList] = useState(true);
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [aSuffixQuery, setASuffixQuery] = useState('');
@@ -180,11 +180,6 @@ const TreatmentDocumentation = () => {
           });
         });
         
-        console.log(`Loaded ${applicators.length} available applicators`);
-        
-        if (applicators.length === 0) {
-          console.warn('No applicators available for this treatment');
-        }
       } else {
         console.error('Failed to load applicators:', response.message);
         setError(response.message || 'Failed to load available applicators');
@@ -259,22 +254,12 @@ const TreatmentDocumentation = () => {
       return;
     }
     
-    console.log(`Starting barcode validation process for: ${serialNumber}`);
-    console.log(`Current treatment:`, {
-      id: currentTreatment.id,
-      subjectId: currentTreatment.subjectId,
-      site: currentTreatment.site,
-      type: currentTreatment.type
-    });
-    console.log(`Already scanned applicators:`, scannedApplicators);
-    
     setError(null);
     setSuccess(null);
     setLoading(true);
 
     try {
       // Validate applicator against Priority system
-      console.log('Calling applicatorService.validateApplicator...');
       const validation = await applicatorService.validateApplicator(
         serialNumber,
         currentTreatment.id,
@@ -282,19 +267,14 @@ const TreatmentDocumentation = () => {
         scannedApplicators
       );
       
-      console.log('Validation result:', validation);
-
       if (validation.requiresConfirmation) {
-        console.log('Validation requires user confirmation');
         // Show confirmation dialog for scenarios that need user approval
         setPendingValidation(validation);
         setShowConfirmDialog(true);
       } else if (validation.isValid) {
-        console.log('Validation successful, filling form with applicator data');
         // Proceed with valid applicator
         await fillFormWithApplicatorData(validation);
       } else {
-        console.log('Validation failed:', validation.message);
         // Show error for invalid applicators
         setError(validation.message);
       }
@@ -494,10 +474,6 @@ const TreatmentDocumentation = () => {
       return;
     }
 
-    console.log('Starting applicator save process...');
-    console.log('Form data:', formData);
-    console.log('Current treatment:', currentTreatment.id);
-
     setLoading(true);
 
     try {
@@ -511,12 +487,8 @@ const TreatmentDocumentation = () => {
         comments: formData.comments
       };
 
-      console.log(isEditMode ? 'Updating applicator data in Priority:' : 'Saving applicator data to Priority:', applicatorData);
-
       // Save applicator data to Priority system
       const saveResult = await applicatorService.saveApplicatorData(currentTreatment.id, applicatorData);
-
-      console.log('Save result:', saveResult);
 
       if (!saveResult.success) {
         console.error('Failed to save applicator data:', saveResult.message);
@@ -533,7 +505,6 @@ const TreatmentDocumentation = () => {
       let uploadFilename: string | undefined = undefined;
 
       if (selectedFiles.length > 0 && savedApplicatorId) {
-        console.log(`Uploading ${selectedFiles.length} files to applicator ${savedApplicatorId}`);
         const uploadResult = await applicatorService.uploadApplicatorFiles(
           currentTreatment.id,
           savedApplicatorId,
@@ -547,7 +518,6 @@ const TreatmentDocumentation = () => {
           uploadSyncStatus = 'failed';
           // Don't return - applicator was saved successfully
         } else {
-          console.log('Files uploaded successfully:', uploadResult.fileCount);
           // Capture upload metadata for local state
           uploadFileCount = uploadResult.fileCount || selectedFiles.length;
           uploadSyncStatus = (uploadResult.syncStatus as 'synced' | 'failed') || 'synced';
@@ -581,7 +551,6 @@ const TreatmentDocumentation = () => {
 
       if (isEditMode) {
         // UPDATE existing applicator in processedApplicators array
-        console.log('Updating existing applicator in context:', applicator);
         const updatedApplicators = processedApplicators.map(app =>
           app.serialNumber === editingSerialNumber ? applicator : app
         );
@@ -589,7 +558,6 @@ const TreatmentDocumentation = () => {
         clearCurrentApplicator();
       } else {
         // ADD new applicator to context
-        console.log('Processing new applicator in context:', applicator);
         processApplicator(applicator);
         setScannedApplicators(prev => [...prev, formData.serialNumber]);
       }
@@ -627,7 +595,6 @@ const TreatmentDocumentation = () => {
         );
       }
       setError(null);
-      console.log(isEditMode ? 'Applicator successfully updated' : 'Applicator successfully added and form cleared');
     } catch (error: any) {
       console.error('Error saving applicator:', error);
       console.error('Error details:', {

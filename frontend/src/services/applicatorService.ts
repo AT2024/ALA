@@ -37,8 +37,6 @@ export const applicatorService = {
     scannedApplicators: string[] = []
   ): Promise<ApplicatorValidationResult> {
     try {
-      console.log(`Validating applicator ${serialNumber} for treatment ${currentTreatmentId}`);
-      
       // Call backend to validate against Priority system
       const response = await api.post('/applicators/validate', {
         serialNumber: serialNumber.trim(),
@@ -101,8 +99,6 @@ export const applicatorService = {
     applicatorData: ApplicatorData
   ): Promise<{ success: boolean; message?: string; applicator?: any }> {
     try {
-      console.log('Saving applicator data:', applicatorData);
-
       const response = await api.post(`/treatments/${treatmentId}/applicators`, {
         serialNumber: applicatorData.serialNumber,
         applicatorType: applicatorData.applicatorType,
@@ -224,9 +220,6 @@ export const applicatorService = {
       // Backend response: { success: true, data: { filename, fileCount, sizeBytes, syncStatus, prioritySync } }
       const uploadData = response.data.data || response.data;
       const fileCount = uploadData.fileCount || files.length;
-
-      console.log('Upload response:', response.data);
-      console.log('Parsed upload data:', { fileCount, filename: uploadData.filename, syncStatus: uploadData.syncStatus });
 
       return {
         success: true,

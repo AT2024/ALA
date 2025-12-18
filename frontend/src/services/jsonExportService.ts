@@ -111,9 +111,6 @@ export class JSONExportService {
       // Cleanup
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
-      console.log('Treatment data exported successfully:', link.download);
-      
     } catch (error) {
       console.error('Failed to export treatment data:', error);
       throw new Error('Failed to export treatment data as JSON');
@@ -139,8 +136,6 @@ export class JSONExportService {
       };
       
       localStorage.setItem(storageKey, JSON.stringify(backupData));
-      console.log('Treatment data backed up to localStorage');
-      
     } catch (error) {
       console.error('Failed to save to localStorage:', error);
     }
@@ -174,7 +169,6 @@ export class JSONExportService {
     try {
       const storageKey = `treatment_backup_${treatmentId}`;
       localStorage.removeItem(storageKey);
-      console.log('Treatment backup cleared from localStorage');
     } catch (error) {
       console.error('Failed to clear backup:', error);
     }

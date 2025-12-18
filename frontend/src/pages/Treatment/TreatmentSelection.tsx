@@ -9,31 +9,6 @@ import { priorityService } from '@/services/priorityService';
 import { treatmentService } from '@/services/treatmentService';
 import api from '@/services/api';
 
-// Development debugging utility
-const debugPatientData = (context: string, data: any) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.group(`🔍 Patient Data Debug - ${context}`);
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('Data:', data);
-    console.groupEnd();
-  }
-};
-
-// Development state monitor
-const debugComponentState = (formData: any, availablePatients: any[], loading: boolean, error: string | null) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.group('📊 Component State Monitor');
-    console.log('Form Data:', formData);
-    console.log('Available Patients:', availablePatients);
-    console.log('Loading:', loading);
-    console.log('Error:', error);
-    console.log('Cache Keys in localStorage:', 
-      Object.keys(localStorage).filter(key => key.includes('cached'))
-    );
-    console.groupEnd();
-  }
-};
-
 // Priority system integration - no more mock data needed
 // Sites, patients, and surgeons will be fetched from Priority system
 
@@ -171,7 +146,6 @@ const TreatmentSelection = () => {
   // Cleanup effect to clear state when component unmounts
   useEffect(() => {
     return () => {
-      console.log('TreatmentSelection component unmounting - clearing patient data');
       setAvailablePatients([]);
       setRemovalCandidate(null);
       setError(null);
@@ -213,9 +187,6 @@ const TreatmentSelection = () => {
     }));
     
     try {
-      console.log(`Fetching patients for site: ${formData.site}, date: ${formData.date}`);
-      debugPatientData('Fetch Start', { site: formData.site, date: formData.date, procedureType });
-      
       // Convert date format from DD.MMM.YYYY to YYYY-MM-DD for Priority API
       const dateForApi = convertDateForPriority(formData.date);
       
@@ -231,8 +202,6 @@ const TreatmentSelection = () => {
         procedureType || undefined
       );
       
-      debugPatientData('API Response', data);
-      
       // Check if request was cancelled after API call
       if (signal?.aborted) {
         return;
@@ -242,14 +211,11 @@ const TreatmentSelection = () => {
       // No frontend filtering needed to prevent duplicate filtering issues
       const filteredOrders = data.orders || [];
       
-      console.log(`Backend returned ${filteredOrders.length} orders for site ${formData.site} on date ${dateForApi}`);
-      
       // Transform Priority data to our patient format with validation
       const patients: PriorityPatient[] = filteredOrders
         .filter((order: any) => {
           // Validate required fields
           if (!order.ORDNAME) {
-            console.warn('Skipping order with missing ORDNAME:', order);
             return false;
           }
           return true;
@@ -268,66 +234,50 @@ const TreatmentSelection = () => {
       const findRootOrder = (orderName: string, visited = new Set<string>()): PriorityPatient | null => {
         // Prevent infinite loops with circular references
         if (visited.has(orderName)) {
-          console.warn(`🔄 Circular reference detected for order: ${orderName}`);
           return null;
         }
         visited.add(orderName);
-        
+
         // Find the current order
         const currentOrder = patients.find(p => p.ordName === orderName);
         if (!currentOrder) {
-          console.warn(`❌ Order not found in dataset: ${orderName}`);
           return null;
         }
-        
-        console.log(`🔍 Checking order: ${orderName} | Seeds: ${currentOrder.seedQty} | Reference: ${currentOrder.reference || 'None'}`);
-        
+
         // If this order has no reference, it's a root order
         if (!currentOrder.reference) {
-          console.log(`🌳 Root order found: ${orderName} | Seeds: ${currentOrder.seedQty}`);
           return currentOrder;
         }
-        
+
         // Follow the reference chain
-        console.log(`⬆️ Following reference: ${orderName} -> ${currentOrder.reference}`);
         return findRootOrder(currentOrder.reference, visited);
       };
       
       // Reference chain validation: only include orders with valid root orders
       const validPatients: PriorityPatient[] = [];
       const seenOrderNames = new Set<string>();
-      
-      console.group(`🔗 Reference Chain Validation for ${patients.length} orders`);
-      
+
       patients.forEach(patient => {
         const orderName = patient.ordName || patient.id;
-        
-        console.group(`🔍 Processing order: ${orderName}`);
-        
+
         // Skip if we've already processed this exact ORDNAME
         if (seenOrderNames.has(orderName)) {
-          console.warn(`⚠️ Duplicate ORDNAME skipped: ${orderName}`);
-          console.groupEnd();
           return;
         }
         seenOrderNames.add(orderName);
-        
+
         // Skip patient reference records (PAT-*) - these are just reference data, not selectable patients
         if (orderName.startsWith('PAT-')) {
-          console.log(`⚠️ Skipping patient reference record: ${orderName}`);
-          console.groupEnd();
           return;
         }
-        
+
         // Follow reference chain to find root order
         const rootOrder = findRootOrder(orderName);
-        
+
         if (!rootOrder) {
-          console.log(`❌ FILTERED OUT: ${orderName} - No valid root order found`);
-          console.groupEnd();
           return;
         }
-        
+
         // Per CLAUDE.md rules: "Only show root orders (no reference OR seedQty > 0)"
         // This means: show orders that either have no reference OR have seeds > 0
         // The current order should be evaluated, not what it references
@@ -337,68 +287,32 @@ const TreatmentSelection = () => {
 
         if (patient.reference && patient.seedQty <= 0 && !isCombinedOrder) {
           // Filter out only orders that BOTH have a reference AND have 0 seeds AND are not combined
-          console.log(`❌ FILTERED OUT: ${orderName} - Order has reference AND 0 seeds (${patient.seedQty})`);
-          console.groupEnd();
           return;
         }
 
-        if (isCombinedOrder) {
-          console.log(`✅ VALID: ${orderName} - Combined pancreas treatment (${patient.seedQty} total seeds)`);
-        }
-        
-        // If order has seeds > 0, it's valid regardless of having a reference
-        if (patient.seedQty > 0) {
-          console.log(`✅ VALID: ${orderName} - Order has seeds (${patient.seedQty}) - valid regardless of reference`);
-        } else if (!patient.reference) {
-          console.log(`✅ VALID: ${orderName} - Order has no reference (root order)`);
-        }
-        
         validPatients.push(patient);
-        console.groupEnd();
       });
-      
-      console.groupEnd();
-      
+
       // Sort patients by ORDNAME for consistent ordering
       const uniquePatients = validPatients.sort((a, b) => (a.ordName || '').localeCompare(b.ordName || ''));
-      
-      console.log(`🔗 Reference Chain Validation Summary for site ${formData.site}:`);
-      console.log(`- Total orders processed: ${patients.length}`);
-      console.log(`- Valid patients (with valid root orders): ${uniquePatients.length}`);
-      console.log(`- Invalid orders filtered out: ${patients.length - uniquePatients.length}`);
-      
-      // Log final patient list for debugging
-      console.group('✅ Final Valid Patient List:');
-      uniquePatients.forEach((patient, index) => {
-        console.log(`${index + 1}. Patient ID: ${patient.ordName} | Reference: ${patient.reference || 'ROOT'} | Seeds: ${patient.seedQty} | Activity: ${patient.activityPerSeed}`);
-      });
-      console.groupEnd();
-      
+
       // Final check for cancelled request before setting state
       if (signal?.aborted) {
         return;
       }
-      
+
       setAvailablePatients(uniquePatients);
-      
-      debugPatientData('Final Patient List Set', uniquePatients);
-      
+
       // If no patients found, show helpful message
       if (uniquePatients.length === 0) {
         setError(`No scheduled procedures found for ${formData.site} on ${formData.date}`);
-      } else {
-        console.log(`Successfully loaded ${uniquePatients.length} unique patients for ${formData.site} on ${formData.date}`);
       }
-      
-      // Debug component state in development
-      debugComponentState(formData, uniquePatients, false, null);
     } catch (err: any) {
       // Don't show error if request was cancelled
       if (signal?.aborted) {
-        console.log('Patient fetch request was cancelled');
         return;
       }
-      
+
       console.error('Error fetching patients:', err);
       setError(err.message || 'Failed to fetch patients for selected site and date');
       setAvailablePatients([]);
@@ -433,8 +347,6 @@ const TreatmentSelection = () => {
         newDate = currentDate;
     }
     
-    console.log(`Date changed to: ${direction} (${format(newDate, 'dd.MMM.yyyy')})`);
-    
     // Clear all patient-related state when date changes to prevent stale data
     setAvailablePatients([]);
     setError(null);
@@ -457,20 +369,14 @@ const TreatmentSelection = () => {
 
   const handlePatientSelection = (patientId: string) => {
     const selectedPatient = availablePatients.find(p => p.id === patientId);
-    
+
     if (selectedPatient) {
-      console.log('Selected patient:', selectedPatient);
-      debugPatientData('Patient Selection', selectedPatient);
-      
       setFormData(prev => ({
         ...prev,
         patientId: selectedPatient.id,
         seedQty: selectedPatient.seedQty.toString(),
         activityPerSeed: selectedPatient.activityPerSeed.toString()
       }));
-    } else {
-      console.warn('Patient not found in availablePatients:', patientId);
-      debugPatientData('Patient Selection Failed', { patientId, availablePatients });
     }
   };
   
@@ -505,8 +411,6 @@ const TreatmentSelection = () => {
     setRemovalCandidate(null);
 
     try {
-      console.log(`Searching for treatment ${formData.treatmentNumber} at site ${formData.site}`);
-
       // Call new API endpoint for removal candidates
       const response = await api.get('/treatments/removal-candidates', {
         params: {
@@ -516,8 +420,6 @@ const TreatmentSelection = () => {
       });
 
       const candidate = response.data;
-
-      console.log('Removal candidate found:', candidate);
       setRemovalCandidate(candidate);
       setTreatmentSearched(true);
 
@@ -609,12 +511,8 @@ const TreatmentSelection = () => {
         };
       }
 
-      console.log('Creating treatment with data:', treatmentData);
-
       // Call backend API to create treatment
       const treatment = await treatmentService.createTreatment(treatmentData);
-
-      console.log('Treatment created successfully:', treatment);
 
       // Set treatment in context with backend-generated ID
       setTreatment(treatment);

@@ -176,31 +176,23 @@ export const getAllowedSitesForUser = asyncHandler(async (req: Request, res: Res
 // @access  Private
 export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Response) => {
   try {
-    // DEBUG: Log that we reached this controller
-    logger.info('🎯 === PRIORITY ORDERS CONTROLLER REACHED - NEW VERSION ===');
-    logger.info(`Timestamp: ${new Date().toISOString()}`);
-    logger.info(`Request Method: ${req.method}`);
-    logger.info(`Request URL: ${req.originalUrl}`);
-    logger.info(`Request Path: ${req.path}`);
-    logger.info(`Request Body:`, req.body);
-    logger.info('=================================');
-    
     const { site, date, procedureType } = req.body;
-    
+
     if (!site) {
-      logger.error('❌ Missing site parameter');
-      res.status(400).json({ 
+      logger.error('Missing site parameter');
+      res.status(400).json({
         error: 'Site parameter is required'
       });
       return;
     }
-    
-    logger.info(`✅ Starting order fetch for site: ${site}, date: ${date}, procedureType: ${procedureType}`);
-    
+
+    logger.info(`Fetching orders for site: ${site}, date: ${date}, procedureType: ${procedureType}`);
+
     // Validate user has access to this site
+    // Use Number() to handle both string and number types from JSON storage
     const userSites = req.user?.metadata?.sites || [];
-    const userHasFullAccess = req.user?.metadata?.positionCode === 99;
-    
+    const userHasFullAccess = Number(req.user?.metadata?.positionCode) === 99;
+
     if (!userHasFullAccess && !userSites.includes(site)) {
       res.status(403).json({
         error: 'Access denied to this site'
@@ -210,61 +202,23 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
     
     // Get orders from Priority for the specified site using exact CUSTNAME and date filtering
     let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email, date);
-    
+
     logger.info(`Retrieved ${orders.length} orders from Priority service for site ${site}`);
-    
-    // DEBUG: Log raw Priority API response
-    logger.info('=== RAW PRIORITY API RESPONSE DEBUG ===');
-    logger.info(`Site: ${site}, Date: ${date}, ProcedureType: ${procedureType}`);
-    logger.info(`Raw orders count: ${orders.length}`);
-    orders.forEach((order: any, index: number) => {
-      logger.info(`RAW ORDER ${index + 1}:`);
-      logger.info(`  ORDNAME: ${order.ORDNAME}`);
-      logger.info(`  CUSTNAME: ${order.CUSTNAME}`);
-      logger.info(`  REFERENCE: ${order.REFERENCE}`);
-      logger.info(`  CURDATE: ${order.CURDATE}`);
-      logger.info(`  SIBD_TREATDAY: ${order.SIBD_TREATDAY}`);
-      logger.info(`  SBD_SEEDQTY: ${order.SBD_SEEDQTY}`);
-      logger.info(`  SBD_PREFACTIV: ${order.SBD_PREFACTIV}`);
-      logger.info(`  Full object:`, JSON.stringify(order, null, 2));
-    });
-    logger.info('=== END RAW PRIORITY API RESPONSE ===');
-    
-    // 🎯 Orders are already filtered by date and site at Priority API level
-    logger.info(`✅ Orders already filtered by Priority API - no additional filtering needed`);
-    
+
     // Validate and clean order data (basic validation only)
     const validOrders = orders.filter((order: any) => {
-      // Check for required fields
       if (!order.ORDNAME) {
-        logger.warn(`⚠️ Skipping order without ORDNAME:`, order);
+        logger.warn(`Skipping order without ORDNAME`);
         return false;
       }
-      
       if (!order.CUSTNAME) {
-        logger.warn(`⚠️ Order ${order.ORDNAME} missing CUSTNAME`);
+        logger.warn(`Order ${order.ORDNAME} missing CUSTNAME`);
         return false;
       }
-      
-      // Orders already have proper date filtering at API level
-      logger.info(`✅ VALIDATED - Order: ${order.ORDNAME}, Site: ${order.CUSTNAME}, Treatment Date: ${order.SIBD_TREATDAY}`);
-      
       return true;
     });
-    
-    logger.info(`📊 VALIDATION SUMMARY: ${validOrders.length} valid orders (removed ${orders.length - validOrders.length} invalid)`);
-    
-    // Use all valid orders since date filtering is already done at Priority API level
+
     orders = validOrders;
-    
-    if (orders.length > 0) {
-      logger.info(`✅ PRIORITY API FILTERED ORDERS:`);
-      orders.forEach((order: any) => {
-        logger.info(`  📋 ${order.ORDNAME} | Site: ${order.CUSTNAME} | Treatment: ${order.SIBD_TREATDAY} | Seeds: ${order.SBD_SEEDQTY}`);
-      });
-    } else {
-      logger.info(`📭 No orders found for site ${site} on date ${date} (already filtered by Priority API)`);
-    }
     
     // Filter by procedure type if needed
     if (procedureType === 'removal') {
@@ -280,12 +234,6 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
         return daysSinceInsertion >= 14 && daysSinceInsertion <= 20;
       });
     }
-    
-    // Log final results with detailed breakdown
-    logger.info(`Final results for site ${site}:`);
-    logger.info(`- Total orders found: ${orders.length}`);
-    logger.info(`- Date filter applied: ${date || 'None'}`);
-    logger.info(`- Procedure type filter: ${procedureType || 'None'}`);
     
     // Add validation summary to response
     const response = {
@@ -445,9 +393,10 @@ export const getAvailableApplicators = asyncHandler(async (req: Request, res: Re
     }
     
     // Validate user has access to this site
+    // Use Number() to handle both string and number types from JSON storage
     const userSites = req.user?.metadata?.sites || [];
-    const userHasFullAccess = req.user?.metadata?.positionCode === 99;
-    
+    const userHasFullAccess = Number(req.user?.metadata?.positionCode) === 99;
+
     if (!userHasFullAccess && !userSites.includes(site)) {
       logger.error(`User ${req.user?.email} does not have access to site ${site}. User sites: ${userSites.join(', ')}`);
       res.status(403).json({
@@ -549,12 +498,8 @@ export const checkRemovalStatus = asyncHandler(async (req: Request, res: Respons
       return;
     }
 
-    logger.info(`🔍 Checking removal status for order: ${orderId}`);
-
     // Check removal status using Priority service
     const removalStatus = await priorityService.checkRemovalStatus(orderId, req.user?.email);
-
-    logger.info(`✅ Removal status check completed for order ${orderId}: Ready for removal = ${removalStatus.readyForRemoval}`);
 
     res.status(200).json({
       success: true,
@@ -562,7 +507,7 @@ export const checkRemovalStatus = asyncHandler(async (req: Request, res: Respons
       ...removalStatus
     });
   } catch (error: any) {
-    logger.error(`❌ Error checking removal status for order ${req.params.orderId}: ${error.message}`);
+    logger.error(`Error checking removal status for order ${req.params.orderId}: ${error.message}`);
     res.status(500).json({
       success: false,
       error: error.message,

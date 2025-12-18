@@ -102,8 +102,7 @@ const generateTestDataForDate = (requestedDate: string) => {
     }
     
     const targetDateISO = targetDate.toISOString();
-    logger.info(`🧪 DYNAMIC TEST DATA: Generating orders for requested date: ${targetDateISO}`);
-    
+
     const dynamicOrders: any[] = [];
     const generatedPatientRecords = new Set<string>(); // Track already-created patient records to avoid duplicates
 
@@ -137,13 +136,6 @@ const generateTestDataForDate = (requestedDate: string) => {
       }
     });
     
-    logger.info(`🧪 DYNAMIC TEST DATA: Generated ${dynamicOrders.length} orders (including patient records) for ${targetDateISO}`);
-    
-    // Log generated orders for debugging
-    dynamicOrders.forEach((order: any) => {
-      logger.info(`📋 Generated: ${order.ORDNAME} | Site: ${order.CUSTNAME} | Seeds: ${order.SBD_SEEDQTY} | Ref: ${order.REFERENCE || 'None'}`);
-    });
-    
     return {
       ...baseTestData,
       orders: dynamicOrders
@@ -169,33 +161,25 @@ const shouldUseTestData = (identifier: string): boolean => {
 // Helper function to check if an email is in the bypass list
 const isEmailInBypassList = (email: string): boolean => {
   const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS;
-  logger.info(`🔍 BYPASS DEBUG: Checking email ${email} against bypass list`);
-  logger.info(`🔍 BYPASS DEBUG: BYPASS_PRIORITY_EMAILS = "${bypassEmails}"`);
-  
+
   if (!bypassEmails) {
-    logger.info(`🔍 BYPASS DEBUG: No bypass emails configured`);
     return false;
   }
-  
+
   const emailList = bypassEmails.split(',').map(e => e.trim().toLowerCase());
-  const result = emailList.includes(email.toLowerCase());
-  logger.info(`🔍 BYPASS DEBUG: Email list: ${JSON.stringify(emailList)}`);
-  logger.info(`🔍 BYPASS DEBUG: Test email: "${email.toLowerCase()}" -> Result: ${result}`);
-  return result;
+  return emailList.includes(email.toLowerCase());
 };
 
 // Helper function to create a bypass user response
 const createBypassUserResponse = async (email: string, priorityServiceInstance: any) => {
-  logger.warn(`🔓 BYPASS ACCESS: Granting emergency access to ${email}`);
-  
+  logger.warn(`BYPASS ACCESS: Granting emergency access to ${email}`);
+
   // Try to get real sites from ORDERS endpoint
   let realSites = [];
   try {
-    logger.info('🔓 BYPASS: Attempting to fetch real sites for bypass user');
     realSites = await priorityServiceInstance.getAllSites();
-    logger.info(`🔓 BYPASS: Retrieved ${realSites.length} real sites for bypass user`);
   } catch (error) {
-    logger.error('🔓 BYPASS: Could not fetch real sites, using fallback:', error);
+    logger.error('BYPASS: Could not fetch real sites, using fallback:', error);
     realSites = [];
   }
   
@@ -242,11 +226,19 @@ function getPriorityUrl(): string {
 }
 
 function getPriorityUsername(): string {
-  return process.env.PRIORITY_API_USERNAME || 'API';
+  const username = process.env.PRIORITY_API_USERNAME;
+  if (!username) {
+    throw new Error('PRIORITY_API_USERNAME environment variable is required');
+  }
+  return username;
 }
 
 function getPriorityPassword(): string {
-  return process.env.PRIORITY_API_PASSWORD || 'Ap@123456';
+  const password = process.env.PRIORITY_API_PASSWORD;
+  if (!password) {
+    throw new Error('PRIORITY_API_PASSWORD environment variable is required');
+  }
+  return password;
 }
 
 // Create axios instance with lazy-loaded authentication
@@ -326,10 +318,8 @@ export const priorityService = {
 
     // Priority check: Handle test@example.com FIRST before any Priority API calls
     if (shouldUseTestData(identifier)) {
-      logger.info(`🧪 TEST USER DETECTED: Using test data for ${identifier} (bypassing Priority API)`);
       const testData = loadTestData();
       if (testData && testData.sites) {
-        logger.info(`🧪 TEST DATA: Loaded ${testData.sites.length} sites for test user:`, testData.sites.map((s: any) => s.custName));
         return {
           found: true,
           fullAccess: true, // Grant full access for testing
@@ -344,7 +334,7 @@ export const priorityService = {
           },
         };
       } else {
-        logger.error(`🧪 TEST DATA ERROR: Failed to load test data for user ${identifier}`);
+        logger.error(`TEST DATA ERROR: Failed to load test data for user ${identifier}`);
         // Return minimal test data as fallback
         return {
           found: true,
@@ -361,9 +351,6 @@ export const priorityService = {
 
     // Check for bypass emails before proceeding with Priority API
     const isEmail = identifier.includes('@');
-    if (isEmail && isEmailInBypassList(identifier)) {
-      logger.warn(`🔓 BYPASS: Email ${identifier} is in bypass list - will use bypass if Priority API fails`);
-    }
 
     // For real users, proceed with Priority API calls
     logger.info(`Processing real user ${identifier} through Priority API`);
@@ -398,7 +385,7 @@ export const priorityService = {
         
         // Check if this is a bypass email before throwing error
         if (isEmail && isEmailInBypassList(identifier)) {
-          logger.warn(`🔓 BYPASS: Priority API unavailable, granting bypass access to ${identifier}`);
+          logger.warn(`BYPASS: Priority API unavailable, granting bypass access to ${identifier}`);
           return await createBypassUserResponse(identifier, this);
         }
         
@@ -432,83 +419,12 @@ export const priorityService = {
       
       // Check if this is a bypass email before throwing error
       if (isEmail && isEmailInBypassList(identifier)) {
-        logger.warn(`🔓 BYPASS: Priority system error, granting bypass access to ${identifier}`);
+        logger.warn(`BYPASS: Priority system error, granting bypass access to ${identifier}`);
         return await createBypassUserResponse(identifier, this);
       }
       
       throw new Error(`Priority system is currently unavailable. Please contact support or try again later.`);
     }
-    
-
-    // Helper function to get all sites for a non-admin user
-    const getAllSitesForUser = async (userEmail: string, userPhone: string) => {
-      try {
-        logger.info(`Getting all sites for user - email: ${userEmail}, phone: ${userPhone}`);
-        
-        // Query all PHONEBOOK records for this user by email or phone
-        let allUserRecords = [];
-        
-        // Only query by email if we have a valid email
-        if (userEmail && userEmail.includes('@')) {
-          try {
-            const emailResponse = await priorityApi.get('/PHONEBOOK', {
-              params: {
-                $filter: `EMAIL eq '${userEmail}'`,
-                $select: 'CUSTNAME,CUSTDES,POSITIONCODE,EMAIL,PHONE,NAME',
-              },
-            });
-            allUserRecords.push(...emailResponse.data.value);
-            logger.info(`Found ${emailResponse.data.value.length} records by email`);
-          } catch (emailError) {
-            logger.warn(`Error querying by email: ${emailError}`);
-            // Continue with phone query
-          }
-        }
-        
-        // Only query by phone if we have a valid phone and didn't already find records
-        if (userPhone && allUserRecords.length === 0) {
-          try {
-            // Clean phone number for query
-            const phoneNumber = userPhone.toString().replace(/\D/g, '');
-            if (phoneNumber) {
-              const phoneResponse = await priorityApi.get('/PHONEBOOK', {
-                params: {
-                  $filter: `PHONE eq ${phoneNumber}`,
-                  $select: 'CUSTNAME,CUSTDES,POSITIONCODE,EMAIL,PHONE,NAME',
-                },
-              });
-              allUserRecords.push(...phoneResponse.data.value);
-              logger.info(`Found ${phoneResponse.data.value.length} records by phone`);
-            }
-          } catch (phoneError) {
-            logger.warn(`Error querying by phone: ${phoneError}`);
-            // Continue anyway
-          }
-        }
-        
-        // Remove duplicates based on CUSTNAME
-        const uniqueRecords = allUserRecords.filter((record, index, self) => 
-          index === self.findIndex(r => r.CUSTNAME === record.CUSTNAME)
-        );
-        
-        // Extract all unique sites (CUSTNAME values)
-        const userSites = uniqueRecords.map(record => record.CUSTNAME).filter(Boolean);
-        
-        logger.info(`Found ${userSites.length} unique sites for user: ${userSites.join(', ')}`);
-        
-        return {
-          sites: userSites,
-          records: uniqueRecords
-        };
-      } catch (error) {
-        logger.error(`Error in getAllSitesForUser: ${error}`);
-        // Return empty result on error, will fall back to original logic
-        return {
-          sites: [],
-          records: []
-        };
-      }
-    };
 
     try {
       // STEP 1: Query PHONEBOOK API to get user data
@@ -794,7 +710,6 @@ export const priorityService = {
 
   // Helper function to combine multiple treatments for the same patient/date/site (pancreas treatments)
   combineMultipleTreatments(orders: any[]): any[] {
-    logger.info(`🔍 combineMultipleTreatments called with ${orders.length} orders`);
 
     // Group orders by patient ID, site, and treatment day
     const grouped = new Map<string, any[]>();
@@ -805,49 +720,30 @@ export const priorityService = {
       const site = order.CUSTNAME || '';
       const treatDay = order.SIBD_TREATDAY || order.CURDATE || '';
 
-      logger.info(`📦 Order ${order.ORDNAME}:`);
-      logger.info(`   - patientName: "${order.patientName}"`);
-      logger.info(`   - DETAILS: "${order.DETAILS}"`);
-      logger.info(`   - patientId (used): "${patientId}"`);
-      logger.info(`   - CUSTNAME: "${order.CUSTNAME}"`);
-      logger.info(`   - site (used): "${site}"`);
-      logger.info(`   - SIBD_TREATDAY: "${order.SIBD_TREATDAY}"`);
-      logger.info(`   - CURDATE: "${order.CURDATE}"`);
-      logger.info(`   - treatDay (used): "${treatDay}"`);
-
       // Only group if we have valid patient ID (skip orders without patient identifier)
       if (!patientId) {
         const key = `UNGROUPED_${order.ORDNAME}`;
-        logger.info(`   ⚠️  No patient ID, using ungrouped key: "${key}"`);
         grouped.set(key, [order]);
         return;
       }
 
       const key = `${site}|${patientId}|${treatDay}`;
-      logger.info(`   🔑 Grouping key: "${key}"`);
 
       if (!grouped.has(key)) {
         grouped.set(key, []);
-        logger.info(`   ➕ Created new group for key: "${key}"`);
-      } else {
-        logger.info(`   ✅ Adding to existing group for key: "${key}"`);
       }
       grouped.get(key)!.push(order);
     });
 
-    logger.info(`\n📊 Grouping summary: ${grouped.size} groups created`);
-
     // Combine groups with 2+ orders, keep single orders as-is
     const combined: any[] = [];
 
-    grouped.forEach((group, key) => {
+    grouped.forEach((group, _key) => {
       if (group.length === 1) {
         // Single order, keep as-is
         combined.push(group[0]);
       } else {
         // Multiple orders for same patient/date/site - combine them
-        logger.info(`🔗 Combining ${group.length} treatments for patient ${group[0].patientName || group[0].DETAILS} at ${group[0].CUSTNAME}`);
-
         const combinedOrder = {
           ...group[0], // Use first order as base
           ORDNAME: group.map(o => o.ORDNAME).join('+'), // "ORDER1+ORDER2+ORDER3"
@@ -859,7 +755,6 @@ export const priorityService = {
         };
 
         combined.push(combinedOrder);
-        logger.info(`✅ Combined order: ${combinedOrder.ORDNAME} with ${combinedOrder.SBD_SEEDQTY} total seeds`);
       }
     });
 
@@ -873,40 +768,26 @@ export const priorityService = {
       
       // For development mode with test@example.com, use dynamic test data first
       if (userId && shouldUseTestData(userId)) {
-        logger.info(`🧪 DEVELOPMENT MODE: Using dynamic test data for user ${userId} at site ${custName}${filterDate ? ` with date: ${filterDate}` : ''}`);
-        
         // Use dynamic test data generation if a specific date is requested
         let testData;
         if (filterDate) {
           testData = generateTestDataForDate(filterDate);
-          logger.info(`🧪 DYNAMIC TEST DATA: Generated data for specific date ${filterDate}`);
         } else {
           // Fall back to static test data if no specific date
           testData = loadTestData();
-          logger.info(`🧪 STATIC TEST DATA: Using pre-generated test data (no date filter)`);
         }
-        
+
         if (testData && testData.orders) {
           let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
-          
-          logger.info(`🧪 TEST DATA: Found ${filteredOrders.length} orders for site ${custName} before date filtering`);
-          
+
           // Apply date filtering to test data if provided (for dynamic data this is redundant but ensures consistency)
           if (filterDate) {
             const targetDate = new Date(filterDate).toISOString().split('T')[0];
-            const preFilterCount = filteredOrders.length;
             filteredOrders = filteredOrders.filter((order: any) => {
               const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
               return orderDate === targetDate;
             });
-            logger.info(`🧪 TEST DATA: Date filtering reduced orders from ${preFilterCount} to ${filteredOrders.length} for date ${targetDate}`);
           }
-          
-          // Log detailed test data results
-          logger.info(`🧪 TEST DATA FINAL RESULTS: Retrieved ${filteredOrders.length} orders for site ${custName}`);
-          filteredOrders.forEach((order: any, index: number) => {
-            logger.info(`  📋 TEST ORDER ${index + 1}: ${order.ORDNAME} | Seeds: ${order.SBD_SEEDQTY} | Date: ${order.SIBD_TREATDAY} | Ref: ${order.REFERENCE || 'None'} | Patient: ${order.DETAILS || 'None'}`);
-          });
 
           // Map DETAILS field to patientName for test data consistency with validation
           const mappedTestOrders = filteredOrders.map((order: any) => ({
@@ -920,7 +801,7 @@ export const priorityService = {
           const combinedTestOrders = this.combineMultipleTreatments(mappedTestOrders);
           return combinedTestOrders;
         } else {
-          logger.warn(`🧪 TEST DATA: Failed to load test data for user ${userId}`);
+          logger.warn(`TEST DATA: Failed to load test data for user ${userId}`);
         }
       }
       
@@ -943,22 +824,11 @@ export const priorityService = {
           
           filterParam += ` and SIBD_TREATDAY ge ${odataDate}T00:00:00Z and SIBD_TREATDAY lt ${nextDayString}T00:00:00Z`;
           
-          logger.info(`📅 PRIORITY API: Adding date filter for ${odataDate}`);
-          logger.info(`🔍 DATE FILTER DETAILS:`);
-          logger.info(`  📅 Target Date: ${odataDate}`);
-          logger.info(`  📅 Filter Range: ${odataDate}T00:00:00 to ${nextDayString}T00:00:00 (exclusive)`);
-          logger.info(`  🔍 Date Filter Clause: SIBD_TREATDAY ge ${odataDate}T00:00:00Z and SIBD_TREATDAY lt ${nextDayString}T00:00:00Z`);
+          logger.info(`Priority API: Adding date filter for ${odataDate}`);
         } else {
-          logger.warn(`⚠️ Invalid date format provided: ${filterDate}, proceeding without date filter`);
+          logger.warn(`Invalid date format provided: ${filterDate}, proceeding without date filter`);
         }
       }
-      
-      logger.info(`🔍 PRIORITY API: Using filter: ${filterParam}`);
-      logger.info(`🎯 COMPLETE PRIORITY API REQUEST DETAILS:`);
-      logger.info(`  🏥 Site Filter: CUSTNAME eq '${custName}'`);
-      logger.info(`  📅 Date Filter: ${filterDate ? `Applied for ${filterDate}` : 'None applied'}`);
-      logger.info(`  🔍 Complete Filter: ${filterParam}`);
-      logger.info(`  🌐 API Endpoint: ${getPriorityUrl()}/ORDERS`);
       
       const response = await priorityApi.get('/ORDERS', {
         params: {
@@ -968,38 +838,7 @@ export const priorityService = {
         timeout: 30000, // 30 second timeout
       });
 
-      logger.info(`✅ PRIORITY API: Retrieved ${response.data.value.length} orders for site ${custName} from Priority API`);
-      logger.info(`📊 PRIORITY API RESPONSE SUMMARY:`);
-      logger.info(`  🏥 Site: ${custName}`);
-      logger.info(`  📅 Date Filter Applied: ${filterDate || 'None'}`);
-      logger.info(`  📊 Total Orders Returned: ${response.data.value.length}`);
-      logger.info(`  🌐 Request URL: ${getPriorityUrl()}ORDERS?$filter=${encodeURIComponent(filterParam)}`);
-
-      // Enhanced DEBUG: Log every single order returned by Priority API with clear data source indication
-      logger.info('=== 🔍 PRIORITY API SERVICE LEVEL DEBUG ===');
-      logger.info(`🎯 Data Source: REAL Priority API (not test data)`);
-      logger.info(`🏥 Site: ${custName}`);
-      logger.info(`📅 Date Filter: ${filterDate || 'None'}`);
-      logger.info(`🔍 Filter used: ${filterParam}`);
-      logger.info(`📊 Total orders returned: ${response.data.value.length}`);
-
-      response.data.value.forEach((order: any, index: number) => {
-        logger.info(`🏥 PRIORITY API ORDER ${index + 1}:`);
-        logger.info(`  📋 ORDNAME: ${order.ORDNAME}`);
-        logger.info(`  🏢 CUSTNAME: ${order.CUSTNAME}`);
-        logger.info(`  🔗 REFERENCE: ${order.REFERENCE}`);
-        logger.info(`  📅 SIBD_TREATDAY: ${order.SIBD_TREATDAY}`);
-        logger.info(`  📅 CURDATE: ${order.CURDATE}`);
-        logger.info(`  🌱 SBD_SEEDQTY: ${order.SBD_SEEDQTY}`);
-        logger.info(`  ⚡ SBD_PREFACTIV: ${order.SBD_PREFACTIV}`);
-        logger.info(`  👤 DETAILS (Patient): ${order.DETAILS}`);
-        logger.info(`  📄 Full order data:`, JSON.stringify(order, null, 2));
-      });
-      logger.info('=== 🔍 END PRIORITY API SERVICE DEBUG ===');
-
-      if (response.data.value.length > 0) {
-        logger.info(`📄 Sample order data:`, response.data.value[0]);
-      }
+      logger.info(`Retrieved ${response.data.value.length} orders for site ${custName}`);
 
       // Map DETAILS field to patientName for treatment creation with validation
       const mappedOrders = response.data.value.map((order: any) => ({
@@ -1027,14 +866,12 @@ export const priorityService = {
       
       // Only fall back to test data if this is a test user
       if (userId && shouldUseTestData(userId)) {
-        logger.warn(`❌ Priority API failed for test user ${userId}, using test data fallback`);
+        logger.warn(`Priority API failed for test user ${userId}, using test data fallback`);
         let testData;
         if (filterDate) {
           testData = generateTestDataForDate(filterDate);
-          logger.warn(`🧪 TEST USER FALLBACK: Using dynamic test data for site ${custName} with date ${filterDate}`);
         } else {
           testData = loadTestData();
-          logger.warn(`🧪 TEST USER FALLBACK: Using static test data for site ${custName}`);
         }
         
         if (testData && testData.orders) {
@@ -1043,15 +880,11 @@ export const priorityService = {
           // Apply date filtering to fallback test data if provided
           if (filterDate) {
             const targetDate = new Date(filterDate).toISOString().split('T')[0];
-            const preFilterCount = filteredOrders.length;
             filteredOrders = filteredOrders.filter((order: any) => {
               const orderDate = new Date(order.SIBD_TREATDAY || order.CURDATE).toISOString().split('T')[0];
               return orderDate === targetDate;
             });
-            logger.info(`🧪 TEST USER FALLBACK: Date filtering reduced orders from ${preFilterCount} to ${filteredOrders.length} for date ${targetDate}`);
           }
-          
-          logger.info(`🧪 TEST USER FALLBACK: Retrieved ${filteredOrders.length} orders for site ${custName} from test data fallback`);
 
           // Map DETAILS field to patientName for fallback test data consistency with validation
           const mappedFallbackOrders = filteredOrders.map((order: any) => ({
@@ -1069,8 +902,7 @@ export const priorityService = {
       }
       
       // For real users, never return test data - throw error instead
-      logger.error(`❌ Priority API failed for real user ${userId || 'unknown'} at site ${custName}`);
-      logger.error(`❌ Real users should not receive test data - throwing error`);
+      logger.error(`Priority API failed for real user ${userId || 'unknown'} at site ${custName}`);
       throw error;
     }
   },
@@ -1080,17 +912,14 @@ export const priorityService = {
     try {
       // Handle combined orders (pancreas) - split and merge results
       if (orderName.includes('+')) {
-        logger.info(`🔗 Combined order detected: ${orderName} - splitting and fetching individually`);
         const orderIds = orderName.split('+');
         const allApplicators: any[] = [];
         for (const orderId of orderIds) {
           const applicators: any = await this.getOrderSubform(orderId.trim(), userId, treatmentType);
           if (applicators && applicators.length > 0) {
             allApplicators.push(...applicators);
-            logger.info(`  ✅ Added ${applicators.length} applicators from ${orderId.trim()}`);
           }
         }
-        logger.info(`📊 Total applicators from combined order: ${allApplicators.length}`);
         return allApplicators;
       }
 
@@ -1105,11 +934,7 @@ export const priorityService = {
           // Extract the base order name by removing the suffix
           const baseOrderName = orderName.replace(/_(Y|T|M)$/, '');
 
-          // For removal treatments, always use the base order name to get insertion applicators
-          const orderToFetch = treatmentType === 'removal' ? baseOrderName : orderName;
-
           if (testData.subform_data[baseOrderName]) {
-            logger.info(`Using test subform data for base order ${baseOrderName} (requested: ${orderName}, type: ${treatmentType})`);
             const applicators = testData.subform_data[baseOrderName].value || [];
 
             // For removal treatments, ensure applicators show as inserted but not yet removed
@@ -1155,29 +980,25 @@ export const priorityService = {
       
       // Only fall back to test data for test users
       if (userId && shouldUseTestData(userId)) {
-        logger.warn(`❌ Priority API failed for test user ${userId}, using test data fallback for subform ${orderName}`);
+        logger.warn(`Priority API failed for test user ${userId}, using test data fallback for subform ${orderName}`);
         const testData = loadTestData();
         if (testData && testData.subform_data) {
           // Handle expanded order names for error fallback as well
           const baseOrderName = orderName.replace(/_(Y|T|M)$/, '');
-          
+
           if (testData.subform_data[baseOrderName]) {
-            logger.info(`🧪 TEST USER FALLBACK: Using test subform data for base order ${baseOrderName} (requested: ${orderName})`);
             return testData.subform_data[baseOrderName].value || [];
           } else if (testData.subform_data[orderName]) {
-            logger.info(`🧪 TEST USER FALLBACK: Using test subform data for exact order ${orderName}`);
             return testData.subform_data[orderName].value || [];
           }
         }
       }
-      
+
       // For real users, try fallback to SIBD_APPLICATUSELIST table first
-      logger.info(`Trying fallback to SIBD_APPLICATUSELIST table for order ${orderName}`);
       try {
         return await this.getApplicatorsForTreatment(orderName, userId);
       } catch (fallbackError: any) {
-        logger.error(`❌ Both subform and fallback failed for real user ${userId || 'unknown'} for order ${orderName}`);
-        logger.error(`❌ Real users should not receive test data - throwing original error`);
+        logger.error(`Both subform and fallback failed for real user ${userId || 'unknown'} for order ${orderName}`);
         throw error;
       }
     }
@@ -1871,40 +1692,22 @@ export const priorityService = {
       
       while (currentDateObj <= endDateObj) {
         const dateString = currentDateObj.toISOString().split('T')[0];
-        logger.info(`🔍 Getting orders for ${site} on ${dateString}`);
-        
         const dayOrders = await this.getOrdersForSiteWithFilter(site, userId, dateString);
         allOrders.push(...dayOrders);
-        
-        logger.info(`📊 Found ${dayOrders.length} orders for ${site} on ${dateString}`);
-        
-        // Move to next day
         currentDateObj.setDate(currentDateObj.getDate() + 1);
       }
-      
+
       // Remove duplicates based on ORDNAME
-      const orders = allOrders.filter((order, index, self) => 
+      const orders = allOrders.filter((order, index, self) =>
         index === self.findIndex(o => o.ORDNAME === order.ORDNAME)
       );
-      
+
       if (orders.length === 0) {
-        logger.info(`📭 No orders found for site ${site} in date range ${dateFrom} to ${dateTo}`);
         return [];
       }
-      
-      logger.info(`📊 Found ${orders.length} unique orders for site ${site} in date range`);
-      
-      // STEP 2: Orders are already filtered by date at API level, just log for debugging
-      logger.info(`📋 Orders already filtered by Priority API date filtering:`);
-      orders.forEach((order: any, index: number) => {
-        const treatmentDate = order.SIBD_TREATDAY || order.CURDATE;
-        logger.info(`  ${index + 1}. Order ${order.ORDNAME} (${order.CUSTNAME}) - treatment: ${order.SIBD_TREATDAY}, order: ${order.CURDATE}`);
-      });
-      
+
       // Use all orders since they're already date-filtered at API level
       const filteredOrders = orders;
-      
-      logger.info(`✅ Using ${filteredOrders.length} orders (already date-filtered by Priority API)`);
       
       // STEP 3: Get subform data (applicators) for each order
       const allApplicators = [];
@@ -2059,11 +1862,8 @@ export const priorityService = {
     error?: string;
   }> {
     try {
-      logger.info(`🔍 Checking removal status for order ${orderId}`);
-
       // For development mode with test@example.com, check test data first
       if (userId && shouldUseTestData(userId)) {
-        logger.info(`🧪 DEVELOPMENT MODE: Checking test data for removal status of order ${orderId}`);
         const testData = loadTestData();
         if (testData && testData.orders) {
           // Handle expanded order names (SO25000010_Y, SO25000010_T, SO25000010_M)
@@ -2077,15 +1877,12 @@ export const priorityService = {
             const status = order.ORDSTATUSDES || 'Open';
             const readyForRemoval = status === 'Waiting for removal' || status === 'Performed';
 
-            logger.info(`🧪 TEST DATA: Order ${orderId} found with status "${status}", ready for removal: ${readyForRemoval}`);
-
             return {
               readyForRemoval,
               status,
               orderFound: true
             };
           } else {
-            logger.warn(`🧪 TEST DATA: Order ${orderId} not found in test data`);
             return {
               readyForRemoval: false,
               status: 'Not Found',
@@ -2096,8 +1893,6 @@ export const priorityService = {
       }
 
       // For real users, query Priority API
-      logger.info(`🎯 REAL API: Checking Priority API for removal status of order ${orderId}`);
-
       try {
         const response = await priorityApi.get(`/ORDERS('${orderId}')`, {
           params: {
@@ -2110,15 +1905,12 @@ export const priorityService = {
           const orderStatus = response.data.ORDSTATUSDES || 'Open';
           const readyForRemoval = orderStatus === 'Waiting for removal' || orderStatus === 'Performed';
 
-          logger.info(`🎯 REAL API: Order ${orderId} found with status "${orderStatus}", ready for removal: ${readyForRemoval}`);
-
           return {
             readyForRemoval,
             status: orderStatus,
             orderFound: true
           };
         } else {
-          logger.warn(`🎯 REAL API: Order ${orderId} not found in Priority API`);
           return {
             readyForRemoval: false,
             status: 'Not Found',
@@ -2126,11 +1918,11 @@ export const priorityService = {
           };
         }
       } catch (apiError: any) {
-        logger.error(`🎯 REAL API: Error querying Priority API for order ${orderId}:`, apiError);
+        logger.error(`Error querying Priority API for order ${orderId}:`, apiError);
 
         // If this is a test user and API fails, fall back to test data
         if (userId && shouldUseTestData(userId)) {
-          logger.warn(`❌ Priority API failed for test user ${userId}, using test data fallback for removal status check`);
+          logger.warn(`Priority API failed for test user ${userId}, using test data fallback for removal status check`);
           const testData = loadTestData();
           if (testData && testData.orders) {
             const baseOrderId = orderId.replace(/_(Y|T|M)$/, '');
@@ -2141,8 +1933,6 @@ export const priorityService = {
             if (order) {
               const status = order.ORDSTATUSDES || 'Open';
               const readyForRemoval = status === 'Waiting for removal' || status === 'Performed';
-
-              logger.info(`🧪 TEST DATA FALLBACK: Order ${orderId} found with status "${status}", ready for removal: ${readyForRemoval}`);
 
               return {
                 readyForRemoval,
@@ -2157,7 +1947,7 @@ export const priorityService = {
         throw apiError;
       }
     } catch (error: any) {
-      logger.error(`❌ Error checking removal status for order ${orderId}: ${error.message}`);
+      logger.error(`Error checking removal status for order ${orderId}: ${error.message}`);
 
       return {
         readyForRemoval: false,
@@ -2292,7 +2082,7 @@ export const priorityService = {
         throw new Error(`Priority API returned status ${response.status}: ${response.statusText}`);
       }
 
-      logger.info(`✅ Successfully uploaded attachment for applicator ${serialNumber} to Priority`);
+      logger.info(`Successfully uploaded attachment for applicator ${serialNumber} to Priority`);
 
       return {
         success: true,
@@ -2300,7 +2090,7 @@ export const priorityService = {
       };
 
     } catch (error: any) {
-      logger.error(`❌ Error uploading attachment to Priority: ${error.message}`);
+      logger.error(`Error uploading attachment to Priority: ${error.message}`);
       // Log detailed error info including full response data for debugging
       const errorData = error.response?.data;
       logger.error(`Priority API Error Response Data: ${JSON.stringify(errorData, null, 2)}`);
@@ -2318,6 +2108,65 @@ export const priorityService = {
         success: false,
         message: `Failed to upload attachment to Priority: ${error.message}`
       };
+    }
+  },
+
+  /**
+   * Get site users from Priority PHONEBOOK for email selection in finalization
+   * Returns users associated with a specific site (CUSTNAME)
+   */
+  async getSiteUsers(site: string): Promise<Array<{ email: string; name: string; position: string }>> {
+    try {
+      logger.info(`Fetching site users from PHONEBOOK for site: ${site}`);
+
+      const response = await priorityApi.get('/PHONEBOOK', {
+        params: {
+          $filter: `CUSTNAME eq '${site}'`,
+          $select: 'EMAIL,NAME,POSITIONCODE,CUSTNAME',
+          $orderby: 'NAME',
+        },
+        timeout: 30000,
+      });
+
+      if (!response.data.value || response.data.value.length === 0) {
+        logger.info(`No users found in PHONEBOOK for site: ${site}`);
+        return [];
+      }
+
+      // Map Priority position codes to readable positions
+      const positionMap: { [key: string]: string } = {
+        '1': 'physician',
+        '2': 'nurse',
+        '3': 'physicist',
+        '10': 'technician',
+        '99': 'admin',
+      };
+
+      const users = response.data.value
+        .filter((user: any) => user.EMAIL) // Only users with email addresses
+        .map((user: any) => ({
+          email: user.EMAIL,
+          name: user.NAME || user.EMAIL,
+          position: positionMap[user.POSITIONCODE] || 'staff',
+        }));
+
+      logger.info(`Found ${users.length} users for site ${site}`);
+      return users;
+
+    } catch (error: any) {
+      logger.error(`Error fetching site users from PHONEBOOK: ${error}`);
+
+      // Log more detailed error information
+      if (error.response) {
+        logger.error(`Priority API error response:`, {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+        });
+      }
+
+      // Return empty array on error - don't throw
+      return [];
     }
   },
 };

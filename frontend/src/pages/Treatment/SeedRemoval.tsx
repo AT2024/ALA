@@ -61,7 +61,6 @@ const SeedRemoval = () => {
 
     try {
       const data = await treatmentService.getApplicators(currentTreatment.id);
-      console.log('Fetched applicators:', data);
 
       // Update the context with the fetched applicators
       if (data && data.length > 0) {

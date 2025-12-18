@@ -11,6 +11,11 @@ import {
   exportTreatment,
   debugTreatment,
   getRemovalCandidates,
+  initializeFinalization,
+  getSiteUsersForFinalization,
+  sendFinalizationCode,
+  verifyAndFinalize,
+  autoFinalize,
 } from '../controllers/treatmentController';
 import { updateApplicator } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
@@ -41,6 +46,13 @@ router.post('/:id/complete', validateUUID('id'), criticalOperationHealthCheck, c
 router.patch('/:id/status', validateUUID('id'), criticalOperationHealthCheck, updateTreatmentStatus);
 router.get('/:id/export', validateUUID('id'), databaseHealthCheck, exportTreatment);
 router.get('/:id/debug', validateUUID('id'), databaseHealthCheck, debugTreatment);
+
+// Treatment finalization routes (PDF generation and digital signature)
+router.post('/:id/finalize/initiate', validateUUID('id'), databaseHealthCheck, initializeFinalization);
+router.get('/:id/finalize/site-users', validateUUID('id'), databaseHealthCheck, getSiteUsersForFinalization);
+router.post('/:id/finalize/send-code', validateUUID('id'), criticalOperationHealthCheck, sendFinalizationCode);
+router.post('/:id/finalize/verify', validateUUID('id'), criticalOperationHealthCheck, verifyAndFinalize);
+router.post('/:id/finalize/auto', validateUUID('id'), criticalOperationHealthCheck, autoFinalize);
 
 // Treatment applicator routes
 router.route('/:id/applicators')

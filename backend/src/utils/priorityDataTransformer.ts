@@ -12,6 +12,7 @@ export interface PriorityApplicatorData {
   seedQuantity?: number;
   insertedSeedsQty?: number;
   comments?: string;
+  applicatorType?: string; // From Priority PARTS.PARTDES
   // Add other fields that might come from Priority
   [key: string]: any;
 }
@@ -23,6 +24,7 @@ export interface TransformedApplicatorData {
   seedQuantity: number;
   insertedSeedsQty: number;
   comments?: string;
+  applicatorType?: string; // From Priority PARTS.PARTDES
   // Add fields that might be missing from Priority but required by our DB
   imagePath?: string;
   isRemoved?: boolean;
@@ -192,6 +194,11 @@ export const transformPriorityApplicatorData = (
     // Transform comments
     if (rawData.comments) {
       transformedData.comments = String(rawData.comments).trim();
+    }
+
+    // Transform applicator type (from Priority PARTS.PARTDES)
+    if (rawData.applicatorType) {
+      transformedData.applicatorType = String(rawData.applicatorType).trim();
     }
 
     // Add default values for fields that might be missing from Priority

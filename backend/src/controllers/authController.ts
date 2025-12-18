@@ -5,6 +5,7 @@ import { User } from '../models';
 import logger from '../utils/logger';
 import priorityService from '../services/priorityService';
 import { shouldEnforceHttps } from '../config/https';
+import { sendVerificationCode } from '../services/emailService';
 
 // Lazy getter for JWT secret with runtime validation
 function getJwtSecret(): string {
@@ -74,18 +75,20 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
 
     // If not found locally, create user from Priority data
     if (!user) {
+      // Use Number() for positionCode comparisons to handle both string and number types
+      const positionCode = Number(priorityUserAccess.user?.positionCode);
       const userData = {
         name: priorityUserAccess.user?.email || 'User',
         email: isEmail ? identifier : null,
         phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
         role:
-          priorityUserAccess.user?.positionCode === 99
+          positionCode === 99
             ? 'admin'
             : ('hospital' as 'admin' | 'hospital'),
         metadata: {
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: priorityUserAccess.user?.positionCode === 99 
-            ? 'ALL_SITES' 
+          custName: positionCode === 99
+            ? 'ALL_SITES'
             : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
           sites: priorityUserAccess.sites || [],
           fullAccess: priorityUserAccess.fullAccess || false,
@@ -96,11 +99,13 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
       logger.info(`Created new user from Priority data: ${user.id}`);
     } else {
       // Update user metadata with latest from Priority
+      // Use Number() for positionCode comparisons to handle both string and number types
+      const positionCode = Number(priorityUserAccess.user?.positionCode);
       user.metadata = {
         ...user.metadata,
         positionCode: priorityUserAccess.user?.positionCode,
-        custName: priorityUserAccess.user?.positionCode === 99 
-          ? 'ALL_SITES' 
+        custName: positionCode === 99
+          ? 'ALL_SITES'
           : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
         sites: priorityUserAccess.sites || [],
         fullAccess: priorityUserAccess.fullAccess || false,
@@ -112,9 +117,22 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
     // Generate verification code
     const verificationCode = await user.generateVerificationCode();
 
-    // In a real app, send the code via SMS or email
-    // For demo purposes, we'll just log it
+    // Log the code (for development debugging)
     logger.info(`Verification code for ${identifier}: ${verificationCode}`);
+
+    // Send verification code via email if it's an email identifier
+    // For phone numbers, SMS would be needed (not implemented)
+    if (isEmail) {
+      try {
+        await sendVerificationCode(identifier, verificationCode);
+        logger.info(`Verification email sent to ${identifier}`);
+      } catch (emailError: any) {
+        // Log error but don't fail the request - user can still use the logged code
+        // In production, the email service will send actual emails
+        // In development, the code is just logged
+        logger.warn(`Failed to send verification email: ${emailError.message}`);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -202,7 +220,7 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
       positionCode: user.metadata?.positionCode?.toString() || '',
       custName: user.metadata?.custName || '',
       sites: user.metadata?.sites || [],
-      fullAccess: user.metadata?.positionCode === 99
+      fullAccess: Number(user.metadata?.positionCode) === 99
     },
     token,
   });
@@ -241,18 +259,20 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
       }
 
       // If found in Priority but not locally, create a new user
+      // Use Number() for positionCode comparisons to handle both string and number types
+      const positionCode = Number(priorityUserAccess.user?.positionCode);
       const userData = {
         name: priorityUserAccess.user?.email || 'User',
         email: isEmail ? identifier : null,
         phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
         role:
-          priorityUserAccess.user?.positionCode === 99
+          positionCode === 99
             ? 'admin'
             : ('hospital' as 'admin' | 'hospital'),
         metadata: {
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: priorityUserAccess.user?.positionCode === 99 
-            ? 'ALL_SITES' 
+          custName: positionCode === 99
+            ? 'ALL_SITES'
             : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
           sites: priorityUserAccess.sites || [],
           fullAccess: priorityUserAccess.fullAccess || false,
@@ -266,9 +286,18 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
     // Generate verification code
     const verificationCode = await user.generateVerificationCode();
 
-    // In a real app, send the code via SMS or email
-    // For demo purposes, we'll just log it
+    // Log the code (for development debugging)
     logger.info(`Resent verification code for ${identifier}: ${verificationCode}`);
+
+    // Send verification code via email if it's an email identifier
+    if (isEmail) {
+      try {
+        await sendVerificationCode(identifier, verificationCode);
+        logger.info(`Resent verification email to ${identifier}`);
+      } catch (emailError: any) {
+        logger.warn(`Failed to resend verification email: ${emailError.message}`);
+      }
+    }
 
     res.status(200).json({
       success: true,

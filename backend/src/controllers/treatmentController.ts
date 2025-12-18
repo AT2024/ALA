@@ -4,9 +4,11 @@ import treatmentService from '../services/treatmentService';
 import applicatorService from '../services/applicatorService';
 import priorityService from '../services/priorityService';
 import sequelize from '../config/database';
-import { Treatment } from '../models';
+import { Treatment, TreatmentPdf, SignatureVerification } from '../models';
 import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger';
+import { generateTreatmentPdf, calculateSummary } from '../services/pdfGenerationService';
+import { sendSignedPdf, sendVerificationCode, getPdfRecipientEmail } from '../services/emailService';
 
 // @desc    Get all treatments with optional filtering
 // @route   GET /api/treatments
@@ -127,7 +129,7 @@ export const completeTreatment = asyncHandler(async (req: Request, res: Response
 
           if (statusResult.success) {
             updatedOrders.push(orderId);
-            logger.info(`✅ Successfully updated Priority order ${orderId}`);
+            logger.info(`Successfully updated Priority order ${orderId}`);
           } else {
             failedOrders.push(orderId);
             logger.warn(`Failed to update Priority order ${orderId}: ${statusResult.message}`);
@@ -240,12 +242,9 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
 
   // For combined treatments (pancreas), fetch applicators from Priority API for ALL orders
   if (orderIds.length > 1) {
-    logger.info(`🔗 Combined treatment detected - fetching applicators from ${orderIds.length} Priority orders`);
-
     try {
       const allApplicators = [];
       for (const orderId of orderIds) {
-        logger.info(`Fetching applicators from Priority order: ${orderId}`);
         const orderApplicators = await priorityService.getOrderSubform(
           orderId,
           req.user.email,
@@ -253,15 +252,12 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
         );
 
         if (orderApplicators && orderApplicators.length > 0) {
-          logger.info(`Found ${orderApplicators.length} applicators in order ${orderId}`);
           allApplicators.push(...orderApplicators);
-        } else {
-          logger.info(`No applicators found in order ${orderId}`);
         }
       }
 
       if (allApplicators.length > 0) {
-        logger.info(`✅ Total applicators from combined treatment: ${allApplicators.length}`);
+        logger.info(`Total applicators from combined treatment: ${allApplicators.length}`);
 
         // Transform Priority data to match our applicator format
         const formattedApplicators = allApplicators.map((app: any) => ({
@@ -285,8 +281,6 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
 
         res.status(200).json(formattedApplicators);
         return;
-      } else {
-        logger.warn(`⚠️  No applicators found in any of the ${orderIds.length} Priority orders`);
       }
     } catch (error) {
       logger.error(`Error fetching applicators for combined treatment: ${error}`);
@@ -658,16 +652,12 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
 
   // Check for test user FIRST (existing pattern from priorityService)
   if (req.user?.email === 'test@example.com') {
-    logger.info(`🧪 TEST MODE: Getting removal candidates for test user at site ${site}`);
-
     try {
       // Reuse existing method that already handles test data properly
       const orders = await priorityService.getOrdersForSiteWithFilter(
         site as string,
         req.user.email
       );
-
-      logger.info(`🧪 Retrieved ${orders.length} orders from test data for site ${site}`);
 
       // Filter for removal-ready orders matching test data statuses
       const removalCandidates = orders.filter((order: any) => {
@@ -684,10 +674,6 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
           order.ORDSTATUSDES === 'Waiting for removal' ||
           order.ORDSTATUSDES === 'Performed';
 
-        if (isRemovalReady) {
-          logger.info(`🧪 Found removal candidate: ${order.ORDNAME} - ${order.ORDSTATUSDES}`);
-        }
-
         return isRemovalReady;
       });
 
@@ -701,19 +687,15 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
             return baseOrderName === treatmentNumber;
           });
           if (!candidate) {
-            // This shouldn't happen due to filtering, but safety check
-            logger.info(`🧪 Treatment ${treatmentNumber} not found in removal candidates`);
             res.status(404).json({
               isEligible: false,
               reason: `Treatment ${treatmentNumber} not found or not eligible for removal`
             });
             return;
           }
-          logger.info(`🧪 Found exact match for treatment: ${treatmentNumber} (matched ${candidate.ORDNAME})`);
         } else {
           // No specific treatment requested, return first available
           candidate = removalCandidates[0];
-          logger.info(`🧪 No specific treatment requested, returning first available: ${candidate.ORDNAME}`);
         }
         const treatmentDate = new Date(candidate.SIBD_TREATDAY || candidate.CURDATE);
         const daysSinceInsertion = Math.floor(
@@ -735,12 +717,10 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
           site: candidate.CUSTNAME
         };
 
-        logger.info(`🧪 Returning test removal candidate: ${candidate.ORDNAME}`);
         res.json(candidateResponse);
         return;
       } else {
         if (treatmentNumber) {
-          logger.info(`🧪 Treatment ${treatmentNumber} not found at site ${site}`);
           res.status(404).json({
             success: false,
             message: `Treatment ${treatmentNumber} not found at site ${site}`,
@@ -748,7 +728,6 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
             site
           });
         } else {
-          logger.info(`🧪 No test removal candidates found for site ${site}`);
           res.status(404).json({
             isEligible: false,
             reason: 'No removal candidates found in test data'
@@ -757,7 +736,7 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
         return;
       }
     } catch (error: any) {
-      logger.error(`🧪 Error getting test removal candidates: ${error.message}`);
+      logger.error(`Error getting test removal candidates: ${error.message}`);
       res.status(500).json({
         isEligible: false,
         reason: 'Error retrieving test removal candidates'
@@ -870,6 +849,494 @@ export const exportTreatment = asyncHandler(async (req: Request, res: Response) 
   }
 });
 
+// ========== FINALIZATION ENDPOINTS ==========
+
+// @desc    Initiate finalization - determine user flow (hospital_auto vs alphatau_verification)
+// @route   POST /api/treatments/:id/finalize/initiate
+// @access  Private
+export const initializeFinalization = asyncHandler(async (req: Request, res: Response) => {
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+
+  // Check if user has access to this treatment
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to finalize this treatment');
+  }
+
+  // Check if treatment is already finalized (has a PDF)
+  const existingPdf = await TreatmentPdf.findOne({ where: { treatmentId: treatment.id } });
+  if (existingPdf) {
+    res.status(400).json({
+      success: false,
+      error: 'Treatment has already been finalized',
+      existingSignature: {
+        signerName: existingPdf.signerName,
+        signedAt: existingPdf.signedAt,
+        signatureType: existingPdf.signatureType
+      }
+    });
+    return;
+  }
+
+  // Determine user flow based on position code
+  // Use Number() to handle both string and number types from JSON storage
+  const positionCode = req.user.metadata?.positionCode;
+  const isAlphaTau = Number(positionCode) === 99;
+
+  logger.info(`Finalization initiated for treatment ${treatment.id}`, {
+    userId: req.user.id,
+    positionCode,
+    flow: isAlphaTau ? 'alphatau_verification' : 'hospital_auto'
+  });
+
+  if (isAlphaTau) {
+    // Alpha Tau users need to select someone to sign
+    res.status(200).json({
+      success: true,
+      flow: 'alphatau_verification',
+      requiresEmailSelection: true,
+      treatmentId: treatment.id,
+      treatmentSite: treatment.site
+    });
+  } else {
+    // Hospital users can auto-sign with their login credentials
+    res.status(200).json({
+      success: true,
+      flow: 'hospital_auto',
+      signerName: req.user.name,
+      signerEmail: req.user.email,
+      signerPosition: req.user.metadata?.positionCode?.toString() || 'hospital_staff',
+      treatmentId: treatment.id
+    });
+  }
+});
+
+// @desc    Get site users for email selection (Position 99 only)
+// @route   GET /api/treatments/:id/finalize/site-users
+// @access  Private (Position 99 only)
+export const getSiteUsersForFinalization = asyncHandler(async (req: Request, res: Response) => {
+  // Only Position 99 users can access this
+  // Use Number() to handle both string and number types from JSON storage
+  const positionCode = req.user.metadata?.positionCode;
+  if (Number(positionCode) !== 99) {
+    res.status(403);
+    throw new Error('Only Alpha Tau administrators can access site users');
+  }
+
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+
+  logger.info(`Getting site users for finalization`, {
+    treatmentId: treatment.id,
+    site: treatment.site,
+    userId: req.user.id
+  });
+
+  try {
+    // Get users from Priority PHONEBOOK for this site
+    const siteUsers = await priorityService.getSiteUsers(treatment.site);
+
+    // Filter and format users for the dropdown
+    const formattedUsers = siteUsers.map((user: any) => ({
+      email: user.EMAIL || user.email,
+      name: user.NAME || user.name || user.EMAIL || user.email,
+      position: user.POSITIONDES || user.positionDes || 'Staff'
+    })).filter((user: any) => user.email); // Only include users with email
+
+    res.status(200).json({
+      success: true,
+      users: formattedUsers,
+      site: treatment.site
+    });
+  } catch (error: any) {
+    logger.error(`Error getting site users for finalization: ${error.message}`);
+    res.status(500);
+    throw new Error('Failed to retrieve site users');
+  }
+});
+
+// @desc    Send verification code to target email (Position 99 only)
+// @route   POST /api/treatments/:id/finalize/send-code
+// @access  Private (Position 99 only)
+export const sendFinalizationCode = asyncHandler(async (req: Request, res: Response) => {
+  const { targetEmail } = req.body;
+
+  // Only Position 99 users can send codes
+  // Use Number() to handle both string and number types from JSON storage
+  const positionCode = req.user.metadata?.positionCode;
+  if (Number(positionCode) !== 99) {
+    res.status(403);
+    throw new Error('Only Alpha Tau administrators can send verification codes');
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!targetEmail || !emailRegex.test(targetEmail)) {
+    res.status(400);
+    throw new Error('Valid email address is required');
+  }
+
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+
+  logger.info(`Sending finalization code`, {
+    treatmentId: treatment.id,
+    targetEmail,
+    requestedBy: req.user.id
+  });
+
+  // Check for existing pending verification
+  const existingVerification = await SignatureVerification.findOne({
+    where: {
+      treatmentId: treatment.id,
+      status: 'pending'
+    }
+  });
+
+  if (existingVerification && existingVerification.isStillValid()) {
+    // Update existing verification with new code
+    const newCode = await existingVerification.generateCode();
+    existingVerification.targetEmail = targetEmail;
+    await existingVerification.save();
+
+    // Send the code via email
+    try {
+      await sendVerificationCode(targetEmail, newCode);
+    } catch (emailError: any) {
+      logger.warn(`Failed to send verification email: ${emailError.message}`);
+      // Continue anyway - code is logged in dev mode
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent',
+      verificationId: existingVerification.id,
+      expiresIn: 3600 // 1 hour in seconds
+    });
+    return;
+  }
+
+  // Create new verification record
+  const verification = await SignatureVerification.create({
+    treatmentId: treatment.id,
+    targetEmail,
+    verificationCode: 'placeholder', // Will be replaced by generateCode
+    verificationExpires: new Date(), // Will be replaced by generateCode
+    status: 'pending'
+  });
+
+  // Generate and send the actual code
+  const code = await verification.generateCode();
+
+  try {
+    await sendVerificationCode(targetEmail, code);
+    logger.info(`Verification code sent to ${targetEmail} for treatment ${treatment.id}`);
+  } catch (emailError: any) {
+    logger.warn(`Failed to send verification email: ${emailError.message}`);
+    // Continue anyway - code is logged in dev mode
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Verification code sent',
+    verificationId: verification.id,
+    expiresIn: 3600 // 1 hour in seconds
+  });
+});
+
+// @desc    Verify code and finalize treatment (Position 99 flow)
+// @route   POST /api/treatments/:id/finalize/verify
+// @access  Private (Position 99 only)
+export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response) => {
+  const { code, signerName, signerPosition } = req.body;
+
+  // Only Position 99 users can verify
+  // Use Number() to handle both string and number types from JSON storage
+  const positionCode = req.user.metadata?.positionCode;
+  if (Number(positionCode) !== 99) {
+    res.status(403);
+    throw new Error('Only Alpha Tau administrators can verify signatures');
+  }
+
+  // Validate required fields
+  if (!code || !signerName || !signerPosition) {
+    res.status(400);
+    throw new Error('Code, signer name, and position are required');
+  }
+
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+
+  // Find pending verification for this treatment
+  const verification = await SignatureVerification.findOne({
+    where: {
+      treatmentId: treatment.id,
+      status: 'pending'
+    },
+    order: [['createdAt', 'DESC']]
+  });
+
+  if (!verification) {
+    res.status(404);
+    throw new Error('No pending verification found. Please request a new code.');
+  }
+
+  // Verify the code
+  const isValid = await verification.verifyCode(code);
+
+  if (!isValid) {
+    const remainingAttempts = verification.getRemainingAttempts();
+
+    if (verification.status === 'expired') {
+      res.status(401).json({
+        success: false,
+        error: 'Verification code has expired. Please request a new code.',
+        attemptsRemaining: 0
+      });
+      return;
+    }
+
+    if (verification.status === 'failed') {
+      res.status(401).json({
+        success: false,
+        error: 'Too many failed attempts. Please request a new code.',
+        attemptsRemaining: 0
+      });
+      return;
+    }
+
+    res.status(401).json({
+      success: false,
+      error: 'Invalid verification code',
+      attemptsRemaining: remainingAttempts
+    });
+    return;
+  }
+
+  // Update verification with signer details
+  verification.signerName = signerName;
+  verification.signerPosition = signerPosition;
+  await verification.save();
+
+  logger.info(`Verification successful for treatment ${treatment.id}`, {
+    signerName,
+    signerPosition,
+    targetEmail: verification.targetEmail
+  });
+
+  // Get applicators for the treatment
+  const applicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+
+  // Generate PDF with signature
+  const signatureDetails = {
+    type: 'alphatau_verified' as const,
+    signerName,
+    signerEmail: verification.targetEmail,
+    signerPosition,
+    signedAt: new Date()
+  };
+
+  const pdfBuffer = await generateTreatmentPdf(
+    {
+      id: treatment.id,
+      type: treatment.type,
+      subjectId: treatment.subjectId,
+      site: treatment.site,
+      date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
+      surgeon: treatment.surgeon,
+      activityPerSeed: treatment.activityPerSeed,
+      patientName: treatment.patientName
+    },
+    applicators.map((app: any) => ({
+      id: app.id,
+      serialNumber: app.serialNumber,
+      applicatorType: app.applicatorType,
+      seedQuantity: app.seedQuantity,
+      usageType: app.usageType,
+      insertionTime: app.insertionTime,
+      insertedSeedsQty: app.insertedSeedsQty,
+      comments: app.comments
+    })),
+    signatureDetails
+  );
+
+  // Store PDF in database
+  const treatmentPdf = await TreatmentPdf.create({
+    treatmentId: treatment.id,
+    pdfData: pdfBuffer,
+    pdfSizeBytes: pdfBuffer.length,
+    signatureType: 'alphatau_verified',
+    signerName,
+    signerEmail: verification.targetEmail,
+    signerPosition,
+    signedAt: new Date(),
+    emailStatus: 'pending'
+  });
+
+  // Send PDF to clinic email
+  const recipientEmail = getPdfRecipientEmail();
+  try {
+    await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
+    treatmentPdf.emailSentAt = new Date();
+    treatmentPdf.emailSentTo = recipientEmail;
+    treatmentPdf.emailStatus = 'sent';
+    await treatmentPdf.save();
+    logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
+  } catch (emailError: any) {
+    logger.error(`Failed to send PDF email: ${emailError.message}`);
+    treatmentPdf.emailStatus = 'failed';
+    await treatmentPdf.save();
+    // Don't fail the whole operation - PDF is stored
+  }
+
+  // Mark treatment as complete
+  await treatmentService.completeTreatment(treatment.id, req.user.id);
+
+  res.status(200).json({
+    success: true,
+    message: 'Treatment finalized successfully',
+    pdfId: treatmentPdf.id,
+    signatureDetails: {
+      signerName,
+      signerPosition,
+      signedAt: treatmentPdf.signedAt,
+      type: 'alphatau_verified'
+    },
+    emailStatus: treatmentPdf.emailStatus
+  });
+});
+
+// @desc    Auto-finalize treatment (Hospital user flow)
+// @route   POST /api/treatments/:id/finalize/auto
+// @access  Private (Non-Position 99 users)
+export const autoFinalize = asyncHandler(async (req: Request, res: Response) => {
+  // Only non-Position 99 users can auto-finalize
+  // Use Number() to handle both string and number types from JSON storage
+  const positionCode = req.user.metadata?.positionCode;
+  if (Number(positionCode) === 99) {
+    res.status(403);
+    throw new Error('Alpha Tau administrators must use verification flow');
+  }
+
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+
+  // Check if user has access to this treatment
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to finalize this treatment');
+  }
+
+  // Check if treatment is already finalized
+  const existingPdf = await TreatmentPdf.findOne({ where: { treatmentId: treatment.id } });
+  if (existingPdf) {
+    res.status(400).json({
+      success: false,
+      error: 'Treatment has already been finalized',
+      existingSignature: {
+        signerName: existingPdf.signerName,
+        signedAt: existingPdf.signedAt,
+        signatureType: existingPdf.signatureType
+      }
+    });
+    return;
+  }
+
+  // Extract optional signer details from request body (from hospital confirmation modal)
+  const { signerName: requestSignerName, signerPosition: requestSignerPosition } = req.body;
+
+  // Use provided values or fall back to user data
+  const signerName = requestSignerName?.trim() || req.user.name;
+  const signerPosition = requestSignerPosition || positionCode?.toString() || 'hospital_staff';
+
+  logger.info(`Auto-finalizing treatment ${treatment.id}`, {
+    userId: req.user.id,
+    userName: req.user.name,
+    userEmail: req.user.email,
+    providedSignerName: requestSignerName,
+    providedSignerPosition: requestSignerPosition,
+    effectiveSignerName: signerName,
+    effectiveSignerPosition: signerPosition
+  });
+
+  // Get applicators for the treatment
+  const applicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+
+  // Generate PDF with auto-signature
+  const signatureDetails = {
+    type: 'hospital_auto' as const,
+    signerName,
+    signerEmail: req.user.email,
+    signerPosition,
+    signedAt: new Date()
+  };
+
+  const pdfBuffer = await generateTreatmentPdf(
+    {
+      id: treatment.id,
+      type: treatment.type,
+      subjectId: treatment.subjectId,
+      site: treatment.site,
+      date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
+      surgeon: treatment.surgeon,
+      activityPerSeed: treatment.activityPerSeed,
+      patientName: treatment.patientName
+    },
+    applicators.map((app: any) => ({
+      id: app.id,
+      serialNumber: app.serialNumber,
+      applicatorType: app.applicatorType,
+      seedQuantity: app.seedQuantity,
+      usageType: app.usageType,
+      insertionTime: app.insertionTime,
+      insertedSeedsQty: app.insertedSeedsQty,
+      comments: app.comments
+    })),
+    signatureDetails
+  );
+
+  // Store PDF in database
+  const treatmentPdf = await TreatmentPdf.create({
+    treatmentId: treatment.id,
+    pdfData: pdfBuffer,
+    pdfSizeBytes: pdfBuffer.length,
+    signatureType: 'hospital_auto',
+    signerName,
+    signerEmail: req.user.email,
+    signerPosition,
+    signedAt: new Date(),
+    emailStatus: 'pending'
+  });
+
+  // Send PDF to clinic email
+  const recipientEmail = getPdfRecipientEmail();
+  try {
+    await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
+    treatmentPdf.emailSentAt = new Date();
+    treatmentPdf.emailSentTo = recipientEmail;
+    treatmentPdf.emailStatus = 'sent';
+    await treatmentPdf.save();
+    logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
+  } catch (emailError: any) {
+    logger.error(`Failed to send PDF email: ${emailError.message}`);
+    treatmentPdf.emailStatus = 'failed';
+    await treatmentPdf.save();
+    // Don't fail the whole operation - PDF is stored
+  }
+
+  // Mark treatment as complete
+  await treatmentService.completeTreatment(treatment.id, req.user.id);
+
+  res.status(200).json({
+    success: true,
+    message: 'Treatment finalized successfully',
+    pdfId: treatmentPdf.id,
+    signatureDetails: {
+      signerName: req.user.name,
+      signerPosition,
+      signedAt: treatmentPdf.signedAt,
+      type: 'hospital_auto'
+    },
+    emailStatus: treatmentPdf.emailStatus
+  });
+});
+
 // Default export for test compatibility
 export default {
   getTreatments,
@@ -882,5 +1349,10 @@ export default {
   addApplicator,
   debugTreatment,
   getRemovalCandidates,
-  exportTreatment
+  exportTreatment,
+  initializeFinalization,
+  getSiteUsersForFinalization,
+  sendFinalizationCode,
+  verifyAndFinalize,
+  autoFinalize
 };

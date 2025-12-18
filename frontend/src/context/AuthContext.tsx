@@ -54,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('token');
             try {
               priorityService.clearCache();
-              console.log('Cleared Priority cache due to invalid token');
             } catch (error) {
               console.warn('Error clearing Priority cache on invalid token:', error);
             }
@@ -89,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store Priority user data if provided (for session persistence)
       if (result.userData) {
         sessionStorage.setItem('priorityUserData', JSON.stringify(result.userData));
-        console.log('Priority user data stored:', result.userData);
       }
       
       return { 
@@ -119,14 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const result = await authService.verifyCode(identifier, code);
       
-      // Log successful authentication
-      console.log('Authentication successful for user:', {
-        email: result.user.email,
-        role: result.user.role,
-        positionCode: result.user.positionCode,
-        sites: result.user.sites?.length || 0
-      });
-      
       setUser(result.user);
       
       // Store auth data in localStorage for persistence
@@ -148,7 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    console.log('User logging out - clearing all data');
     setUser(null);
     setLoginIdentifier('');
     
@@ -161,7 +150,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear Priority service cache to prevent data leakage between users
     try {
       priorityService.clearCache();
-      console.log('Priority cache cleared successfully');
     } catch (error) {
       console.warn('Error clearing Priority cache:', error);
     }

@@ -38,8 +38,13 @@ let testSequelize: Sequelize;
 
 // Setup test database before all tests
 beforeAll(async () => {
-  // Create in-memory SQLite database for tests
-  testSequelize = new Sequelize('sqlite::memory:', {
+  // Connect to PostgreSQL test database
+  testSequelize = new Sequelize({
+    dialect: 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'medical_app_test',
+    username: process.env.DB_USER || 'test_user',
+    password: process.env.DB_PASS || 'test_password',
     logging: false, // Disable SQL logging in tests
   });
 

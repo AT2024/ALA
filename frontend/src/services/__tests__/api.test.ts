@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
-import api from '../api';
+import api from '@/services/api';
 
 // Mock axios
 vi.mock('axios');
@@ -42,10 +42,10 @@ describe('API Service', () => {
   });
 
   describe('Configuration', () => {
-    it('should create axios instance with correct baseURL', () => {
+    it('should create axios instance with correct baseURL', async () => {
       // Re-import to trigger axios.create
       vi.resetModules();
-      require('../api');
+      await import('@/services/api');
 
       expect(axios.create).toHaveBeenCalledWith(
         expect.objectContaining({

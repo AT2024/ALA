@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Add debug logging
-const API_DEBUG = true;
+// Debug logging (disabled for production)
+const API_DEBUG = false;
 
 // Dynamic URL generation based on HTTPS configuration
 const getBaseURL = (): string => {

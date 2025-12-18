@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { TreatmentProvider, useTreatment } from '../TreatmentContext';
 import { ReactNode } from 'react';
 
-// Wrapper component for testing
+// Wrapper component for testing - includes BrowserRouter for useLocation() hook
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <TreatmentProvider>{children}</TreatmentProvider>
+  <BrowserRouter>
+    <TreatmentProvider>{children}</TreatmentProvider>
+  </BrowserRouter>
 );
 
 describe('TreatmentContext - 9-State Workflow Helpers', () => {

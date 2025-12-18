@@ -191,5 +191,72 @@ export const treatmentService = {
       responseType: 'blob'
     });
     return response.data;
+  },
+
+  // ===== Treatment Finalization Methods =====
+
+  // Initialize finalization - determines user flow (hospital_auto vs alphatau_verification)
+  async initializeFinalization(treatmentId: string): Promise<{
+    flow: 'hospital_auto' | 'alphatau_verification';
+    signerName?: string;
+    signerEmail?: string;
+    signerPosition?: string;
+    requiresEmailSelection?: boolean;
+  }> {
+    const response = await api.post(`/treatments/${treatmentId}/finalize/initiate`);
+    return response.data;
+  },
+
+  // Get site users for finalization (Position 99 users only)
+  async getSiteUsersForFinalization(treatmentId: string): Promise<{
+    users: Array<{ email: string; name: string; position: string }>;
+  }> {
+    const response = await api.get(`/treatments/${treatmentId}/finalize/site-users`);
+    return response.data;
+  },
+
+  // Send verification code to target email (Position 99 flow)
+  async sendFinalizationCode(treatmentId: string, targetEmail: string): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
+    const response = await api.post(`/treatments/${treatmentId}/finalize/send-code`, {
+      targetEmail
+    });
+    return response.data;
+  },
+
+  // Verify code and finalize treatment with signature (Position 99 flow)
+  async verifyAndFinalize(
+    treatmentId: string,
+    code: string,
+    signerName: string,
+    signerPosition: string
+  ): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
+    const response = await api.post(`/treatments/${treatmentId}/finalize/verify`, {
+      code,
+      signerName,
+      signerPosition
+    });
+    return response.data;
+  },
+
+  // Auto-finalize for hospital users (non-Position 99)
+  async autoFinalize(
+    treatmentId: string,
+    signerName?: string,
+    signerPosition?: string
+  ): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
+    const response = await api.post(`/treatments/${treatmentId}/finalize/auto`, {
+      signerName,
+      signerPosition
+    });
+    return response.data;
   }
 };

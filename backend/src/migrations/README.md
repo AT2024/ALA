@@ -74,3 +74,4 @@ If a migration needs to be rolled back:
 
 - `20251111000000-add-patient-name.sql` - Add patient_name column to treatments table
 - `20251119000000-add-applicator-status-fields.sql` - Add status and package_label columns for 9-state workflow
+- `20251214000000-add-treatment-pdf-tables.sql` - Add treatment_pdfs and signature_verifications tables for digital signature workflow

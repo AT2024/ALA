@@ -2,6 +2,8 @@ import User from './User';
 import Treatment from './Treatment';
 import Applicator from './Applicator';
 import ApplicatorAuditLog from './ApplicatorAuditLog';
+import TreatmentPdf from './TreatmentPdf';
+import SignatureVerification from './SignatureVerification';
 
 // Define model associations
 User.hasMany(Treatment, {
@@ -52,4 +54,26 @@ ApplicatorAuditLog.belongsTo(Applicator, {
   as: 'applicator',
 });
 
-export { User, Treatment, Applicator, ApplicatorAuditLog };
+// TreatmentPdf associations (one PDF per treatment)
+Treatment.hasOne(TreatmentPdf, {
+  foreignKey: 'treatmentId',
+  as: 'pdf',
+  onDelete: 'CASCADE',
+});
+TreatmentPdf.belongsTo(Treatment, {
+  foreignKey: 'treatmentId',
+  as: 'treatment',
+});
+
+// SignatureVerification associations (can have multiple verification attempts per treatment)
+Treatment.hasMany(SignatureVerification, {
+  foreignKey: 'treatmentId',
+  as: 'signatureVerifications',
+  onDelete: 'CASCADE',
+});
+SignatureVerification.belongsTo(Treatment, {
+  foreignKey: 'treatmentId',
+  as: 'treatment',
+});
+
+export { User, Treatment, Applicator, ApplicatorAuditLog, TreatmentPdf, SignatureVerification };

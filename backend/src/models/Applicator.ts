@@ -39,10 +39,12 @@ interface ApplicatorAttributes {
   attachmentFileCount: number;
   attachmentSizeBytes: number;
   attachmentSyncStatus: 'pending' | 'syncing' | 'synced' | 'failed' | null;
+  // Applicator type from Priority PARTS.PARTDES
+  applicatorType: string | null;
 }
 
 // For creating a new applicator
-interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus'> {}
+interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType'> {}
 
 class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttributes> implements ApplicatorAttributes {
   public id!: string;
@@ -66,6 +68,8 @@ class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttribute
   public attachmentFileCount!: number;
   public attachmentSizeBytes!: number;
   public attachmentSyncStatus!: 'pending' | 'syncing' | 'synced' | 'failed' | null;
+  // Applicator type from Priority PARTS.PARTDES
+  public applicatorType!: string | null;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -192,6 +196,12 @@ Applicator.init(
       type: DataTypes.STRING(50),
       allowNull: true,
       field: 'attachment_sync_status',
+    },
+    // Applicator type from Priority PARTS.PARTDES
+    applicatorType: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'applicator_type',
     },
   },
   {

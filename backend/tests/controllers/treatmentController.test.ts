@@ -51,8 +51,7 @@ app.get('/api/treatments', treatmentController.getTreatments);
 app.get('/api/treatments/:id', treatmentController.getTreatmentById);
 app.post('/api/treatments', treatmentController.createTreatment);
 app.put('/api/treatments/:id', treatmentController.updateTreatment);
-app.delete('/api/treatments/:id', treatmentController.deleteTreatment);
-app.post('/api/treatments/:id/applicators', treatmentController.addApplicatorToTreatment);
+app.post('/api/treatments/:id/applicators', treatmentController.addApplicator);
 app.get('/api/treatments/:id/applicators', treatmentController.getTreatmentApplicators);
 app.put('/api/treatments/:id/complete', treatmentController.completeTreatment);
 
@@ -570,43 +569,6 @@ describe('Treatment Controller', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain('type');
-    });
-  });
-
-  describe('DELETE /api/treatments/:id', () => {
-    test('should delete treatment successfully', async () => {
-      const { Treatment } = require('../../src/models');
-
-      const treatmentToDelete = {
-        ...mockTreatmentData,
-        destroy: jest.fn<Promise<boolean>, []>().mockResolvedValue(true)
-      };
-
-      Treatment.findByPk.mockResolvedValue(treatmentToDelete);
-
-      const response = await request(app)
-        .delete(`/api/treatments/${mockTreatmentData.id}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Treatment deleted successfully');
-      expect(treatmentToDelete.destroy).toHaveBeenCalled();
-    });
-
-    test('should prevent deleting completed treatment', async () => {
-      const { Treatment } = require('../../src/models');
-
-      const completedTreatment = {
-        ...mockTreatmentData,
-        isComplete: true
-      };
-
-      Treatment.findByPk.mockResolvedValue(completedTreatment);
-
-      const response = await request(app)
-        .delete(`/api/treatments/${mockTreatmentData.id}`);
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toContain('completed');
     });
   });
 

@@ -37,8 +37,10 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
   // Helper methods
   public async generateVerificationCode(): Promise<string> {
-    // Always use "123456" as the verification code as requested
-    const verificationCode = "123456"; // Fixed code for all environments
+    // Generate random 6-digit verification code
+    // In production, this will be sent via email
+    // In development, the code is logged to console
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
     // Hash the verification code
     const hashedCode = await bcrypt.hash(verificationCode, 10);
@@ -56,6 +58,21 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   }
 
   public async verifyCode(code: string): Promise<boolean> {
+    // Check for test user bypass - allow "123456" for bypass emails
+    const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS;
+    if (bypassEmails && this.email) {
+      const bypassList = bypassEmails.split(',').map(e => e.trim().toLowerCase());
+      if (bypassList.includes(this.email.toLowerCase()) && code === '123456') {
+        // Clear any pending verification and update login time
+        this.verificationCode = null;
+        this.verificationExpires = null;
+        this.failedAttempts = 0;
+        this.lastLogin = new Date();
+        await this.save();
+        return true;
+      }
+    }
+
     // Check if verification code exists and is not expired
     if (!this.verificationCode || !this.verificationExpires) {
       return false;

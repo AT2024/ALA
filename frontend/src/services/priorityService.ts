@@ -13,7 +13,6 @@ const clearAllCache = () => {
   Object.values(CACHE_KEYS).forEach(key => {
     localStorage.removeItem(key);
   });
-  console.log('Cleared all Priority data cache');
 };
 
 // Helper function to get cache with expiration check
@@ -27,7 +26,6 @@ const getCachedData = (key: string, maxAgeMs: number = 5 * 60 * 1000): any | nul
     
     if (age > maxAgeMs) {
       localStorage.removeItem(key);
-      console.log(`Cache expired for ${key} (age: ${age}ms)`);
       return null;
     }
     
@@ -81,26 +79,22 @@ export const priorityService = {
     date?: string;
   }): Promise<Treatment[]> {
     try {
-      console.log('Fetching treatments with params:', params);
-      
       // Use our backend as a proxy to Priority
       const response = await api.get('/proxy/priority/treatments', { params });
 
       // Cache treatments with timestamp for offline use (5 minute expiration)
       setCachedData(CACHE_KEYS.TREATMENTS, response.data);
-      console.log(`Cached ${response.data.length} treatments`);
 
       return response.data;
     } catch (error) {
       console.error('Error fetching from Priority:', error);
-      
+
       // Try to get from cache if available and not expired
       const cachedData = getCachedData(CACHE_KEYS.TREATMENTS);
       if (cachedData) {
-        console.log(`Using cached treatments (${cachedData.length} items)`);
         return cachedData;
       }
-      
+
       throw error;
     }
   },
@@ -130,56 +124,27 @@ export const priorityService = {
   // Get orders for a specific site and date (for treatment selection)
   async getOrdersForSiteAndDate(site: string, date: string, procedureType?: string): Promise<any> {
     const cacheKey = `${CACHE_KEYS.ORDERS}_${site}_${date}_${procedureType || 'all'}`;
-    
+
     try {
-      console.log(`Fetching orders for site: ${site}, date: ${date}, type: ${procedureType || 'all'}`);
-      
-      // DEBUG: Log the exact API call details
-      console.log('=== API CALL DEBUG ===');
-      console.log('API Base URL:', api.defaults.baseURL);
-      console.log('Request Path:', '/proxy/priority/orders');
-      console.log('Full URL will be:', `${api.defaults.baseURL}/proxy/priority/orders`);
-      console.log('Request Data:', { site, date, procedureType });
-      
       const response = await api.post('/proxy/priority/orders', {
         site,
         date,
         procedureType
       });
-      
-      console.log('✅ API call successful, response received');
-      
+
       // Cache the response with a shorter expiration (2 minutes for order data)
       setCachedData(cacheKey, response.data);
-      console.log(`Cached orders for ${site} on ${date}:`, response.data.count || 0, 'orders');
-      
+
       return response.data;
     } catch (error: any) {
-      console.error('❌ API call failed');
       console.error(`Error fetching orders for ${site} on ${date}:`, error.message);
-      
-      // DEBUG: Log detailed error information
-      if (error.response) {
-        console.error('Response Error Details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          url: error.response.config?.url,
-          fullURL: `${error.response.config?.baseURL}${error.response.config?.url}`,
-          data: error.response.data
-        });
-      } else if (error.request) {
-        console.error('Request Error - No Response:', error.request);
-      } else {
-        console.error('Setup Error:', error.message);
-      }
-      
+
       // Try cached data as fallback (2 minute expiration)
       const cachedData = getCachedData(cacheKey, 2 * 60 * 1000);
       if (cachedData) {
-        console.log(`Using cached orders for ${site} on ${date}`);
         return cachedData;
       }
-      
+
       throw error;
     }
   },

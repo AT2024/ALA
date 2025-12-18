@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
-import { PDFService } from '@/services/pdfService';
+import { treatmentService } from '@/services/treatmentService';
 import PackageManager from '@/components/PackageManager';
+import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
+import SignatureModal from '@/components/Dialogs/SignatureModal';
 
 // Get status color classes based on status for table rows
 const getStatusColor = (status: string | undefined | null): string => {
@@ -67,6 +69,17 @@ const UseList = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Finalization flow state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [finalizationFlowType, setFinalizationFlowType] = useState<'hospital_auto' | 'alphatau_verification'>('alphatau_verification');
+  const [finalizationUserData, setFinalizationUserData] = useState<{
+    name: string;
+    email: string;
+    position?: string;
+    site?: string;
+  } | undefined>(undefined);
+
   // Calculate treatment summary data using processed applicators
   const treatmentSummary = {
     timeInsertionStarted: processedApplicators.length > 0 
@@ -111,72 +124,73 @@ const UseList = () => {
     navigate('/treatment/scan');
   };
 
-  const handleDownloadPDF = () => {
-    if (!currentTreatment || processedApplicators.length === 0) {
-      setError('No treatment data available to generate PDF');
-      return;
-    }
-
-    try {
-      // Calculate total activity for PDF
-      const activityPerSeed = currentTreatment?.activityPerSeed || 0;
-      const summaryWithActivity = {
-        ...treatmentSummary,
-        totalActivity: treatmentSummary.totalDartSeedsInserted * activityPerSeed
-      };
-
-      // Generate and download PDF
-      PDFService.generateTreatmentReport(
-        currentTreatment,
-        processedApplicators,
-        summaryWithActivity
-      );
-
-      setSuccess('PDF downloaded successfully!');
-    } catch (error: any) {
-      console.error('Error generating files:', error);
-      setError('Failed to generate PDF. Please try again.');
-    }
-  };
-
-  const handleFinalize = async () => {
+  // Start finalization process - shows confirmation dialog
+  const handleFinalizeClick = () => {
     if (processedApplicators.length === 0) {
       setError('Please process at least one applicator before finalizing');
       return;
     }
+    setShowConfirmDialog(true);
+  };
 
+  // User confirmed finalization - determine flow based on user type
+  const handleConfirmFinalize = async () => {
+    setShowConfirmDialog(false);
     setLoading(true);
     setError(null);
 
     try {
-      // TODO: Update ORDSTATUSDES= "Performed" FROM ORDERS WHERE Details=Patient ID
-      // This would be implemented with the Priority system integration
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setSuccess('Process completed successfully!');
-
-      // Clear sessionStorage after successful finalization
-      try {
-        sessionStorage.removeItem('currentTreatment');
-        sessionStorage.removeItem('processedApplicators');
-        sessionStorage.removeItem('availableApplicators');
-        sessionStorage.removeItem('individualSeedsRemoved');
-      } catch (storageError) {
-        console.error('Failed to clear sessionStorage:', storageError);
+      if (!currentTreatment) {
+        throw new Error('No treatment selected');
       }
 
-      // Navigate back to procedure selection after a brief delay
-      setTimeout(() => {
-        navigate('/procedure-type');
-      }, 2000);
+      // Determine the finalization flow based on user's position code
+      const response = await treatmentService.initializeFinalization(currentTreatment.id);
 
+      // Store the flow type and user data for the modal
+      setFinalizationFlowType(response.flow);
+      setFinalizationUserData({
+        name: response.signerName || '',
+        email: response.signerEmail || '',
+        position: response.signerPosition,
+        site: currentTreatment.site
+      });
+
+      // Show signature modal for both flows (hospital sees simplified confirmation, Alpha Tau sees full verification)
+      setShowSignatureModal(true);
+      setLoading(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to finalize treatment');
-    } finally {
+      console.error('Finalization initialization failed:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to start finalization');
       setLoading(false);
     }
+  };
+
+  // Called when finalization is successful (either auto or via signature modal)
+  const handleFinalizationSuccess = () => {
+    setLoading(false);
+    setSuccess('Treatment finalized successfully! PDF report has been generated and sent.');
+
+    // Clear sessionStorage after successful finalization
+    try {
+      sessionStorage.removeItem('currentTreatment');
+      sessionStorage.removeItem('processedApplicators');
+      sessionStorage.removeItem('availableApplicators');
+      sessionStorage.removeItem('individualSeedsRemoved');
+    } catch (storageError) {
+      console.error('Failed to clear sessionStorage:', storageError);
+    }
+
+    // Navigate back to procedure selection after a brief delay
+    setTimeout(() => {
+      navigate('/procedure-type');
+    }, 2500);
+  };
+
+  // Handle signature modal success callback
+  const handleSignatureSuccess = () => {
+    setShowSignatureModal(false);
+    handleFinalizationSuccess();
   };
   if (!currentTreatment) {
     return (
@@ -433,20 +447,44 @@ const UseList = () => {
             Back to Treatment
           </button>
           <button
-            onClick={handleDownloadPDF}
-            disabled={processedApplicators.length === 0}
-            className="flex-1 rounded-md border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 shadow-sm hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            Download PDF
-          </button>
-          <button
-            onClick={handleFinalize}
+            onClick={handleFinalizeClick}
             disabled={loading || processedApplicators.length === 0}
             className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
           >
-            {loading ? 'Processing...' : 'Finalize'}
+            {loading ? 'Processing...' : 'Finalize Treatment'}
           </button>
         </div>
+
+        {/* Confirmation Dialog */}
+        <ConfirmationDialog
+          isOpen={showConfirmDialog}
+          onClose={() => setShowConfirmDialog(false)}
+          onConfirm={handleConfirmFinalize}
+          title="Finalize Treatment"
+          message={`Are you sure you want to finalize this treatment?\n\nThis will:\n• Generate a signed PDF report\n• Send the report to the clinic\n• Mark the treatment as complete\n\nThis action cannot be undone.`}
+          confirmText="Yes, Finalize"
+          cancelText="Cancel"
+          type="warning"
+          loading={loading}
+        />
+
+        {/* Signature Modal - shows different UI based on user type */}
+        {/* Hospital users see simplified confirmation modal */}
+        {/* Position 99 (Alpha Tau) users see full 3-step verification flow */}
+        {currentTreatment && (
+          <SignatureModal
+            isOpen={showSignatureModal}
+            onClose={() => {
+              setShowSignatureModal(false);
+              setLoading(false);
+            }}
+            treatmentId={currentTreatment.id}
+            treatmentSite={currentTreatment.site}
+            onSuccess={handleSignatureSuccess}
+            flowType={finalizationFlowType}
+            userData={finalizationUserData}
+          />
+        )}
 
         {/* Information Panel */}
         <div className="rounded-lg border bg-gray-50 p-4">
@@ -459,7 +497,7 @@ const UseList = () => {
             <li>• Row colors indicate status: Red (OPENED), Yellow (LOADED), Green (INSERTED), Black (Terminal states)</li>
             <li>• Use 'Edit' to modify processed applicator details</li>
             <li>• Use 'Back to Treatment' to scan and process another applicator</li>
-            <li>• Use 'Finalize' to complete the treatment</li>
+            <li>• Use 'Finalize Treatment' to generate a signed PDF report and complete the treatment</li>
             <li>• Total Activity = Total Seeds × Activity Per Seed</li>
           </ul>
         </div>
