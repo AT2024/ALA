@@ -2,6 +2,7 @@ import { useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import api from '@/services/api';
+import type { ApplicatorStatus } from '@/utils/applicatorStatus';
 
 interface Applicator {
   id: string;
@@ -21,7 +22,7 @@ interface Applicator {
   attachmentFileCount?: number;
   attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
   attachmentFilename?: string;
-  status?: 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | 'UNACCOUNTED';
+  status?: ApplicatorStatus;
   package_label?: string;
 }
 

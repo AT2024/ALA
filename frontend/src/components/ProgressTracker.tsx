@@ -90,7 +90,7 @@ const ProgressTracker = () => {
           </div>
         )}
 
-        {/* Status Distribution - Uses 9-state workflow status labels */}
+        {/* Status Distribution - Uses 8-state workflow status labels */}
         {progressStats.usedApplicators > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-700">Status Distribution</h4>

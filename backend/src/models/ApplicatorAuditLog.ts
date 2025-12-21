@@ -1,6 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
-import { ApplicatorStatus } from './Applicator';
+import { ApplicatorStatus, ALL_STATUSES } from '@shared/applicatorStatuses';
 
 // ApplicatorAuditLog attributes interface
 interface ApplicatorAuditLogAttributes {
@@ -62,7 +62,7 @@ ApplicatorAuditLog.init(
       allowNull: false,
       field: 'new_status',
       validate: {
-        isIn: [['SEALED', 'OPENED', 'LOADED', 'INSERTED', 'FAULTY', 'DISPOSED', 'DISCHARGED', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED']],
+        isIn: [ALL_STATUSES],
       },
     },
     changedBy: {

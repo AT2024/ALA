@@ -1,4 +1,4 @@
-// Applicator Service 9-State Workflow Test Suite
+// Applicator Service 8-State Workflow Test Suite
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import { applicatorService } from '../../src/services/applicatorService';
 import { Applicator, Treatment } from '../../src/models';
@@ -31,7 +31,7 @@ jest.mock('../../src/utils/logger', () => ({
   }
 }));
 
-describe('Applicator Service - 9-State Workflow', () => {
+describe('Applicator Service - 8-State Workflow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -63,11 +63,6 @@ describe('Applicator Service - 9-State Workflow', () => {
 
     test('should map DISCHARGED status to none usage type', () => {
       const result = applicatorService.mapStatusToUsageType('DISCHARGED');
-      expect(result).toBe('none');
-    });
-
-    test('should map UNACCOUNTED status to none usage type', () => {
-      const result = applicatorService.mapStatusToUsageType('UNACCOUNTED');
       expect(result).toBe('none');
     });
 
@@ -109,16 +104,11 @@ describe('Applicator Service - 9-State Workflow', () => {
       expect(result.valid).toBe(true);
     });
 
-    test('should allow transition from SEALED to UNACCOUNTED', () => {
-      const result = applicatorService.validateStatusTransition('SEALED', 'UNACCOUNTED');
-      expect(result.valid).toBe(true);
-    });
-
     test('should reject transition from SEALED to INSERTED', () => {
       const result = applicatorService.validateStatusTransition('SEALED', 'INSERTED');
       expect(result.valid).toBe(false);
       expect(result.error).toContain('Invalid transition from SEALED to INSERTED');
-      expect(result.error).toContain('Allowed: OPENED, FAULTY, UNACCOUNTED');
+      expect(result.error).toContain('Allowed: OPENED, FAULTY');
     });
 
     test('should allow transition from OPENED to LOADED', () => {
@@ -133,11 +123,6 @@ describe('Applicator Service - 9-State Workflow', () => {
 
     test('should allow transition from OPENED to DISPOSED', () => {
       const result = applicatorService.validateStatusTransition('OPENED', 'DISPOSED');
-      expect(result.valid).toBe(true);
-    });
-
-    test('should allow transition from OPENED to UNACCOUNTED', () => {
-      const result = applicatorService.validateStatusTransition('OPENED', 'UNACCOUNTED');
       expect(result.valid).toBe(true);
     });
 
@@ -159,11 +144,6 @@ describe('Applicator Service - 9-State Workflow', () => {
 
     test('should allow transition from LOADED to DEPLOYMENT_FAILURE', () => {
       const result = applicatorService.validateStatusTransition('LOADED', 'DEPLOYMENT_FAILURE');
-      expect(result.valid).toBe(true);
-    });
-
-    test('should allow transition from LOADED to UNACCOUNTED', () => {
-      const result = applicatorService.validateStatusTransition('LOADED', 'UNACCOUNTED');
       expect(result.valid).toBe(true);
     });
 
@@ -219,12 +199,6 @@ describe('Applicator Service - 9-State Workflow', () => {
       const result = applicatorService.validateStatusTransition('DISCHARGED', 'SEALED');
       expect(result.valid).toBe(false);
       expect(result.error).toContain('Cannot transition from terminal state DISCHARGED');
-    });
-
-    test('should reject transition from terminal state UNACCOUNTED', () => {
-      const result = applicatorService.validateStatusTransition('UNACCOUNTED', 'OPENED');
-      expect(result.valid).toBe(false);
-      expect(result.error).toContain('Cannot transition from terminal state UNACCOUNTED');
     });
 
     test('should allow any initial status when current status is null', () => {

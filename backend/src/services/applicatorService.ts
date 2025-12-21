@@ -9,7 +9,13 @@ import {
   transformToPriorityFormat,
   PriorityApplicatorData
 } from '../utils/priorityDataTransformer';
-import { ApplicatorStatus } from '../models/Applicator';
+import {
+  ApplicatorStatus,
+  GENERIC_TRANSITIONS,
+  PANC_PROS_TRANSITIONS,
+  SKIN_TRANSITIONS,
+  ALL_STATUSES
+} from '@shared/applicatorStatuses';
 
 export interface ApplicatorValidationResult {
   isValid: boolean;
@@ -536,12 +542,12 @@ export const applicatorService = {
 
   /**
    * Map internal applicator status to Priority ERP usageType
-   * Implements 9-state workflow mapping to Priority values
+   * Implements 8-state workflow mapping to Priority values
    *
    * Status mappings:
    * - INSERTED → 'full' (applicator successfully used)
    * - FAULTY, DEPLOYMENT_FAILURE → 'faulty' (applicator has issues)
-   * - DISPOSED, DISCHARGED, UNACCOUNTED → 'none' (applicator not used)
+   * - DISPOSED, DISCHARGED → 'none' (applicator not used)
    * - SEALED, OPENED, LOADED → null (intermediate states, don't sync yet)
    *
    * @param status - Internal applicator status
@@ -550,6 +556,12 @@ export const applicatorService = {
   mapStatusToUsageType(status: string | null): 'full' | 'faulty' | 'none' | null {
     if (!status) {
       return null; // No status = backward compatibility mode
+    }
+
+    // Defensive validation: warn if invalid status is passed
+    if (!ALL_STATUSES.includes(status as ApplicatorStatus)) {
+      logger.warn(`mapStatusToUsageType called with invalid status: ${status}`);
+      return null;
     }
 
     const statusMapping: Record<string, 'full' | 'faulty' | 'none' | null> = {
@@ -563,7 +575,6 @@ export const applicatorService = {
       // Terminal states - not used
       'DISPOSED': 'none',
       'DISCHARGED': 'none',
-      'UNACCOUNTED': 'none',
 
       // Intermediate states - don't sync to Priority yet
       'SEALED': null,
@@ -575,46 +586,59 @@ export const applicatorService = {
   },
 
   /**
+   * Get the appropriate transition map based on treatment type
+   * @param treatmentType - Treatment type string (e.g., 'pancreas_insertion', 'skin_insertion')
+   * @returns The transition map for the treatment type
+   */
+  getTransitionsForTreatment(treatmentType?: string): Record<ApplicatorStatus, ApplicatorStatus[]> {
+    if (!treatmentType) {
+      return GENERIC_TRANSITIONS;
+    }
+
+    const lowerType = treatmentType.toLowerCase();
+
+    // Skin treatments use simplified 2-stage workflow
+    if (lowerType.includes('skin')) {
+      return SKIN_TRANSITIONS;
+    }
+
+    // Pancreas and prostate treatments use 3-stage workflow
+    if (lowerType.includes('pancreas') || lowerType.includes('prostate')) {
+      return PANC_PROS_TRANSITIONS;
+    }
+
+    // Default to generic transitions for unknown treatment types
+    return GENERIC_TRANSITIONS;
+  },
+
+  /**
    * Validate status transition for applicator state machine
-   * Implements 9-state workflow with strict transition rules
-   *
-   * Allowed transitions:
-   * - SEALED → [OPENED, FAULTY, UNACCOUNTED]
-   * - OPENED → [LOADED, FAULTY, DISPOSED, UNACCOUNTED]
-   * - LOADED → [INSERTED, FAULTY, DEPLOYMENT_FAILURE, UNACCOUNTED]
-   * - INSERTED → [DISCHARGED, DISPOSED] (can only dispose after insertion)
-   * - FAULTY → [DISPOSED, DISCHARGED]
-   * - DEPLOYMENT_FAILURE → [DISPOSED, FAULTY]
-   * - Terminal states (DISPOSED, DISCHARGED, UNACCOUNTED) → [] (no transitions allowed)
+   * Implements 8-state workflow with strict transition rules
+   * Uses treatment-specific transitions from @shared/applicatorStatuses:
+   * - PANC_PROS_TRANSITIONS for pancreas/prostate workflow (3-stage)
+   * - SKIN_TRANSITIONS for skin workflow (2-stage)
+   * - GENERIC_TRANSITIONS for fallback/unknown treatment types
    *
    * @param currentStatus - Current applicator status
    * @param newStatus - Requested new status
+   * @param treatmentType - Optional treatment type for treatment-specific validation
    * @returns Validation result with error message if invalid
    */
   validateStatusTransition(
     currentStatus: string | null,
-    newStatus: string
+    newStatus: string,
+    treatmentType?: string
   ): { valid: boolean; error?: string } {
     // If no current status, any initial status is allowed (backward compatibility)
     if (!currentStatus) {
       return { valid: true };
     }
 
-    // Define allowed transitions for each state
-    const allowedTransitions: Record<string, string[]> = {
-      'SEALED': ['OPENED', 'FAULTY', 'UNACCOUNTED'],
-      'OPENED': ['LOADED', 'FAULTY', 'DISPOSED', 'UNACCOUNTED'],
-      'LOADED': ['INSERTED', 'FAULTY', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED'],
-      'INSERTED': ['DISCHARGED', 'DISPOSED'],
-      'FAULTY': ['DISPOSED', 'DISCHARGED'],
-      'DEPLOYMENT_FAILURE': ['DISPOSED', 'FAULTY'],
-      'DISPOSED': [], // Terminal state
-      'DISCHARGED': [], // Terminal state
-      'UNACCOUNTED': [], // Terminal state
-    };
+    // Get treatment-specific transition rules
+    const transitions = this.getTransitionsForTreatment(treatmentType);
 
     // Check if current status is valid
-    if (!allowedTransitions[currentStatus]) {
+    if (!transitions[currentStatus as ApplicatorStatus]) {
       return {
         valid: false,
         error: `Invalid current status: ${currentStatus}`
@@ -622,7 +646,7 @@ export const applicatorService = {
     }
 
     // Check if transition is allowed
-    const allowedNextStates = allowedTransitions[currentStatus];
+    const allowedNextStates = transitions[currentStatus as ApplicatorStatus];
 
     if (allowedNextStates.length === 0) {
       return {
@@ -631,7 +655,7 @@ export const applicatorService = {
       };
     }
 
-    if (!allowedNextStates.includes(newStatus)) {
+    if (!allowedNextStates.includes(newStatus as ApplicatorStatus)) {
       return {
         valid: false,
         error: `Invalid transition from ${currentStatus} to ${newStatus}. Allowed: ${allowedNextStates.join(', ')}`
@@ -1084,9 +1108,9 @@ export const applicatorService = {
       }
 
       // Validation 5: All applicators must be in ready status
-      // LOADED is part of the 9-state workflow (not yet fully implemented)
+      // LOADED is part of the 8-state workflow (not yet fully implemented)
       // For now, we accept OPENED or null (backward compatibility)
-      // When 9-state workflow is fully implemented, this should check for 'LOADED' specifically
+      // When 8-state workflow is fully implemented, this should check for 'LOADED' specifically
       const acceptableStatuses = ['OPENED', null]; // null = status not set (backward compatibility)
       const notReadyApplicator = applicators.find(app => !acceptableStatuses.includes(app.status));
       if (notReadyApplicator) {

@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { TERMINAL_STATUSES, ApplicatorStatus } from '@/utils/applicatorStatus';
 
 interface Treatment {
   id: string;
@@ -36,8 +37,8 @@ interface Applicator {
   attachmentFileCount?: number;
   attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
   attachmentFilename?: string;
-  // 9-state workflow field (replaces usageType)
-  status?: 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | 'UNACCOUNTED';
+  // 8-state workflow field (replaces usageType) - uses shared ApplicatorStatus type
+  status?: ApplicatorStatus;
   // Package label for pancreas/prostate treatments
   package_label?: string;
 }
@@ -249,7 +250,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     // Always add to processed applicators list for history tracking
     setProcessedApplicators((prev) => {
       const existingIndex = prev.findIndex(app => app.serialNumber === applicator.serialNumber);
-      
+
       if (existingIndex !== -1) {
         // Update existing applicator instead of adding duplicate
         const updated = [...prev];
@@ -260,21 +261,30 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         return [...prev, applicator];
       }
     });
-    
-    // Handle available applicators based on usage type
-    if (applicator.usageType === 'none') {
-      // For "No Use": Keep in available list but mark as returned from no use
+
+    // Handle available applicators based on STATUS field (8-state workflow)
+    // In-progress statuses (SEALED, OPENED, LOADED) should STAY in available list
+    // Terminal statuses (INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) should be REMOVED
+    const effectiveStatus = applicator.status ||
+      (applicator.usageType === 'full' ? 'INSERTED' :
+       applicator.usageType === 'faulty' ? 'FAULTY' :
+       applicator.usageType === 'none' ? 'SEALED' : null);
+
+    const isTerminal = effectiveStatus && TERMINAL_STATUSES.includes(effectiveStatus as ApplicatorStatus);
+
+    if (isTerminal) {
+      // Terminal status: Remove from available list
       setAvailableApplicators((prev) =>
-        prev.map(app => 
-          app.serialNumber === applicator.serialNumber 
-            ? { ...app, returnedFromNoUse: true }
-            : app
-        )
+        prev.filter(app => app.serialNumber !== applicator.serialNumber)
       );
     } else {
-      // For "Full use" and "Faulty": Remove from available list
-      setAvailableApplicators((prev) => 
-        prev.filter(app => app.serialNumber !== applicator.serialNumber)
+      // In-progress status (SEALED, OPENED, LOADED): Keep in available list, update status
+      setAvailableApplicators((prev) =>
+        prev.map(app =>
+          app.serialNumber === applicator.serialNumber
+            ? { ...app, status: applicator.status, returnedFromNoUse: applicator.usageType === 'none' }
+            : app
+        )
       );
     }
   };
@@ -314,15 +324,14 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   // Centralized filtering function - single source of truth
-  // Uses status field (9-state workflow) instead of usageType (3-state legacy)
+  // Uses status field (8-state workflow) instead of usageType (3-state legacy)
+  // Terminal statuses are imported from @shared/applicatorStatuses
   const getFilteredAvailableApplicators = (): Applicator[] => {
     if (!currentTreatment) return [];
 
-    // Terminal statuses - applicators with these statuses should be REMOVED from "Choose from List"
-    const TERMINAL_STATUSES = ['INSERTED', 'FAULTY', 'DISPOSED', 'DISCHARGED', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED'];
-
     // Get serial numbers of applicators that have reached a terminal state
     // In-progress statuses (SEALED, OPENED, LOADED) STAY in the list so user can continue working
+    // Terminal statuses (INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) are REMOVED
     const terminalApplicatorSerialNumbers = new Set(
       processedApplicators
         .filter(app => {
@@ -331,7 +340,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
             (app.usageType === 'full' ? 'INSERTED' :
              app.usageType === 'faulty' ? 'FAULTY' :
              null);
-          return effectiveStatus && TERMINAL_STATUSES.includes(effectiveStatus);
+          return effectiveStatus && TERMINAL_STATUSES.includes(effectiveStatus as ApplicatorStatus);
         })
         .map(app => app.serialNumber)
     );
@@ -520,7 +529,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      // Determine effective status (new 9-state or backward compatible)
+      // Determine effective status (new 8-state or backward compatible)
       const status = app.status || (app.usageType === 'full' ? 'INSERTED' :
                                      app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
 

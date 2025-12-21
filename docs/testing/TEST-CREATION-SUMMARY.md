@@ -11,7 +11,7 @@ Comprehensive test suite created for the 9-state applicator workflow and packagi
 
 **Test Suites** (57 tests total):
 - `mapStatusToUsageType` (11 tests)
-  - All 9 status mappings (SEALED, OPENED, LOADED, INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE, UNACCOUNTED)
+  - All 9 status mappings (SEALED, OPENED, LOADED, INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)
   - Intermediate vs terminal state handling
   - Backward compatibility with null status
 
@@ -118,7 +118,6 @@ Comprehensive test suite created for the 9-state applicator workflow and packagi
   - Faulty applicator workflow
   - Disposal workflow
   - Deployment failure workflow
-  - Unaccounted workflow
 
 - Package Creation for Pancreas Treatment (6 tests)
   - Create package with 4 loaded applicators

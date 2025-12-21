@@ -1,92 +1,78 @@
 /**
  * Applicator status transition rules and utilities
- * Mirrors backend validation logic from applicatorService.ts
+ *
+ * This file re-exports shared constants and adds frontend-specific utilities.
+ * All status definitions come from @shared/applicatorStatuses (single source of truth).
  */
 
-export type ApplicatorStatus =
-  | 'SEALED'
-  | 'OPENED'
-  | 'LOADED'
-  | 'INSERTED'
-  | 'FAULTY'
-  | 'DISPOSED'
-  | 'DISCHARGED'
-  | 'DEPLOYMENT_FAILURE'
-  | 'UNACCOUNTED';
+import type { ApplicatorStatus } from '@shared/applicatorStatuses';
+import {
+  // Constants
+  APPLICATOR_STATUSES,
+  ALL_STATUSES,
+  TERMINAL_STATUSES,
+  IN_PROGRESS_STATUSES,
+  COMMENT_REQUIRED_STATUSES,
+  // Transitions
+  PANC_PROS_TRANSITIONS,
+  SKIN_TRANSITIONS,
+  GENERIC_TRANSITIONS,
+  // Labels and colors
+  STATUS_LABELS,
+  STATUS_COLORS,
+  LIST_ITEM_COLORS,
+  STATUS_EMOJIS,
+  // Helper functions
+  isTerminalStatus,
+  isInProgressStatus,
+  requiresComment,
+  getStatusLabel,
+  getStatusEmoji,
+  getStatusColors,
+  getListItemColor,
+} from '@shared/applicatorStatuses';
 
-/**
- * Valid status transitions - EXACT copy from backend
- * Source: backend/src/services/applicatorService.ts lines 602-612
- */
-const ALLOWED_TRANSITIONS: Record<ApplicatorStatus, ApplicatorStatus[]> = {
-  'SEALED': ['OPENED', 'FAULTY', 'UNACCOUNTED'],
-  'OPENED': ['LOADED', 'FAULTY', 'DISPOSED', 'UNACCOUNTED'],
-  'LOADED': ['INSERTED', 'FAULTY', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED'],
-  'INSERTED': ['DISCHARGED', 'DISPOSED'],
-  'FAULTY': ['DISPOSED', 'DISCHARGED'],
-  'DEPLOYMENT_FAILURE': ['DISPOSED', 'FAULTY'],
-  'DISPOSED': [],
-  'DISCHARGED': [],
-  'UNACCOUNTED': [],
+// Re-export type separately (required with isolatedModules)
+export type { ApplicatorStatus };
+
+// Re-export constants and functions from shared module for convenience
+export {
+  // Constants
+  APPLICATOR_STATUSES,
+  ALL_STATUSES,
+  TERMINAL_STATUSES,
+  IN_PROGRESS_STATUSES,
+  COMMENT_REQUIRED_STATUSES,
+  // Transitions
+  PANC_PROS_TRANSITIONS,
+  SKIN_TRANSITIONS,
+  GENERIC_TRANSITIONS,
+  // Labels and colors
+  STATUS_LABELS,
+  STATUS_COLORS,
+  LIST_ITEM_COLORS,
+  STATUS_EMOJIS,
+  // Helper functions
+  isTerminalStatus,
+  isInProgressStatus,
+  requiresComment,
+  getStatusLabel,
+  getStatusEmoji,
+  getStatusColors,
+  getListItemColor,
 };
 
 /**
- * Pancreas/Prostate 3-step workflow transitions
- * Step 1: SEALED → OPENED
- * Step 2: OPENED → {LOADED, FAULTY, DISPOSED}
- * Step 3: LOADED → {INSERTED, DISCHARGED, DEPLOYMENT_FAILURE, UNACCOUNTED}
+ * Finished states representing completed applicators (terminal statuses)
+ * These are removed from "Choose from List" and shown in "Use List Table"
  */
-const PANCREAS_PROSTATE_TRANSITIONS: Record<ApplicatorStatus, ApplicatorStatus[]> = {
-  'SEALED': ['OPENED'],
-  'OPENED': ['LOADED', 'FAULTY', 'DISPOSED'],
-  'LOADED': ['INSERTED', 'DISCHARGED', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED'],
-  'INSERTED': [],
-  'FAULTY': [],
-  'DISPOSED': [],
-  'DISCHARGED': [],
-  'DEPLOYMENT_FAILURE': [],
-  'UNACCOUNTED': [],
-};
+export const FINISHED_STATUSES: ApplicatorStatus[] = TERMINAL_STATUSES;
 
 /**
- * Skin workflow transitions
- * SEALED → {INSERTED, OPENED, FAULTY}
+ * States that should be REMOVED from "Choose from List"
+ * Same as TERMINAL_STATUSES - these represent completed or dead-end applicators
  */
-const SKIN_TRANSITIONS: Record<ApplicatorStatus, ApplicatorStatus[]> = {
-  'SEALED': ['INSERTED', 'OPENED', 'FAULTY'],
-  'OPENED': ['INSERTED', 'FAULTY'],
-  'LOADED': [],
-  'INSERTED': [],
-  'FAULTY': [],
-  'DISPOSED': [],
-  'DISCHARGED': [],
-  'DEPLOYMENT_FAILURE': [],
-  'UNACCOUNTED': [],
-};
-
-/**
- * Terminal states that cannot transition to any other status
- * Used for validation purposes (these statuses have no allowed next transitions)
- */
-const TERMINAL_STATUSES: ApplicatorStatus[] = [
-  'DISPOSED',
-  'DISCHARGED',
-  'UNACCOUNTED'
-];
-
-/**
- * Finished states representing completed applicators
- * INSERTED and FAULTY are kept visible for documentation and PDF generation
- * Only truly terminal/failed states are hidden from the work list
- */
-export const FINISHED_STATUSES: ApplicatorStatus[] = [
-  'INSERTED',
-  'FAULTY',
-  'DISPOSED',
-  'DISCHARGED',
-  'DEPLOYMENT_FAILURE',
-  'UNACCOUNTED'
-];
+export const LIST_REMOVAL_STATUSES: ApplicatorStatus[] = TERMINAL_STATUSES;
 
 /**
  * Treatment context for workflow detection
@@ -97,13 +83,14 @@ export interface TreatmentContext {
   priorityId?: string;     // Order ID (e.g., "PANC-HEAD-001", "PROST-LEFT-001")
   patientName?: string;    // Patient details (may contain PANC-, PROST- patterns)
   subjectId?: string;      // Patient reference (may contain patterns)
+  getApplicatorSummary?: () => { sealed: number; opened: number; loaded: number; inserted: number; total: number };
 }
 
 /**
  * Detect if treatment is pancreas or prostate based on multiple context fields
  * Checks: site name, order ID prefix, patient details patterns
  */
-const isPancreasOrProstate = (context?: TreatmentContext | string): boolean => {
+export const isPancreasOrProstate = (context?: TreatmentContext | string): boolean => {
   // Handle legacy string parameter (just site)
   if (typeof context === 'string') {
     const siteLower = context.toLowerCase();
@@ -151,7 +138,7 @@ const isPancreasOrProstate = (context?: TreatmentContext | string): boolean => {
 /**
  * Detect if treatment is skin based on multiple context fields
  */
-const isSkin = (context?: TreatmentContext | string): boolean => {
+export const isSkin = (context?: TreatmentContext | string): boolean => {
   // Handle legacy string parameter (just site)
   if (typeof context === 'string') {
     const siteLower = context.toLowerCase();
@@ -188,6 +175,21 @@ const isSkin = (context?: TreatmentContext | string): boolean => {
 };
 
 /**
+ * Get the transition map for a specific treatment type
+ */
+export const getTransitionsForTreatment = (
+  treatmentContext?: TreatmentContext | string
+): Record<ApplicatorStatus, ApplicatorStatus[]> => {
+  if (isPancreasOrProstate(treatmentContext)) {
+    return PANC_PROS_TRANSITIONS;
+  }
+  if (isSkin(treatmentContext)) {
+    return SKIN_TRANSITIONS;
+  }
+  return GENERIC_TRANSITIONS;
+};
+
+/**
  * Get allowed next statuses for the current applicator status
  * @param currentStatus - Current status of the applicator
  * @param treatmentContext - Treatment context object OR legacy site string
@@ -197,89 +199,39 @@ export const getAllowedNextStatuses = (
   currentStatus: ApplicatorStatus | null | undefined,
   treatmentContext?: TreatmentContext | string
 ): ApplicatorStatus[] => {
-  // NEW APPLICATORS: Return treatment-specific initial status
+  // Get treatment-specific transition map
+  const transitions = getTransitionsForTreatment(treatmentContext);
+
+  // NEW APPLICATORS: They are implicitly SEALED, show transitions FROM SEALED
   if (!currentStatus) {
-    // Pancreas/Prostate: MUST start with SEALED (3-step workflow)
-    if (isPancreasOrProstate(treatmentContext)) {
-      return ['SEALED'];
-    }
-
-    // Skin: Also starts with SEALED (but workflow allows direct insertion later)
-    if (isSkin(treatmentContext)) {
-      return ['SEALED'];
-    }
-
-    // Unknown treatment type: allow all statuses as safe fallback
-    return Object.keys(ALLOWED_TRANSITIONS) as ApplicatorStatus[];
+    return transitions[APPLICATOR_STATUSES.SEALED] || [];
   }
 
   // EXISTING APPLICATORS: Use treatment-specific workflow transitions
-  if (isPancreasOrProstate(treatmentContext)) {
-    return PANCREAS_PROSTATE_TRANSITIONS[currentStatus] || [];
-  }
-
-  if (isSkin(treatmentContext)) {
-    return SKIN_TRANSITIONS[currentStatus] || [];
-  }
-
-  // Fallback to generic transitions
-  return ALLOWED_TRANSITIONS[currentStatus] || [];
-};
-
-/**
- * Check if a status is terminal (cannot transition to any other status)
- * @param status - Status to check
- * @returns True if status is terminal
- */
-export const isTerminalStatus = (status: ApplicatorStatus | null | undefined): boolean => {
-  if (!status) return false;
-  return TERMINAL_STATUSES.includes(status);
+  return transitions[currentStatus] || [];
 };
 
 /**
  * Check if a status transition is valid
  * @param fromStatus - Current status
  * @param toStatus - Target status
+ * @param treatmentContext - Treatment context for workflow-specific validation
  * @returns True if transition is allowed
  */
 export const isValidTransition = (
   fromStatus: ApplicatorStatus | null | undefined,
-  toStatus: ApplicatorStatus
+  toStatus: ApplicatorStatus,
+  treatmentContext?: TreatmentContext | string
 ): boolean => {
-  // New applicators can transition to any status
-  if (!fromStatus) return true;
+  // New applicators are implicitly SEALED, validate transitions FROM SEALED
+  if (!fromStatus) {
+    const transitions = getTransitionsForTreatment(treatmentContext);
+    const allowedFromSealed = transitions[APPLICATOR_STATUSES.SEALED] || [];
+    return allowedFromSealed.includes(toStatus);
+  }
 
-  const allowedStatuses = ALLOWED_TRANSITIONS[fromStatus] || [];
+  const allowedStatuses = getAllowedNextStatuses(fromStatus, treatmentContext);
   return allowedStatuses.includes(toStatus);
-};
-
-/**
- * In-progress states that should STAY in "Choose from List"
- * User can select these applicators to continue working with them
- */
-export const IN_PROGRESS_STATUSES: ApplicatorStatus[] = ['SEALED', 'OPENED', 'LOADED'];
-
-/**
- * States that should be REMOVED from "Choose from List"
- * These represent completed or dead-end applicators
- */
-export const LIST_REMOVAL_STATUSES: ApplicatorStatus[] = [
-  'INSERTED',
-  'FAULTY',
-  'DISPOSED',
-  'DISCHARGED',
-  'DEPLOYMENT_FAILURE',
-  'UNACCOUNTED'
-];
-
-/**
- * Check if status should keep applicator in "Choose from List"
- * @param status - Applicator status
- * @returns True if applicator should remain in the active selection list
- */
-export const isInProgressStatus = (status: ApplicatorStatus | string | null | undefined): boolean => {
-  if (!status) return true; // No status = treat as SEALED (in-progress)
-  return IN_PROGRESS_STATUSES.includes(status as ApplicatorStatus);
 };
 
 /**
@@ -289,53 +241,51 @@ export const isInProgressStatus = (status: ApplicatorStatus | string | null | un
  */
 export const shouldRemoveFromList = (status: ApplicatorStatus | string | null | undefined): boolean => {
   if (!status) return false; // No status = keep in list
-  return LIST_REMOVAL_STATUSES.includes(status as ApplicatorStatus);
+  return isTerminalStatus(status);
 };
 
 /**
- * Get color classes for "Choose from List" dropdown items
- * @param status - Applicator status
- * @returns Tailwind CSS classes for background and border
+ * Get the current workflow stage for PANC/PROS treatment
+ * Stage 1: Working with SEALED applicators
+ * Stage 2: Working with OPENED applicators
+ * Stage 3: Working with LOADED applicators
  */
-export const getListItemColor = (status: ApplicatorStatus | string | null | undefined): string => {
-  switch (status) {
-    case 'SEALED': return 'bg-gray-50 border-l-4 border-l-gray-400';
-    case 'OPENED': return 'bg-red-50 border-l-4 border-l-red-500';
-    case 'LOADED': return 'bg-yellow-50 border-l-4 border-l-yellow-500';
-    default: return 'bg-gray-50 border-l-4 border-l-gray-400'; // Default to SEALED style
+export const getCurrentStage = (treatmentContext?: TreatmentContext): 1 | 2 | 3 => {
+  if (!treatmentContext?.getApplicatorSummary) {
+    return 1; // Default to stage 1
   }
+
+  const summary = treatmentContext.getApplicatorSummary();
+
+  // If there are LOADED applicators, we're in stage 3
+  if (summary.loaded > 0) return 3;
+
+  // If there are OPENED applicators, we're in stage 2
+  if (summary.opened > 0) return 2;
+
+  // Default to stage 1 (working with SEALED)
+  return 1;
 };
 
 /**
- * Get emoji icon for applicator status in list view
- * @param status - Applicator status
- * @returns Emoji representing the status
+ * Get the statuses that should be shown in "Choose from List" based on current stage
+ * For PANC/PROS: Shows only applicators matching the current workflow stage
+ * For SKIN: Shows only SEALED applicators
  */
-export const getStatusEmoji = (status: ApplicatorStatus | string | null | undefined): string => {
-  switch (status) {
-    case 'SEALED': return '📦';
-    case 'OPENED': return '📂';
-    case 'LOADED': return '🔧';
-    default: return '📦'; // Default to sealed
+export const getStageFilterStatuses = (
+  treatmentContext?: TreatmentContext | string
+): ApplicatorStatus[] => {
+  if (isSkin(treatmentContext)) {
+    // SKIN: Only show SEALED (they go directly to terminal states)
+    return [APPLICATOR_STATUSES.SEALED];
   }
-};
 
-/**
- * Get human-readable status label
- * @param status - Applicator status
- * @returns Display label for the status
- */
-export const getStatusLabel = (status: ApplicatorStatus | string | null | undefined): string => {
-  switch (status) {
-    case 'SEALED': return 'Sealed';
-    case 'OPENED': return 'Opened';
-    case 'LOADED': return 'Loaded';
-    case 'INSERTED': return 'Inserted';
-    case 'FAULTY': return 'Faulty';
-    case 'DISPOSED': return 'Disposed';
-    case 'DISCHARGED': return 'Discharged';
-    case 'DEPLOYMENT_FAILURE': return 'Deployment Failure';
-    case 'UNACCOUNTED': return 'Unaccounted';
-    default: return 'Unknown';
+  if (isPancreasOrProstate(treatmentContext)) {
+    // PANC/PROS: Show based on current stage
+    // For now, show all in-progress statuses - stage filtering happens in TreatmentContext
+    return IN_PROGRESS_STATUSES;
   }
+
+  // Default: show all in-progress statuses
+  return IN_PROGRESS_STATUSES;
 };

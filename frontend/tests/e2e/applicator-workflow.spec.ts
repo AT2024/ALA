@@ -40,7 +40,7 @@ async function scanApplicator(page: Page, serialNumber: string) {
   await page.waitForTimeout(500);
 }
 
-test.describe('9-State Applicator Workflow', () => {
+test.describe('8-State Applicator Workflow', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
   });
@@ -145,17 +145,78 @@ test.describe('9-State Applicator Workflow', () => {
     await expect(page.locator('text=DEPLOYMENT_FAILURE')).toBeVisible();
   });
 
-  test('Unaccounted workflow: Can transition from any active state', async ({ page }) => {
-    await selectInsertionTreatment(page, 'skin');
+  test('Discharged workflow: INSERTED → DISCHARGED', async ({ page }) => {
+    await selectInsertionTreatment(page, 'pancreas');
 
     await scanApplicator(page, 'APP-TEST-006');
 
-    // Mark as unaccounted from SEALED state
-    await page.click('button:has-text("Mark Unaccounted")');
-    await page.fill('textarea[name="comments"]', 'Lost during procedure');
+    // Complete full workflow to INSERTED
+    await page.click('button:has-text("Open Package")');
+    await page.click('button:has-text("Load Applicator")');
+    await page.click('button:has-text("Insert")');
+    await page.fill('input[name="insertedSeedsQty"]', '25');
     await page.click('button:has-text("Confirm")');
 
-    await expect(page.locator('text=UNACCOUNTED')).toBeVisible();
+    await expect(page.locator('text=INSERTED')).toBeVisible();
+
+    // Transition to DISCHARGED (post-insertion removal)
+    await page.click('button:has-text("Discharge")');
+    await page.fill('textarea[name="comments"]', 'Removed after procedure');
+    await page.click('button:has-text("Confirm Discharge")');
+
+    await expect(page.locator('text=DISCHARGED')).toBeVisible();
+
+    // Verify terminal state (cannot transition further)
+    const row = page.locator('tr:has-text("APP-TEST-006")');
+    await expect(row).toHaveClass(/bg-gray-900/);
+  });
+
+  test('Treatment-specific transitions: Skin workflow skips OPENED/LOADED', async ({ page }) => {
+    // Skin treatments use simplified 2-stage workflow: SEALED → INSERTED
+    await selectInsertionTreatment(page, 'skin');
+
+    await scanApplicator(page, 'APP-TEST-007');
+
+    // Skin workflow should allow direct SEALED → INSERTED (no OPENED/LOADED stages)
+    // Check that insert button is available directly
+    const insertButton = page.locator('button:has-text("Insert")');
+    await expect(insertButton).toBeEnabled();
+
+    // Complete insertion
+    await page.click('button:has-text("Insert")');
+    await page.fill('input[name="insertedSeedsQty"]', '20');
+    await page.click('button:has-text("Confirm")');
+
+    await expect(page.locator('text=INSERTED')).toBeVisible();
+  });
+
+  test('Treatment-specific transitions: Pancreas requires 3-stage workflow', async ({ page }) => {
+    // Pancreas treatments require: SEALED → OPENED → LOADED → INSERTED
+    await selectInsertionTreatment(page, 'pancreas');
+
+    await scanApplicator(page, 'APP-TEST-008');
+
+    // Verify SEALED state
+    await expect(page.locator('text=SEALED')).toBeVisible();
+
+    // Insert button should be disabled (cannot skip OPENED and LOADED)
+    const insertButton = page.locator('button:has-text("Insert")');
+    await expect(insertButton).toBeDisabled();
+
+    // Must follow proper sequence
+    await page.click('button:has-text("Open Package")');
+    await expect(page.locator('text=OPENED')).toBeVisible();
+    await expect(insertButton).toBeDisabled(); // Still disabled until LOADED
+
+    await page.click('button:has-text("Load Applicator")');
+    await expect(page.locator('text=LOADED')).toBeVisible();
+    await expect(insertButton).toBeEnabled(); // Now enabled
+
+    await page.click('button:has-text("Insert")');
+    await page.fill('input[name="insertedSeedsQty"]', '25');
+    await page.click('button:has-text("Confirm")');
+
+    await expect(page.locator('text=INSERTED')).toBeVisible();
   });
 });
 

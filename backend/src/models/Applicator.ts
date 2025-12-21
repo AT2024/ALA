@@ -1,20 +1,9 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
+import { ApplicatorStatus, ALL_STATUSES } from '@shared/applicatorStatuses';
 
-// Applicator workflow states (9-state model)
-// SEALED → OPENED → LOADED → INSERTED → [DISCHARGED | DISPOSED]
-//            ↓         ↓           ↓
-//          FAULTY  DEPLOYMENT_FAILURE  UNACCOUNTED
-export type ApplicatorStatus =
-  | 'SEALED'              // Applicator in unopened package (initial state)
-  | 'OPENED'              // Package opened, not yet loaded
-  | 'LOADED'              // Loaded into delivery device, ready for insertion
-  | 'INSERTED'            // Successfully inserted into patient (terminal success state)
-  | 'FAULTY'              // Faulty applicator (terminal state)
-  | 'DISPOSED'            // Disposed without use (terminal state)
-  | 'DISCHARGED'          // Discharged after use (terminal state)
-  | 'DEPLOYMENT_FAILURE'  // Failed deployment attempt (terminal state)
-  | 'UNACCOUNTED'         // Lost or unaccounted for (terminal state);
+// Re-export the type for use by other modules
+export type { ApplicatorStatus } from '@shared/applicatorStatuses';
 
 // Applicator attributes interface
 interface ApplicatorAttributes {
@@ -104,7 +93,7 @@ Applicator.init(
       type: DataTypes.STRING(50),
       allowNull: true, // Nullable for backward compatibility
       validate: {
-        isIn: [['SEALED', 'OPENED', 'LOADED', 'INSERTED', 'FAULTY', 'DISPOSED', 'DISCHARGED', 'DEPLOYMENT_FAILURE', 'UNACCOUNTED']],
+        isIn: [ALL_STATUSES],
       },
     },
     packageLabel: {

@@ -11,7 +11,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   </BrowserRouter>
 );
 
-describe('TreatmentContext - 9-State Workflow Helpers', () => {
+describe('TreatmentContext - 8-State Workflow Helpers', () => {
   describe('sortApplicatorsByStatus', () => {
     it('should sort active states (SEALED, OPENED, LOADED) to top', () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
@@ -226,7 +226,7 @@ describe('TreatmentContext - 9-State Workflow Helpers', () => {
       expect(sorted[2].usageType).toBe('faulty');
     });
 
-    it('should handle DEPLOYMENT_FAILURE, DISCHARGED, UNACCOUNTED as terminal states', () => {
+    it('should handle DEPLOYMENT_FAILURE and DISCHARGED as terminal states', () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       const applicators = [
@@ -250,16 +250,8 @@ describe('TreatmentContext - 9-State Workflow Helpers', () => {
           id: '3',
           serialNumber: 'APP003',
           seedQuantity: 25,
-          usageType: 'none' as const,
-          insertionTime: '2025-07-10T10:02:00Z',
-          status: 'UNACCOUNTED' as const
-        },
-        {
-          id: '4',
-          serialNumber: 'APP004',
-          seedQuantity: 25,
           usageType: 'full' as const,
-          insertionTime: '2025-07-10T10:03:00Z',
+          insertionTime: '2025-07-10T10:02:00Z',
           status: 'OPENED' as const
         }
       ];
@@ -273,7 +265,6 @@ describe('TreatmentContext - 9-State Workflow Helpers', () => {
       const terminalStatuses = sorted.slice(1).map(app => app.status);
       expect(terminalStatuses).toContain('DEPLOYMENT_FAILURE');
       expect(terminalStatuses).toContain('DISCHARGED');
-      expect(terminalStatuses).toContain('UNACCOUNTED');
     });
 
     it('should not mutate original array', () => {

@@ -10,7 +10,7 @@ import applicatorService, { ApplicatorValidationResult } from '@/services/applic
 import { priorityService } from '@/services/priorityService';
 import ProgressTracker from '@/components/ProgressTracker';
 import { generateUUID } from '@/utils/uuid';
-import { getAllowedNextStatuses, getListItemColor, getStatusEmoji, getStatusLabel, type ApplicatorStatus, type TreatmentContext } from '@/utils/applicatorStatus';
+import { getAllowedNextStatuses, getListItemColor, getStatusEmoji, getStatusLabel, requiresComment, type ApplicatorStatus, type TreatmentContext } from '@/utils/applicatorStatus';
 
 const TreatmentDocumentation = () => {
   const {
@@ -48,6 +48,9 @@ const TreatmentDocumentation = () => {
   const [aSuffixQuery, setASuffixQuery] = useState('');
   const [isReturnedFromNoUse, setIsReturnedFromNoUse] = useState(false);
   const [showFinalizeConfirmDialog, setShowFinalizeConfirmDialog] = useState(false);
+  // Track the ORIGINAL status when applicator was selected (for Bug #5 fix)
+  // This ensures all same-stage options remain visible even after selecting a terminal status
+  const [originalApplicatorStatus, setOriginalApplicatorStatus] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -55,7 +58,7 @@ const TreatmentDocumentation = () => {
     seedsQty: '',
     insertionTime: new Date().toISOString(),
     usingType: '', // Deprecated - keeping for backward compatibility
-    status: '', // New 9-state workflow field
+    status: '', // New 8-state workflow field
     insertedSeedsQty: '',
     comments: ''
   });
@@ -75,14 +78,20 @@ const TreatmentDocumentation = () => {
   };
 
   // Get allowed statuses based on current applicator status and treatment context
-  const allowedStatuses = isEditMode && currentApplicator?.status
-    ? getAllowedNextStatuses(currentApplicator.status as ApplicatorStatus, treatmentContext)
-    : getAllowedNextStatuses(null, treatmentContext); // New applicator: get initial statuses
+  // Priority order: currentApplicator (UseList edit mode) > originalApplicatorStatus (Choose from List) > null (new)
+  // Bug #5 fix: Use originalApplicatorStatus (saved when applicator was selected) instead of formData.status
+  // This ensures all same-stage options remain visible even after user selects a terminal status
+  const effectiveCurrentStatus = (isEditMode && currentApplicator?.status)
+    ? currentApplicator.status as ApplicatorStatus
+    : (originalApplicatorStatus as ApplicatorStatus) || null;
+
+  const allowedStatuses = getAllowedNextStatuses(effectiveCurrentStatus, treatmentContext);
 
   // Helper function to check if a status should be shown in dropdown
   const shouldShowStatus = (status: string): boolean => {
-    // Show only allowed statuses (both new applicators and edit mode)
-    return allowedStatuses.includes(status as ApplicatorStatus);
+    // Always show the currently selected status (so user can confirm their selection)
+    // Plus show all allowed next statuses for transitions
+    return status === formData.status || allowedStatuses.includes(status as ApplicatorStatus);
   };
 
   useEffect(() => {
@@ -190,7 +199,7 @@ const TreatmentDocumentation = () => {
     }
   };
 
-  // Handle Status change with smart auto-fill (9-state workflow)
+  // Handle Status change with smart auto-fill (8-state workflow)
   useEffect(() => {
     const seedsQty = parseInt(formData.seedsQty) || 0;
 
@@ -198,7 +207,7 @@ const TreatmentDocumentation = () => {
     const currentStatus = formData.status || formData.usingType;
 
     switch (currentStatus) {
-      // New 9-state workflow
+      // New 8-state workflow
       case 'INSERTED':
         // Auto-fill with full seed quantity
         setFormData(prev => ({ ...prev, insertedSeedsQty: seedsQty.toString() }));
@@ -216,7 +225,6 @@ const TreatmentDocumentation = () => {
         break;
       case 'DISPOSED':
       case 'DISCHARGED':
-      case 'UNACCOUNTED':
         // Terminal states - no seeds inserted
         setFormData(prev => ({ ...prev, insertedSeedsQty: '0' }));
         break;
@@ -315,14 +323,17 @@ const TreatmentDocumentation = () => {
     // Set the returned from no use flag
     setIsReturnedFromNoUse(returnedFromNoUse);
 
-    // Fill form with validated applicator data - default to SEALED for new 9-state workflow
+    // Bug #5 fix: Set original status for new applicators (SEALED)
+    setOriginalApplicatorStatus('SEALED');
+
+    // Fill form with validated applicator data - default to SEALED for new 8-state workflow
     setFormData({
       serialNumber,
       applicatorType,
       seedsQty: seedQuantity.toString(),
       insertionTime: new Date().toISOString(),
       usingType: 'Full use', // Keep for backward compatibility
-      status: 'SEALED', // Default to SEALED for 9-state workflow
+      status: 'SEALED', // Default to SEALED for 8-state workflow
       insertedSeedsQty: '0', // SEALED means no seeds inserted yet
       comments: ''
     });
@@ -411,11 +422,20 @@ const TreatmentDocumentation = () => {
     setShowApplicatorList(false);
     setError(null);
     setSuccess(null);
-    
+
     // Set the returned from no use flag
     const isReturnedFromNoUse = applicator.returnedFromNoUse || false;
     setIsReturnedFromNoUse(isReturnedFromNoUse);
-    
+
+    // Preserve the applicator's actual status - don't reset to SEALED!
+    // This is critical for the 8-state workflow where OPENED/LOADED applicators
+    // stay in the "Choose from List" and need to show their NEXT valid transitions
+    const currentStatus = applicator.status || 'SEALED';
+
+    // Bug #5 fix: Save original status for dropdown options calculation
+    // This ensures all same-stage options remain visible even after user selects a terminal status
+    setOriginalApplicatorStatus(currentStatus);
+
     // Fill form with selected applicator data directly (no validation needed since it's from Priority)
     setFormData({
       serialNumber: applicator.serialNumber,
@@ -423,13 +443,15 @@ const TreatmentDocumentation = () => {
       seedsQty: applicator.seedQuantity?.toString() || '',
       insertionTime: new Date().toISOString(),
       usingType: 'Full use', // Keep for backward compatibility
-      status: 'SEALED', // Default to SEALED for 9-state workflow
-      insertedSeedsQty: '0', // SEALED means no seeds inserted yet
-      comments: ''
+      status: currentStatus, // Preserve existing status from availableApplicators
+      insertedSeedsQty: currentStatus === 'SEALED' ? '0' : (applicator.insertedSeedsQty?.toString() || '0'),
+      comments: applicator.comments || ''
     });
 
     if (isReturnedFromNoUse) {
       setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as SEALED (unused) - you can select any status.`);
+    } else if (currentStatus !== 'SEALED') {
+      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Current status: ${currentStatus} - select next status below.`);
     } else {
       setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Status set to SEALED - select appropriate status below.`);
     }
@@ -467,10 +489,11 @@ const TreatmentDocumentation = () => {
       return;
     }
 
-    // Validate comment requirement for faulty applicators (both old and new workflow)
-    if ((currentStatus === 'Faulty' || currentStatus === 'FAULTY' || currentStatus === 'DEPLOYMENT_FAILURE') &&
+    // Validate comment requirement for terminal failure statuses (FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)
+    // Uses shared requiresComment() function for consistency with COMMENT_REQUIRED_STATUSES
+    if ((requiresComment(currentStatus) || currentStatus === 'Faulty') &&
         (!formData.comments || formData.comments.trim().length === 0)) {
-      setError('Comments are required for faulty applicators. Please explain why it is faulty.');
+      setError('Comments are required for this status. Please explain why the applicator was not used successfully.');
       return;
     }
 
@@ -539,7 +562,7 @@ const TreatmentDocumentation = () => {
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
         usageType: mapUsageType(formData.usingType),
-        status: (formData.status || undefined) as 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | 'UNACCOUNTED' | undefined, // New status field for 9-state workflow
+        status: (formData.status || undefined) as ApplicatorStatus | undefined, // 8-state workflow using shared type
         insertionTime: formData.insertionTime,
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
         comments: formData.comments,
@@ -576,6 +599,9 @@ const TreatmentDocumentation = () => {
       
       // Reset the returned from no use flag
       setIsReturnedFromNoUse(false);
+
+      // Bug #5 fix: Reset original status when form is cleared
+      setOriginalApplicatorStatus(null);
 
       // Enhanced success message with progress information
       const totalSeeds = progressStats.totalSeeds;
@@ -1091,7 +1117,7 @@ const TreatmentDocumentation = () => {
                 </div>
               </div>
 
-              {/* Status (9-state workflow) */}
+              {/* Status (8-state workflow) */}
               <div>
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                   Status *
@@ -1120,7 +1146,6 @@ const TreatmentDocumentation = () => {
                   {shouldShowStatus('DISPOSED') && <option value="DISPOSED" className="text-gray-800">Disposed (discarded)</option>}
                   {shouldShowStatus('DISCHARGED') && <option value="DISCHARGED" className="text-gray-800">Discharged (seeds expelled)</option>}
                   {shouldShowStatus('DEPLOYMENT_FAILURE') && <option value="DEPLOYMENT_FAILURE" className="text-gray-800">Deployment Failure</option>}
-                  {shouldShowStatus('UNACCOUNTED') && <option value="UNACCOUNTED" className="text-gray-800">Unaccounted (lost/missing)</option>}
                 </select>
                 {isReturnedFromNoUse && (
                   <p className="mt-1 text-xs text-red-600">
@@ -1134,7 +1159,7 @@ const TreatmentDocumentation = () => {
                 <label htmlFor="insertedSeedsQty" className="block text-sm font-medium text-gray-700 mb-1">
                   Inserted Seeds Qty.
                 </label>
-                {(formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') ? (
+                {(requiresComment(formData.status) || formData.usingType === 'Faulty') ? (
                   <input
                     type="number"
                     id="insertedSeedsQty"
@@ -1158,7 +1183,7 @@ const TreatmentDocumentation = () => {
               {/* Comments */}
               <div className="md:col-span-2">
                 <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-1">
-                  Comments {(formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') && <span className="text-red-500">*</span>}
+                  Comments {(requiresComment(formData.status) || formData.usingType === 'Faulty') && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   id="comments"
@@ -1167,19 +1192,19 @@ const TreatmentDocumentation = () => {
                   value={formData.comments}
                   onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
                   className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px] ${
-                    (formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') ? 'border-red-300' : 'border-gray-300'
+                    (requiresComment(formData.status) || formData.usingType === 'Faulty') ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder={
-                    (formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty')
-                      ? 'Required: Explain why this applicator is faulty...'
+                    (requiresComment(formData.status) || formData.usingType === 'Faulty')
+                      ? 'Required: Explain why the applicator was not used successfully...'
                       : 'Optional comments...'
                   }
                   disabled={loading}
-                  required={formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty'}
+                  required={requiresComment(formData.status) || formData.usingType === 'Faulty'}
                 />
-                {(formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') && (
+                {(requiresComment(formData.status) || formData.usingType === 'Faulty') && (
                   <p className="mt-1 text-sm text-red-600">
-                    Comments are required for faulty applicators to continue.
+                    Comments are required for this status to continue.
                   </p>
                 )}
               </div>
@@ -1270,7 +1295,7 @@ const TreatmentDocumentation = () => {
                   loading ||
                   !formData.serialNumber ||
                   !(formData.status || formData.usingType) ||
-                  ((formData.status === 'FAULTY' || formData.status === 'DEPLOYMENT_FAILURE' || formData.usingType === 'Faulty') &&
+                  ((requiresComment(formData.status) || formData.usingType === 'Faulty') &&
                    (!formData.comments || formData.comments.trim().length === 0))
                 }
                 className="flex-1 min-h-[44px] rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"

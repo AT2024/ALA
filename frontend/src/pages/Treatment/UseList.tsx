@@ -7,57 +7,22 @@ import { treatmentService } from '@/services/treatmentService';
 import PackageManager from '@/components/PackageManager';
 import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
 import SignatureModal from '@/components/Dialogs/SignatureModal';
+import { getStatusColors, APPLICATOR_STATUSES } from '@/utils/applicatorStatus';
 
 // Get status color classes based on status for table rows
+// Uses shared STATUS_COLORS from @shared/applicatorStatuses
 const getStatusColor = (status: string | undefined | null): string => {
-  // If status is null/undefined, return default/white (backward compatibility)
-  if (!status) {
-    return 'bg-white';
-  }
-
-  switch (status) {
-    case 'SEALED':
-      return 'bg-white';
-    case 'OPENED':
-      return 'bg-red-50';
-    case 'LOADED':
-      return 'bg-yellow-50';
-    case 'INSERTED':
-      return 'bg-green-50';
-    case 'FAULTY':
-    case 'DISPOSED':
-    case 'DISCHARGED':
-    case 'DEPLOYMENT_FAILURE':
-    case 'UNACCOUNTED':
-      return 'bg-gray-900 text-white';
-    default:
-      return 'bg-white';
-  }
+  const colors = getStatusColors(status);
+  return colors.row;
 };
 
 // Get status badge color classes
+// Uses shared STATUS_COLORS from @shared/applicatorStatuses
 const getStatusBadgeColor = (status: string | undefined | null, usageType: string): string => {
-  // Use status if available, otherwise fallback to usageType
-  const effectiveStatus = status || (usageType === 'full' ? 'INSERTED' : usageType === 'faulty' ? 'FAULTY' : 'SEALED');
-
-  switch (effectiveStatus) {
-    case 'SEALED':
-      return 'bg-white border-gray-300 text-gray-800';
-    case 'OPENED':
-      return 'bg-red-50 border-red-300 text-red-800';
-    case 'LOADED':
-      return 'bg-yellow-50 border-yellow-300 text-yellow-800';
-    case 'INSERTED':
-      return 'bg-green-50 border-green-300 text-green-800';
-    case 'FAULTY':
-    case 'DISPOSED':
-    case 'DISCHARGED':
-    case 'DEPLOYMENT_FAILURE':
-    case 'UNACCOUNTED':
-      return 'bg-gray-900 text-white';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+  // Use status if available, otherwise fallback to usageType mapping
+  const effectiveStatus = status || (usageType === 'full' ? APPLICATOR_STATUSES.INSERTED : usageType === 'faulty' ? APPLICATOR_STATUSES.FAULTY : APPLICATOR_STATUSES.SEALED);
+  const colors = getStatusColors(effectiveStatus);
+  return `${colors.bg} ${colors.border} ${colors.text}`;
 };
 
 const UseList = () => {
