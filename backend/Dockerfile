@@ -128,5 +128,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Run production server
-CMD ["node", "dist/server.js"]
+# Run production server (path reflects tsconfig rootDir: ".." for shared module)
+CMD ["node", "dist/app/src/server.js"]
