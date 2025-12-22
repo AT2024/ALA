@@ -11,7 +11,7 @@ interface SiteInfo {
 // Helper function to load test data with dynamic dates
 const loadTestData = () => {
   try {
-    const testDataPath = path.join(__dirname, '../../test-data.json');
+    const testDataPath = path.join(__dirname, '../../../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
     const testData = JSON.parse(testDataContent);
     
@@ -86,7 +86,7 @@ const loadTestData = () => {
 // Helper function to generate test data dynamically for specific date
 const generateTestDataForDate = (requestedDate: string) => {
   try {
-    const testDataPath = path.join(__dirname, '../../test-data.json');
+    const testDataPath = path.join(__dirname, '../../../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
     const baseTestData = JSON.parse(testDataContent);
     
