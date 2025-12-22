@@ -27,7 +27,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /usr/src/app
 
 # Copy package files for better caching
-COPY package*.json ./
+COPY frontend/package*.json ./
 
 # =================================================================
 # DEVELOPMENT STAGE - Vite dev server with HMR
@@ -37,8 +37,9 @@ FROM base AS development
 # Install ALL dependencies (including dev dependencies)
 RUN npm install && npm cache clean --force
 
-# Copy source code
-COPY . .
+# Copy source code (frontend and shared folders)
+COPY frontend/ .
+COPY shared/ ../shared/
 
 # Change ownership to nodejs user
 RUN chown -R nodejs:nodejs /usr/src/app
@@ -82,8 +83,9 @@ ENV VITE_OFFLINE_STORAGE=${VITE_OFFLINE_STORAGE}
 # Install ALL dependencies needed for build
 RUN npm install && npm cache clean --force
 
-# Copy source code
-COPY . .
+# Copy source code (frontend and shared folders)
+COPY frontend/ .
+COPY shared/ ../shared/
 
 # Change ownership to nodejs user
 RUN chown -R nodejs:nodejs /usr/src/app
@@ -123,7 +125,7 @@ COPY --from=build --chown=nginx-app:nginx-app /usr/src/app/dist /usr/share/nginx
 #   ~/ala-improved/ssl-certs/private/private.key -> /etc/ssl/private/private.key
 
 # Copy nginx configuration (configurable via NGINX_CONFIG ARG)
-COPY --chown=nginx-app:nginx-app ${NGINX_CONFIG} /etc/nginx/conf.d/default.conf
+COPY --chown=nginx-app:nginx-app frontend/${NGINX_CONFIG} /etc/nginx/conf.d/default.conf
 
 # Create custom nginx configuration with pid file in writable location
 RUN echo "pid /var/cache/nginx/nginx.pid;" > /etc/nginx/nginx.conf && \
