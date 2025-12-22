@@ -10,8 +10,12 @@ process.env.DB_NAME = 'medical_app_test';
 process.env.DB_USER = 'test_user';
 process.env.DB_PASS = 'test_password';
 process.env.PRIORITY_URL = 'https://test.priority.api/odata';
+process.env.PRIORITY_API_URL = 'https://test.priority.api/odata';
 process.env.PRIORITY_USERNAME = 'TEST_API';
+process.env.PRIORITY_API_USERNAME = 'TEST_API';
 process.env.PRIORITY_PASSWORD = 'test_password';
+process.env.PRIORITY_API_PASSWORD = 'test_password';
+process.env.PRIORITY_API_COMPANY = 'test_company';
 process.env.ENABLE_TEST_DATA = 'true';
 process.env.BYPASS_PRIORITY_EMAILS = 'test@example.com,test@bypass.com';
 
