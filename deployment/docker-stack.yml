@@ -14,13 +14,23 @@ services:
     networks:
       - ala-network
     environment:
+      # Core configuration
       - NODE_ENV=${NODE_ENV:-production}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ala-db:5432/${POSTGRES_DB}
       - JWT_SECRET=${JWT_SECRET}
+      # Priority ERP API
       - PRIORITY_API_URL=${PRIORITY_API_URL}
       - PRIORITY_API_USERNAME=${PRIORITY_API_USERNAME}
       - PRIORITY_API_PASSWORD=${PRIORITY_API_PASSWORD}
+      # Test mode
       - ENABLE_TEST_DATA=${ENABLE_TEST_DATA:-false}
+      - BYPASS_PRIORITY_EMAILS=${BYPASS_PRIORITY_EMAILS:-test@example.com}
+      # CORS Configuration
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://ala-app.israelcentral.cloudapp.azure.com}
+      # Azure Communication Services (Email)
+      - AZURE_COMMUNICATION_CONNECTION_STRING=${AZURE_COMMUNICATION_CONNECTION_STRING}
+      - AZURE_EMAIL_SENDER_ADDRESS=${AZURE_EMAIL_SENDER_ADDRESS}
+      - PDF_RECIPIENT_EMAIL=${PDF_RECIPIENT_EMAIL}
     deploy:
       replicas: 2
       update_config:
