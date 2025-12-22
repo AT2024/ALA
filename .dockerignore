@@ -1,0 +1,62 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+.claude/
+
+# Node modules (copied by npm install)
+node_modules
+*/node_modules
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/tests/
+**/test/
+
+# Build artifacts
+dist/
+build/
+coverage/
+*.log
+
+# IDE and local files
+.vscode/
+.idea/
+*.local
+*.local.*
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+!.env.*.template
+
+# SSL certificates and sensitive data
+ssl-certs/
+*.pem
+*.key
+*.crt
+
+# Deployment files (not needed in container)
+deployment/
+azure/
+backups/
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
