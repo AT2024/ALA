@@ -27,7 +27,7 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /usr/src/app
 
 # Copy package files for better caching
-COPY package*.json ./
+COPY backend/package*.json ./
 
 # =================================================================
 # DEVELOPMENT STAGE - For local development with hot reload
@@ -40,8 +40,9 @@ RUN npm install && npm cache clean --force
 # Install global development tools
 RUN npm install -g nodemon ts-node
 
-# Copy source code
-COPY . .
+# Copy source code (backend and shared folders)
+COPY backend/ .
+COPY shared/ ../shared/
 
 # Change ownership to nodejs user
 RUN chown -R nodejs:nodejs /usr/src/app
@@ -76,8 +77,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Install development dependencies needed for build
 RUN npm install --only=development && npm cache clean --force
 
-# Copy source code
-COPY . .
+# Copy source code (backend and shared folders)
+COPY backend/ .
+COPY shared/ ../shared/
 
 # Build TypeScript code
 RUN npm run build
@@ -98,10 +100,10 @@ COPY --from=build --chown=nodejs:nodejs /usr/src/app/dist ./dist
 COPY --from=build --chown=nodejs:nodejs /usr/src/app/node_modules ./node_modules
 
 # Copy only necessary files
-COPY --chown=nodejs:nodejs package*.json ./
+COPY --chown=nodejs:nodejs backend/package*.json ./
 
 # Copy test data file for development testing
-COPY --chown=nodejs:nodejs test-data.json ./
+COPY --chown=nodejs:nodejs backend/test-data.json ./
 
 # Create logs and uploads directories
 RUN mkdir -p logs && chown -R nodejs:nodejs logs

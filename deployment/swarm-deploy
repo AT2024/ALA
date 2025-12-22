@@ -144,7 +144,7 @@ main() {
         cd "$PROJECT_ROOT"
 
         log "  Building backend API..."
-        docker build -t ala-api:$VERSION ./backend || { error "Backend build failed"; exit 1; }
+        docker build -f backend/Dockerfile -t ala-api:$VERSION . || { error "Backend build failed"; exit 1; }
         docker tag ala-api:$VERSION ala-api:latest
 
         log "  Building frontend..."
