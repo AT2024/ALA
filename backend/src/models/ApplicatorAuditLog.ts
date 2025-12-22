@@ -1,6 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
-import { ApplicatorStatus, ALL_STATUSES } from '@shared/applicatorStatuses';
+import { ApplicatorStatus, ALL_STATUSES } from '../../../shared/applicatorStatuses';
 
 // ApplicatorAuditLog attributes interface
 interface ApplicatorAuditLogAttributes {

@@ -15,7 +15,7 @@ import {
   PANC_PROS_TRANSITIONS,
   SKIN_TRANSITIONS,
   ALL_STATUSES
-} from '@shared/applicatorStatuses';
+} from '../../../shared/applicatorStatuses';
 
 export interface ApplicatorValidationResult {
   isValid: boolean;

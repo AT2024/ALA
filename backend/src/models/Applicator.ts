@@ -1,9 +1,9 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config/database';
-import { ApplicatorStatus, ALL_STATUSES } from '@shared/applicatorStatuses';
+import { ApplicatorStatus, ALL_STATUSES } from '../../../shared/applicatorStatuses';
 
 // Re-export the type for use by other modules
-export type { ApplicatorStatus } from '@shared/applicatorStatuses';
+export type { ApplicatorStatus } from '../../../shared/applicatorStatuses';
 
 // Applicator attributes interface
 interface ApplicatorAttributes {

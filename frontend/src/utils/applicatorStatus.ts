@@ -5,7 +5,7 @@
  * All status definitions come from @shared/applicatorStatuses (single source of truth).
  */
 
-import type { ApplicatorStatus } from '@shared/applicatorStatuses';
+import type { ApplicatorStatus } from '../../../shared/applicatorStatuses';
 import {
   // Constants
   APPLICATOR_STATUSES,
@@ -30,7 +30,7 @@ import {
   getStatusEmoji,
   getStatusColors,
   getListItemColor,
-} from '@shared/applicatorStatuses';
+} from '../../../shared/applicatorStatuses';
 
 // Re-export type separately (required with isolatedModules)
 export type { ApplicatorStatus };
