@@ -148,7 +148,10 @@ main() {
         docker tag ala-api:$VERSION ala-api:latest
 
         log "  Building frontend..."
-        docker build -f frontend/Dockerfile --build-arg NGINX_CONFIG=nginx.https.azure.conf -t ala-frontend:$VERSION . || { error "Frontend build failed"; exit 1; }
+        docker build -f frontend/Dockerfile \
+            --build-arg NGINX_CONFIG=nginx.https.azure.conf \
+            --build-arg VITE_API_URL=https://ala-app.israelcentral.cloudapp.azure.com/api \
+            -t ala-frontend:$VERSION . || { error "Frontend build failed"; exit 1; }
         docker tag ala-frontend:$VERSION ala-frontend:latest
 
         success "Images built: ala-api:$VERSION, ala-frontend:$VERSION"
