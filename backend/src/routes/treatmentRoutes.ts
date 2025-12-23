@@ -22,6 +22,7 @@ import { protect } from '../middleware/authMiddleware';
 import { validateUUID, validateMultipleUUIDs } from '../middleware/uuidValidationMiddleware';
 import { treatmentRequestLoggingMiddleware } from '../middleware/requestLoggingMiddleware';
 import { databaseHealthCheck, criticalOperationHealthCheck } from '../middleware/databaseHealthMiddleware';
+import { config } from '../config/appConfig';
 
 const router = express.Router();
 
@@ -75,7 +76,7 @@ const validateApplicatorUpdate = (req: Request, res: Response, next: NextFunctio
   }
 
   // For test user, allow numeric IDs (test data applicators)
-  if (req.user?.email === 'test@example.com' && id && /^\d+$/.test(id)) {
+  if (req.user?.email === config.testUserEmail && id && /^\d+$/.test(id)) {
     return next(); // Skip UUID validation for numeric test IDs
   }
 

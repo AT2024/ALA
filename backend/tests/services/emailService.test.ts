@@ -4,6 +4,17 @@
 
 import bcrypt from 'bcryptjs';
 
+// Test configuration - use generic test values, not real emails
+const TEST_PDF_RECIPIENT = 'test-pdf-recipient@test.example.com';
+const TEST_SENDER_ADDRESS = 'test@test.azurecomm.net';
+const TEST_CONNECTION_STRING = 'endpoint=https://test.communication.azure.com/;accesskey=testkey';
+
+// Set environment variables BEFORE any imports that depend on them
+process.env.NODE_ENV = 'test';
+process.env.AZURE_COMMUNICATION_CONNECTION_STRING = TEST_CONNECTION_STRING;
+process.env.AZURE_EMAIL_SENDER_ADDRESS = TEST_SENDER_ADDRESS;
+process.env.PDF_RECIPIENT_EMAIL = TEST_PDF_RECIPIENT;
+
 // Mock Azure Communication Services before importing emailService
 jest.mock('@azure/communication-email', () => ({
   EmailClient: jest.fn().mockImplementation(() => ({
@@ -27,23 +38,7 @@ jest.mock('../../src/utils/logger', () => ({
   error: jest.fn()
 }));
 
-// Set environment variables before importing the module
-const originalEnv = process.env;
-beforeAll(() => {
-  process.env = {
-    ...originalEnv,
-    NODE_ENV: 'test',
-    AZURE_COMMUNICATION_CONNECTION_STRING: 'endpoint=https://test.communication.azure.com/;accesskey=testkey',
-    AZURE_EMAIL_SENDER_ADDRESS: 'test@test.azurecomm.net',
-    PDF_RECIPIENT_EMAIL: 'tamig@alphatau.com'
-  };
-});
-
-afterAll(() => {
-  process.env = originalEnv;
-});
-
-// Import after setting up mocks and env
+// Import after setting up mocks and env vars
 import emailService, { sendVerificationCode, sendSignedPdf, isEmailConfigured, getPdfRecipientEmail } from '../../src/services/emailService';
 import logger from '../../src/utils/logger';
 
@@ -58,9 +53,9 @@ describe('EmailService', () => {
       expect(getPdfRecipientEmail).toBeDefined();
     });
 
-    it('should have clinic recipient email configured', () => {
+    it('should have clinic recipient email configured from env var', () => {
       const recipient = getPdfRecipientEmail();
-      expect(recipient).toBe('tamig@alphatau.com');
+      expect(recipient).toBe(TEST_PDF_RECIPIENT);
     });
 
     it('should report email as configured when env vars are set', () => {
@@ -122,9 +117,9 @@ describe('EmailService', () => {
       const pdfBuffer = Buffer.from('test pdf');
       await sendSignedPdf(null, pdfBuffer, 'treatment-456', mockSignatureDetails);
 
-      // In test mode, it logs the recipient
+      // In test mode, it logs the recipient from env var
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('tamig@alphatau.com')
+        expect.stringContaining(TEST_PDF_RECIPIENT)
       );
     });
 
