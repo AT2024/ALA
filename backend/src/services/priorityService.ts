@@ -2,6 +2,7 @@ import axios from 'axios';
 import logger from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import { config } from '../config/appConfig';
 
 interface SiteInfo {
   custName: string;
@@ -11,7 +12,9 @@ interface SiteInfo {
 // Helper function to load test data with dynamic dates
 const loadTestData = () => {
   try {
-    const testDataPath = path.join(__dirname, '../../../../test-data.json');
+    const testDataPath = process.env.NODE_ENV === 'production'
+      ? path.join(process.cwd(), 'test-data.json')
+      : path.join(__dirname, '../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
     const testData = JSON.parse(testDataContent);
     
@@ -86,7 +89,9 @@ const loadTestData = () => {
 // Helper function to generate test data dynamically for specific date
 const generateTestDataForDate = (requestedDate: string) => {
   try {
-    const testDataPath = path.join(__dirname, '../../../../test-data.json');
+    const testDataPath = process.env.NODE_ENV === 'production'
+      ? path.join(process.cwd(), 'test-data.json')
+      : path.join(__dirname, '../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
     const baseTestData = JSON.parse(testDataContent);
     
@@ -149,11 +154,8 @@ const generateTestDataForDate = (requestedDate: string) => {
 
 // Helper function to check if we should use test data for development
 const shouldUseTestData = (identifier: string): boolean => {
-  // Support both email and UUID for test user
-  const testUserEmail = 'test@example.com';
-  const testUserUUID = '47605b24-e71b-479b-93c5-8b7ce1c17098'; // Known test user UUID
-
-  const isTestUser = identifier === testUserEmail || identifier === testUserUUID;
+  // Support both email and UUID for test user (from environment config)
+  const isTestUser = identifier === config.testUserEmail || identifier === config.testUserUuid;
 
   return (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_DATA === 'true') && isTestUser;
 };
@@ -260,7 +262,7 @@ export const priorityService = {
       // Test basic connectivity
       logger.info('Testing connection to Priority API at:', getPriorityUrl());
       const phonebookResponse = await priorityApi.get(`/PHONEBOOK`, {
-        timeout: 10000, // 10 second timeout
+        timeout: config.priorityApiShortTimeout, // Configurable timeout
       });
       logger.info('Connected to Priority API PHONEBOOK endpoint successfully');
       logger.info('Number of contacts:', phonebookResponse.data.value.length);
@@ -275,7 +277,7 @@ export const priorityService = {
           $top: 5, // Just get first 5 orders for testing
           $select: 'ORDNAME,CUSTNAME,CURDATE'
         },
-        timeout: 10000,
+        timeout: config.priorityApiShortTimeout,
       });
       logger.info('ORDERS endpoint successful');
       logger.info('Number of orders:', ordersResponse.data.value.length);
@@ -316,7 +318,7 @@ export const priorityService = {
     // Always treat identifier as string
     identifier = String(identifier).trim();
 
-    // Priority check: Handle test@example.com FIRST before any Priority API calls
+    // Priority check: Handle test user FIRST before any Priority API calls
     if (shouldUseTestData(identifier)) {
       const testData = loadTestData();
       if (testData && testData.sites) {
@@ -472,8 +474,8 @@ export const priorityService = {
           `Priority API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`
         );
 
-        // If the user is trying test@example.com, provide fallback data
-        if (identifier === 'test@example.com' || identifier.includes('475')) {
+        // If the user is the test user, provide fallback data
+        if (identifier === config.testUserEmail || identifier.includes(config.testUserUuid.substring(0, 3))) {
           logger.info(`Using fallback test data for user ${identifier} after API error`);
           const testData = loadTestData();
           if (testData && testData.sites) {
@@ -530,7 +532,7 @@ export const priorityService = {
           $filter: filterQuery,
           $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME,CUSTDES',
         },
-        timeout: 30000, // 30 second timeout
+        timeout: config.priorityApiTimeout, // Configurable timeout
       });
 
       logger.info(`Priority API responded with ${response.data.value.length} results for ${identifier}`);
@@ -545,7 +547,7 @@ export const priorityService = {
             params: {
               $select: 'CUSTNAME,POSITIONCODE,EMAIL,PHONE,NAME,CUSTDES',
             },
-            timeout: 30000,
+            timeout: config.priorityApiTimeout,
           });
 
           logger.info(`Retrieved ${allUsersResponse.data.value.length} total users for case-insensitive search`);
@@ -766,7 +768,7 @@ export const priorityService = {
     try {
       logger.info(`Getting orders for site ${custName} using Priority API format${filterDate ? ` with date filter: ${filterDate}` : ''}`);
       
-      // For development mode with test@example.com, use dynamic test data first
+      // For development mode with test user, use dynamic test data first
       if (userId && shouldUseTestData(userId)) {
         // Use dynamic test data generation if a specific date is requested
         let testData;
@@ -835,7 +837,7 @@ export const priorityService = {
           $filter: filterParam,
           $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
         },
-        timeout: 30000, // 30 second timeout
+        timeout: config.priorityApiTimeout, // Configurable timeout
       });
 
       logger.info(`Retrieved ${response.data.value.length} orders for site ${custName}`);
@@ -925,7 +927,7 @@ export const priorityService = {
 
       logger.info(`Getting order subform for order ${orderName}, type: ${treatmentType || 'unknown'}`);
 
-      // For development mode with test@example.com, prioritize test data
+      // For development mode with test user, prioritize test data
       if (userId && shouldUseTestData(userId)) {
         logger.info(`Development mode: Using test subform data for user ${userId} and order ${orderName}`);
         const testData = loadTestData();
@@ -1152,7 +1154,7 @@ export const priorityService = {
         const testData = loadTestData();
         if (testData && testData.sites) {
           return testData.sites.map((site: any) => ({
-            EMAIL: 'test@example.com',
+            EMAIL: config.testUserEmail,
             NAME: 'Test User',
             PHONE: '555-TEST',
             POSITIONCODE: '99',
@@ -1862,7 +1864,7 @@ export const priorityService = {
     error?: string;
   }> {
     try {
-      // For development mode with test@example.com, check test data first
+      // For development mode with test user, check test data first
       if (userId && shouldUseTestData(userId)) {
         const testData = loadTestData();
         if (testData && testData.orders) {
@@ -1898,7 +1900,7 @@ export const priorityService = {
           params: {
             $select: 'ORDNAME,ORDSTATUSDES,CUSTNAME,REFERENCE',
           },
-          timeout: 30000,
+          timeout: config.priorityApiTimeout,
         });
 
         if (response.data) {
@@ -2125,7 +2127,7 @@ export const priorityService = {
           $select: 'EMAIL,NAME,POSITIONCODE,CUSTNAME',
           $orderby: 'NAME',
         },
-        timeout: 30000,
+        timeout: config.priorityApiTimeout,
       });
 
       if (!response.data.value || response.data.value.length === 0) {

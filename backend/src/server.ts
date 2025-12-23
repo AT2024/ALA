@@ -12,6 +12,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorMiddleware';
 import { notFound } from './middleware/notFoundMiddleware';
 import {
@@ -33,6 +34,7 @@ import priorityRoutes from './routes/priorityRoutes';
 import { initializeDatabase } from './config/database';
 import './models'; // Import models to ensure they're loaded before database sync
 import logger from './utils/logger';
+import { config } from './config/appConfig';
 
 // Initialize express app
 const app = express();
@@ -45,6 +47,7 @@ app.use(securityHeaders);
 app.use(requestLogger);
 
 // Basic middleware
+app.use(cookieParser()); // Parse cookies for HttpOnly auth tokens
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cors(corsOptions));
@@ -141,7 +144,7 @@ const startServer = async () => {
           if (isDatabaseConnected) {
             logger.info('Successfully reconnected to database!');
           }
-        }, 30000); // Retry every 30 seconds
+        }, config.dbReconnectIntervalMs); // Retry interval from config
       } else {
         logger.info('Database connected successfully');
       }
