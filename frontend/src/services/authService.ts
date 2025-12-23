@@ -12,7 +12,8 @@ export interface AuthResponse {
     sites?: string[];
     fullAccess?: boolean;
   };
-  token: string;
+  // NOTE: token is no longer returned in response body - it's set as HttpOnly cookie
+  // This is an OWASP security best practice to prevent XSS token theft
 }
 
 export const authService = {
@@ -157,12 +158,12 @@ export const authService = {
     }
   },
 
-  // Validate token with the backend
-  async validateToken(token: string): Promise<boolean> {
+  // Validate session with the backend
+  // Token is now in HttpOnly cookie, sent automatically via withCredentials
+  async validateToken(_token?: string): Promise<boolean> {
     try {
-      const response = await api.post('/auth/validate-token', {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Cookie is sent automatically by browser with withCredentials: true
+      const response = await api.post('/auth/validate-token');
       return response.status === 200;
     } catch (error) {
       return false;
@@ -203,12 +204,22 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       console.error('Error getting user site access:', error);
-      
+
       // Return default access in case of error
       return {
         sites: [],
         fullAccess: false
       };
+    }
+  },
+
+  // Logout - clears HttpOnly auth cookie on the server
+  async logout(): Promise<void> {
+    try {
+      await api.post('/auth/logout');
+    } catch (error: any) {
+      // Log error but don't throw - local cleanup should still happen
+      console.warn('Logout API call failed:', error.message);
     }
   }
 };

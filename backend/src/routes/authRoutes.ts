@@ -5,6 +5,7 @@ import {
   resendVerificationCode,
   validateToken,
   debugUserSiteAccess,
+  logout,
 } from '../controllers/authController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -14,6 +15,7 @@ const router = express.Router();
 router.post('/request-code', requestVerificationCode);
 router.post('/verify', verifyCode);
 router.post('/resend-code', resendVerificationCode);
+router.post('/logout', logout); // Logout clears HttpOnly auth cookie
 
 // Debug route (for testing multi-site access)
 router.get('/debug-sites/:identifier', debugUserSiteAccess);

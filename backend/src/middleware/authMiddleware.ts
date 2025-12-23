@@ -21,40 +21,44 @@ function getJwtSecret(): string {
 }
 
 // Middleware to protect routes
+// Checks for auth token in HttpOnly cookie first (more secure), then Authorization header (for API clients)
 export const protect = async (req: Request, res: Response, next: NextFunction) => {
-  let token;
+  let token: string | undefined;
 
-  // Check for token in Authorization header
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
-
-      // Verify token (JWT_SECRET validated at runtime)
-      const decoded: any = jwt.verify(token, getJwtSecret());
-
-      // Get user from the token
-      const user = await User.findByPk(decoded.id, {
-        attributes: { exclude: ['verificationCode', 'verificationExpires'] },
-      });
-
-      if (!user) {
-        res.status(401);
-        throw new Error('Not authorized, user not found');
-      }
-
-      // Set user to req.user
-      req.user = user;
-      next();
-    } catch (error) {
-      res.status(401);
-      throw new Error('Not authorized, invalid token');
-    }
+  // Priority 1: Check for HttpOnly cookie (most secure - OWASP recommended)
+  if (req.cookies?.['auth-token']) {
+    token = req.cookies['auth-token'];
+  }
+  // Priority 2: Fallback to Authorization header for API clients and backwards compatibility
+  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
   }
 
   if (!token) {
     res.status(401);
     throw new Error('Not authorized, no token');
+  }
+
+  try {
+    // Verify token (JWT_SECRET validated at runtime)
+    const decoded: any = jwt.verify(token, getJwtSecret());
+
+    // Get user from the token
+    const user = await User.findByPk(decoded.id, {
+      attributes: { exclude: ['verificationCode', 'verificationExpires'] },
+    });
+
+    if (!user) {
+      res.status(401);
+      throw new Error('Not authorized, user not found');
+    }
+
+    // Set user to req.user
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(401);
+    throw new Error('Not authorized, invalid token');
   }
 };
 
