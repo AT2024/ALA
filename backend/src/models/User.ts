@@ -58,18 +58,21 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   }
 
   public async verifyCode(code: string): Promise<boolean> {
-    // Check for test user bypass - allow "123456" for bypass emails
-    const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS;
-    if (bypassEmails && this.email) {
-      const bypassList = bypassEmails.split(',').map(e => e.trim().toLowerCase());
-      if (bypassList.includes(this.email.toLowerCase()) && code === '123456') {
-        // Clear any pending verification and update login time
-        this.verificationCode = null;
-        this.verificationExpires = null;
-        this.failedAttempts = 0;
-        this.lastLogin = new Date();
-        await this.save();
-        return true;
+    // Test bypass ONLY works in development mode - NEVER in production
+    // This is a security measure to prevent unauthorized access
+    if (process.env.NODE_ENV === 'development') {
+      const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS;
+      if (bypassEmails && this.email) {
+        const bypassList = bypassEmails.split(',').map(e => e.trim().toLowerCase());
+        if (bypassList.includes(this.email.toLowerCase()) && code === '123456') {
+          // Clear any pending verification and update login time
+          this.verificationCode = null;
+          this.verificationExpires = null;
+          this.failedAttempts = 0;
+          this.lastLogin = new Date();
+          await this.save();
+          return true;
+        }
       }
     }
 
