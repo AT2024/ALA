@@ -17,7 +17,6 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/server.ts',
     '!src/dbInit.ts',
-    '!src/seedUser.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html', 'clover'],

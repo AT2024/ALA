@@ -40,7 +40,15 @@
       "Bash(ipconfig:*)",
       "Bash(docker inspect:*)",
       "Bash(npm run lint:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(wc:*)",
+      "Bash(for f in \"c:\\\\Users\\\\amitaik\\\\Desktop\\\\ala-improved\\\\backend\\\\src\\\\services\"*.ts)",
+      "Bash(do wc -l \"$f\")",
+      "Bash(done)",
+      "Bash(for f in \"c:\\\\Users\\\\amitaik\\\\Desktop\\\\ala-improved\\\\backend\\\\src\\\\controllers\"*.ts)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

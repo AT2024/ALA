@@ -474,7 +474,6 @@ _For full context, see [Architectural Decision Records](docs/architecture/adr/)_
 - **Old Problem**: 5+ deployment scripts, 7+ env files, constant confusion
 - **Solution**: ONE deploy script, ONE docker-compose.yml, ONE .env template
 - **Result**: Impossible to use wrong script/config (only one of each exists)
-- **See**: `deployment/archive/README.md` for history of the simplification
 
 **Pitfall**: Missing or misconfigured .env file
 - **Symptom**: Deployment fails with "POSTGRES_PASSWORD not set" or similar
