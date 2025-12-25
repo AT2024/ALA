@@ -3,6 +3,11 @@ import axios from 'axios';
 // Debug logging (disabled for production)
 const API_DEBUG = false;
 
+// Configuration from environment variables with defaults
+const API_PORT = (import.meta as any).env.VITE_API_PORT || '5000';
+const API_TIMEOUT = parseInt((import.meta as any).env.VITE_API_TIMEOUT_MS || '30000', 10);
+const PRODUCTION_DOMAIN = (import.meta as any).env.VITE_DOMAIN || 'localhost';
+
 // Dynamic URL generation based on HTTPS configuration
 const getBaseURL = (): string => {
   // First, try environment variable (build-time configuration)
@@ -10,11 +15,11 @@ const getBaseURL = (): string => {
 
   if (baseURL) {
     // If using Docker's internal API URL, adjust for browser context
-    if (baseURL === 'http://api:5000/api' && typeof window !== 'undefined') {
+    if (baseURL === `http://api:${API_PORT}/api` && typeof window !== 'undefined') {
       const useHttps = (import.meta as any).env.VITE_USE_HTTPS === 'true';
       const isProduction = (import.meta as any).env.VITE_ENVIRONMENT === 'production';
       const protocol = useHttps && isProduction ? 'https' : 'http';
-      baseURL = `${protocol}://${window.location.hostname}:5000/api`;
+      baseURL = `${protocol}://${window.location.hostname}:${API_PORT}/api`;
     }
     return baseURL;
   }
@@ -28,7 +33,7 @@ const getBaseURL = (): string => {
     const protocol = useHttps && isProduction ? 'https' : 'http';
     const hostname = window.location.hostname;
 
-    return `${protocol}://${hostname}:5000/api`;
+    return `${protocol}://${hostname}:${API_PORT}/api`;
   }
 
   // Fallback for server-side rendering or missing window object
@@ -37,8 +42,8 @@ const getBaseURL = (): string => {
   const protocol = useHttps && isProduction ? 'https' : 'http';
 
   return isProduction
-    ? `${protocol}://20.217.84.100:5000/api`
-    : 'http://localhost:5000/api';
+    ? `${protocol}://${PRODUCTION_DOMAIN}:${API_PORT}/api`
+    : `http://localhost:${API_PORT}/api`;
 };
 
 const baseURL = getBaseURL();
@@ -52,21 +57,16 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Add longer timeout for Priority API calls
-  timeout: 30000
+  // Add longer timeout for Priority API calls (configurable via VITE_API_TIMEOUT_MS)
+  timeout: API_TIMEOUT,
+  // IMPORTANT: withCredentials is required for HttpOnly cookies to be sent automatically
+  // This replaces the old localStorage token approach (OWASP security best practice)
+  withCredentials: true
 });
 
-// Add request interceptor to include auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Note: No request interceptor needed for auth token
+// HttpOnly cookies are automatically sent by the browser with withCredentials: true
+// This is more secure than localStorage as the token is not accessible via JavaScript
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
@@ -112,8 +112,7 @@ api.interceptors.response.use(
 
     // Handle authentication errors
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Clear invalid auth data
-      localStorage.removeItem('token');
+      // Clear user data (token is in HttpOnly cookie, cleared by logout endpoint)
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

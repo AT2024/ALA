@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models';
 import logger from '../utils/logger';
 import priorityService from '../services/priorityService';
-import { shouldEnforceHttps } from '../config/https';
 import { sendVerificationCode } from '../services/emailService';
 
 // Lazy getter for JWT secret with runtime validation
@@ -16,12 +15,21 @@ function getJwtSecret(): string {
   return JWT_SECRET;
 }
 
-// Generate JWT token
+// Generate JWT token (7 days expiration - security best practice for medical apps)
 const generateToken = (id: string) => {
   return jwt.sign({ id }, getJwtSecret(), {
-    expiresIn: '30d',
+    expiresIn: '7d',
   });
 };
+
+// Cookie configuration for HttpOnly secure auth token
+const getCookieOptions = () => ({
+  httpOnly: true,                                      // Prevents XSS token theft (OWASP mandatory)
+  secure: process.env.NODE_ENV === 'production',       // HTTPS only in production
+  sameSite: 'strict' as const,                         // Prevents CSRF attacks
+  maxAge: 7 * 24 * 60 * 60 * 1000,                    // 7 days in milliseconds
+  path: '/'
+});
 
 // @desc    Request verification code
 // @route   POST /api/auth/request-code
@@ -37,6 +45,54 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
   // Check if the identifier is an email or phone number
   const isEmail = identifier.includes('@');
 
+  // Test bypass ONLY in development - skip Priority validation for test emails
+  // This allows testing without requiring Priority system connectivity
+  if (process.env.NODE_ENV === 'development') {
+    const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
+    if (isEmail && bypassEmails.includes(identifier.toLowerCase())) {
+      logger.info(`[DEV] Bypassing Priority validation for test email: ${identifier}`);
+
+      // Find or create test user locally (no Priority validation)
+      let user = await User.findOne({ where: { email: identifier } });
+      if (!user) {
+        user = await User.create({
+          name: 'Test User',
+          email: identifier,
+          phoneNumber: '555-TEST',
+          role: 'admin',
+          metadata: {
+            positionCode: '99',
+            custName: 'ALL_SITES',
+            sites: [
+              { custName: '100078', custDes: 'Main Test Hospital' },
+              { custName: '100040', custDes: 'Test Hospital' },
+            ],
+            fullAccess: true,
+          },
+        });
+        logger.info(`[DEV] Created test user: ${user.id}`);
+      }
+
+      // Generate verification code
+      const verificationCode = await user.generateVerificationCode();
+      logger.info(`[DEV] Test verification code for ${identifier}: ${verificationCode}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Verification code sent (test mode)',
+        userData: {
+          name: user.name,
+          email: user.email,
+          phoneNumber: user.phoneNumber || '',
+          positionCode: user.metadata?.positionCode || '99',
+          custName: user.metadata?.custName || 'ALL_SITES',
+          sites: user.metadata?.sites || [],
+        },
+      });
+      return;
+    }
+  }
+
   try {
     // First, validate against Priority system
     logger.info(`Validating ${isEmail ? 'email' : 'phone'}: ${identifier} with Priority`);
@@ -45,19 +101,24 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
     try {
       priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
     } catch (priorityError: any) {
+      // Log the actual error for debugging but return generic message to prevent information leakage
       logger.error(`Priority system error for ${identifier}:`, priorityError);
-      res.status(500).json({
+      // Use generic error message to prevent user enumeration attacks
+      res.status(400).json({
         success: false,
-        message: `Priority system error: ${priorityError.message}`,
+        message: 'Unable to send verification code. Please try again later.',
       });
       return;
     }
 
     if (!priorityUserAccess.found) {
+      // Log the actual reason for debugging but return generic message to prevent user enumeration
       logger.info(`${isEmail ? 'Email' : 'Phone'} ${identifier} not found in Priority system`);
-      res.status(404).json({
+      // SECURITY: Use same status code (400) and similar generic message as other failures
+      // This prevents attackers from determining which emails/phones exist in the system
+      res.status(400).json({
         success: false,
-        message: `${isEmail ? 'Email' : 'Phone'} not found in the system`,
+        message: 'Unable to send verification code. Please verify your credentials.',
       });
       return;
     }
@@ -199,15 +260,9 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
   // Generate JWT token
   const token = generateToken(user.id);
 
-  // Set secure cookie for HTTPS environments
-  if (shouldEnforceHttps()) {
-    res.cookie('auth-token', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-    });
-  }
+  // Always set HttpOnly cookie for secure token storage (OWASP best practice)
+  // This prevents XSS attacks from stealing the auth token
+  res.cookie('auth-token', token, getCookieOptions());
 
   res.status(200).json({
     success: true,
@@ -222,7 +277,8 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
       sites: user.metadata?.sites || [],
       fullAccess: Number(user.metadata?.positionCode) === 99
     },
-    token,
+    // NOTE: Token is NOT included in response body - it's set as HttpOnly cookie only
+    // This is an OWASP security best practice to prevent XSS token theft
   });
 });
 
@@ -254,8 +310,12 @@ export const resendVerificationCode = asyncHandler(async (req: Request, res: Res
       const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
 
       if (!priorityUserAccess.found) {
-        res.status(404);
-        throw new Error('User not found in the system');
+        // SECURITY: Use generic error message to prevent user enumeration
+        res.status(400).json({
+          success: false,
+          message: 'Unable to resend verification code. Please verify your credentials.',
+        });
+        return;
       }
 
       // If found in Priority but not locally, create a new user
@@ -333,8 +393,15 @@ export const validateToken = asyncHandler(async (req: Request, res: Response) =>
 
 // @desc    Debug user site access
 // @route   GET /api/auth/debug-sites/:identifier
-// @access  Public (for testing)
+// @access  Development ONLY - returns 404 in production
 export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Response) => {
+  // Security: This endpoint exposes sensitive user information and MUST be disabled in production
+  // It can be used for user enumeration and data leakage attacks
+  if (process.env.NODE_ENV !== 'development') {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+
   const { identifier } = req.params;
 
   if (!identifier) {
@@ -347,10 +414,10 @@ export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Respon
 
   try {
     logger.info(`[DEBUG] Testing site access for identifier: ${identifier}`);
-    
+
     // First test basic Priority connection
     const connectionTest = await priorityService.debugPriorityConnection();
-    
+
     if (!connectionTest.success) {
       res.status(500).json({
         success: false,
@@ -360,9 +427,9 @@ export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Respon
       });
       return;
     }
-    
+
     const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
-    
+
     res.status(200).json({
       success: true,
       message: 'Debug site access check completed',
@@ -385,7 +452,27 @@ export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Respon
       success: false,
       message: 'Debug test failed',
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      stack: error.stack, // OK in development (already protected by NODE_ENV check above)
     });
   }
+});
+
+// @desc    Logout user (clear auth cookie)
+// @route   POST /api/auth/logout
+// @access  Public (anyone can request logout)
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  // Clear the HttpOnly auth cookie
+  res.clearCookie('auth-token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/'
+  });
+
+  logger.info('User logged out, auth cookie cleared');
+
+  res.status(200).json({
+    success: true,
+    message: 'Logged out successfully'
+  });
 });

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import sequelize from '../config/database';
 import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger';
+import { config } from '../config/appConfig';
 
 /**
  * Interface for database health check result
@@ -18,7 +19,7 @@ interface DatabaseHealthResult {
  */
 class DatabaseHealthCache {
   private lastHealthCheck: DatabaseHealthResult | null = null;
-  private cacheValidityMs: number = 300000; // 5 minutes (reduced from 30 seconds to improve performance)
+  private cacheValidityMs: number = config.dbHealthCacheMs; // Configurable via DB_HEALTH_CACHE_MS env var
 
   public async getHealthStatus(): Promise<DatabaseHealthResult> {
     const now = Date.now();
@@ -227,11 +228,11 @@ export const criticalOperationHealthCheck = async (req: Request, res: Response, 
       });
       
       // Consider rejecting if latency is too high for critical operations
-      if (healthStatus.connectionTime > 5000) {
+      if (healthStatus.connectionTime > config.dbHealthThresholdMs) {
         logger.error(`[DB_HEALTH] Database latency too high, blocking critical operation`, {
           requestId,
           connectionTime: `${healthStatus.connectionTime}ms`,
-          maxThreshold: '5000ms'
+          maxThreshold: `${config.dbHealthThresholdMs}ms`
         });
 
         return res.status(503).json({
@@ -240,7 +241,7 @@ export const criticalOperationHealthCheck = async (req: Request, res: Response, 
           message: 'Database response time is too high for critical operations.',
           details: {
             connectionTime: `${healthStatus.connectionTime}ms`,
-            maxAllowed: '5000ms',
+            maxAllowed: `${config.dbHealthThresholdMs}ms`,
             retryAfter: '30 seconds'
           }
         });

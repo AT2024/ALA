@@ -1,7 +1,8 @@
-import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { priorityService } from '@/services/priorityService';
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 
 interface User {
   id: string;
@@ -24,6 +25,10 @@ interface AuthContextType {
   verify: (code: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  // Idle timeout state for UI
+  isIdleWarningShown: boolean;
+  idleSecondsRemaining: number;
+  dismissIdleWarning: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,25 +42,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for user in local storage on initial load
+    // Token is now in HttpOnly cookie (handled automatically by browser)
     const checkAuth = async () => {
       try {
         const storedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-        
-        if (storedUser && token) {
-          // Validate token with backend
-          const valid = await authService.validateToken(token);
-          
+
+        if (storedUser) {
+          // Validate session with backend (cookie is sent automatically)
+          // We pass empty string since token is in HttpOnly cookie now
+          const valid = await authService.validateToken('');
+
           if (valid) {
             setUser(JSON.parse(storedUser));
           } else {
-            // Token invalid, remove from storage and clear cache
+            // Session invalid, clear local storage and cache
             localStorage.removeItem('user');
-            localStorage.removeItem('token');
             try {
               priorityService.clearCache();
             } catch (error) {
-              console.warn('Error clearing Priority cache on invalid token:', error);
+              console.warn('Error clearing Priority cache on invalid session:', error);
             }
           }
         }
@@ -116,17 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const result = await authService.verifyCode(identifier, code);
-      
+
       setUser(result.user);
-      
-      // Store auth data in localStorage for persistence
+
+      // Store user info in localStorage for UI purposes only
+      // Token is now stored in HttpOnly cookie by backend (OWASP security best practice)
+      // The cookie is automatically managed by browser - not accessible via JavaScript
       localStorage.setItem('user', JSON.stringify(result.user));
-      localStorage.setItem('token', result.token);
-      
+
       // Clear session storage
       sessionStorage.removeItem('loginIdentifier');
       sessionStorage.removeItem('priorityUserData');
-      
+
       // Navigate based on user role
       navigate('/procedure-type');
     } catch (err: any) {
@@ -137,29 +143,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Call logout API to clear HttpOnly auth cookie on server
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn('Logout API call failed, continuing with local cleanup:', error);
+    }
+
     setUser(null);
     setLoginIdentifier('');
-    
+
     // Clear all stored data
     localStorage.removeItem('user');
-    localStorage.removeItem('token');
     sessionStorage.removeItem('loginIdentifier');
     sessionStorage.removeItem('priorityUserData');
-    
+
     // Clear Priority service cache to prevent data leakage between users
     try {
       priorityService.clearCache();
     } catch (error) {
       console.warn('Error clearing Priority cache:', error);
     }
-    
+
     navigate('/login');
   };
 
   const clearError = () => {
     setError(null);
   };
+
+  // HIPAA-compliant idle session timeout (15 minutes)
+  // Only active when user is authenticated
+  const handleIdleTimeout = useCallback(() => {
+    if (user) {
+      console.warn('Session expired due to inactivity (HIPAA compliance)');
+      logout();
+    }
+  }, [user]);
+
+  const handleIdleWarning = useCallback(() => {
+    // Warning is shown via the isIdleWarningShown state
+    console.info('Session expiring in 1 minute due to inactivity');
+  }, []);
+
+  const { isWarningShown, secondsRemaining, resetTimer } = useIdleTimeout({
+    onTimeout: handleIdleTimeout,
+    onWarning: handleIdleWarning,
+    enabled: !!user // Only enable when user is logged in
+  });
+
+  const dismissIdleWarning = useCallback(() => {
+    // Reset the timer when user dismisses warning (user activity)
+    resetTimer();
+  }, [resetTimer]);
 
   return (
     <AuthContext.Provider
@@ -171,10 +208,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         verify,
         logout,
-        clearError
+        clearError,
+        isIdleWarningShown: isWarningShown,
+        idleSecondsRemaining: secondsRemaining,
+        dismissIdleWarning
       }}
     >
       {children}
+      {/* Idle timeout warning modal */}
+      {isWarningShown && user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Session Expiring Soon
+            </h2>
+            <p className="text-gray-600 mb-4">
+              For your security, your session will expire in{' '}
+              <span className="font-bold text-red-600">{secondsRemaining}</span>{' '}
+              seconds due to inactivity.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              This is required for HIPAA compliance to protect patient data.
+            </p>
+            <button
+              onClick={dismissIdleWarning}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Stay Logged In
+            </button>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 }

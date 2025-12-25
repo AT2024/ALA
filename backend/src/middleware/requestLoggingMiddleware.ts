@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
+import { config } from '../config/appConfig';
 
 /**
  * Middleware to log detailed request and response information for debugging
@@ -70,13 +71,13 @@ export const requestLoggingMiddleware = (req: Request, res: Response, next: Next
     });
 
     // Log warning for slow requests
-    if (duration > 5000) {
+    if (duration > config.slowRequestThresholdMs) {
       logger.warn(`[PERFORMANCE_WARNING] Slow request detected`, {
         requestId,
         method: req.method,
         url: req.originalUrl,
         duration: `${duration}ms`,
-        threshold: '5000ms'
+        threshold: `${config.slowRequestThresholdMs}ms`
       });
     }
   });
@@ -169,14 +170,14 @@ export const treatmentRequestLoggingMiddleware = (req: Request, res: Response, n
     });
 
     // Performance monitoring for treatment operations
-    if (duration > 3000) {
+    if (duration > config.slowResponseThresholdMs) {
       logger.warn(`[TREATMENT_PERFORMANCE] Slow treatment operation`, {
         requestId,
         method: req.method,
         url: req.originalUrl,
         treatmentId: req.params.id || req.params.treatmentId,
         duration: `${duration}ms`,
-        threshold: '3000ms',
+        threshold: `${config.slowResponseThresholdMs}ms`,
         recommendation: 'Consider optimizing database queries or caching'
       });
     }

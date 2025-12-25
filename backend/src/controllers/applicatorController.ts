@@ -8,6 +8,7 @@ import { zipService } from '../services/zipService';
 import { cleanupTempFiles } from '../middleware/upload';
 import Applicator from '../models/Applicator';
 import logger from '../utils/logger';
+import { config } from '../config/appConfig';
 
 // @desc    Validate an applicator barcode
 // @route   POST /api/applicators/validate
@@ -120,7 +121,7 @@ export const updateApplicator = asyncHandler(async (req: Request, res: Response)
   const { treatmentId, id } = req.params;
 
   // Special handling for test user with numeric applicator IDs
-  if (req.user.email === 'test@example.com' && /^\d+$/.test(id)) {
+  if (req.user.email === config.testUserEmail && /^\d+$/.test(id)) {
     // Verify the treatment exists and user has access
     const treatment = await treatmentService.getTreatmentById(treatmentId);
 

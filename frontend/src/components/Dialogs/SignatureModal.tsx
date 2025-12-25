@@ -496,10 +496,7 @@ const SignatureModal = ({
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="physicist">Physicist</option>
-          <option value="physician">Physician</option>
           <option value="doctor">Doctor</option>
-          <option value="nurse">Nurse</option>
-          <option value="technician">Technician</option>
           <option value="admin">Administrator</option>
         </select>
       </div>

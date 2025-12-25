@@ -9,6 +9,7 @@ import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger';
 import { generateTreatmentPdf, calculateSummary } from '../services/pdfGenerationService';
 import { sendSignedPdf, sendVerificationCode, getPdfRecipientEmail } from '../services/emailService';
+import { config } from '../config/appConfig';
 
 // @desc    Get all treatments with optional filtering
 // @route   GET /api/treatments
@@ -291,17 +292,19 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
   // For test user removals, load applicators from test data
   // For removal treatments with test user, prioritize subjectId as it contains the original order
   // This handles cases where priorityId might have been auto-generated
-  const treatmentNumber = (req.user.email === 'test@example.com' && treatment.type === 'removal')
+  const treatmentNumber = (req.user.email === config.testUserEmail && treatment.type === 'removal')
     ? (treatment.subjectId || treatment.priorityId)
     : (treatment.priorityId || treatment.subjectId);
 
-  if (req.user.email === 'test@example.com' && treatment.type === 'removal' && treatmentNumber) {
+  if (req.user.email === config.testUserEmail && treatment.type === 'removal' && treatmentNumber) {
     logger.info(`Test user removal treatment - loading from test data for order ${treatmentNumber}`);
 
     try {
       // For combined treatments, fetch applicators from all orders
+      // Use treatmentNumber as fallback when orderIds is empty (removal treatments have NULL priorityId)
       const allApplicators = [];
-      for (const orderId of orderIds) {
+      const orderIdsToFetch = orderIds.length > 0 ? orderIds : [treatmentNumber];
+      for (const orderId of orderIdsToFetch) {
         const testApplicators = await priorityService.getOrderSubform(
           orderId,
           req.user.email,
@@ -651,7 +654,7 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
   }
 
   // Check for test user FIRST (existing pattern from priorityService)
-  if (req.user?.email === 'test@example.com') {
+  if (req.user?.email === config.testUserEmail) {
     try {
       // Reuse existing method that already handles test data properly
       const orders = await priorityService.getOrdersForSiteWithFilter(
