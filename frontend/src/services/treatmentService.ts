@@ -231,7 +231,13 @@ export const treatmentService = {
     treatmentId: string,
     code: string,
     signerName: string,
-    signerPosition: string
+    signerPosition: string,
+    availableApplicators?: Array<{
+      id: string;
+      serialNumber: string;
+      applicatorType?: string;
+      seedQuantity: number;
+    }>
   ): Promise<{
     success: boolean;
     message?: string;
@@ -239,7 +245,8 @@ export const treatmentService = {
     const response = await api.post(`/treatments/${treatmentId}/finalize/verify`, {
       code,
       signerName,
-      signerPosition
+      signerPosition,
+      availableApplicators
     });
     return response.data;
   },
@@ -248,14 +255,21 @@ export const treatmentService = {
   async autoFinalize(
     treatmentId: string,
     signerName?: string,
-    signerPosition?: string
+    signerPosition?: string,
+    availableApplicators?: Array<{
+      id: string;
+      serialNumber: string;
+      applicatorType?: string;
+      seedQuantity: number;
+    }>
   ): Promise<{
     success: boolean;
     message?: string;
   }> {
     const response = await api.post(`/treatments/${treatmentId}/finalize/auto`, {
       signerName,
-      signerPosition
+      signerPosition,
+      availableApplicators
     });
     return response.data;
   }

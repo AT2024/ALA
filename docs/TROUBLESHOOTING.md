@@ -643,3 +643,86 @@ docker-compose down && docker-compose up -d --build
 # Azure (uses simplified deployment system)
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 ```
+
+---
+
+## Known Pitfalls & Solutions
+
+### Priority API Integration
+
+**Pitfall**: OData query syntax errors causing silent failures
+- **Solution**: Always test queries with Postman first
+- **Prevention**: Use priority-api-reviewer for all OData queries
+- **Pattern**: See [Priority OData patterns](patterns/integration/priority-odata-queries.md)
+
+**Pitfall**: Incomplete applicator validation (skipping chain steps)
+- **Solution**: Follow complete validation checklist
+- **Prevention**: medical-safety-reviewer enforces complete chain
+- **Critical**: All 7 steps must be validated, no shortcuts
+
+**Pitfall**: Mixing test and production data
+- **Solution**: Strict environment-based data loading
+- **Prevention**: Test data ONLY for test@example.com
+- **Critical**: Never mix 🧪 and 🎯 data sources
+
+### Frontend State Management
+
+**Pitfall**: Treatment state getting out of sync with backend
+- **Solution**: Use TreatmentContext with proper invalidation
+- **Prevention**: ala-code-reviewer checks state consistency
+- **Pattern**: See frontend patterns documentation
+
+**Pitfall**: Scanner component not handling errors gracefully
+- **Solution**: Implement proper error boundaries and fallbacks
+- **Prevention**: medical-safety-reviewer checks critical path error handling
+
+### Database Operations
+
+**Pitfall**: Missing transactions for multi-step operations
+- **Solution**: Always use Sequelize transactions for related updates
+- **Prevention**: medical-safety-reviewer enforces transaction boundaries
+- **Critical**: Treatment data changes must be atomic
+
+**Pitfall**: Migration failures in production
+- **Solution**: Test migrations locally with production-like data first
+- **Prevention**: Database-specialist reviews all migrations
+- **Critical**: Always have rollback plan
+
+### Deployment Issues
+
+**October 2025: Deployment System Radically Simplified**
+- **Old Problem**: 5+ deployment scripts, 7+ env files, constant confusion
+- **Solution**: ONE deploy script, ONE docker-compose.yml, ONE .env template
+- **Result**: Impossible to use wrong script/config (only one of each exists)
+
+**Pitfall**: Missing or misconfigured .env file
+- **Symptom**: Deployment fails with "POSTGRES_PASSWORD not set" or similar
+- **Solution**: Copy `.env.production.template` to `.env` and fill in secrets
+- **Prevention**: deploy script checks for `.env` file existence before proceeding
+- **Quick Fix**: `cd deployment && cp .env.production.template .env && vim .env`
+
+**Pitfall**: Container startup failures
+- **Symptom**: Health checks fail, deployment rolls back automatically
+- **Solution**: Check logs: `cd deployment && docker-compose logs`
+- **Common Causes**: Database password mismatch, incorrect API URLs
+- **Prevention**: Docker health checks catch issues early, automatic rollback prevents bad deployments
+
+**Pitfall**: Nginx config not taking effect
+- **Root Cause**: Nginx config is baked into Docker image at build time
+- **Solution**: The deploy script always rebuilds with `--no-cache`, so nginx config changes take effect
+- **Manual Rebuild**: `cd deployment && docker-compose build --no-cache frontend`
+- **Lesson**: Accept Docker's immutability - rebuild instead of fighting it
+
+**Pitfall**: Testing deployment system changes on production (2025-10-27 CRITICAL INCIDENT)
+- **Symptom**: Production outage while testing "zero-downtime" blue-green deployment
+- **Root Cause**: Tested deployment infrastructure changes directly on live system without local verification
+- **Solution**: ALWAYS test deployment changes locally FIRST with complete workflow verification
+- **Prevention**: Pre-deployment checklist enforcement - see [incident report](learnings/errors/2025-10-27-blue-green-production-outage.md)
+- **Critical**: Production is NEVER a test environment, especially for deployment infrastructure
+
+**Pitfall**: Azure VM disk space fills up over time (RESOLVED 2025-11-10)
+- **Symptom**: Disk space fills up causing deployment failures and production issues
+- **Root Cause**: Docker images accumulate with each build (1-2GB per production deployment)
+- **Solution**: Automated cleanup added to deploy scripts - runs after successful deployment
+- **Prevention**: Disk usage warning shows before deployment, automatic cleanup frees 1-3.5GB per deployment cycle
+- **Manual cleanup**: `docker system prune -f` if emergency space needed

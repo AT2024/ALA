@@ -12,7 +12,7 @@ interface SiteInfo {
 // Helper function to load test data with dynamic dates
 const loadTestData = () => {
   try {
-    const testDataPath = process.env.NODE_ENV === 'production'
+const testDataPath = process.env.NODE_ENV === 'production'
       ? path.join(process.cwd(), 'test-data.json')
       : path.join(__dirname, '../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');
@@ -89,7 +89,7 @@ const loadTestData = () => {
 // Helper function to generate test data dynamically for specific date
 const generateTestDataForDate = (requestedDate: string) => {
   try {
-    const testDataPath = process.env.NODE_ENV === 'production'
+const testDataPath = process.env.NODE_ENV === 'production'
       ? path.join(process.cwd(), 'test-data.json')
       : path.join(__dirname, '../../test-data.json');
     const testDataContent = fs.readFileSync(testDataPath, 'utf8');

@@ -48,7 +48,8 @@
       "Bash(do wc -l \"$f\")",
       "Bash(done)",
       "Bash(for f in \"c:\\\\Users\\\\amitaik\\\\Desktop\\\\ala-improved\\\\backend\\\\src\\\\controllers\"*.ts)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git branch:*)"
     ],
     "deny": []
   }

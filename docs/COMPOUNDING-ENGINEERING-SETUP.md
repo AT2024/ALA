@@ -198,6 +198,45 @@ Your system now uses these quality gates:
 
 ---
 
+## Quality Gates (Detailed)
+
+Every substantial change must pass through these gates:
+
+### Gate 1: Planning Review
+- Tool: `judge_coding_plan`
+- Validates: Requirements clear, design sound, risks identified
+- Blocker: Critical missing requirements or design flaws
+
+### Gate 2: Implementation
+- Agents: Specialist agents implement with domain expertise
+- Parallel: Use multiple agents when tasks are independent
+- Documentation: Update relevant docs as you code
+
+### Gate 3: Code Review
+- Agents: `ala-code-reviewer`, `priority-api-reviewer`, `medical-safety-reviewer`
+- Validates: Code quality, patterns, safety requirements
+- Blocker: Critical safety issues or major quality problems
+
+### Gate 4: Code Change Validation
+- Tool: `judge_code_change`
+- Validates: Implementation matches plan, quality standards met
+- Requires: Git diff of all changes
+- Blocker: Data integrity issues, safety violations
+
+### Gate 5: Testing Validation
+- Tool: `judge_testing_implementation`
+- Validates: Test quality, coverage, execution results
+- Requires: Test files list + test execution output
+- Blocker: Insufficient coverage of critical paths
+
+### Gate 6: Completion Validation
+- Tool: `judge_coding_task_completion`
+- Validates: All requirements met, quality gates passed
+- Final check before deployment
+- Blocker: Incomplete implementation or failed validations
+
+---
+
 ## 🔄 Learning Loops - The Secret Sauce
 
 ### After Every Bug Fix

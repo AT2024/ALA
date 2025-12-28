@@ -1,0 +1,28 @@
+name: "ALA Medical App CodeQL Config"
+
+# Use security-extended for thorough analysis
+queries:
+  - uses: security-extended
+
+# Paths to analyze
+paths:
+  - backend/src
+  - frontend/src
+
+# Paths to ignore
+paths-ignore:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/__tests__/**"
+  - "**/coverage/**"
+
+# Query filters - focus on high/critical for medical app
+query-filters:
+  - exclude:
+      problem.severity: recommendation

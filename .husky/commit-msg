@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Validate commit message follows conventional commits
+npx --no -- commitlint --edit $1

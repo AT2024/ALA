@@ -105,6 +105,10 @@ COPY --chown=nodejs:nodejs backend/package*.json ./
 # Copy test data file for development testing
 COPY --chown=nodejs:nodejs backend/test-data.json ./
 
+# Create assets directory and copy logo from frontend for PDF generation (no file duplication in repo)
+RUN mkdir -p assets
+COPY --chown=nodejs:nodejs frontend/public/alphataulogo.png ./assets/alphataulogo.png
+
 # Create logs and uploads directories
 RUN mkdir -p logs && chown -R nodejs:nodejs logs
 RUN mkdir -p uploads/zips uploads/temp && chown -R nodejs:nodejs uploads

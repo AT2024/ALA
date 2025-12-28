@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect, useCallback } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, EnvelopeIcon, CheckCircleIcon, ExclamationTriangleIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { treatmentService } from '@/services/treatmentService';
+import { useTreatment } from '@/context/TreatmentContext';
 
 interface SiteUser {
   email: string;
@@ -38,6 +39,10 @@ const SignatureModal = ({
   userData,
 }: SignatureModalProps) => {
   // Note: treatmentSite is available via _treatmentSite if needed for site-specific features
+
+  // Get available applicators from treatment context to include in PDF
+  const { availableApplicators } = useTreatment();
+
   // Step management - hospital flow starts at confirmation, alphatau at email selection
   const [currentStep, setCurrentStep] = useState<Step>(
     flowType === 'hospital_auto' ? 'hospital_confirmation' : 'email_selection'
@@ -201,7 +206,8 @@ const SignatureModal = ({
         treatmentId,
         verificationCode,
         signerName.trim(),
-        signerPosition
+        signerPosition,
+        availableApplicators
       );
       onSuccess();
       onClose();
@@ -242,7 +248,7 @@ const SignatureModal = ({
     setError(null);
 
     try {
-      await treatmentService.autoFinalize(treatmentId, signerName.trim(), signerPosition);
+      await treatmentService.autoFinalize(treatmentId, signerName.trim(), signerPosition, availableApplicators);
       onSuccess();
       onClose();
     } catch (err: any) {

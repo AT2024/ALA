@@ -9,7 +9,8 @@
     "dev": "node run.js",
     "docker": "node run.js",
     "docs:update": "node scripts/update-docs.js",
-    "docs:check": "echo '\n📝 Documentation Reminder:\n' && echo '  If you changed:' && echo '  - Azure commands → Update docs/deployment/AZURE_DEPLOYMENT.md' && echo '  - API endpoints → Update docs/API_REFERENCE.md' && echo '  - Priority logic → Update docs/PRIORITY_INTEGRATION.md' && echo '\n  Or just run: npm run docs:update\n'"
+    "docs:check": "echo '\n📝 Documentation Reminder:\n' && echo '  If you changed:' && echo '  - Azure commands → Update docs/deployment/AZURE_DEPLOYMENT.md' && echo '  - API endpoints → Update docs/API_REFERENCE.md' && echo '  - Priority logic → Update docs/PRIORITY_INTEGRATION.md' && echo '\n  Or just run: npm run docs:update\n'",
+    "prepare": "husky"
   },
   "keywords": [
     "docker",
@@ -24,5 +25,15 @@
     "axios": "^1.12.2",
     "colors": "^1.4.0",
     "puppeteer": "^24.17.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,tsx}": "cd frontend && npm run lint -- --fix",
+    "backend/src/**/*.ts": "cd backend && npm run lint -- --fix"
   }
 }

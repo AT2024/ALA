@@ -1049,7 +1049,7 @@ export const sendFinalizationCode = asyncHandler(async (req: Request, res: Respo
 // @route   POST /api/treatments/:id/finalize/verify
 // @access  Private (Position 99 only)
 export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response) => {
-  const { code, signerName, signerPosition } = req.body;
+  const { code, signerName, signerPosition, availableApplicators } = req.body;
 
   // Only Position 99 users can verify
   // Use Number() to handle both string and number types from JSON storage
@@ -1125,7 +1125,36 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
   });
 
   // Get applicators for the treatment
-  const applicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+  const processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+
+  // Merge unused applicators from availableApplicators list
+  const processedSerials = new Set(processedApplicators.map((a: any) => a.serialNumber));
+  const unusedApplicators = (availableApplicators || [])
+    .filter((a: any) => !processedSerials.has(a.serialNumber))
+    .map((a: any) => ({
+      id: a.id,
+      serialNumber: a.serialNumber,
+      applicatorType: a.applicatorType,
+      seedQuantity: a.seedQuantity,
+      usageType: 'sealed',
+      insertionTime: '',
+      insertedSeedsQty: 0,
+      comments: 'Not used'
+    }));
+
+  const allApplicators = [
+    ...processedApplicators.map((app: any) => ({
+      id: app.id,
+      serialNumber: app.serialNumber,
+      applicatorType: app.applicatorType,
+      seedQuantity: app.seedQuantity,
+      usageType: app.usageType,
+      insertionTime: app.insertionTime,
+      insertedSeedsQty: app.insertedSeedsQty,
+      comments: app.comments
+    })),
+    ...unusedApplicators
+  ];
 
   // Generate PDF with signature
   const signatureDetails = {
@@ -1147,16 +1176,7 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
       activityPerSeed: treatment.activityPerSeed,
       patientName: treatment.patientName
     },
-    applicators.map((app: any) => ({
-      id: app.id,
-      serialNumber: app.serialNumber,
-      applicatorType: app.applicatorType,
-      seedQuantity: app.seedQuantity,
-      usageType: app.usageType,
-      insertionTime: app.insertionTime,
-      insertedSeedsQty: app.insertedSeedsQty,
-      comments: app.comments
-    })),
+    allApplicators,
     signatureDetails
   );
 
@@ -1242,7 +1262,7 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   }
 
   // Extract optional signer details from request body (from hospital confirmation modal)
-  const { signerName: requestSignerName, signerPosition: requestSignerPosition } = req.body;
+  const { signerName: requestSignerName, signerPosition: requestSignerPosition, availableApplicators } = req.body;
 
   // Use provided values or fall back to user data
   const signerName = requestSignerName?.trim() || req.user.name;
@@ -1259,7 +1279,36 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   });
 
   // Get applicators for the treatment
-  const applicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+  const processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+
+  // Merge unused applicators from availableApplicators list
+  const processedSerials = new Set(processedApplicators.map((a: any) => a.serialNumber));
+  const unusedApplicators = (availableApplicators || [])
+    .filter((a: any) => !processedSerials.has(a.serialNumber))
+    .map((a: any) => ({
+      id: a.id,
+      serialNumber: a.serialNumber,
+      applicatorType: a.applicatorType,
+      seedQuantity: a.seedQuantity,
+      usageType: 'sealed',
+      insertionTime: '',
+      insertedSeedsQty: 0,
+      comments: 'Not used'
+    }));
+
+  const allApplicators = [
+    ...processedApplicators.map((app: any) => ({
+      id: app.id,
+      serialNumber: app.serialNumber,
+      applicatorType: app.applicatorType,
+      seedQuantity: app.seedQuantity,
+      usageType: app.usageType,
+      insertionTime: app.insertionTime,
+      insertedSeedsQty: app.insertedSeedsQty,
+      comments: app.comments
+    })),
+    ...unusedApplicators
+  ];
 
   // Generate PDF with auto-signature
   const signatureDetails = {
@@ -1281,16 +1330,7 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
       activityPerSeed: treatment.activityPerSeed,
       patientName: treatment.patientName
     },
-    applicators.map((app: any) => ({
-      id: app.id,
-      serialNumber: app.serialNumber,
-      applicatorType: app.applicatorType,
-      seedQuantity: app.seedQuantity,
-      usageType: app.usageType,
-      insertionTime: app.insertionTime,
-      insertedSeedsQty: app.insertedSeedsQty,
-      comments: app.comments
-    })),
+    allApplicators,
     signatureDetails
   );
 

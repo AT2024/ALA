@@ -1,4 +1,6 @@
 import PDFDocument from 'pdfkit';
+import * as fs from 'fs';
+import * as path from 'path';
 import logger from '../utils/logger';
 
 // PDF Document Configuration - matches frontend
@@ -24,7 +26,7 @@ export interface Applicator {
   serialNumber: string;
   applicatorType?: string;
   seedQuantity: number;
-  usageType: 'full' | 'faulty' | 'none';
+  usageType: 'full' | 'faulty' | 'none' | 'sealed';
   insertionTime: string;
   insertedSeedsQty?: number;
   comments?: string;
@@ -49,7 +51,7 @@ export interface SignatureDetails {
 }
 
 /**
- * Format a date for display
+ * Format a date for display with 3-letter month abbreviation
  */
 function formatDate(date: Date | string, includeTime = true): string {
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -57,8 +59,9 @@ function formatDate(date: Date | string, includeTime = true): string {
     return 'N/A';
   }
 
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const month = months[d.getMonth()];
   const year = d.getFullYear();
 
   if (!includeTime) {
@@ -84,6 +87,21 @@ function formatSignatureDate(date: Date): string {
   const seconds = String(date.getSeconds()).padStart(2, '0');
 
   return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Format site name for display (handles backward compatibility)
+ * - If site has a number in parentheses at the end, strip it
+ * - Otherwise return as-is
+ */
+function formatSiteName(site: string): string {
+  if (!site) return 'N/A';
+  // Match pattern: "Hospital Name (123456)" -> extract "Hospital Name"
+  const match = site.match(/^(.+?)\s*\(\d+\)$/);
+  if (match) {
+    return match[1].trim();
+  }
+  return site;
 }
 
 /**
@@ -168,7 +186,8 @@ export function calculateSummary(
 ): TreatmentSummary {
   const fullUseApplicators = applicators.filter(a => a.usageType === 'full');
   const faultyApplicators = applicators.filter(a => a.usageType === 'faulty');
-  const notUsedApplicators = applicators.filter(a => a.usageType === 'none');
+  // Count both 'none' and 'sealed' as not used
+  const notUsedApplicators = applicators.filter(a => a.usageType === 'none' || a.usageType === 'sealed');
 
   // Find earliest insertion time
   const insertionTimes = applicators
@@ -239,6 +258,17 @@ export async function generateTreatmentPdf(
       const summary = calculateSummary(treatment, applicators);
 
       // ===== HEADER =====
+      // Add Alpha Tau logo (top-left corner)
+      // Smart path: works in both local dev and Docker production
+      // Local: process.cwd() is backend folder, logo is in ../frontend/public/
+      // Docker: logo is copied to ./assets/ during build
+      const localLogoPath = path.join(process.cwd(), '..', 'frontend', 'public', 'alphataulogo.png');
+      const dockerLogoPath = path.join(process.cwd(), 'assets', 'alphataulogo.png');
+      const logoPath = fs.existsSync(localLogoPath) ? localLogoPath : dockerLogoPath;
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, 15, { width: 100 });
+      }
+
       // Draw document number and version (also drawn on subsequent pages via pageAdded event)
       doc.fontSize(10).font('Helvetica').fillColor('black');
       doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: 'center' });
@@ -259,10 +289,10 @@ export async function generateTreatmentPdf(
       doc.fontSize(11).font('Helvetica');
       const treatmentInfo: [string, string][] = [
         ['Patient ID:', treatment.patientName || treatment.subjectId],
-        ['Site:', treatment.site],
+        ['Site:', formatSiteName(treatment.site)],
         ['Treatment Type:', treatment.type.charAt(0).toUpperCase() + treatment.type.slice(1).replace('_', ' ')],
-        ['Treatment Date:', formatDate(treatment.date, false)],
-        ['Surgeon:', treatment.surgeon || 'N/A']
+        ['Treatment Date:', formatDate(treatment.date, false)]
+        // Surgeon removed - already shown as "Inserted By" in Treatment Summary
       ];
 
       treatmentInfo.forEach(([label, value]) => {
@@ -281,7 +311,9 @@ export async function generateTreatmentPdf(
       const sortedApplicators = [...applicators].sort((a, b) => b.seedQuantity - a.seedQuantity);
 
       const tableHeaders = ['Serial', 'Type', 'Seeds', 'Time', 'Usage', 'Inserted', 'Comments'];
-      const columnWidths = [65, 55, 40, 75, 55, 50, 85];
+      // Increased Type column width to 110 to show full applicator names like "Alpha Flex 3D Needle"
+      // Redistributed: Serial 55, Type 110, Seeds 30, Time 65, Usage 45, Inserted 40, Comments 80 = 425 total
+      const columnWidths = [55, 110, 30, 65, 45, 40, 80];
 
       const tableRows = sortedApplicators.map(applicator => [
         applicator.serialNumber,
@@ -292,6 +324,7 @@ export async function generateTreatmentPdf(
           : 'N/A',
         applicator.usageType === 'full' ? 'Full use'
           : applicator.usageType === 'faulty' ? 'Faulty'
+          : applicator.usageType === 'sealed' ? 'Not Used'
           : 'No Use',
         applicator.usageType === 'full'
           ? applicator.seedQuantity.toString()
