@@ -31,24 +31,8 @@ export const validateApplicator = asyncHandler(async (req: Request, res: Respons
   res.status(200).json(validation);
 });
 
-// @desc    Add an applicator to a treatment
-// @route   POST /api/treatments/:treatmentId/applicators
-// @access  Private
-export const addApplicator = asyncHandler(async (req: Request, res: Response) => {
-  const { treatmentId } = req.params;
-  
-  // Verify the treatment exists and user has access
-  const treatment = await treatmentService.getTreatmentById(treatmentId);
-  
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to modify this treatment');
-  }
-  
-  const applicator = await applicatorService.addApplicator(treatmentId, req.body, req.user.id);
-  
-  res.status(201).json(applicator);
-});
+// NOTE: addApplicator was removed - use treatmentController.addApplicator instead
+// which uses addApplicatorWithTransaction() for better reliability
 
 // @desc    Get applicator data by serial number
 // @route   GET /api/applicators/:serialNumber
@@ -66,35 +50,8 @@ export const getApplicatorBySerialNumber = asyncHandler(async (req: Request, res
   res.status(200).json(applicatorData.data);
 });
 
-// @desc    Update treatment status
-// @route   PATCH /api/treatments/:treatmentId/status
-// @access  Private
-export const updateTreatmentStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { treatmentId } = req.params;
-  const { status } = req.body;
-  
-  if (!['Performed', 'Removed'].includes(status)) {
-    res.status(400);
-    throw new Error('Status must be either "Performed" or "Removed"');
-  }
-  
-  // Verify the treatment exists and user has access
-  const treatment = await treatmentService.getTreatmentById(treatmentId);
-  
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to modify this treatment');
-  }
-  
-  const result = await applicatorService.updateTreatmentStatusInPriority(treatmentId, status);
-  
-  if (!result.success) {
-    res.status(500);
-    throw new Error(result.message || 'Failed to update treatment status');
-  }
-  
-  res.status(200).json(result);
-});
+// NOTE: updateTreatmentStatus was removed - use treatmentController.updateTreatmentStatus instead
+// to avoid duplicate route handlers
 
 // @desc    Get an applicator by ID
 // @route   GET /api/applicators/:id

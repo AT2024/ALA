@@ -16,6 +16,7 @@ import {
   SKIN_TRANSITIONS,
   ALL_STATUSES
 } from '../../../shared/applicatorStatuses';
+import { getFirstOrderId } from '../utils/priorityIdParser';
 
 export interface ApplicatorValidationResult {
   isValid: boolean;
@@ -26,6 +27,8 @@ export interface ApplicatorValidationResult {
     serialNumber: string;
     applicatorType: string; // PARTDES from Priority
     seedQuantity: number;   // INTDATA2 from Priority
+    catalog?: string;       // PARTNAME from Priority (catalog number)
+    seedLength?: number;    // SIBD_SEEDLEN from Priority order
     intendedPatientId?: string;
     previousTreatmentId?: string;
   };
@@ -148,6 +151,54 @@ export const applicatorService = {
         order: [['insertionTime', 'ASC']],
       });
 
+      // Enrich applicators with seedLength and catalog from Priority if not already set
+      if (applicators.length > 0 && treatment) {
+        try {
+          // Get order details for seedLength
+          let orderSeedLength: number | null = null;
+          if (treatment.priorityId) {
+            try {
+              const orderDetails = await priorityService.getOrderDetails(treatment.priorityId);
+              orderSeedLength = orderDetails?.SIBD_SEEDLEN || null;
+              if (orderSeedLength) {
+                logger.info(`Enrichment: Found seedLength ${orderSeedLength} from order ${treatment.priorityId}`);
+              }
+            } catch (e) {
+              logger.warn(`Could not fetch order seedLength: ${e}`);
+            }
+          }
+
+          // Enrich each applicator
+          const enrichedApplicators = await Promise.all(applicators.map(async (app) => {
+            const appData = app.toJSON() as any;
+
+            // Enrich seedLength if missing
+            if (!appData.seedLength && orderSeedLength) {
+              appData.seedLength = orderSeedLength;
+            }
+
+            // Enrich catalog if missing - try to get PARTNAME from PARTS table using applicatorType
+            if (!appData.catalog && appData.applicatorType) {
+              try {
+                const partName = await priorityService.getPartNameFromDescription(appData.applicatorType);
+                if (partName) {
+                  appData.catalog = partName;
+                  logger.info(`Enrichment: Found catalog ${partName} for applicator ${appData.serialNumber}`);
+                }
+              } catch (e) {
+                // Silently continue if lookup fails
+              }
+            }
+
+            return appData;
+          }));
+
+          return enrichedApplicators;
+        } catch (enrichError) {
+          logger.warn(`Could not enrich applicators: ${enrichError}`);
+        }
+      }
+
       return applicators;
     } catch (error) {
       logger.error(`Error fetching applicators: ${error}`);
@@ -201,7 +252,8 @@ export const applicatorService = {
       }
       
       // Scenario 2: Check if applicator exists in Priority SIBD_APPLICATUSELIST
-      const applicatorInPriority = await this.getApplicatorFromPriority(serialNumber);
+      // Pass treatment.priorityId to also fetch seedLength from order
+      const applicatorInPriority = await this.getApplicatorFromPriority(serialNumber, treatment.priorityId || undefined);
       
       if (!applicatorInPriority.found) {
         // If not found, import applicator lists from treatments at same site within 24 hours
@@ -296,7 +348,9 @@ export const applicatorService = {
           applicatorData: {
             serialNumber: priorityApplicator.serialNumber,
             applicatorType: priorityApplicator.applicatorType,
-            seedQuantity: priorityApplicator.seedQuantity
+            seedQuantity: priorityApplicator.seedQuantity,
+            catalog: priorityApplicator.catalog,  // PARTNAME from Priority
+            seedLength: priorityApplicator.seedLength  // SIBD_SEEDLEN from order
           }
         };
       }
@@ -316,12 +370,14 @@ export const applicatorService = {
   /**
    * Get applicator data from Priority SIBD_APPLICATUSELIST table
    */
-  async getApplicatorFromPriority(serialNumber: string): Promise<{
+  async getApplicatorFromPriority(serialNumber: string, treatmentPriorityId?: string): Promise<{
     found: boolean;
     data?: {
       serialNumber: string;
       applicatorType: string; // PARTDES
       seedQuantity: number;   // INTDATA2
+      catalog?: string;       // PARTNAME (catalog number)
+      seedLength?: number;    // SIBD_SEEDLEN from order
       intendedPatientId?: string;
       previousTreatmentId?: string;
       previousUsageType?: string;
@@ -331,23 +387,51 @@ export const applicatorService = {
     try {
       // Query Priority SIBD_APPLICATUSELIST table for the serial number
       const applicatorData = await priorityService.getApplicatorFromPriority(serialNumber);
-      
+
       if (!applicatorData.found || !applicatorData.data) {
         return {
           found: false,
           error: 'Applicator not found in Priority system.'
         };
       }
-      
+
       // Get additional part details from PARTS table
       const partDetails = await priorityService.getPartDetails(applicatorData.data.partName);
-      
+
+      // Get seedLength from order if treatmentPriorityId provided
+      let seedLength: number | undefined;
+      if (treatmentPriorityId) {
+        try {
+          const orderDetails = await priorityService.getOrderDetails(treatmentPriorityId);
+          seedLength = orderDetails?.SIBD_SEEDLEN || undefined;
+        } catch (e) {
+          logger.warn(`Could not fetch seedLength for validation: ${e}`);
+        }
+      }
+
+      // If PARTNAME is missing from SIBD_APPLICATUSELIST, try order subform
+      let catalog = applicatorData.data.partName;
+      if (!catalog && applicatorData.data.treatmentId) {
+        try {
+          const orderApplicators = await priorityService.getOrderSubform(applicatorData.data.treatmentId);
+          const matchingApp = orderApplicators?.find((a: any) => a.SERNUM === serialNumber);
+          if (matchingApp?.PARTNAME) {
+            catalog = matchingApp.PARTNAME;
+            logger.info(`Fetched catalog ${catalog} from order subform for validation of ${serialNumber}`);
+          }
+        } catch (e) {
+          logger.warn(`Could not fetch catalog from order subform for validation: ${e}`);
+        }
+      }
+
       return {
         found: true,
         data: {
           serialNumber: applicatorData.data.serialNumber,
           applicatorType: partDetails.partDes || applicatorData.data.partName,
           seedQuantity: partDetails.seedQuantity || 0,
+          catalog: catalog || null,  // PARTNAME with subform fallback
+          seedLength,  // SIBD_SEEDLEN from order
           intendedPatientId: applicatorData.data.intendedPatientId,
           previousTreatmentId: applicatorData.data.treatmentId,
           previousUsageType: applicatorData.data.usageType
@@ -665,137 +749,11 @@ export const applicatorService = {
     return { valid: true };
   },
 
-  // Add an applicator to a treatment with validation
-  async addApplicator(treatmentId: string, data: any, userId: string) {
-    logger.info(`[APPLICATOR_SERVICE] Starting addApplicator process`, {
-      treatmentId,
-      treatmentIdType: typeof treatmentId,
-      treatmentIdLength: treatmentId?.length,
-      userId,
-      requestData: data
-    });
-
-    try {
-      // Validate input parameters
-      if (!treatmentId) {
-        logger.error(`[APPLICATOR_SERVICE] Invalid treatmentId: ${treatmentId}`);
-        throw new Error('Treatment ID is required');
-      }
-
-      if (typeof treatmentId !== 'string') {
-        logger.error(`[APPLICATOR_SERVICE] treatmentId is not a string: ${typeof treatmentId}`, { treatmentId });
-        throw new Error('Treatment ID must be a string');
-      }
-
-      // UUID format validation
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(treatmentId)) {
-        logger.error(`[APPLICATOR_SERVICE] Invalid UUID format for treatmentId: ${treatmentId}`);
-        throw new Error('Treatment ID must be a valid UUID');
-      }
-
-      logger.info(`[APPLICATOR_SERVICE] Searching for treatment in database`, { treatmentId });
-      
-      const treatment = await Treatment.findByPk(treatmentId);
-      
-      logger.info(`[APPLICATOR_SERVICE] Database query result`, {
-        treatmentId,
-        found: !!treatment,
-        treatmentData: treatment ? {
-          id: treatment.id,
-          type: treatment.type,
-          subjectId: treatment.subjectId,
-          site: treatment.site,
-          isComplete: treatment.isComplete,
-          userId: treatment.userId
-        } : null
-      });
-      
-      if (!treatment) {
-        logger.error(`[APPLICATOR_SERVICE] Treatment not found in database`, {
-          treatmentId,
-          searchedId: treatmentId,
-          databaseError: 'No treatment record found with this ID'
-        });
-        throw new Error(`Treatment not found with ID: ${treatmentId}`);
-      }
-      
-      if (treatment.isComplete) {
-        logger.warn(`[APPLICATOR_SERVICE] Attempt to add applicator to completed treatment`, {
-          treatmentId,
-          isComplete: treatment.isComplete
-        });
-        throw new Error('Cannot add applicator to a completed treatment');
-      }
-      
-      // Validate required fields
-      if (!data.serialNumber) {
-        throw new Error('Serial number is required');
-      }
-      
-      if (!data.usageType) {
-        throw new Error('Usage type is required');
-      }
-      
-      // Validate usage type
-      if (!['full', 'faulty', 'none'].includes(data.usageType)) {
-        throw new Error('Invalid usage type. Must be "full", "faulty", or "none"');
-      }
-      
-      // If usage type is "faulty", comments are required
-      if (data.usageType === 'faulty' && !data.comments) {
-        throw new Error('Comments are required for faulty applicators');
-      }
-      
-      // Save to Priority system first (optional - won't block local save)
-      const prioritySaveResult = await this.saveApplicatorToPriority(treatmentId, {
-        serialNumber: data.serialNumber,
-        insertionTime: data.insertionTime || new Date().toISOString(),
-        usingType: data.usageType,
-        insertedSeedsQty: data.insertedSeedsQty || 0,
-        comments: data.comments
-      });
-      
-      // Log Priority result but DON'T THROW ERROR - always continue with local save
-      if (!prioritySaveResult.success) {
-        logger.warn(`Priority save failed (continuing with local save): ${prioritySaveResult.message}`);
-      } else {
-        logger.info(`Priority save successful: ${prioritySaveResult.message}`);
-      }
-      
-      // ALWAYS create the applicator in local database
-      const applicator = await Applicator.create({
-        ...data,
-        treatmentId,
-        addedBy: userId,
-        insertionTime: data.insertionTime || new Date(),
-        seedQuantity: data.seedQuantity || 0,
-        isRemoved: false,
-      });
-      
-      logger.info(`[APPLICATOR_SERVICE] Successfully added applicator`, {
-        treatmentId,
-        applicatorId: applicator.id,
-        serialNumber: data.serialNumber,
-        usageType: data.usageType
-      });
-
-      return applicator;
-    } catch (error: any) {
-      logger.error(`[APPLICATOR_SERVICE] Error adding applicator`, {
-        treatmentId,
-        userId,
-        requestData: data,
-        error: {
-          message: error.message,
-          name: error.name,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        },
-        timestamp: new Date().toISOString()
-      });
-      throw error;
-    }
-  },
+  // NOTE: Legacy addApplicator() method was removed (160 lines).
+  // Use addApplicatorWithTransaction() instead - it's the active code path
+  // called by treatmentController.addApplicator via POST /api/treatments/:id/applicators.
+  // The legacy method used getPartNameFromDescription() which is less reliable than
+  // the order subform lookup used by addApplicatorWithTransaction().
 
   // Add an applicator to a treatment with transaction support (optimized version)
   async addApplicatorWithTransaction(treatment: any, data: any, userId: string, transaction: any) {
@@ -851,9 +809,45 @@ export const applicatorService = {
         throw new Error(`Data validation failed: ${dataValidation.issues.join(', ')}`);
       }
 
+      // STEP 2.5: Enrich data with catalog and seedLength from Priority if not provided
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 2.5: Enriching data with Priority lookup`);
+      let enrichedData = { ...data };
+
+      // Get first order ID for lookups (handles combined treatments with JSON array)
+      const orderIdForLookup = getFirstOrderId(treatment.priorityId);
+
+      // Fetch catalog from order subform (more reliable than PARTS table substring query)
+      if (!enrichedData.catalog && enrichedData.serialNumber && orderIdForLookup) {
+        try {
+          const orderApplicators = await priorityService.getOrderSubform(orderIdForLookup);
+          const matchingApp = orderApplicators?.find((a: any) => a.SERNUM === enrichedData.serialNumber);
+          if (matchingApp?.PARTNAME) {
+            enrichedData.catalog = matchingApp.PARTNAME;
+            logger.info(`[APPLICATOR_SERVICE] [${requestId}] Fetched catalog ${enrichedData.catalog} from order subform for serial ${enrichedData.serialNumber}`);
+          } else {
+            logger.warn(`[APPLICATOR_SERVICE] [${requestId}] No matching applicator found in subform for serial ${enrichedData.serialNumber}`);
+          }
+        } catch (error: any) {
+          logger.warn(`[APPLICATOR_SERVICE] [${requestId}] Could not fetch catalog from order subform: ${error.message}`);
+        }
+      }
+
+      // Fetch seedLength from order if not provided
+      if (!enrichedData.seedLength && orderIdForLookup) {
+        try {
+          const orderDetails = await priorityService.getOrderDetails(orderIdForLookup);
+          if (orderDetails?.SIBD_SEEDLEN) {
+            enrichedData.seedLength = orderDetails.SIBD_SEEDLEN;
+            logger.info(`[APPLICATOR_SERVICE] [${requestId}] Fetched seedLength from Priority order: ${enrichedData.seedLength}`);
+          }
+        } catch (error: any) {
+          logger.warn(`[APPLICATOR_SERVICE] [${requestId}] Could not fetch seedLength from Priority order: ${error.message}`);
+        }
+      }
+
       // STEP 3: Transform Priority data to our application format
       logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 3: Transforming Priority data`);
-      const transformationResult = transformPriorityApplicatorData(data as PriorityApplicatorData, requestId);
+      const transformationResult = transformPriorityApplicatorData(enrichedData as PriorityApplicatorData, requestId);
       
       if (!transformationResult.success) {
         logger.error(`[APPLICATOR_SERVICE] [${requestId}] Priority data transformation failed`, {
