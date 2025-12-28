@@ -41,6 +41,10 @@ interface Applicator {
   status?: ApplicatorStatus;
   // Package label for pancreas/prostate treatments
   package_label?: string;
+  // Catalog number from Priority PARTNAME field
+  catalog?: string;
+  // Seed length from Priority SIBD_SEEDLEN field
+  seedLength?: number;
 }
 
 interface ProgressStats {

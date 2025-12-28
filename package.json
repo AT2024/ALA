@@ -33,7 +33,7 @@
     "lint-staged": "^16.2.7"
   },
   "lint-staged": {
-    "frontend/src/**/*.{ts,tsx}": "cd frontend && npm run lint -- --fix",
-    "backend/src/**/*.ts": "cd backend && npm run lint -- --fix"
+    "frontend/src/**/*.{ts,tsx}": "npm run lint --prefix frontend -- --fix",
+    "backend/src/**/*.ts": "npm run lint --prefix backend -- --fix"
   }
 }

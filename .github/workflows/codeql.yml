@@ -85,8 +85,6 @@ jobs:
           upload: true
           # Generate detailed output for debugging
           output: sarif-results
-          # Add medical app context to results
-          add-snippets: true
 
       - name: Upload CodeQL Results (Artifact)
         uses: actions/upload-artifact@v4

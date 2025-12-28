@@ -30,10 +30,14 @@ interface ApplicatorAttributes {
   attachmentSyncStatus: 'pending' | 'syncing' | 'synced' | 'failed' | null;
   // Applicator type from Priority PARTS.PARTDES
   applicatorType: string | null;
+  // Catalog number from Priority PARTNAME field
+  catalog: string | null;
+  // Seed length from Priority SIBD_SEEDLEN field
+  seedLength: number | null;
 }
 
 // For creating a new applicator
-interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType'> {}
+interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType' | 'catalog' | 'seedLength'> {}
 
 class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttributes> implements ApplicatorAttributes {
   public id!: string;
@@ -59,6 +63,10 @@ class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttribute
   public attachmentSyncStatus!: 'pending' | 'syncing' | 'synced' | 'failed' | null;
   // Applicator type from Priority PARTS.PARTDES
   public applicatorType!: string | null;
+  // Catalog number from Priority PARTNAME field
+  public catalog!: string | null;
+  // Seed length from Priority SIBD_SEEDLEN field
+  public seedLength!: number | null;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -191,6 +199,18 @@ Applicator.init(
       type: DataTypes.STRING(255),
       allowNull: true,
       field: 'applicator_type',
+    },
+    // Catalog number from Priority PARTNAME field
+    catalog: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'catalog',
+    },
+    // Seed length from Priority SIBD_SEEDLEN field
+    seedLength: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      field: 'seed_length',
     },
   },
   {

@@ -239,10 +239,16 @@ const UseList = () => {
                       Serial Number
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Catalog
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Applicator Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Seeds Qty.
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Length (mm)
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Using Time
@@ -287,13 +293,19 @@ const UseList = () => {
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {applicator.catalog || 'N/A'}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {applicator.applicatorType || 'N/A'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {applicator.seedQuantity}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {applicator.insertionTime && !isNaN(new Date(applicator.insertionTime).getTime()) 
+                        {applicator.seedLength ? `${applicator.seedLength}` : '-'}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {applicator.insertionTime && !isNaN(new Date(applicator.insertionTime).getTime())
                           ? format(new Date(applicator.insertionTime), 'dd.MM.yyyy HH:mm')
                           : 'N/A'
                         }

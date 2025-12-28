@@ -1,4 +1,15 @@
 name: Deploy to Production
+# =================================================================
+# Required GitHub Configuration:
+#
+# SECRETS (Settings > Secrets and variables > Actions):
+#   - AZURE_VM_HOST: Azure VM IP address or hostname
+#   - AZURE_VM_USERNAME: SSH username for Azure VM
+#   - AZURE_VM_SSH_KEY: Private SSH key for Azure VM access
+#
+# ENVIRONMENTS (Settings > Environments):
+#   - production: Enable protection rules (required reviewers, etc.)
+# =================================================================
 
 on:
   push:

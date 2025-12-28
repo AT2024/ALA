@@ -9,6 +9,8 @@ export interface ApplicatorValidationResult {
     serialNumber: string;
     applicatorType: string; // PARTDES from Priority
     seedQuantity: number;   // INTDATA2 from Priority
+    catalog?: string;       // PARTNAME from Priority (catalog number)
+    seedLength?: number;    // SIBD_SEEDLEN from Priority order
     intendedPatientId?: string;
     previousTreatmentId?: string;
     returnedFromNoUse?: boolean;
@@ -23,6 +25,8 @@ export interface ApplicatorData {
   usingType: 'full' | 'partial' | 'faulty' | 'none';
   insertedSeedsQty: number;
   comments?: string;
+  catalog?: string;      // PARTNAME from Priority
+  seedLength?: number;   // SIBD_SEEDLEN from Priority
 }
 
 export const applicatorService = {
@@ -106,7 +110,9 @@ export const applicatorService = {
         insertionTime: applicatorData.insertionTime,
         usageType: applicatorData.usingType,
         insertedSeedsQty: applicatorData.insertedSeedsQty,
-        comments: applicatorData.comments
+        comments: applicatorData.comments,
+        catalog: applicatorData.catalog,       // PARTNAME from Priority
+        seedLength: applicatorData.seedLength  // SIBD_SEEDLEN from Priority
       });
 
       return {
