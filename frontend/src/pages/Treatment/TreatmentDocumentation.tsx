@@ -52,6 +52,10 @@ const TreatmentDocumentation = () => {
   // This ensures all same-stage options remain visible even after selecting a terminal status
   const [originalApplicatorStatus, setOriginalApplicatorStatus] = useState<string | null>(null);
 
+  // Store catalog and seedLength from validation response (for display in UseList)
+  const [validatedCatalog, setValidatedCatalog] = useState<string | null>(null);
+  const [validatedSeedLength, setValidatedSeedLength] = useState<number | null>(null);
+
   const [formData, setFormData] = useState({
     serialNumber: '',
     applicatorType: '',
@@ -301,7 +305,7 @@ const TreatmentDocumentation = () => {
 
   const fillFormWithApplicatorData = async (validation: ApplicatorValidationResult) => {
     const applicatorData = validation.applicatorData;
-    
+
     if (!applicatorData) {
       console.error('No applicator data in validation result:', validation);
       setError('No applicator data received from server.');
@@ -314,6 +318,10 @@ const TreatmentDocumentation = () => {
     const seedQuantity = applicatorData.seedQuantity || 0;
     const returnedFromNoUse = applicatorData.returnedFromNoUse || false;
 
+    // Extract catalog and seedLength for UseList display
+    const catalog = applicatorData.catalog || null;
+    const seedLength = applicatorData.seedLength || null;
+
     if (!serialNumber) {
       console.error('Missing serial number in applicator data:', applicatorData);
       setError('Invalid applicator data: missing serial number.');
@@ -322,6 +330,10 @@ const TreatmentDocumentation = () => {
 
     // Set the returned from no use flag
     setIsReturnedFromNoUse(returnedFromNoUse);
+
+    // Store catalog and seedLength for when applicator is created
+    setValidatedCatalog(catalog);
+    setValidatedSeedLength(seedLength);
 
     // Bug #5 fix: Set original status for new applicators (SEALED)
     setOriginalApplicatorStatus('SEALED');
@@ -566,6 +578,9 @@ const TreatmentDocumentation = () => {
         insertionTime: formData.insertionTime,
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
         comments: formData.comments,
+        // Use saved applicator data from backend (has correct catalog/seedLength from database)
+        catalog: saveResult.applicator?.catalog || validatedCatalog || undefined,
+        seedLength: saveResult.applicator?.seedLength || validatedSeedLength || undefined,
         // Attachment metadata for UI display (fixes "No files" bug in UseList)
         attachmentFileCount: uploadFileCount,
         attachmentSyncStatus: uploadSyncStatus,
@@ -599,6 +614,10 @@ const TreatmentDocumentation = () => {
       
       // Reset the returned from no use flag
       setIsReturnedFromNoUse(false);
+
+      // Reset catalog and seedLength from validation
+      setValidatedCatalog(null);
+      setValidatedSeedLength(null);
 
       // Bug #5 fix: Reset original status when form is cleared
       setOriginalApplicatorStatus(null);

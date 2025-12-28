@@ -13,6 +13,8 @@ export interface PriorityApplicatorData {
   insertedSeedsQty?: number;
   comments?: string;
   applicatorType?: string; // From Priority PARTS.PARTDES
+  catalog?: string; // From Priority PARTNAME field
+  seedLength?: number; // From Priority SIBD_SEEDLEN field
   // Add other fields that might come from Priority
   [key: string]: any;
 }
@@ -25,6 +27,8 @@ export interface TransformedApplicatorData {
   insertedSeedsQty: number;
   comments?: string;
   applicatorType?: string; // From Priority PARTS.PARTDES
+  catalog?: string; // From Priority PARTNAME field
+  seedLength?: number; // From Priority SIBD_SEEDLEN field
   // Add fields that might be missing from Priority but required by our DB
   imagePath?: string;
   isRemoved?: boolean;
@@ -199,6 +203,24 @@ export const transformPriorityApplicatorData = (
     // Transform applicator type (from Priority PARTS.PARTDES)
     if (rawData.applicatorType) {
       transformedData.applicatorType = String(rawData.applicatorType).trim();
+    }
+
+    // Transform catalog (from Priority PARTNAME field)
+    if (rawData.catalog) {
+      transformedData.catalog = String(rawData.catalog).trim();
+    }
+
+    // Transform seed length (from Priority SIBD_SEEDLEN field)
+    if (rawData.seedLength !== undefined && rawData.seedLength !== null) {
+      if (typeof rawData.seedLength === 'number') {
+        transformedData.seedLength = rawData.seedLength;
+      } else {
+        const parsedLength = parseFloat(String(rawData.seedLength));
+        if (!isNaN(parsedLength)) {
+          transformedData.seedLength = parsedLength;
+          warnings.push(`Seed length converted from ${typeof rawData.seedLength} to number`);
+        }
+      }
     }
 
     // Add default values for fields that might be missing from Priority

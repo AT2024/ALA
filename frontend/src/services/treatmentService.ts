@@ -36,6 +36,10 @@ export interface Applicator {
   attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
   attachmentFilename?: string;
   attachmentSizeBytes?: number;
+  // Catalog number from Priority PARTNAME field
+  catalog?: string;
+  // Seed length from Priority SIBD_SEEDLEN field
+  seedLength?: number;
 }
 
 export const treatmentService = {
@@ -145,7 +149,10 @@ export const treatmentService = {
         attachmentFileCount: app.attachmentFileCount || 0,
         attachmentSyncStatus: app.attachmentSyncStatus || null,
         attachmentFilename: app.attachmentFilename || null,
-        attachmentSizeBytes: app.attachmentSizeBytes || 0
+        attachmentSizeBytes: app.attachmentSizeBytes || 0,
+        // Catalog and seed length from Priority
+        catalog: app.catalog || app.PARTNAME || null,
+        seedLength: app.seedLength || app.SIBD_SEEDLEN || null
       }));
     }
 

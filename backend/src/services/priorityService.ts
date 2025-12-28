@@ -835,7 +835,7 @@ export const priorityService = {
       const response = await priorityApi.get('/ORDERS', {
         params: {
           $filter: filterParam,
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN',
         },
         timeout: config.priorityApiTimeout, // Configurable timeout
       });
@@ -971,12 +971,21 @@ export const priorityService = {
       
       // For real users, go directly to Priority API
       logger.info(`Real user - calling Priority API for order ${orderName}`);
-      
-      // Use exact URL format: /ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM
-      const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`);
 
-      logger.info(`Retrieved subform data for order ${orderName}`);
-      return response.data.value || [];
+      // Use exact URL format: /ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM
+      // Include $select to ensure PARTNAME (catalog) is returned - Priority doesn't include it by default
+      const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`, {
+        params: {
+          $select: 'SERNUM,PARTNAME,PARTDES,INTDATA2,ORDNAME,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,EXTFILENAME,INSERTEDREPORTEDBY,INSERTIONDATE,SIBD_REPPRODPAL'
+        }
+      });
+
+      const applicators = response.data.value || [];
+
+      // Enrich applicators with catalog and seedLength from Priority
+      const enrichedApplicators = await this.enrichApplicatorsWithPriorityData(applicators, orderName);
+      logger.info(`Retrieved and enriched subform data for order ${orderName} (${enrichedApplicators.length} applicators)`);
+      return enrichedApplicators;
     } catch (error: any) {
       logger.error(`Error getting order subform for ${orderName}: ${error}`);
       
@@ -1006,6 +1015,84 @@ export const priorityService = {
     }
   },
 
+  /**
+   * Enrich applicators with catalog (PARTNAME) and seedLength (SIBD_SEEDLEN) from Priority
+   * This is needed because the subform endpoint may not return PARTNAME directly
+   */
+  async enrichApplicatorsWithPriorityData(applicators: any[], orderName: string): Promise<any[]> {
+    try {
+      logger.info(`Enrichment: Starting enrichment for ${applicators.length} applicators from order ${orderName}`);
+
+      // Log what we received from the subform
+      const applicatorSummary = applicators.map(a => ({
+        sernum: a.SERNUM,
+        partname: a.PARTNAME || 'MISSING',
+        partdes: a.PARTDES || 'MISSING'
+      }));
+      logger.info(`Enrichment: Received applicators: ${JSON.stringify(applicatorSummary)}`);
+
+      // 1. Fetch order details once for seedLength
+      let seedLength: number | null = null;
+      try {
+        const orderDetails = await this.getOrderDetails(orderName);
+        seedLength = orderDetails?.SIBD_SEEDLEN || null;
+        if (seedLength) {
+          logger.info(`Enrichment: Found seedLength ${seedLength} for order ${orderName}`);
+        } else {
+          logger.warn(`Enrichment: No seedLength (SIBD_SEEDLEN) found in order details for ${orderName}`);
+        }
+      } catch (error) {
+        logger.warn(`Enrichment: Could not fetch order details for seed length: ${error}`);
+      }
+
+      // 2. Fetch catalog (PARTNAME) for applicators missing it
+      const missingCatalog = applicators.filter(a => !a.PARTNAME && a.SERNUM);
+      const catalogMap = new Map<string, string>();
+
+      if (missingCatalog.length > 0) {
+        logger.info(`Enrichment: ${missingCatalog.length}/${applicators.length} applicators missing PARTNAME, fetching from SIBD_APPLICATUSELIST`);
+
+        for (const app of missingCatalog) {
+          try {
+            const lookup = await this.getApplicatorFromPriority(app.SERNUM);
+            if (lookup.found && lookup.data?.partName) {
+              catalogMap.set(app.SERNUM, lookup.data.partName);
+              logger.info(`Enrichment: Found catalog "${lookup.data.partName}" for ${app.SERNUM}`);
+            } else {
+              logger.warn(`Enrichment: No PARTNAME in lookup result for ${app.SERNUM} (found: ${lookup.found})`);
+            }
+          } catch (e: any) {
+            logger.warn(`Enrichment: Failed to fetch catalog for ${app.SERNUM}: ${e.message}`);
+          }
+        }
+
+        logger.info(`Enrichment: Found catalog for ${catalogMap.size}/${missingCatalog.length} applicators`);
+      } else {
+        logger.info(`Enrichment: All ${applicators.length} applicators already have PARTNAME`);
+      }
+
+      // 3. Return enriched applicators
+      const enrichedApplicators = applicators.map(app => ({
+        ...app,
+        PARTNAME: app.PARTNAME || catalogMap.get(app.SERNUM) || null,
+        SIBD_SEEDLEN: seedLength
+      }));
+
+      // Log final enrichment results
+      const finalSummary = enrichedApplicators.map(a => ({
+        sernum: a.SERNUM,
+        partname: a.PARTNAME || 'STILL_MISSING',
+        seedlen: a.SIBD_SEEDLEN || 'MISSING'
+      }));
+      logger.info(`Enrichment: Final results: ${JSON.stringify(finalSummary)}`);
+
+      return enrichedApplicators;
+    } catch (error: any) {
+      logger.error(`Enrichment failed for order ${orderName}: ${error.message}`);
+      return applicators; // Return original if enrichment fails
+    }
+  },
+
   // Get detailed order information including seed quantity and activity
   async getOrderDetails(orderName: string) {
     try {
@@ -1030,7 +1117,7 @@ export const priorityService = {
       // Use exact URL format: /ORDERS('SO25000042')
       const response = await priorityApi.get(`/ORDERS('${orderName}')`, {
         params: {
-          $select: 'ORDNAME,CUSTNAME,CUSTDES,REFERENCE,CURDATE,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS',
+          $select: 'ORDNAME,CUSTNAME,CUSTDES,REFERENCE,CURDATE,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN',
         },
       });
 
@@ -1080,7 +1167,7 @@ export const priorityService = {
         const response = await priorityApi.get('/ORDERS', {
           params: {
             $filter: orderFilter,
-            $select: 'ORDNAME,CUSTNAME,CURDATE,REFERENCE,DETAILS',
+            $select: 'ORDNAME,CUSTNAME,CURDATE,REFERENCE,DETAILS,SIBD_SEEDLEN',
           },
         });
 
@@ -1432,6 +1519,44 @@ export const priorityService = {
   },
 
   /**
+   * Get PARTNAME from Priority PARTS table using PARTDES (description)
+   * Used to look up catalog number from applicator type description
+   * Uses substring matching for tolerance to whitespace/formatting differences
+   */
+  async getPartNameFromDescription(partDes: string): Promise<string | null> {
+    try {
+      const trimmedPartDes = partDes.trim();
+      logger.info(`Looking up PARTNAME for description: "${trimmedPartDes}"`);
+
+      // Use substringof for tolerant matching (OData 2.0 syntax used by Priority)
+      // This handles cases where the stored PARTDES has slight formatting differences
+      const response = await priorityApi.get('/PARTS', {
+        params: {
+          $filter: `substringof('${trimmedPartDes}',PARTDES)`,
+          $select: 'PARTNAME,PARTDES',
+          $top: 5  // Get multiple results to find best match
+        },
+      });
+
+      if (response.data?.value?.length > 0) {
+        // Prefer exact match if found, otherwise use first result
+        const exactMatch = response.data.value.find(
+          (p: any) => p.PARTDES?.trim() === trimmedPartDes
+        );
+        const partName = exactMatch?.PARTNAME || response.data.value[0].PARTNAME;
+        logger.info(`Found PARTNAME "${partName}" for description "${trimmedPartDes}" (exact match: ${!!exactMatch})`);
+        return partName;
+      }
+
+      logger.warn(`No PARTNAME found for description: "${trimmedPartDes}"`);
+      return null;
+    } catch (error: any) {
+      logger.error(`Failed to fetch PARTNAME for "${partDes}": ${error.message}`);
+      return null;
+    }
+  },
+
+  /**
    * Get part details from Priority PARTS table
    */
   async getPartDetails(partName: string) {
@@ -1552,7 +1677,8 @@ export const priorityService = {
           usageType: item.ALPH_USETYPE,
           usageTime: item.ALPH_USETIME,
           insertedSeeds: item.ALPH_INSERTED || 0,
-          comments: item.FREE1 || ''
+          comments: item.FREE1 || '',
+          catalog: item.PARTNAME || null,
         });
       }
       

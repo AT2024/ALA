@@ -40,7 +40,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 20,
       "SBD_PREFACTIV": 2.8,
-      "DETAILS": "Patient Main-015"
+      "DETAILS": "Patient Main-015",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000010",
@@ -52,7 +53,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 15,
       "SBD_PREFACTIV": 2.5,
-      "DETAILS": "Patient Alpha-001"
+      "DETAILS": "Patient Alpha-001",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000011",
@@ -64,7 +66,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 12,
       "SBD_PREFACTIV": 3.0,
-      "DETAILS": "Patient Beta-002"
+      "DETAILS": "Patient Beta-002",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000012",
@@ -76,7 +79,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 20,
       "SBD_PREFACTIV": 2.0,
-      "DETAILS": "Patient Gamma-003"
+      "DETAILS": "Patient Gamma-003",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000013",
@@ -88,7 +92,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 18,
       "SBD_PREFACTIV": 2.2,
-      "DETAILS": "Patient Delta-004"
+      "DETAILS": "Patient Delta-004",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000014",
@@ -100,7 +105,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 25,
       "SBD_PREFACTIV": 1.8,
-      "DETAILS": "Patient Epsilon-005"
+      "DETAILS": "Patient Epsilon-005",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000016",
@@ -112,7 +118,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 22,
       "SBD_PREFACTIV": 2.3,
-      "DETAILS": "Patient Test-016"
+      "DETAILS": "Patient Test-016",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "PANC-HEAD-001",
@@ -124,7 +131,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 30,
       "SBD_PREFACTIV": 2.5,
-      "DETAILS": "PANC-09-01-005"
+      "DETAILS": "PANC-09-01-005",
+      "SIBD_SEEDLEN": 20
     },
     {
       "ORDNAME": "PANC-TAIL-001",
@@ -136,7 +144,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 25,
       "SBD_PREFACTIV": 2.5,
-      "DETAILS": "PANC-09-01-005"
+      "DETAILS": "PANC-09-01-005",
+      "SIBD_SEEDLEN": 20
     },
     {
       "ORDNAME": "SO25000043",
@@ -148,7 +157,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 8,
       "SBD_PREFACTIV": 3.2,
-      "DETAILS": "Patient Main-043"
+      "DETAILS": "Patient Main-043",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000042",
@@ -160,7 +170,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 10,
       "SBD_PREFACTIV": 2.1,
-      "DETAILS": "Patient Gamma-042"
+      "DETAILS": "Patient Gamma-042",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000017",
@@ -172,7 +183,8 @@
       "ORDSTATUSDES": "Waiting for removal",
       "SBD_SEEDQTY": 20,
       "SBD_PREFACTIV": 2.8,
-      "DETAILS": "Patient Main-017 (Ready for removal)"
+      "DETAILS": "Patient Main-017 (Ready for removal)",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000018",
@@ -184,7 +196,8 @@
       "ORDSTATUSDES": "Performed",
       "SBD_SEEDQTY": 15,
       "SBD_PREFACTIV": 2.5,
-      "DETAILS": "Patient Alpha-018 (Treatment performed, ready for removal)"
+      "DETAILS": "Patient Alpha-018 (Treatment performed, ready for removal)",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "SO25000019",
@@ -196,7 +209,8 @@
       "ORDSTATUSDES": "Waiting for removal",
       "SBD_SEEDQTY": 18,
       "SBD_PREFACTIV": 2.2,
-      "DETAILS": "Patient Gamma-019 (Awaiting removal procedure)"
+      "DETAILS": "Patient Gamma-019 (Awaiting removal procedure)",
+      "SIBD_SEEDLEN": 10
     },
     {
       "ORDNAME": "PANC-HEAD-002",
@@ -208,7 +222,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 28,
       "SBD_PREFACTIV": 2.5,
-      "DETAILS": "PANC-TEST-001"
+      "DETAILS": "PANC-TEST-001",
+      "SIBD_SEEDLEN": 20
     },
     {
       "ORDNAME": "PANC-TAIL-002",
@@ -220,7 +235,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 22,
       "SBD_PREFACTIV": 2.5,
-      "DETAILS": "PANC-TEST-001"
+      "DETAILS": "PANC-TEST-001",
+      "SIBD_SEEDLEN": 20
     },
     {
       "ORDNAME": "PROST-LEFT-001",
@@ -232,7 +248,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 18,
       "SBD_PREFACTIV": 2.3,
-      "DETAILS": "PROST-TEST-001"
+      "DETAILS": "PROST-TEST-001",
+      "SIBD_SEEDLEN": 20
     },
     {
       "ORDNAME": "PROST-RIGHT-001",
@@ -244,7 +261,8 @@
       "ORDSTATUSDES": "Open",
       "SBD_SEEDQTY": 18,
       "SBD_PREFACTIV": 2.3,
-      "DETAILS": "PROST-TEST-001"
+      "DETAILS": "PROST-TEST-001",
+      "SIBD_SEEDLEN": 20
     }
   ],
   "subform_data": {

@@ -30,6 +30,8 @@ export interface Applicator {
   insertionTime: string;
   insertedSeedsQty?: number;
   comments?: string;
+  catalog?: string;
+  seedLength?: number;
 }
 
 export interface TreatmentSummary {
@@ -163,10 +165,12 @@ function drawTable(
     doc.fillColor('black');
     let cellX = startX;
     row.forEach((cell, i) => {
+      // Don't truncate Serial (0) and Catalog (1) columns - they must show full values
+      const noEllipsis = i === 0 || i === 1;
       doc.text(cell, cellX + cellPadding, currentY + cellPadding, {
         width: columnWidths[i] - cellPadding * 2,
         height: rowHeight - cellPadding * 2,
-        ellipsis: true
+        ellipsis: !noEllipsis
       });
       cellX += columnWidths[i];
     });
@@ -310,15 +314,42 @@ export async function generateTreatmentPdf(
       // Sort applicators by seed quantity (descending)
       const sortedApplicators = [...applicators].sort((a, b) => b.seedQuantity - a.seedQuantity);
 
-      const tableHeaders = ['Serial', 'Type', 'Seeds', 'Time', 'Usage', 'Inserted', 'Comments'];
-      // Increased Type column width to 110 to show full applicator names like "Alpha Flex 3D Needle"
-      // Redistributed: Serial 55, Type 110, Seeds 30, Time 65, Usage 45, Inserted 40, Comments 80 = 425 total
-      const columnWidths = [55, 110, 30, 65, 45, 40, 80];
+      // Updated headers with Catalog and Length columns
+      const tableHeaders = ['Serial', 'Catalog', 'Type', 'Seeds', 'Length', 'Time', 'Usage', 'Inserted', 'Comments'];
+
+      // Dynamic column width calculation - proportional widths with minimums
+      // Available width for content (A4 = 595pt, margins 50pt each side = 495pt usable)
+      const CONTENT_WIDTH = 495;
+
+      // Column configurations with minimum widths and flex weights
+      // Catalog column increased for full PARTNAME values like "FLEX-00101-FG"
+      const columnConfig = [
+        { minWidth: 45, flex: 1.0 },   // Serial
+        { minWidth: 85, flex: 1.5 },   // Catalog - increased from 50/1.1 for full values
+        { minWidth: 65, flex: 1.1 },   // Type - reduced from 75/1.4
+        { minWidth: 25, flex: 0.5 },   // Seeds
+        { minWidth: 28, flex: 0.5 },   // Length
+        { minWidth: 50, flex: 0.9 },   // Time
+        { minWidth: 35, flex: 0.6 },   // Usage
+        { minWidth: 32, flex: 0.5 },   // Inserted
+        { minWidth: 45, flex: 0.9 }    // Comments - reduced from 55/1.3
+      ];
+
+      // Calculate dynamic column widths
+      const totalMinWidth = columnConfig.reduce((sum, c) => sum + c.minWidth, 0);
+      const totalFlex = columnConfig.reduce((sum, c) => sum + c.flex, 0);
+      const remainingWidth = Math.max(0, CONTENT_WIDTH - totalMinWidth);
+
+      const columnWidths = columnConfig.map(c =>
+        Math.floor(c.minWidth + (c.flex / totalFlex) * remainingWidth)
+      );
 
       const tableRows = sortedApplicators.map(applicator => [
         applicator.serialNumber,
+        applicator.catalog || 'N/A',
         applicator.applicatorType || 'N/A',
         applicator.seedQuantity.toString(),
+        applicator.seedLength ? `${applicator.seedLength}` : '-',
         applicator.insertionTime && !isNaN(new Date(applicator.insertionTime).getTime())
           ? formatDate(applicator.insertionTime)
           : 'N/A',

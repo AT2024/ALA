@@ -10,6 +10,7 @@ import logger from '../utils/logger';
 import { generateTreatmentPdf, calculateSummary } from '../services/pdfGenerationService';
 import { sendSignedPdf, sendVerificationCode, getPdfRecipientEmail } from '../services/emailService';
 import { config } from '../config/appConfig';
+import { formatAndEnrichApplicators, fetchSeedLength } from '../utils/applicatorFormatter';
 
 // @desc    Get all treatments with optional filtering
 // @route   GET /api/treatments
@@ -260,31 +261,52 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
       if (allApplicators.length > 0) {
         logger.info(`Total applicators from combined treatment: ${allApplicators.length}`);
 
-        // Transform Priority data to match our applicator format
-        const formattedApplicators = allApplicators.map((app: any) => ({
-          id: app.SIBD_REPPRODPAL || `${treatment.priorityId}-${app.SERNUM}`,
-          serialNumber: app.SERNUM,
+        // Use shared utility for enrichment and formatting
+        const seedLength = orderIds.length > 0 ? await fetchSeedLength(orderIds[0]) : null;
+        const formattedApplicators = await formatAndEnrichApplicators(allApplicators, {
           treatmentId: req.params.id,
-          seedQuantity: app.INTDATA2 || 0,
-          usageType: app.USINGTYPE || 'full',
-          insertionTime: app.INSERTIONDATE || new Date().toISOString(),
-          comments: app.INSERTIONCOMMENTS || '',
-          image: app.EXTFILENAME || null,
-          addedBy: app.INSERTEDREPORTEDBY || req.user.id,
-          isRemoved: false,
-          removalComments: null,
-          removalImage: null,
-          removedBy: null,
-          removalTime: null,
-          applicatorType: app.PARTDES || app.PARTNAME || 'Unknown Applicator',
-          insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2 || 0
-        }));
+          priorityIdPrefix: treatment.priorityId,
+          defaultUserId: req.user.id,
+          seedLength
+        });
 
         res.status(200).json(formattedApplicators);
         return;
       }
     } catch (error) {
       logger.error(`Error fetching applicators for combined treatment: ${error}`);
+      // Fall through to database query
+    }
+  }
+
+  // For single orders with real users, also fetch from Priority API and format properly
+  if (orderIds.length === 1 && req.user.email !== config.testUserEmail) {
+    try {
+      logger.info(`Single order treatment - fetching from Priority API for order ${orderIds[0]}`);
+
+      const orderApplicators = await priorityService.getOrderSubform(
+        orderIds[0],
+        req.user.email,
+        treatment.type
+      );
+
+      if (orderApplicators && orderApplicators.length > 0) {
+        logger.info(`Found ${orderApplicators.length} applicators from Priority for single order`);
+
+        // Use shared utility for enrichment and formatting
+        const seedLength = await fetchSeedLength(orderIds[0]);
+        const formattedApplicators = await formatAndEnrichApplicators(orderApplicators, {
+          treatmentId: req.params.id,
+          priorityIdPrefix: treatment.priorityId,
+          defaultUserId: req.user.id,
+          seedLength
+        });
+
+        res.status(200).json(formattedApplicators);
+        return;
+      }
+    } catch (error) {
+      logger.error(`Error fetching applicators for single order: ${error}`);
       // Fall through to database query
     }
   }
@@ -319,25 +341,14 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
       if (allApplicators.length > 0) {
         logger.info(`Found ${allApplicators.length} applicators from test data (${orderIds.length} order(s))`);
 
-        // Transform test data to match our applicator format
-        const formattedApplicators = allApplicators.map((app: any) => ({
-          id: app.SIBD_REPPRODPAL || `${treatmentNumber}-${app.SERNUM}`,
-          serialNumber: app.SERNUM,
+        // Use shared utility for enrichment and formatting
+        const seedLength = await fetchSeedLength(treatmentNumber);
+        const formattedApplicators = await formatAndEnrichApplicators(allApplicators, {
           treatmentId: req.params.id,
-          seedQuantity: app.INTDATA2 || 0,
-          usageType: app.USINGTYPE || 'full',
-          insertionTime: app.INSERTIONDATE || new Date().toISOString(),
-          comments: app.INSERTIONCOMMENTS || '',
-          image: app.EXTFILENAME || null,
-          addedBy: app.INSERTEDREPORTEDBY || req.user.id,
-          isRemoved: false,
-          removalComments: null,
-          removalImage: null,
-          removedBy: null,
-          removalTime: null,
-          applicatorType: app.PARTDES || app.PARTNAME || 'Unknown Applicator',
-          insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2 || 0
-        }));
+          priorityIdPrefix: treatmentNumber,
+          defaultUserId: req.user.id,
+          seedLength
+        });
 
         res.status(200).json(formattedApplicators);
         return;

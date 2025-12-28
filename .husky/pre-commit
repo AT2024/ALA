@@ -1,7 +1,4 @@
 #!/usr/bin/env sh
 
-# Lint-staged disabled until ESLint deps are installed in frontend/backend
-# To enable: uncomment the line below
-# npx lint-staged
-
-echo "Pre-commit: lint-staged disabled (enable in .husky/pre-commit when ready)"
+# Run lint-staged to lint only staged files
+npx lint-staged
