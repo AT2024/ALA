@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../../../../tests/testUtils';
 import ConfirmationDialog from '../ConfirmationDialog';
@@ -138,7 +138,7 @@ describe('ConfirmationDialog', () => {
   });
 
   it('should have correct button styling for warning type', () => {
-    const { container } = render(
+    render(
       <ConfirmationDialog {...defaultProps} type="warning" />
     );
 
@@ -147,7 +147,7 @@ describe('ConfirmationDialog', () => {
   });
 
   it('should have correct button styling for success type', () => {
-    const { container } = render(
+    render(
       <ConfirmationDialog {...defaultProps} type="success" />
     );
 
@@ -156,7 +156,7 @@ describe('ConfirmationDialog', () => {
   });
 
   it('should have correct button styling for error type', () => {
-    const { container } = render(
+    render(
       <ConfirmationDialog {...defaultProps} type="error" />
     );
 
@@ -165,7 +165,7 @@ describe('ConfirmationDialog', () => {
   });
 
   it('should have correct button styling for info type', () => {
-    const { container } = render(
+    render(
       <ConfirmationDialog {...defaultProps} type="info" />
     );
 

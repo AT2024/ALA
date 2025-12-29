@@ -25,7 +25,7 @@ describe('ProtectedRoute', () => {
 
   it('should show loading spinner when loading', async () => {
     // Start without auth to see loading state
-    const { container } = render(
+    render(
       <Routes>
         <Route path="/" element={<ProtectedRoute />}>
           <Route index element={<div>Protected Content</div>} />
@@ -33,9 +33,7 @@ describe('ProtectedRoute', () => {
       </Routes>
     );
 
-    // During initial load, should show spinner
-    const spinner = container.querySelector('.animate-spin');
-    // Note: This might not be visible if loading completes too fast
+    // Note: Spinner might not be visible if loading completes too fast
     // The test validates the component structure
   });
 
@@ -91,7 +89,7 @@ describe('ProtectedRoute', () => {
   it('should replace history when redirecting to login', async () => {
     clearAuth();
 
-    const { container } = render(
+    render(
       <Routes>
         <Route path="/" element={<ProtectedRoute />}>
           <Route index element={<div>Protected Content</div>} />

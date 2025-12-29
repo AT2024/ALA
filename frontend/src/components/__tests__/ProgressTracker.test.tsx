@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, act } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { render, mockTreatment, mockApplicator, mockFaultyApplicator } from '../../../tests/testUtils';
 import ProgressTracker from '../ProgressTracker';
 import { TreatmentProvider, useTreatment } from '@/context/TreatmentContext';

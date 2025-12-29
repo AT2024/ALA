@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
 
 // Error handling middleware
-export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (err: any, req: Request, res: Response, _next: NextFunction) => {
   // Log error
   logger.error(`${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
   

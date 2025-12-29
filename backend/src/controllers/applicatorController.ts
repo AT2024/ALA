@@ -80,7 +80,7 @@ export const updateApplicator = asyncHandler(async (req: Request, res: Response)
   // Special handling for test user with numeric applicator IDs
   if (req.user.email === config.testUserEmail && /^\d+$/.test(id)) {
     // Verify the treatment exists and user has access
-    const treatment = await treatmentService.getTreatmentById(treatmentId);
+    await treatmentService.getTreatmentById(treatmentId);
 
     // For test data, return a mock updated response
     const mockUpdatedApplicator = {

@@ -19,7 +19,7 @@ import {
 } from '../controllers/treatmentController';
 import { updateApplicator } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
-import { validateUUID, validateMultipleUUIDs } from '../middleware/uuidValidationMiddleware';
+import { validateUUID } from '../middleware/uuidValidationMiddleware';
 import { treatmentRequestLoggingMiddleware } from '../middleware/requestLoggingMiddleware';
 import { databaseHealthCheck, criticalOperationHealthCheck } from '../middleware/databaseHealthMiddleware';
 import { config } from '../config/appConfig';

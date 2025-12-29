@@ -1361,7 +1361,7 @@ export const priorityService = {
       }
       // For updating an existing treatment
       else {
-        const response = await priorityApi.patch(
+        await priorityApi.patch(
           `/ORDERS(ORDNAME='${treatmentData.priorityId}')`,
           priorityData
         );
@@ -1724,7 +1724,7 @@ export const priorityService = {
       const orderName = applicatorData.treatmentId;
       logger.info(`Sending applicator data to Priority ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`);
       
-      const response = await priorityApi.post(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`, priorityUpdateData);
+      await priorityApi.post(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`, priorityUpdateData);
       logger.info(`Successfully saved applicator record to Priority subform`);
       
       return {
@@ -2097,7 +2097,7 @@ export const priorityService = {
         ORDSTATUSDES: status
       };
 
-      const response = await priorityApi.patch(`/ORDERS(ORDNAME='${orderName}')`, updateData);
+      await priorityApi.patch(`/ORDERS(ORDNAME='${orderName}')`, updateData);
 
       logger.info(`Successfully updated treatment status to ${status}`);
 

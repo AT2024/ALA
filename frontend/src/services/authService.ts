@@ -34,7 +34,7 @@ export const authService = {
     try {
       // Validate identifier format
       const isEmail = identifier.includes('@');
-      const isPhone = /^[\d\s\-\+\(\)]+$/.test(identifier.trim());
+      const isPhone = /^[\d\s\-+()]+$/.test(identifier.trim());
       
       if (!isEmail && !isPhone) {
         return {

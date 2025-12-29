@@ -540,7 +540,7 @@ export const applicatorService = {
         date: treatment.date
       };
 
-      const result = await priorityService.updateApplicatorInPriority(priorityUpdateData);
+      await priorityService.updateApplicatorInPriority(priorityUpdateData);
 
       return {
         success: true,
@@ -580,7 +580,7 @@ export const applicatorService = {
       const priorityOrderId = specificOrderId || treatment.priorityId || treatment.subjectId || treatmentId;
 
       logger.info(`Updating Priority order ${priorityOrderId} to status ${status}`);
-      const result = await priorityService.updateTreatmentStatus(priorityOrderId, status);
+      await priorityService.updateTreatmentStatus(priorityOrderId, status);
 
       return {
         success: true,
@@ -798,7 +798,7 @@ export const applicatorService = {
 
       // STEP 2.5: Enrich data with catalog and seedLength from Priority if not provided
       logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 2.5: Enriching data with Priority lookup`);
-      let enrichedData = { ...data };
+      const enrichedData = { ...data };
 
       // Get first order ID for lookups (handles combined treatments with JSON array)
       const orderIdForLookup = getFirstOrderId(treatment.priorityId);

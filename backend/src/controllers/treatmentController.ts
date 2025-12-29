@@ -7,7 +7,7 @@ import sequelize from '../config/database';
 import { Treatment, TreatmentPdf, SignatureVerification } from '../models';
 import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger';
-import { generateTreatmentPdf, calculateSummary } from '../services/pdfGenerationService';
+import { generateTreatmentPdf } from '../services/pdfGenerationService';
 import { sendSignedPdf, sendVerificationCode, getPdfRecipientEmail } from '../services/emailService';
 import { config } from '../config/appConfig';
 import { formatAndEnrichApplicators, fetchSeedLength } from '../utils/applicatorFormatter';

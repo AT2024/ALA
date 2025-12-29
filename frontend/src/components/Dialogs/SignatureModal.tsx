@@ -21,7 +21,7 @@ interface SignatureModalProps {
   isOpen: boolean;
   onClose: () => void;
   treatmentId: string;
-  treatmentSite: string; // eslint-disable-line @typescript-eslint/no-unused-vars - Reserved for future use
+  treatmentSite: string;
   onSuccess: () => void;
   flowType?: 'hospital_auto' | 'alphatau_verification';
   userData?: UserData;
