@@ -1,0 +1,316 @@
+name: SRS Documentation Update
+
+# =================================================================
+# Triggered on: Merge to main, Manual dispatch
+# Purpose: Automatically update SRS documentation when code changes
+# IEC 62304 Compliance: Creates PR requiring human review
+# =================================================================
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/src/**'
+      - 'frontend/src/**'
+      - 'package*.json'
+  workflow_dispatch:
+    inputs:
+      force_full_update:
+        description: 'Force full traceability update (ignores change detection)'
+        required: false
+        default: 'false'
+        type: boolean
+      dry_run:
+        description: 'Dry run - preview changes without creating PR'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # =================================================================
+  # Detect Changes and Affected Requirements
+  # =================================================================
+  detect-changes:
+    name: Detect Affected Requirements
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+      requirements: ${{ steps.detect.outputs.requirements }}
+      changed_files: ${{ steps.changes.outputs.files }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Get Changed Files
+        id: changes
+        run: |
+          # Get files changed in the last commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(backend|frontend)/src/' || true)
+
+          if [ -z "$CHANGED" ]; then
+            echo "files=" >> $GITHUB_OUTPUT
+            echo "No relevant source files changed"
+          else
+            # Escape newlines for GitHub Actions output
+            ESCAPED=$(echo "$CHANGED" | tr '\n' ' ')
+            echo "files=$ESCAPED" >> $GITHUB_OUTPUT
+            echo "Changed files: $CHANGED"
+          fi
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.files != '' || github.event.inputs.force_full_update == 'true'
+        run: |
+          npm install -g ts-node typescript @types/node
+
+      - name: Detect Affected Requirements
+        id: detect
+        if: steps.changes.outputs.files != '' || github.event.inputs.force_full_update == 'true'
+        run: |
+          if [ "${{ github.event.inputs.force_full_update }}" == "true" ]; then
+            # Force mode: mark all requirements as affected
+            REQS=$(cat docs/srs/requirement-mapping.json | jq -r '.requirements | keys[]' | tr '\n' ',' | sed 's/,$//')
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "requirements=$REQS" >> $GITHUB_OUTPUT
+            echo "Force mode: All requirements marked as affected"
+          else
+            # Normal mode: detect from changed files
+            cd scripts/srs
+            OUTPUT=$(npx ts-node detect-changes.ts "${{ steps.changes.outputs.files }}" 2>&1)
+
+            # Parse output for GitHub Actions
+            HAS_CHANGES=$(echo "$OUTPUT" | grep "^has_changes=" | cut -d'=' -f2)
+            REQS=$(echo "$OUTPUT" | grep "^requirements=" | cut -d'=' -f2)
+
+            echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+            echo "requirements=$REQS" >> $GITHUB_OUTPUT
+
+            # Log full output for debugging
+            echo "$OUTPUT"
+          fi
+
+      - name: Skip if No Changes
+        if: steps.detect.outputs.has_changes != 'true' && github.event.inputs.force_full_update != 'true'
+        run: |
+          echo "No SRS-relevant changes detected. Skipping documentation update."
+
+  # =================================================================
+  # Run Tests and Collect Results
+  # =================================================================
+  collect-test-results:
+    name: Collect Test Results
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    outputs:
+      test_results_path: ${{ steps.tests.outputs.results_path }}
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run Backend Tests with JSON Output
+        id: tests
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+          JWT_SECRET: test_jwt_secret
+          PRIORITY_MOCK: true
+        run: |
+          cd backend
+          npm test -- --json --outputFile=test-results.json || true
+
+          if [ -f test-results.json ]; then
+            echo "results_path=backend/test-results.json" >> $GITHUB_OUTPUT
+          else
+            echo "results_path=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: backend/test-results.json
+          retention-days: 7
+
+  # =================================================================
+  # Update SRS Documentation
+  # =================================================================
+  update-srs:
+    name: Update SRS Documentation
+    runs-on: ubuntu-latest
+    needs: [detect-changes, collect-test-results]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download Test Results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: ./
+
+      - name: Install Dependencies
+        run: |
+          npm install -g ts-node typescript @types/node
+
+      - name: Update Traceability Matrix
+        id: update
+        run: |
+          cd scripts/srs
+
+          COMMIT_RANGE="${{ github.event.before || 'HEAD~1' }}...${{ github.sha }}"
+          TEST_RESULTS=""
+
+          if [ -f "../../backend/test-results.json" ]; then
+            TEST_RESULTS="--test-results ../../backend/test-results.json"
+          fi
+
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            npx ts-node update-traceability.ts \
+              --requirements "${{ needs.detect-changes.outputs.requirements }}" \
+              --commit-range "$COMMIT_RANGE" \
+              $TEST_RESULTS \
+              --dry-run
+          else
+            npx ts-node update-traceability.ts \
+              --requirements "${{ needs.detect-changes.outputs.requirements }}" \
+              --commit-range "$COMMIT_RANGE" \
+              $TEST_RESULTS
+          fi
+
+      - name: Update Change Log
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          COMMIT_RANGE="${{ github.event.before || 'HEAD~1' }}...${{ github.sha }}"
+          REQS="${{ needs.detect-changes.outputs.requirements }}"
+          REQ_COUNT=$(echo "$REQS" | tr ',' '\n' | wc -l)
+
+          # Append to change log
+          cat >> docs/srs/change-log.md << EOF
+          | $DATE | Auto | $COMMIT_RANGE | $REQ_COUNT requirements | Claude Code | Pending Review |
+          EOF
+
+      - name: Verify SRS Integrity
+        run: |
+          cd scripts/srs
+          npx ts-node verify-integrity.ts || echo "::warning::SRS integrity check found issues"
+
+      - name: Check for Changes
+        id: check_changes
+        run: |
+          if git diff --quiet docs/srs/; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs(srs): Auto-update documentation [automated]"
+          title: "docs(srs): Auto-update traceability matrix"
+          body: |
+            ## Automated SRS Documentation Update
+
+            This PR was automatically generated after merging to main.
+
+            ### Trigger
+            - **Commit**: ${{ github.sha }}
+            - **Triggered by**: ${{ github.actor }}
+
+            ### Affected Requirements
+            ```
+            ${{ needs.detect-changes.outputs.requirements }}
+            ```
+
+            ### Changes Made
+            - Updated traceability matrix status for affected requirements
+            - Added revision history entry
+            - Recalculated statistics
+            - Updated change log
+
+            ### IEC 62304 Compliance Notice
+            **Human review is REQUIRED before merging this PR.**
+
+            Please verify:
+            - [ ] Status changes accurately reflect test results
+            - [ ] No safety-critical sections were modified
+            - [ ] Statistics are calculated correctly
+            - [ ] Revision history entry is appropriate
+
+            ---
+            *This PR was automatically generated by the SRS Update workflow.*
+          branch: docs/srs-update-${{ github.run_number }}
+          delete-branch: true
+          labels: |
+            documentation
+            automated
+            needs-review
+            srs-update
+
+      - name: Summary
+        run: |
+          echo "## SRS Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Affected Requirements" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.detect-changes.outputs.requirements }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "**Mode**: Dry Run (no changes made)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Mode**: Live (PR created if changes detected)" >> $GITHUB_STEP_SUMMARY
+          fi

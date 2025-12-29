@@ -106,7 +106,7 @@ export function cleanupTempFiles(files: Express.Multer.File[]): void {
  * @param olderThanHours - Delete files older than this many hours (default: 24)
  * @returns Number of files deleted
  */
-export async function cleanupOldTempFiles(olderThanHours: number = 24): Promise<number> {
+export async function cleanupOldTempFiles(olderThanHours = 24): Promise<number> {
   try {
     const files = fs.readdirSync(tempDir);
     const cutoffTime = Date.now() - (olderThanHours * 60 * 60 * 1000);

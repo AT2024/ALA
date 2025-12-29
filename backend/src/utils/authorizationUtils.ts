@@ -28,7 +28,7 @@ interface TreatmentWithOwner {
  * Custom error class for authorization failures
  */
 export class ForbiddenError extends Error {
-  constructor(message: string = 'Not authorized to access this resource') {
+  constructor(message = 'Not authorized to access this resource') {
     super(message);
     this.name = 'ForbiddenError';
   }

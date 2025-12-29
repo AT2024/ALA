@@ -18,7 +18,7 @@ interface TreatmentPdfAttributes {
 }
 
 // For creating a new TreatmentPdf
-interface TreatmentPdfCreationAttributes extends Optional<TreatmentPdfAttributes, 'id' | 'emailSentAt' | 'emailSentTo' | 'emailStatus'> {}
+type TreatmentPdfCreationAttributes = Optional<TreatmentPdfAttributes, 'id' | 'emailSentAt' | 'emailSentTo' | 'emailStatus'>
 
 class TreatmentPdf extends Model<TreatmentPdfAttributes, TreatmentPdfCreationAttributes> implements TreatmentPdfAttributes {
   public id!: string;

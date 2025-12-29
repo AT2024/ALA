@@ -8,7 +8,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * Middleware to validate UUID parameters in routes
  * @param paramName - The name of the parameter to validate (e.g., 'id', 'treatmentId')
  */
-export const validateUUID = (paramName: string = 'id') => {
+export const validateUUID = (paramName = 'id') => {
   return (req: Request, res: Response, next: NextFunction) => {
     const paramValue = req.params[paramName];
     

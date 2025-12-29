@@ -17,7 +17,7 @@ interface UserAttributes {
 }
 
 // For creating a new user
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'verificationCode' | 'verificationExpires' | 'failedAttempts' | 'lastLogin' | 'metadata'> {}
+type UserCreationAttributes = Optional<UserAttributes, 'id' | 'verificationCode' | 'verificationExpires' | 'failedAttempts' | 'lastLogin' | 'metadata'>
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: string;

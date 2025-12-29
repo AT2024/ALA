@@ -15,8 +15,7 @@ interface ApplicatorAuditLogAttributes {
 }
 
 // For creating a new audit log entry
-interface ApplicatorAuditLogCreationAttributes
-  extends Optional<ApplicatorAuditLogAttributes, 'id' | 'changedAt' | 'reason' | 'requestId'> {}
+type ApplicatorAuditLogCreationAttributes = Optional<ApplicatorAuditLogAttributes, 'id' | 'changedAt' | 'reason' | 'requestId'>
 
 class ApplicatorAuditLog
   extends Model<ApplicatorAuditLogAttributes, ApplicatorAuditLogCreationAttributes>

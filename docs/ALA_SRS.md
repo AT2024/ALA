@@ -28,6 +28,7 @@
 
 ---
 
+<!-- AUTO-UPDATE:START revision_history -->
 ## Revision History
 
 | Version | Date | Author | Description |
@@ -35,6 +36,7 @@
 | 1.0 | 2024 | - | Initial SRS for ALA |
 | 2.0 | December 2025 | - | Complete rewrite reflecting current implementation |
 | 3.0 | December 2025 | - | Full overhaul: Added risk integration (ISO 14971), HIPAA 2025 compliance, cybersecurity section, missing features (attachments, treatment types, radioactivity), populated traceability matrix |
+<!-- AUTO-UPDATE:END revision_history -->
 
 ---
 

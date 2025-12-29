@@ -21,7 +21,7 @@ interface TreatmentAttributes {
 }
 
 // For creating a new treatment
-interface TreatmentCreationAttributes extends Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName'> {}
+type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName'>
 
 class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> implements TreatmentAttributes {
   public id!: string;

@@ -37,7 +37,7 @@ interface ApplicatorAttributes {
 }
 
 // For creating a new applicator
-interface ApplicatorCreationAttributes extends Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType' | 'catalog' | 'seedLength'> {}
+type ApplicatorCreationAttributes = Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType' | 'catalog' | 'seedLength'>
 
 class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttributes> implements ApplicatorAttributes {
   public id!: string;

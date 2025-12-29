@@ -1,0 +1,821 @@
+{
+  "$schema": "./requirement-mapping.schema.json",
+  "_meta": {
+    "description": "Maps SRS requirements to implementation files for incremental documentation updates",
+    "version": "1.0.0",
+    "lastUpdated": "2025-12-29",
+    "totalRequirements": 162
+  },
+  "requirements": {
+    "SRS-AUTH-001": {
+      "files": ["backend/src/services/priorityService.ts", "backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts", "backend/tests/controllers/authController.test.ts"],
+      "description": "Validate email against Priority PHONEBOOK"
+    },
+    "SRS-AUTH-002": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Generate cryptographically secure 6-digit codes"
+    },
+    "SRS-AUTH-003": {
+      "files": ["backend/src/services/emailService.ts", "backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/services/emailService.test.ts"],
+      "description": "Send verification codes via SMTP email"
+    },
+    "SRS-AUTH-004": {
+      "files": ["backend/src/controllers/authController.ts", "backend/src/models/User.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Verification codes expire after 10 minutes"
+    },
+    "SRS-AUTH-005": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Hash verification codes using bcrypt"
+    },
+    "SRS-AUTH-006": {
+      "files": ["backend/src/controllers/authController.ts", "backend/src/middleware/authMiddleware.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Issue JWT tokens with 7-day expiration"
+    },
+    "SRS-AUTH-007": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Store JWT in HttpOnly secure cookies"
+    },
+    "SRS-AUTH-008": {
+      "files": ["backend/src/controllers/authController.ts", "backend/src/models/User.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Track failed verification attempts"
+    },
+    "SRS-AUTH-009": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Allow code resend"
+    },
+    "SRS-AUTH-010": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Extract user site access from Priority"
+    },
+    "SRS-AUTH-011": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Position Code 99 grants full site access"
+    },
+    "SRS-AUTH-012": {
+      "files": ["frontend/src/context/AuthContext.tsx", "backend/src/middleware/authMiddleware.ts"],
+      "tests": ["frontend/tests/e2e/auth.spec.ts"],
+      "description": "Implement automatic session timeout"
+    },
+    "SRS-AUTH-013": {
+      "files": ["backend/src/controllers/authController.ts", "frontend/src/context/AuthContext.tsx"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Provide logout clearing auth cookies"
+    },
+    "SRS-AUTH-014": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Prevent user enumeration"
+    },
+    "SRS-TSEL-001": {
+      "files": ["frontend/src/pages/Treatment/TreatmentSelection.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Allow insertion/removal procedure choice"
+    },
+    "SRS-TSEL-002": {
+      "files": ["backend/src/services/priorityService.ts", "backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Fetch treatment data from Priority ORDERS"
+    },
+    "SRS-TSEL-003": {
+      "files": ["backend/src/controllers/treatmentController.ts", "backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Display only authorized site treatments"
+    },
+    "SRS-TSEL-004": {
+      "files": ["backend/src/services/treatmentService.ts"],
+      "tests": ["backend/tests/services/treatmentService.test.ts"],
+      "description": "Combine related pancreas procedures"
+    },
+    "SRS-TSEL-005": {
+      "files": ["frontend/src/pages/Treatment/TreatmentSelection.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Allow search by Subject ID, date, site"
+    },
+    "SRS-TSEL-006": {
+      "files": ["backend/src/services/priorityService.ts", "frontend/src/pages/Treatment/TreatmentSelection.tsx"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Display patient identifier (DETAILS field)"
+    },
+    "SRS-TSEL-007": {
+      "files": ["backend/src/controllers/treatmentController.ts", "backend/src/services/treatmentService.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Removal only for 30+ day old insertions"
+    },
+    "SRS-TSEL-008": {
+      "files": ["backend/src/controllers/treatmentController.ts", "backend/src/models/Treatment.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Create local treatment with Priority reference"
+    },
+    "SRS-TSEL-009": {
+      "files": ["backend/src/models/Treatment.ts"],
+      "tests": ["backend/tests/models/Treatment.test.ts"],
+      "description": "Store treatment metadata"
+    },
+    "SRS-TSEL-010": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Record treatment creator"
+    },
+    "SRS-SCAN-001": {
+      "files": ["frontend/src/components/Scanner/QRScanner.tsx"],
+      "tests": ["frontend/tests/e2e/scanner.spec.ts"],
+      "description": "Support QR code scanning via camera"
+    },
+    "SRS-SCAN-002": {
+      "files": ["frontend/src/components/Scanner/ManualEntry.tsx", "frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/scanner.spec.ts"],
+      "description": "Support manual serial number entry"
+    },
+    "SRS-SCAN-003": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Validate serial against Priority SIBD_APPLICATUSELIST"
+    },
+    "SRS-SCAN-004": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Detect duplicate scanning in treatment"
+    },
+    "SRS-SCAN-005": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Detect applicators from different treatments"
+    },
+    "SRS-SCAN-006": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx", "frontend/src/components/ApplicatorCard.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Display applicator details"
+    },
+    "SRS-SCAN-007": {
+      "files": ["backend/src/services/priorityService.ts", "backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Retrieve seed quantity from Priority"
+    },
+    "SRS-SCAN-008": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx", "backend/src/controllers/applicatorController.ts"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Allow manual seed quantity override with justification"
+    },
+    "SRS-SCAN-009": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Record package label from scan"
+    },
+    "SRS-SCAN-010": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Store applicator type from Priority"
+    },
+    "SRS-WKFL-001": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Support 8 applicator statuses"
+    },
+    "SRS-WKFL-002": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Enforce treatment-specific transitions"
+    },
+    "SRS-WKFL-003": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Pancreas/Prostate workflow transitions"
+    },
+    "SRS-WKFL-004": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Skin workflow transitions"
+    },
+    "SRS-WKFL-005": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Terminal statuses block further transitions"
+    },
+    "SRS-WKFL-006": {
+      "files": ["backend/src/controllers/applicatorController.ts", "frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/workflow.spec.ts"],
+      "description": "Require comments for failure statuses"
+    },
+    "SRS-WKFL-007": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Create audit log for status transitions"
+    },
+    "SRS-WKFL-008": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Audit logs include required fields"
+    },
+    "SRS-WKFL-009": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx", "frontend/src/components/StatusTransition.tsx"],
+      "tests": ["frontend/tests/e2e/workflow.spec.ts"],
+      "description": "Display available transitions"
+    },
+    "SRS-WKFL-010": {
+      "files": ["frontend/src/components/ApplicatorCard.tsx", "frontend/src/components/StatusBadge.tsx"],
+      "tests": ["frontend/tests/e2e/workflow.spec.ts"],
+      "description": "Visual status type distinction"
+    },
+    "SRS-PROG-001": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx", "frontend/src/components/ProgressDisplay.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Display total vs processed applicators"
+    },
+    "SRS-PROG-002": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Display total vs inserted seeds"
+    },
+    "SRS-PROG-003": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/unit/progress.test.ts"],
+      "description": "Calculate completion percentage"
+    },
+    "SRS-PROG-004": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Show usage type distribution"
+    },
+    "SRS-PROG-005": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Show status breakdown"
+    },
+    "SRS-PROG-006": {
+      "files": ["frontend/src/context/TreatmentContext.tsx", "frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/treatment.spec.ts"],
+      "description": "Real-time progress updates"
+    },
+    "SRS-FINL-001": {
+      "files": ["backend/src/controllers/treatmentController.ts", "backend/src/models/Treatment.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Support hospital_auto and alphatau_verified types"
+    },
+    "SRS-FINL-002": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Hospital users may auto-sign"
+    },
+    "SRS-FINL-003": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "AlphaTau requires verification code"
+    },
+    "SRS-FINL-004": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Signature codes expire after 1 hour"
+    },
+    "SRS-FINL-005": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Limit verification attempts to 3"
+    },
+    "SRS-FINL-006": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Fetch signers from Priority PHONEBOOK"
+    },
+    "SRS-FINL-007": {
+      "files": ["backend/src/controllers/treatmentController.ts", "backend/src/models/Treatment.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Record signer details"
+    },
+    "SRS-FINL-008": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Mark treatment complete with metadata"
+    },
+    "SRS-FINL-009": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Completed treatments are immutable"
+    },
+    "SRS-EXPRT-001": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "Generate PDF with complete treatment info"
+    },
+    "SRS-EXPRT-002": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "PDF includes treatment summary"
+    },
+    "SRS-EXPRT-003": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "PDF includes applicator list"
+    },
+    "SRS-EXPRT-004": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "PDF includes signature information"
+    },
+    "SRS-EXPRT-005": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "PDF includes seed count totals"
+    },
+    "SRS-EXPRT-006": {
+      "files": ["backend/src/models/TreatmentPdf.ts", "backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Store PDF in database"
+    },
+    "SRS-EXPRT-007": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Support JSON export"
+    },
+    "SRS-EXPRT-008": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "Exclude internal employee names"
+    },
+    "SRS-RMVL-001": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Allow removal 30+ days post-insertion"
+    },
+    "SRS-RMVL-002": {
+      "files": ["frontend/src/pages/Treatment/RemovalWorkflow.tsx"],
+      "tests": ["frontend/tests/e2e/removal.spec.ts"],
+      "description": "Display original insertion applicators"
+    },
+    "SRS-RMVL-003": {
+      "files": ["backend/src/controllers/applicatorController.ts", "backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/controllers/applicatorController.test.ts"],
+      "description": "Track seeds removed per applicator"
+    },
+    "SRS-RMVL-004": {
+      "files": ["frontend/src/pages/Treatment/RemovalWorkflow.tsx"],
+      "tests": ["frontend/tests/e2e/removal.spec.ts"],
+      "description": "Allow removal comments"
+    },
+    "SRS-RMVL-005": {
+      "files": ["backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/models/Applicator.test.ts"],
+      "description": "Track removal timestamp"
+    },
+    "SRS-RMVL-006": {
+      "files": ["backend/src/controllers/applicatorController.ts"],
+      "tests": ["backend/tests/controllers/applicatorController.test.ts"],
+      "description": "Track removal performer"
+    },
+    "SRS-RMVL-007": {
+      "files": ["frontend/src/pages/Treatment/RemovalWorkflow.tsx"],
+      "tests": ["frontend/tests/e2e/removal.spec.ts"],
+      "description": "Display removal progress"
+    },
+    "SRS-RMVL-008": {
+      "files": ["frontend/src/pages/Treatment/RemovalWorkflow.tsx"],
+      "tests": ["frontend/tests/e2e/removal.spec.ts"],
+      "description": "Color-code final count"
+    },
+    "SRS-AUDT-001": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Log all status transitions"
+    },
+    "SRS-AUDT-002": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Include applicator ID, statuses, user, timestamp"
+    },
+    "SRS-AUDT-003": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Include reason/comments"
+    },
+    "SRS-AUDT-004": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Include request ID for correlation"
+    },
+    "SRS-AUDT-005": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Audit logs are immutable"
+    },
+    "SRS-AUDT-006": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Index logs by applicator and timestamp"
+    },
+    "SRS-AUDT-007": {
+      "files": ["backend/src/controllers/applicatorController.ts"],
+      "tests": ["backend/tests/controllers/applicatorController.test.ts"],
+      "description": "Support time range queries"
+    },
+    "SRS-ADMN-001": {
+      "files": ["frontend/src/pages/Admin/AdminDashboard.tsx", "backend/src/middleware/authMiddleware.ts"],
+      "tests": ["frontend/tests/e2e/admin.spec.ts"],
+      "description": "Dashboard accessible to admin only"
+    },
+    "SRS-ADMN-002": {
+      "files": ["frontend/src/pages/Admin/AdminDashboard.tsx"],
+      "tests": ["frontend/tests/e2e/admin.spec.ts"],
+      "description": "Display treatment statistics"
+    },
+    "SRS-ADMN-003": {
+      "files": ["frontend/src/pages/Admin/AdminDashboard.tsx"],
+      "tests": ["frontend/tests/e2e/admin.spec.ts"],
+      "description": "Display system logs"
+    },
+    "SRS-ADMN-004": {
+      "files": ["frontend/src/pages/Admin/AdminDashboard.tsx"],
+      "tests": ["frontend/tests/e2e/admin.spec.ts"],
+      "description": "Support date and site filtering"
+    },
+    "SRS-UI-001": {
+      "files": ["frontend/src/index.css", "frontend/tailwind.config.js"],
+      "tests": ["frontend/tests/e2e/responsive.spec.ts"],
+      "description": "Responsive design (320px minimum)"
+    },
+    "SRS-UI-002": {
+      "files": ["frontend/tailwind.config.js"],
+      "tests": ["frontend/tests/accessibility/contrast.test.ts"],
+      "description": "WCAG 2.1 AA color contrast"
+    },
+    "SRS-UI-003": {
+      "files": ["frontend/src/components/ErrorMessage.tsx"],
+      "tests": ["frontend/tests/e2e/errors.spec.ts"],
+      "description": "Clear error messages"
+    },
+    "SRS-UI-004": {
+      "files": ["frontend/src/components/LoadingSpinner.tsx"],
+      "tests": ["frontend/tests/e2e/loading.spec.ts"],
+      "description": "Loading indicators"
+    },
+    "SRS-UI-005": {
+      "files": ["frontend/src/components/EnvironmentBanner.tsx"],
+      "tests": ["frontend/tests/e2e/environment.spec.ts"],
+      "description": "Environment indicator"
+    },
+    "SRS-HW-001": {
+      "files": ["frontend/src/components/Scanner/QRScanner.tsx"],
+      "tests": ["frontend/tests/e2e/scanner.spec.ts"],
+      "description": "Access device camera for scanning"
+    },
+    "SRS-HW-002": {
+      "files": ["frontend/src/components/Scanner/ManualEntry.tsx"],
+      "tests": ["frontend/tests/e2e/scanner.spec.ts"],
+      "description": "Function without camera"
+    },
+    "SRS-API-001": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Authenticate to Priority API"
+    },
+    "SRS-API-002": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Handle Priority timeouts (30s)"
+    },
+    "SRS-API-003": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Cache Priority data"
+    },
+    "SRS-API-004": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Provide fallback test data"
+    },
+    "SRS-DB-001": {
+      "files": ["backend/src/config/database.ts"],
+      "tests": ["backend/tests/config/database.test.ts"],
+      "description": "Use PostgreSQL 14+"
+    },
+    "SRS-DB-002": {
+      "files": ["backend/src/config/database.ts"],
+      "tests": ["backend/tests/config/database.test.ts"],
+      "description": "Use Sequelize ORM"
+    },
+    "SRS-DB-003": {
+      "files": ["backend/src/config/database.ts"],
+      "tests": ["backend/tests/config/database.test.ts"],
+      "description": "Connection pooling"
+    },
+    "SRS-DB-004": {
+      "files": ["backend/src/routes/health.ts"],
+      "tests": ["backend/tests/routes/health.test.ts"],
+      "description": "Health checks"
+    },
+    "SRS-COM-001": {
+      "files": ["backend/src/middleware/securityMiddleware.ts", "deployment/docker/nginx.conf"],
+      "tests": ["backend/tests/security/https.test.ts"],
+      "description": "HTTPS for all communication"
+    },
+    "SRS-COM-002": {
+      "files": ["backend/src/services/emailService.ts"],
+      "tests": ["backend/tests/services/emailService.test.ts"],
+      "description": "SMTP for verification emails"
+    },
+    "SRS-COM-003": {
+      "files": ["backend/src/services/emailService.ts"],
+      "tests": ["backend/tests/services/emailService.test.ts"],
+      "description": "Email retry logic"
+    },
+    "SRS-PERF-001": {
+      "files": ["frontend/vite.config.ts"],
+      "tests": ["frontend/tests/performance/pageload.test.ts"],
+      "description": "Page load < 3 seconds on 4G"
+    },
+    "SRS-PERF-002": {
+      "files": ["backend/src/routes/index.ts"],
+      "tests": ["backend/tests/performance/api.test.ts"],
+      "description": "API response < 2 seconds"
+    },
+    "SRS-PERF-003": {
+      "files": ["frontend/src/components/Scanner/QRScanner.tsx"],
+      "tests": ["frontend/tests/performance/scanner.test.ts"],
+      "description": "QR decode < 500ms"
+    },
+    "SRS-PERF-004": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/performance/pdf.test.ts"],
+      "description": "PDF generation < 10 seconds"
+    },
+    "SRS-PERF-005": {
+      "files": ["backend/src/config/database.ts", "deployment/docker/docker-compose.yml"],
+      "tests": ["backend/tests/performance/load.test.ts"],
+      "description": "Support 50 concurrent users"
+    },
+    "SRS-SAFE-001": {
+      "files": ["backend/src/services/applicatorService.ts", "backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Validate against Priority master data"
+    },
+    "SRS-SAFE-002": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/safety.spec.ts"],
+      "description": "Require confirmation for terminal statuses"
+    },
+    "SRS-SAFE-003": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Maintain immutable audit trail"
+    },
+    "SRS-SAFE-004": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Prevent finalized treatment modification"
+    },
+    "SRS-SAFE-005": {
+      "files": ["backend/src/controllers/applicatorController.ts"],
+      "tests": ["backend/tests/controllers/applicatorController.test.ts"],
+      "description": "Require comments for failure statuses"
+    },
+    "SRS-SAFE-006": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx"],
+      "tests": ["frontend/tests/e2e/safety.spec.ts"],
+      "description": "Display warnings for unusual conditions"
+    },
+    "SRS-SEC-001": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/security/cookies.test.ts"],
+      "description": "JWT in HttpOnly secure cookies"
+    },
+    "SRS-SEC-002": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/controllers/authController.test.ts"],
+      "description": "Hash verification codes with bcrypt"
+    },
+    "SRS-SEC-003": {
+      "files": ["backend/src/middleware/securityMiddleware.ts"],
+      "tests": ["backend/tests/security/ratelimit.test.ts"],
+      "description": "Rate limit authentication endpoints"
+    },
+    "SRS-SEC-004": {
+      "files": ["backend/src/middleware/securityMiddleware.ts"],
+      "tests": ["backend/tests/security/ratelimit.test.ts"],
+      "description": "Rate limit API endpoints"
+    },
+    "SRS-SEC-005": {
+      "files": ["backend/src/middleware/securityMiddleware.ts", "deployment/docker/nginx.conf"],
+      "tests": ["backend/tests/security/https.test.ts"],
+      "description": "Enforce HTTPS in production"
+    },
+    "SRS-SEC-006": {
+      "files": ["backend/src/middleware/securityMiddleware.ts"],
+      "tests": ["backend/tests/security/cors.test.ts"],
+      "description": "CORS origin validation"
+    },
+    "SRS-SEC-007": {
+      "files": ["backend/src/middleware/securityMiddleware.ts"],
+      "tests": ["backend/tests/security/headers.test.ts"],
+      "description": "Security headers via Helmet.js"
+    },
+    "SRS-SEC-008": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/security/enumeration.test.ts"],
+      "description": "Prevent user enumeration"
+    },
+    "SRS-SEC-009": {
+      "files": ["backend/src/middleware/validationMiddleware.ts"],
+      "tests": ["backend/tests/security/validation.test.ts"],
+      "description": "Validate all user input"
+    },
+    "SRS-SEC-010": {
+      "files": ["backend/src/config/database.ts"],
+      "tests": ["backend/tests/security/encryption.test.ts"],
+      "description": "AES-256 encryption at rest"
+    },
+    "SRS-SEC-011": {
+      "files": ["deployment/docker/nginx.conf"],
+      "tests": ["backend/tests/security/tls.test.ts"],
+      "description": "TLS 1.3 for data in transit"
+    },
+    "SRS-SEC-012": {
+      "files": ["backend/src/controllers/authController.ts"],
+      "tests": ["backend/tests/security/mfa.test.ts"],
+      "description": "MFA for ePHI access (email verification)"
+    },
+    "SRS-SEC-013": {
+      "files": ["deployment/docker/docker-compose.yml"],
+      "tests": ["backend/tests/security/network.test.ts"],
+      "description": "Network segmentation for ePHI systems"
+    },
+    "SRS-SEC-014": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/compliance/retention.test.ts"],
+      "description": "Audit log retention 6 years"
+    },
+    "SRS-SEC-015": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/security/integrity.test.ts"],
+      "description": "Audit log integrity verification"
+    },
+    "SRS-SEC-016": {
+      "files": ["backend/src/middleware/authMiddleware.ts", "frontend/src/context/AuthContext.tsx"],
+      "tests": ["backend/tests/security/session.test.ts"],
+      "description": "Session timeout 30 minutes"
+    },
+    "SRS-BR-001": {
+      "files": ["backend/src/services/treatmentService.ts"],
+      "tests": ["backend/tests/services/treatmentService.test.ts"],
+      "description": "Removal only 30+ days post-insertion"
+    },
+    "SRS-BR-002": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Position Code 99 = full site access"
+    },
+    "SRS-BR-003": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Test data isolated from production"
+    },
+    "SRS-BR-004": {
+      "files": ["backend/src/controllers/applicatorController.ts"],
+      "tests": ["backend/tests/controllers/applicatorController.test.ts"],
+      "description": "Failure statuses require comments"
+    },
+    "SRS-BR-005": {
+      "files": ["backend/src/controllers/treatmentController.ts"],
+      "tests": ["backend/tests/controllers/treatmentController.test.ts"],
+      "description": "Completed treatments immutable"
+    },
+    "SRS-DATA-001": {
+      "files": ["backend/src/models/index.ts"],
+      "tests": ["backend/tests/models/associations.test.ts"],
+      "description": "Foreign key constraints"
+    },
+    "SRS-DATA-002": {
+      "files": ["backend/src/services/treatmentService.ts"],
+      "tests": ["backend/tests/services/treatmentService.test.ts"],
+      "description": "Database transactions"
+    },
+    "SRS-DATA-003": {
+      "files": ["backend/src/models/ApplicatorAuditLog.ts"],
+      "tests": ["backend/tests/models/ApplicatorAuditLog.test.ts"],
+      "description": "Audit logs never deleted"
+    },
+    "SRS-DATA-004": {
+      "files": ["deployment/scripts/backup.sh"],
+      "tests": ["backend/tests/compliance/retention.test.ts"],
+      "description": "7 year data retention"
+    },
+    "SRS-DATA-005": {
+      "files": ["deployment/scripts/backup.sh"],
+      "tests": ["backend/tests/operations/backup.test.ts"],
+      "description": "Database backups"
+    },
+    "SRS-ATCH-001": {
+      "files": ["frontend/src/pages/Treatment/TreatmentDocumentation.tsx", "backend/src/controllers/applicatorController.ts"],
+      "tests": ["frontend/tests/e2e/attachments.spec.ts"],
+      "description": "Support file attachments per applicator"
+    },
+    "SRS-ATCH-002": {
+      "files": ["backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/models/Applicator.test.ts"],
+      "description": "Track attachment filename"
+    },
+    "SRS-ATCH-003": {
+      "files": ["backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/models/Applicator.test.ts"],
+      "description": "Track attachment count"
+    },
+    "SRS-ATCH-004": {
+      "files": ["backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/models/Applicator.test.ts"],
+      "description": "Track attachment size in bytes"
+    },
+    "SRS-ATCH-005": {
+      "files": ["backend/src/models/Applicator.ts"],
+      "tests": ["backend/tests/models/Applicator.test.ts"],
+      "description": "Track attachment sync status"
+    },
+    "SRS-TYPE-001": {
+      "files": ["backend/src/models/Treatment.ts"],
+      "tests": ["backend/tests/models/Treatment.test.ts"],
+      "description": "Support 5 treatment types"
+    },
+    "SRS-TYPE-002": {
+      "files": ["backend/src/services/treatmentService.ts"],
+      "tests": ["backend/tests/services/treatmentService.test.ts"],
+      "description": "Combine pancreas Priority orders"
+    },
+    "SRS-TYPE-003": {
+      "files": ["backend/src/models/Treatment.ts"],
+      "tests": ["backend/tests/models/Treatment.test.ts"],
+      "description": "Support JSON array priorityId"
+    },
+    "SRS-TYPE-004": {
+      "files": ["backend/src/services/applicatorService.ts"],
+      "tests": ["backend/tests/services/applicatorService.test.ts"],
+      "description": "Type-specific workflow transitions"
+    },
+    "SRS-RAD-001": {
+      "files": ["backend/src/models/Applicator.ts", "backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/models/Applicator.test.ts"],
+      "description": "Track activity per seed"
+    },
+    "SRS-RAD-002": {
+      "files": ["backend/src/services/pdfGenerationService.ts"],
+      "tests": ["backend/tests/services/pdfGenerationService.test.ts"],
+      "description": "Include activity in PDF export"
+    },
+    "SRS-RAD-003": {
+      "files": ["backend/src/services/priorityService.ts"],
+      "tests": ["backend/tests/services/priorityService.test.ts"],
+      "description": "Retrieve activity from Priority"
+    },
+    "SRS-CYBER-001": {
+      "files": ["docs/srs/sbom.json", "package.json"],
+      "tests": ["backend/tests/compliance/sbom.test.ts"],
+      "description": "Maintain SBOM"
+    },
+    "SRS-CYBER-002": {
+      "files": [".github/workflows/docker-security.yml"],
+      "tests": [],
+      "description": "Vulnerability scanning every 6 months"
+    },
+    "SRS-CYBER-003": {
+      "files": ["docs/security/penetration-testing.md"],
+      "tests": [],
+      "description": "Annual penetration testing"
+    },
+    "SRS-CYBER-004": {
+      "files": ["docs/security/incident-response.md"],
+      "tests": [],
+      "description": "Documented incident response"
+    },
+    "SRS-CYBER-005": {
+      "files": [".github/dependabot.yml"],
+      "tests": [],
+      "description": "Patch management (30 days critical)"
+    },
+    "SRS-RECV-001": {
+      "files": ["deployment/scripts/backup.sh"],
+      "tests": ["backend/tests/operations/backup.test.ts"],
+      "description": "Database backup every 24 hours"
+    },
+    "SRS-RECV-002": {
+      "files": ["docs/operations/disaster-recovery.md"],
+      "tests": ["backend/tests/operations/dr.test.ts"],
+      "description": "RTO < 4 hours"
+    },
+    "SRS-RECV-003": {
+      "files": ["docs/operations/disaster-recovery.md"],
+      "tests": ["backend/tests/operations/dr.test.ts"],
+      "description": "RPO < 24 hours"
+    },
+    "SRS-RECV-004": {
+      "files": ["deployment/scripts/backup.sh"],
+      "tests": ["backend/tests/operations/backup.test.ts"],
+      "description": "Weekly backup integrity verification"
+    }
+  }
+}

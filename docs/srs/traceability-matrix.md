@@ -312,6 +312,7 @@ This document provides the complete traceability matrix for all requirements in 
 
 ---
 
+<!-- AUTO-UPDATE:START statistics -->
 ## 3. Summary Statistics
 
 ### 3.1 Requirements Count by Category
@@ -350,6 +351,7 @@ This document provides the complete traceability matrix for all requirements in 
 - **Implemented**: 130 (80.2%)
 - **Needs Verification**: 27 (16.7%)
 - **Pending Implementation**: 5 (3.1%)
+<!-- AUTO-UPDATE:END statistics -->
 
 ### 3.3 Safety-Critical Requirements Coverage
 
@@ -358,11 +360,13 @@ All 10 hazards have control measures implemented:
 
 ---
 
+<!-- AUTO-UPDATE:START revision_history -->
 ## 4. Revision History
 
 | Version | Date | Author | Description |
 |---------|------|--------|-------------|
 | 1.0 | December 2025 | - | Initial traceability matrix |
+<!-- AUTO-UPDATE:END revision_history -->
 
 ---
 

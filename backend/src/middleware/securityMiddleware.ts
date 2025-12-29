@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { getHttpsConfig, getCorsOrigins, shouldEnforceHttps } from '../config/https';
 
 // Rate limiting middleware
-export const createRateLimiter = (windowMs: number = 15 * 60 * 1000, max: number = 100) => {
+export const createRateLimiter = (windowMs: number = 15 * 60 * 1000, max = 100) => {
   return rateLimit({
     windowMs, // 15 minutes default
     max, // limit each IP to max requests per windowMs

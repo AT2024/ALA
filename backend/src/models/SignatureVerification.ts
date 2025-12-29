@@ -16,7 +16,7 @@ interface SignatureVerificationAttributes {
 }
 
 // For creating a new SignatureVerification
-interface SignatureVerificationCreationAttributes extends Optional<SignatureVerificationAttributes, 'id' | 'failedAttempts' | 'status' | 'signerName' | 'signerPosition'> {}
+type SignatureVerificationCreationAttributes = Optional<SignatureVerificationAttributes, 'id' | 'failedAttempts' | 'status' | 'signerName' | 'signerPosition'>
 
 class SignatureVerification extends Model<SignatureVerificationAttributes, SignatureVerificationCreationAttributes> implements SignatureVerificationAttributes {
   public id!: string;

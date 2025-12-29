@@ -891,7 +891,29 @@ const TreatmentDocumentation = () => {
                             </div>
                           )}
                           {filteredApplicators
-                            .sort((a, b) => b.seedQuantity - a.seedQuantity)
+                            .sort((a, b) => {
+                              // Status priority: LOADED (0) > OPENED (1) > SEALED (2)
+                              // Applicators with status move to top, ordered by workflow progress
+                              const statusPriority: Record<string, number> = {
+                                'LOADED': 0,
+                                'OPENED': 1,
+                                'SEALED': 2,
+                              };
+
+                              const statusA = a.status || 'SEALED';
+                              const statusB = b.status || 'SEALED';
+
+                              const priorityA = statusPriority[statusA] ?? 2;
+                              const priorityB = statusPriority[statusB] ?? 2;
+
+                              // Primary sort: by status priority (lower = higher priority)
+                              if (priorityA !== priorityB) {
+                                return priorityA - priorityB;
+                              }
+
+                              // Secondary sort: by seed quantity descending (higher first)
+                              return b.seedQuantity - a.seedQuantity;
+                            })
                             .map((applicator, index) => {
                             const isNoUseReturned = applicator.returnedFromNoUse;
                             const applicatorStatus = applicator.status || 'SEALED';
