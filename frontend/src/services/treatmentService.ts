@@ -191,6 +191,29 @@ export const treatmentService = {
     return response.data;
   },
 
+  // Update removal procedure data for a treatment
+  async updateRemovalProcedure(
+    treatmentId: string,
+    data: {
+      removalDate: string;
+      allSourcesSameDate: boolean;
+      additionalRemovalDate?: string;
+      reasonNotSameDate?: string;
+      discrepancyClarification?: {
+        lost: { checked: boolean; amount: number; comment: string };
+        retrievedToSite: { checked: boolean; amount: number; comment: string };
+        removalFailure: { checked: boolean; amount: number; comment: string };
+        other: { checked: boolean; amount: number; comment: string; description: string };
+      };
+      individualSeedsRemoved: number;
+      individualSeedNotes: Array<{ reason: string; timestamp: string; count: number }>;
+      removalGeneralComments?: string;
+    }
+  ): Promise<{ success: boolean; treatment: Treatment }> {
+    const response = await api.put(`/treatments/${treatmentId}/removal-procedure`, data);
+    return response.data;
+  },
+
   // Export treatment data as CSV or PDF
   async exportTreatment(treatmentId: string, format: 'csv' | 'pdf'): Promise<Blob> {
     const response = await api.get(`/treatments/${treatmentId}/export`, {

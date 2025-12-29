@@ -3,6 +3,7 @@ import { Op } from 'sequelize';
 import sequelize from '../config/database';
 import logger from '../utils/logger';
 import priorityService from './priorityService';
+import { RemovalProcedureData } from '../types/removalProcedure';
 
 interface TreatmentFilterParams {
   type?: 'insertion' | 'removal';
@@ -443,7 +444,40 @@ export const treatmentService = {
       throw error;
     }
   },
-  
+
+  // Update removal procedure data for a treatment
+  async updateRemovalProcedure(treatmentId: string, data: RemovalProcedureData) {
+    try {
+      const treatment = await Treatment.findByPk(treatmentId);
+
+      if (!treatment) {
+        throw new Error('Treatment not found');
+      }
+
+      if (treatment.type !== 'removal') {
+        throw new Error('This treatment is not a removal procedure');
+      }
+
+      await treatment.update({
+        removalDate: data.removalDate ? new Date(data.removalDate) : undefined,
+        allSourcesSameDate: data.allSourcesSameDate,
+        additionalRemovalDate: data.additionalRemovalDate ? new Date(data.additionalRemovalDate) : undefined,
+        reasonNotSameDate: data.reasonNotSameDate || undefined,
+        discrepancyClarification: data.discrepancyClarification ? JSON.stringify(data.discrepancyClarification) : undefined,
+        individualSeedsRemoved: data.individualSeedsRemoved || 0,
+        individualSeedNotes: data.individualSeedNotes ? JSON.stringify(data.individualSeedNotes) : undefined,
+        removalGeneralComments: data.removalGeneralComments || undefined,
+      });
+
+      logger.info(`Updated removal procedure data for treatment ${treatmentId}`);
+
+      return treatment;
+    } catch (error) {
+      logger.error(`Error updating removal procedure: ${error}`);
+      throw error;
+    }
+  },
+
   // Specific method for time window validation
   async validateTreatmentTimeWindow(treatmentId: string, applicatorId?: string) {
     try {

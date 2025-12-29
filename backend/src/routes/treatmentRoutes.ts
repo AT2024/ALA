@@ -5,6 +5,7 @@ import {
   createTreatment,
   updateTreatment,
   completeTreatment,
+  updateRemovalProcedure,
   updateTreatmentStatus,
   getTreatmentApplicators,
   addApplicator,
@@ -44,6 +45,7 @@ router.route('/:id')
   .put(validateUUID('id'), criticalOperationHealthCheck, updateTreatment);
 
 router.post('/:id/complete', validateUUID('id'), criticalOperationHealthCheck, completeTreatment);
+router.put('/:id/removal-procedure', validateUUID('id'), criticalOperationHealthCheck, updateRemovalProcedure);
 router.patch('/:id/status', validateUUID('id'), criticalOperationHealthCheck, updateTreatmentStatus);
 router.get('/:id/export', validateUUID('id'), databaseHealthCheck, exportTreatment);
 router.get('/:id/debug', validateUUID('id'), databaseHealthCheck, debugTreatment);
