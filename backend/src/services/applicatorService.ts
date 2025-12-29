@@ -177,19 +177,6 @@ export const applicatorService = {
               appData.seedLength = orderSeedLength;
             }
 
-            // Enrich catalog if missing - try to get PARTNAME from PARTS table using applicatorType
-            if (!appData.catalog && appData.applicatorType) {
-              try {
-                const partName = await priorityService.getPartNameFromDescription(appData.applicatorType);
-                if (partName) {
-                  appData.catalog = partName;
-                  logger.info(`Enrichment: Found catalog ${partName} for applicator ${appData.serialNumber}`);
-                }
-              } catch (e) {
-                // Silently continue if lookup fails
-              }
-            }
-
             return appData;
           }));
 
