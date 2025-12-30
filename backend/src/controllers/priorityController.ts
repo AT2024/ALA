@@ -417,12 +417,17 @@ export const getAvailableApplicators = asyncHandler(async (req: Request, res: Re
     }
     
     logger.info(`User ${req.user?.email} has access to site ${site}. Getting available applicators...`);
-    
+
     // Get available applicators from Priority service
+    // Pass user context with metadata for test mode support
+    const userContext = {
+      identifier: req.user?.email || req.user?.id || '',
+      userMetadata: req.user?.metadata
+    };
     const applicators = await priorityService.getAvailableApplicatorsForTreatment(
-      site as string, 
+      site as string,
       currentDate as string,
-      req.user?.email
+      userContext
     );
     
     logger.info(`Successfully retrieved ${applicators.length} available applicators for site ${site}`);

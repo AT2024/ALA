@@ -1804,8 +1804,9 @@ export const priorityService = {
   /**
    * Get available applicators for a treatment from same site within date range
    * Used for applicator dropdown selection
+   * userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
    */
-  async getAvailableApplicatorsForTreatment(site: string, currentDate: string, userId?: string) {
+  async getAvailableApplicatorsForTreatment(site: string, currentDate: string, userContext?: string | TestModeContext) {
     try {
       logger.info(`Fetching available applicators for site ${site} around date ${currentDate}`);
       
@@ -1861,7 +1862,7 @@ export const priorityService = {
       
       while (currentDateObj <= endDateObj) {
         const dateString = currentDateObj.toISOString().split('T')[0];
-        const dayOrders = await this.getOrdersForSiteWithFilter(site, userId, dateString);
+        const dayOrders = await this.getOrdersForSiteWithFilter(site, userContext, dateString);
         allOrders.push(...dayOrders);
         currentDateObj.setDate(currentDateObj.getDate() + 1);
       }
@@ -1883,7 +1884,7 @@ export const priorityService = {
       for (const order of filteredOrders) {
         try {
           logger.info(`Getting subform data for order ${order.ORDNAME}`);
-          const subformData = await this.getOrderSubform(order.ORDNAME, userId);
+          const subformData = await this.getOrderSubform(order.ORDNAME, userContext);
           
           if (subformData && subformData.length > 0) {
             // Transform subform data to applicator format

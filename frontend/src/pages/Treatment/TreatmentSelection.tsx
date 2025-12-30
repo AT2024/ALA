@@ -82,22 +82,31 @@ const TreatmentSelection = () => {
         // For ATM users (fullAccess), fetch all sites
         // For site users, use their assigned site
         if (user.fullAccess && user.sites && user.sites.length > 0) {
-          // Convert user.sites to PrioritySite format
-          const userSites: PrioritySite[] = user.sites.map(site => {
-            // Handle both old format (string) and new format (site object)
-            if (typeof site === 'string') {
-              return {
-                custName: site,
-                custDes: site // Fallback for old format
-              };
-            } else {
-              return {
-                custName: site.custName,
-                custDes: site.custDes
-              };
-            }
-          });
-          setAvailableSites(userSites);
+          // If test mode is enabled, only show test sites
+          if (user.testModeEnabled) {
+            const testSites: PrioritySite[] = [
+              { custName: '100078', custDes: 'Main Test Hospital' },
+              { custName: '100040', custDes: 'Test Hospital' }
+            ];
+            setAvailableSites(testSites);
+          } else {
+            // Normal mode - convert user.sites to PrioritySite format
+            const userSites: PrioritySite[] = user.sites.map(site => {
+              // Handle both old format (string) and new format (site object)
+              if (typeof site === 'string') {
+                return {
+                  custName: site,
+                  custDes: site // Fallback for old format
+                };
+              } else {
+                return {
+                  custName: site.custName,
+                  custDes: site.custDes
+                };
+              }
+            });
+            setAvailableSites(userSites);
+          }
         } else if (user.custName) {
           // Site users have access to their own site only
           setAvailableSites([{
