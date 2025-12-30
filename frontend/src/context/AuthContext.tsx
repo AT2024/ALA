@@ -14,6 +14,7 @@ interface User {
   custName?: string;
   sites?: Array<{ custName: string; custDes: string }> | string[];
   fullAccess?: boolean;
+  testModeEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -29,6 +30,8 @@ interface AuthContextType {
   isIdleWarningShown: boolean;
   idleSecondsRemaining: number;
   dismissIdleWarning: () => void;
+  // Test mode support
+  setTestModeEnabled: (enabled: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -198,6 +201,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetTimer();
   }, [resetTimer]);
 
+  // Update user's test mode state (called from Admin Dashboard)
+  const setTestModeEnabled = useCallback((enabled: boolean) => {
+    if (user) {
+      const updatedUser = { ...user, testModeEnabled: enabled };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -211,7 +223,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearError,
         isIdleWarningShown: isWarningShown,
         idleSecondsRemaining: secondsRemaining,
-        dismissIdleWarning
+        dismissIdleWarning,
+        setTestModeEnabled
       }}
     >
       {children}

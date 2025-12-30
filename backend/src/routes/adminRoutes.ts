@@ -1,5 +1,11 @@
 import express from 'express';
+import asyncHandler from 'express-async-handler';
 import { protect, restrict } from '../middleware/authMiddleware';
+import { User } from '../models';
+import logger from '../utils/logger';
+
+// Constants for admin access validation
+const ADMIN_POSITION_CODE = 99;
 
 const router = express.Router();
 
@@ -86,5 +92,55 @@ router.put('/config', (req, res) => {
     config: req.body,
   });
 });
+
+// Test Mode Management
+// GET /api/admin/test-mode - Get current test mode status for the authenticated user
+router.get('/test-mode', (req, res) => {
+  const testModeEnabled = req.user?.metadata?.testModeEnabled || false;
+  res.status(200).json({
+    testModeEnabled,
+    userId: req.user?.id,
+    email: req.user?.email,
+  });
+});
+
+// PUT /api/admin/test-mode - Toggle test mode for the authenticated user
+router.put('/test-mode', asyncHandler(async (req, res) => {
+  const { enabled } = req.body;
+
+  if (typeof enabled !== 'boolean') {
+    res.status(400).json({ error: 'enabled must be a boolean' });
+    return;
+  }
+
+  // Verify admin permission (POSITIONCODE=99)
+  const positionCode = Number(req.user?.metadata?.positionCode);
+  if (positionCode !== ADMIN_POSITION_CODE && req.user?.role !== 'admin') {
+    res.status(403).json({ error: 'Only admin users (Position 99) can toggle test mode' });
+    return;
+  }
+
+  // Update user metadata in database
+  const user = await User.findByPk(req.user?.id);
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  user.metadata = {
+    ...user.metadata,
+    testModeEnabled: enabled,
+  };
+  await user.save();
+
+  // Audit log for security tracking
+  logger.info(`TEST MODE ${enabled ? 'ENABLED' : 'DISABLED'} by ${req.user?.email} (user ID: ${req.user?.id})`);
+
+  res.status(200).json({
+    success: true,
+    testModeEnabled: enabled,
+    message: `Test mode ${enabled ? 'enabled' : 'disabled'}`,
+  });
+}));
 
 export default router;

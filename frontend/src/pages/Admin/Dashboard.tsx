@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
+import api from '@/services/api';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, setTestModeEnabled } = useAuth();
   const [activeTab, setActiveTab] = useState<'stats' | 'logs' | 'config'>('stats');
-  
+  const [testModeEnabled, setLocalTestModeEnabled] = useState(user?.testModeEnabled || false);
+  const [isTogglingTestMode, setIsTogglingTestMode] = useState(false);
+
   // In a real app, we would fetch these stats from an API
   const stats = {
     totalTreatments: 156,
@@ -13,6 +16,29 @@ const Dashboard = () => {
     pendingTreatments: 14,
     totalApplicators: 843,
     users: 27,
+  };
+
+  // Sync local state with user state
+  useEffect(() => {
+    setLocalTestModeEnabled(user?.testModeEnabled || false);
+  }, [user?.testModeEnabled]);
+
+  // Handle test mode toggle
+  const handleTestModeToggle = async () => {
+    setIsTogglingTestMode(true);
+    try {
+      const newState = !testModeEnabled;
+      const response = await api.put('/admin/test-mode', { enabled: newState });
+      if (response.data.success) {
+        setLocalTestModeEnabled(response.data.testModeEnabled);
+        setTestModeEnabled(response.data.testModeEnabled);
+      }
+    } catch (error) {
+      console.error('Failed to toggle test mode:', error);
+      alert('Failed to toggle test mode. Please try again.');
+    } finally {
+      setIsTogglingTestMode(false);
+    }
   };
   
   useEffect(() => {
@@ -344,6 +370,51 @@ const Dashboard = () => {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Test Mode Section - Development Tools */}
+            <div className="mt-6 rounded-lg border bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-medium">Development Tools</h3>
+              <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 p-4">
+                <div>
+                  <label htmlFor="test-mode-toggle" className="text-sm font-medium text-gray-900">
+                    Test Mode
+                  </label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Enable to use test data instead of Priority API data.
+                    This is useful for testing without affecting real data.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {testModeEnabled && (
+                    <span className="rounded-full bg-orange-200 px-2 py-0.5 text-xs font-medium text-orange-800">
+                      ACTIVE
+                    </span>
+                  )}
+                  <button
+                    id="test-mode-toggle"
+                    onClick={handleTestModeToggle}
+                    disabled={isTogglingTestMode}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                      testModeEnabled ? 'bg-orange-500' : 'bg-gray-300'
+                    } ${isTogglingTestMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    role="switch"
+                    aria-checked={testModeEnabled}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        testModeEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+              {testModeEnabled && (
+                <p className="mt-3 text-xs text-orange-700">
+                  Test mode is active. All Priority data fetches will return simulated test data.
+                  Disable when you want to use real Priority API data.
+                </p>
+              )}
             </div>
           </div>
         )}

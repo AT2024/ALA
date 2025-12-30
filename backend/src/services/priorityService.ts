@@ -152,11 +152,42 @@ const testDataPath = process.env.NODE_ENV === 'production'
   }
 };
 
-// Helper function to check if we should use test data for development
-const shouldUseTestData = (identifier: string): boolean => {
-  // Support both email and UUID for test user (from environment config)
-  const isTestUser = identifier === config.testUserEmail || identifier === config.testUserUuid;
+// Constants for admin access validation
+const ADMIN_POSITION_CODE = 99;
 
+// Interface for user context when checking test mode
+interface TestModeContext {
+  identifier: string;
+  userMetadata?: {
+    testModeEnabled?: boolean;
+    positionCode?: number | string;
+  };
+}
+
+// Helper function to check if we should use test data
+// Supports both legacy string identifier and new context object with user metadata
+const shouldUseTestData = (context: TestModeContext | string): boolean => {
+  // Legacy string support for backward compatibility
+  if (typeof context === 'string') {
+    const identifier = context;
+    const isTestUser = identifier === config.testUserEmail || identifier === config.testUserUuid;
+    return (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_DATA === 'true') && isTestUser;
+  }
+
+  const { identifier, userMetadata } = context;
+
+  // Check if admin user has test mode enabled in their metadata
+  if (userMetadata?.testModeEnabled === true) {
+    const positionCode = Number(userMetadata.positionCode);
+    // Only allow test mode for admin users (POSITIONCODE=99)
+    if (positionCode === ADMIN_POSITION_CODE) {
+      logger.info(`[TEST MODE] Using test data for admin user: ${identifier}`);
+      return true;
+    }
+  }
+
+  // Fallback to legacy behavior for designated test users
+  const isTestUser = identifier === config.testUserEmail || identifier === config.testUserUuid;
   return (process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_DATA === 'true') && isTestUser;
 };
 
@@ -764,12 +795,13 @@ export const priorityService = {
   },
 
   // Get orders for site using exact Priority API format with optional date filtering
-  async getOrdersForSiteWithFilter(custName: string, userId?: string, filterDate?: string) {
+  // userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
+  async getOrdersForSiteWithFilter(custName: string, userContext?: string | TestModeContext, filterDate?: string) {
     try {
       logger.info(`Getting orders for site ${custName} using Priority API format${filterDate ? ` with date filter: ${filterDate}` : ''}`);
-      
+
       // For development mode with test user, use dynamic test data first
-      if (userId && shouldUseTestData(userId)) {
+      if (userContext && shouldUseTestData(userContext)) {
         // Use dynamic test data generation if a specific date is requested
         let testData;
         if (filterDate) {
@@ -803,7 +835,8 @@ export const priorityService = {
           const combinedTestOrders = this.combineMultipleTreatments(mappedTestOrders);
           return combinedTestOrders;
         } else {
-          logger.warn(`TEST DATA: Failed to load test data for user ${userId}`);
+          const userIdForLog = typeof userContext === 'string' ? userContext : userContext.identifier;
+          logger.warn(`TEST DATA: Failed to load test data for user ${userIdForLog}`);
         }
       }
       
@@ -867,18 +900,19 @@ export const priorityService = {
       }
       
       // Only fall back to test data if this is a test user
-      if (userId && shouldUseTestData(userId)) {
-        logger.warn(`Priority API failed for test user ${userId}, using test data fallback`);
+      if (userContext && shouldUseTestData(userContext)) {
+        const userIdForLog = typeof userContext === 'string' ? userContext : userContext.identifier;
+        logger.warn(`Priority API failed for test user ${userIdForLog}, using test data fallback`);
         let testData;
         if (filterDate) {
           testData = generateTestDataForDate(filterDate);
         } else {
           testData = loadTestData();
         }
-        
+
         if (testData && testData.orders) {
           let filteredOrders = testData.orders.filter((order: any) => order.CUSTNAME === custName);
-          
+
           // Apply date filtering to fallback test data if provided
           if (filterDate) {
             const targetDate = new Date(filterDate).toISOString().split('T')[0];
@@ -902,22 +936,24 @@ export const priorityService = {
           return combinedFallbackOrders;
         }
       }
-      
+
       // For real users, never return test data - throw error instead
-      logger.error(`Priority API failed for real user ${userId || 'unknown'} at site ${custName}`);
+      const userIdForError = userContext ? (typeof userContext === 'string' ? userContext : userContext.identifier) : 'unknown';
+      logger.error(`Priority API failed for real user ${userIdForError} at site ${custName}`);
       throw error;
     }
   },
 
   // Get order details using SIBD_APPLICATUSELIST_SUBFORM endpoint
-  async getOrderSubform(orderName: string, userId?: string, treatmentType?: string) {
+  // userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
+  async getOrderSubform(orderName: string, userContext?: string | TestModeContext, treatmentType?: string) {
     try {
       // Handle combined orders (pancreas) - split and merge results
       if (orderName.includes('+')) {
         const orderIds = orderName.split('+');
         const allApplicators: any[] = [];
         for (const orderId of orderIds) {
-          const applicators: any = await this.getOrderSubform(orderId.trim(), userId, treatmentType);
+          const applicators: any = await this.getOrderSubform(orderId.trim(), userContext, treatmentType);
           if (applicators && applicators.length > 0) {
             allApplicators.push(...applicators);
           }
@@ -928,8 +964,9 @@ export const priorityService = {
       logger.info(`Getting order subform for order ${orderName}, type: ${treatmentType || 'unknown'}`);
 
       // For development mode with test user, prioritize test data
-      if (userId && shouldUseTestData(userId)) {
-        logger.info(`Development mode: Using test subform data for user ${userId} and order ${orderName}`);
+      if (userContext && shouldUseTestData(userContext)) {
+        const userIdForLog = typeof userContext === 'string' ? userContext : userContext.identifier;
+        logger.info(`Development mode: Using test subform data for user ${userIdForLog} and order ${orderName}`);
         const testData = loadTestData();
         if (testData && testData.subform_data) {
           // Handle expanded order names (SO25000010_Y, SO25000010_T, SO25000010_M)
@@ -988,10 +1025,11 @@ export const priorityService = {
       return enrichedApplicators;
     } catch (error: any) {
       logger.error(`Error getting order subform for ${orderName}: ${error}`);
-      
+
       // Only fall back to test data for test users
-      if (userId && shouldUseTestData(userId)) {
-        logger.warn(`Priority API failed for test user ${userId}, using test data fallback for subform ${orderName}`);
+      if (userContext && shouldUseTestData(userContext)) {
+        const userIdForLog = typeof userContext === 'string' ? userContext : userContext.identifier;
+        logger.warn(`Priority API failed for test user ${userIdForLog}, using test data fallback for subform ${orderName}`);
         const testData = loadTestData();
         if (testData && testData.subform_data) {
           // Handle expanded order names for error fallback as well
@@ -1007,9 +1045,11 @@ export const priorityService = {
 
       // For real users, try fallback to SIBD_APPLICATUSELIST table first
       try {
-        return await this.getApplicatorsForTreatment(orderName, userId);
+        const userIdForFallback = userContext ? (typeof userContext === 'string' ? userContext : userContext.identifier) : undefined;
+        return await this.getApplicatorsForTreatment(orderName, userIdForFallback);
       } catch (fallbackError: any) {
-        logger.error(`Both subform and fallback failed for real user ${userId || 'unknown'} for order ${orderName}`);
+        const userIdForError = userContext ? (typeof userContext === 'string' ? userContext : userContext.identifier) : 'unknown';
+        logger.error(`Both subform and fallback failed for real user ${userIdForError} for order ${orderName}`);
         throw error;
       }
     }
@@ -1629,13 +1669,14 @@ export const priorityService = {
 
   /**
    * Get applicators for a specific treatment from Priority
+   * userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
    */
-  async getApplicatorsForTreatment(treatmentId: string, userId?: string) {
+  async getApplicatorsForTreatment(treatmentId: string, userContext?: string | TestModeContext) {
     try {
       logger.info(`Fetching applicators for treatment ${treatmentId}`);
-      
+
       // Check if we should use test data for development
-      if (userId && shouldUseTestData(userId)) {
+      if (userContext && shouldUseTestData(userContext)) {
         const testData = loadTestData();
         if (testData && testData.subform_data && testData.subform_data[treatmentId]) {
           logger.info(`Using test data for applicators in treatment ${treatmentId}`);
@@ -1982,8 +2023,9 @@ export const priorityService = {
   /**
    * Check removal status for a treatment order
    * Returns true if the treatment is ready for removal (status = "Waiting for removal")
+   * userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
    */
-  async checkRemovalStatus(orderId: string, userId?: string): Promise<{
+  async checkRemovalStatus(orderId: string, userContext?: string | TestModeContext): Promise<{
     readyForRemoval: boolean;
     status: string;
     orderFound: boolean;
@@ -1991,7 +2033,7 @@ export const priorityService = {
   }> {
     try {
       // For development mode with test user, check test data first
-      if (userId && shouldUseTestData(userId)) {
+      if (userContext && shouldUseTestData(userContext)) {
         const testData = loadTestData();
         if (testData && testData.orders) {
           // Handle expanded order names (SO25000010_Y, SO25000010_T, SO25000010_M)
@@ -2049,8 +2091,9 @@ export const priorityService = {
         logger.error(`Error querying Priority API for order ${orderId}:`, apiError);
 
         // If this is a test user and API fails, fall back to test data
-        if (userId && shouldUseTestData(userId)) {
-          logger.warn(`Priority API failed for test user ${userId}, using test data fallback for removal status check`);
+        if (userContext && shouldUseTestData(userContext)) {
+          const userIdForLog = typeof userContext === 'string' ? userContext : userContext.identifier;
+          logger.warn(`Priority API failed for test user ${userIdForLog}, using test data fallback for removal status check`);
           const testData = loadTestData();
           if (testData && testData.orders) {
             const baseOrderId = orderId.replace(/_(Y|T|M)$/, '');

@@ -269,6 +269,12 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
 
   logger.info(`Treatment has ${orderIds.length} Priority order(s): ${orderIds.join(', ')}`);
 
+  // Build user context for test mode support
+  const userContext = {
+    identifier: req.user.email || req.user.id || '',
+    userMetadata: req.user.metadata
+  };
+
   // For combined treatments (pancreas), fetch applicators from Priority API for ALL orders
   if (orderIds.length > 1) {
     try {
@@ -276,7 +282,7 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
       for (const orderId of orderIds) {
         const orderApplicators = await priorityService.getOrderSubform(
           orderId,
-          req.user.email,
+          userContext,
           treatment.type
         );
 
@@ -313,7 +319,7 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
 
       const orderApplicators = await priorityService.getOrderSubform(
         orderIds[0],
-        req.user.email,
+        userContext,
         treatment.type
       );
 
@@ -356,7 +362,7 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
       for (const orderId of orderIdsToFetch) {
         const testApplicators = await priorityService.getOrderSubform(
           orderId,
-          req.user.email,
+          userContext,
           treatment.type
         );
 
@@ -691,13 +697,19 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
     throw new Error('Site parameter is required');
   }
 
+  // Build user context for test mode support
+  const userContext = {
+    identifier: req.user?.email || req.user?.id || '',
+    userMetadata: req.user?.metadata
+  };
+
   // Check for test user FIRST (existing pattern from priorityService)
   if (req.user?.email === config.testUserEmail) {
     try {
       // Reuse existing method that already handles test data properly
       const orders = await priorityService.getOrdersForSiteWithFilter(
         site as string,
-        req.user.email
+        userContext
       );
 
       // Filter for removal-ready orders matching test data statuses

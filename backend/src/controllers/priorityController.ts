@@ -201,7 +201,12 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
     }
     
     // Get orders from Priority for the specified site using exact CUSTNAME and date filtering
-    let orders = await priorityService.getOrdersForSiteWithFilter(site, req.user?.email, date);
+    // Pass user context with metadata for test mode support
+    const userContext = {
+      identifier: req.user?.email || req.user?.id || '',
+      userMetadata: req.user?.metadata
+    };
+    let orders = await priorityService.getOrdersForSiteWithFilter(site, userContext, date);
 
     logger.info(`Retrieved ${orders.length} orders from Priority service for site ${site}`);
 
@@ -279,9 +284,13 @@ export const getOrderSubform = asyncHandler(async (req: Request, res: Response) 
     }
     
     logger.info(`Fetching subform data for order: ${orderId}`);
-    
-    // Get subform data from Priority
-    const subformData = await priorityService.getOrderSubform(orderId, req.user?.email);
+
+    // Get subform data from Priority with user context for test mode support
+    const userContext = {
+      identifier: req.user?.email || req.user?.id || '',
+      userMetadata: req.user?.metadata
+    };
+    const subformData = await priorityService.getOrderSubform(orderId, userContext);
     
     logger.info(`Retrieved ${subformData.length} subform records for order ${orderId}`);
     
@@ -498,8 +507,12 @@ export const checkRemovalStatus = asyncHandler(async (req: Request, res: Respons
       return;
     }
 
-    // Check removal status using Priority service
-    const removalStatus = await priorityService.checkRemovalStatus(orderId, req.user?.email);
+    // Check removal status using Priority service with user context for test mode support
+    const userContext = {
+      identifier: req.user?.email || req.user?.id || '',
+      userMetadata: req.user?.metadata
+    };
+    const removalStatus = await priorityService.checkRemovalStatus(orderId, userContext);
 
     res.status(200).json({
       success: true,

@@ -275,7 +275,8 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
       positionCode: user.metadata?.positionCode?.toString() || '',
       custName: user.metadata?.custName || '',
       sites: user.metadata?.sites || [],
-      fullAccess: Number(user.metadata?.positionCode) === 99
+      fullAccess: Number(user.metadata?.positionCode) === 99,
+      testModeEnabled: user.metadata?.testModeEnabled || false
     },
     // NOTE: Token is NOT included in response body - it's set as HttpOnly cookie only
     // This is an OWASP security best practice to prevent XSS token theft

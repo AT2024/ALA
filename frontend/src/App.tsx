@@ -5,6 +5,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { TreatmentProvider } from '@/context/TreatmentContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { EnvironmentBanner, useIsStaging } from '@/components/EnvironmentBanner';
+import { TestModeBanner, useIsTestMode } from '@/components/TestModeBanner';
 
 // Eager load authentication pages (needed immediately)
 import LoginPage from '@/pages/Auth/LoginPage';
@@ -29,39 +30,52 @@ const PageLoader = () => (
   </div>
 );
 
-function App() {
+// Inner app component that can use auth context hooks
+function AppContent() {
   const isStaging = useIsStaging();
+  const isTestMode = useIsTestMode();
 
+  // Add padding when banners are visible
+  const topPadding = isStaging || isTestMode ? 'pt-12' : '';
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Environment banner - only shows in staging */}
+      <EnvironmentBanner />
+      {/* Test mode banner - only shows when test mode is enabled */}
+      <TestModeBanner />
+
+      {/* Main content - conditional padding only when banner is visible */}
+      <div className={topPadding}>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify" element={<VerificationPage />} />
+            <Route path="/docs" element={<ProjectDocPage />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/procedure-type" element={<ProcedureTypePage />} />
+              <Route path="/treatment/select" element={<TreatmentSelection />} />
+              <Route path="/treatment/scan" element={<TreatmentDocumentation />} />
+              <Route path="/treatment/list" element={<UseList />} />
+              <Route path="/treatment/removal" element={<SeedRemoval />} />
+              <Route path="/admin/dashboard" element={<Dashboard />} />
+            </Route>
+
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+function App() {
   return (
     <AuthProvider>
       <TreatmentProvider>
-        <div className="min-h-screen bg-background">
-          {/* Environment banner - only shows in staging */}
-          <EnvironmentBanner />
-
-          {/* Main content - conditional padding only when banner is visible */}
-          <div className={isStaging ? 'pt-16' : ''}>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/verify" element={<VerificationPage />} />
-              <Route path="/docs" element={<ProjectDocPage />} /> {/* New docs page - accessible without login */}
-
-              <Route element={<ProtectedRoute />}>
-                <Route path="/procedure-type" element={<ProcedureTypePage />} />
-                <Route path="/treatment/select" element={<TreatmentSelection />} />
-                <Route path="/treatment/scan" element={<TreatmentDocumentation />} />
-                <Route path="/treatment/list" element={<UseList />} />
-                <Route path="/treatment/removal" element={<SeedRemoval />} />
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-              </Route>
-
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </Suspense>
-          </div>
-        </div>
+        <AppContent />
       </TreatmentProvider>
     </AuthProvider>
   );
