@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { TreatmentProvider, useTreatment } from '../TreatmentContext';
+import { TreatmentProvider, useTreatment } from '@/context/TreatmentContext';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>

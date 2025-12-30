@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { TreatmentProvider, useTreatment } from '../TreatmentContext';
+import { TreatmentProvider, useTreatment } from '@/context/TreatmentContext';
 import { ReactNode } from 'react';
 
 // Wrapper component for testing - includes BrowserRouter for useLocation() hook
