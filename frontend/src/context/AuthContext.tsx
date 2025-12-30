@@ -137,7 +137,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('priorityUserData');
 
       // Navigate based on user role
-      navigate('/procedure-type');
+      // Admin users (positionCode=99) go to mode selection first
+      if (result.user.positionCode === '99') {
+        navigate('/mode-select');
+      } else {
+        navigate('/procedure-type');
+      }
     } catch (err: any) {
       console.error('Verification error:', err);
       setError(err.message || 'Verification failed. Please try again.');

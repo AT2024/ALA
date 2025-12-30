@@ -41,22 +41,9 @@ const Dashboard = () => {
     }
   };
   
-  useEffect(() => {
-    if (user?.role !== 'admin') {
-      // Redirect non-admin users
-      window.location.href = '/treatment/select';
-    }
-  }, [user]);
-
-  if (user?.role !== 'admin') {
-    return (
-      <Layout title="Admin Dashboard">
-        <div className="flex items-center justify-center py-10">
-          <p>You do not have permission to access this page.</p>
-        </div>
-      </Layout>
-    );
-  }
+  // Admin access is now handled by the ModeSelectionPage routing
+  // Users with positionCode=99 are the only ones who can access mode selection
+  // and therefore can toggle test mode
 
   return (
     <Layout title="Admin Dashboard">

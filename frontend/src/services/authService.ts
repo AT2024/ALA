@@ -118,24 +118,10 @@ export const authService = {
         code: code.trim(),
       });
       
-      // Enhance user data with Priority information
-      const userData = response.data.user;
-      
-      // Determine user role based on Priority position code
-      let role: 'hospital' | 'alphatau' | 'admin' = 'hospital';
-      if (userData.positionCode === '99') {
-        role = 'alphatau'; // ATM users with full access
-      } else if (userData.positionCode && parseInt(userData.positionCode) >= 50) {
-        role = 'admin'; // Site administrators
-      }
-      
-      return {
-        ...response.data,
-        user: {
-          ...userData,
-          role
-        }
-      };
+      // Return user data from backend directly
+      // Backend assigns correct role based on positionCode (99 = admin)
+      // DO NOT override the role here - trust the backend's assignment
+      return response.data;
     } catch (error: any) {
       console.error('Error verifying code:', error);
       

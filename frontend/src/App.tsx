@@ -19,6 +19,7 @@ const SeedRemoval = lazy(() => import('@/pages/Treatment/SeedRemoval'));
 const Dashboard = lazy(() => import('@/pages/Admin/Dashboard'));
 const ProjectDocPage = lazy(() => import('@/pages/ProjectDocPage'));
 const ProcedureTypePage = lazy(() => import('@/pages/Procedure/ProcedureTypePage'));
+const ModeSelectionPage = lazy(() => import('@/pages/ModeSelection/ModeSelectionPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -54,6 +55,7 @@ function AppContent() {
             <Route path="/docs" element={<ProjectDocPage />} />
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/mode-select" element={<ModeSelectionPage />} />
               <Route path="/procedure-type" element={<ProcedureTypePage />} />
               <Route path="/treatment/select" element={<TreatmentSelection />} />
               <Route path="/treatment/scan" element={<TreatmentDocumentation />} />
