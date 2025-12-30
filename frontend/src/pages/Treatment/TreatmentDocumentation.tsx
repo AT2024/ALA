@@ -949,7 +949,7 @@ const TreatmentDocumentation = () => {
                                   )}
                                 </div>
                                 <div className={`text-sm ${isNoUseReturned ? 'text-red-600' : 'text-gray-500'}`}>
-                                  {applicator.applicatorType} • {applicator.seedQuantity} seeds
+                                  {applicator.applicatorType} • {applicator.seedQuantity} sources
                                 </div>
                               </button>
                             );
@@ -1027,7 +1027,7 @@ const TreatmentDocumentation = () => {
                                 )}
                               </div>
                               <div className={`${isNoUseReturned ? 'text-red-600' : 'text-gray-600'}`}>
-                                {suggestion.applicatorType} • {suggestion.seedQuantity} seeds
+                                {suggestion.applicatorType} • {suggestion.seedQuantity} sources
                               </div>
                             </button>
                           );
@@ -1114,10 +1114,10 @@ const TreatmentDocumentation = () => {
                 />
               </div>
 
-              {/* Seeds Qty (Read-only) */}
+              {/* Sources Qty (Read-only) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Seeds Qty.
+                  Sources Qty.
                 </label>
                 <input
                   type="text"
@@ -1185,7 +1185,7 @@ const TreatmentDocumentation = () => {
                   {shouldShowStatus('INSERTED') && <option value="INSERTED" className="text-green-600">Inserted (successfully deployed)</option>}
                   {shouldShowStatus('FAULTY') && <option value="FAULTY" className="text-gray-800">Faulty (defective equipment)</option>}
                   {shouldShowStatus('DISPOSED') && <option value="DISPOSED" className="text-gray-800">Disposed (discarded)</option>}
-                  {shouldShowStatus('DISCHARGED') && <option value="DISCHARGED" className="text-gray-800">Discharged (seeds expelled)</option>}
+                  {shouldShowStatus('DISCHARGED') && <option value="DISCHARGED" className="text-gray-800">Discharged (sources expelled)</option>}
                   {shouldShowStatus('DEPLOYMENT_FAILURE') && <option value="DEPLOYMENT_FAILURE" className="text-gray-800">Deployment Failure</option>}
                 </select>
                 {isReturnedFromNoUse && (
@@ -1195,10 +1195,10 @@ const TreatmentDocumentation = () => {
                 )}
               </div>
 
-              {/* Inserted Seeds Qty */}
+              {/* Inserted Sources Qty */}
               <div>
                 <label htmlFor="insertedSeedsQty" className="block text-sm font-medium text-gray-700 mb-1">
-                  Inserted Seeds Qty.
+                  Inserted Sources Qty.
                 </label>
                 {(requiresComment(formData.status) || formData.usingType === 'Faulty') ? (
                   <input
@@ -1369,7 +1369,7 @@ const TreatmentDocumentation = () => {
                 <li>• Scan or enter the applicator serial number</li>
                 <li>• System validates applicator against Priority database in real-time</li>
                 <li>• Insertion time is automatically set when scanning</li>
-                <li>• For 'Faulty' usage type, specify actual inserted seeds quantity</li>
+                <li>• For 'Faulty' usage type, specify actual inserted sources quantity</li>
                 <li>• Use 'Next' to add another applicator or 'Finalize' to complete treatment</li>
               </ul>
             </div>

@@ -315,7 +315,7 @@ export async function generateTreatmentPdf(
       const sortedApplicators = [...applicators].sort((a, b) => b.seedQuantity - a.seedQuantity);
 
       // Updated headers with Catalog and Length columns
-      const tableHeaders = ['Serial', 'Catalog', 'Type', 'Seeds', 'Length', 'Time', 'Usage', 'Inserted', 'Comments'];
+      const tableHeaders = ['Serial', 'Catalog', 'Type', 'Sources', 'Length', 'Time', 'Usage', 'Inserted', 'Comments'];
 
       // Dynamic column width calculation - proportional widths with minimums
       // Available width for content (A4 = 595pt, margins 50pt each side = 495pt usable)
@@ -389,7 +389,7 @@ export async function generateTreatmentPdf(
         ['Applicators Used:', summary.totalApplicatorUse.toString()],
         ['Faulty:', summary.faultyApplicator.toString()],
         ['Not Used:', summary.notUsedApplicators.toString()],
-        ['Seeds Inserted:', summary.totalDartSeedsInserted.toString()],
+        ['Sources Inserted:', summary.totalDartSeedsInserted.toString()],
         ['Total Activity:', `${summary.totalActivity.toFixed(2)} µCi`],
         ['Inserted By:', summary.seedsInsertedBy]
       ];

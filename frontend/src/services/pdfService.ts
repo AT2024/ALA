@@ -112,7 +112,7 @@ export class PDFService {
     
     autoTable(doc, {
       startY: yPosition + 5,
-      head: [['Serial Number', 'Type', 'Seeds Qty', 'Time', 'Usage Type', 'Inserted Seeds', 'Comments']],
+      head: [['Serial Number', 'Type', 'Sources Qty', 'Time', 'Usage Type', 'Inserted Sources', 'Comments']],
       body: tableData,
       styles: {
         fontSize: 10,
@@ -129,10 +129,10 @@ export class PDFService {
       columnStyles: {
         0: { cellWidth: 25 }, // Serial Number
         1: { cellWidth: 20 }, // Type
-        2: { cellWidth: 15 }, // Seeds Qty
+        2: { cellWidth: 15 }, // Sources Qty
         3: { cellWidth: 25 }, // Time
         4: { cellWidth: 20 }, // Usage Type
-        5: { cellWidth: 15 }, // Inserted Seeds
+        5: { cellWidth: 15 }, // Inserted Sources
         6: { cellWidth: 30 }, // Comments
       },
       margin: { left: 20, right: 20 },
@@ -160,23 +160,23 @@ export class PDFService {
     // Summary data as table to prevent text overlap
     const summaryTableData = [
       [
-        'Time Treatment Started:', 
+        'Time Treatment Started:',
         summary.timeInsertionStarted && !isNaN(new Date(summary.timeInsertionStarted).getTime())
           ? format(new Date(summary.timeInsertionStarted), 'dd.MM.yyyy HH:mm')
           : 'N/A',
-        'Total Seeds Inserted:', 
+        'Total Sources Inserted:',
         summary.totalDartSeedsInserted.toString()
       ],
       [
-        'Total Applicators Used:', 
+        'Total Applicators Used:',
         summary.totalApplicatorUse.toString(),
-        'Total Activity:', 
+        'Total Activity:',
         `${summary.totalActivity.toFixed(2)} µCi`
       ],
       [
-        'Faulty Applicators:', 
+        'Faulty Applicators:',
         summary.faultyApplicator.toString(),
-        'Seeds Inserted By:', 
+        'Sources Inserted By:',
         summary.seedsInsertedBy
       ],
       [
@@ -253,7 +253,7 @@ export class PDFService {
     
     autoTable(doc, {
       startY: yPosition,
-      head: [['Serial Number', 'Type', 'Seeds Qty', 'Time', 'Usage Type', 'Inserted Seeds', 'Comments']],
+      head: [['Serial Number', 'Type', 'Sources Qty', 'Time', 'Usage Type', 'Inserted Sources', 'Comments']],
       body: tableData,
       styles: {
         fontSize: 10,
@@ -270,10 +270,10 @@ export class PDFService {
       columnStyles: {
         0: { cellWidth: 25 }, // Serial Number
         1: { cellWidth: 20 }, // Type
-        2: { cellWidth: 15 }, // Seeds Qty
+        2: { cellWidth: 15 }, // Sources Qty
         3: { cellWidth: 25 }, // Time
         4: { cellWidth: 20 }, // Usage Type
-        5: { cellWidth: 15 }, // Inserted Seeds
+        5: { cellWidth: 15 }, // Inserted Sources
         6: { cellWidth: 30 }, // Comments
       },
       margin: { left: 20, right: 20 },

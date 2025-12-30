@@ -245,7 +245,7 @@ const UseList = () => {
                       Applicator Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Seeds Qty.
+                      Sources Qty.
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Length (mm)
@@ -257,7 +257,7 @@ const UseList = () => {
                       Using Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Inserted Seeds Qty.
+                      Inserted Sources Qty.
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Comments
@@ -399,7 +399,7 @@ const UseList = () => {
             </div>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-gray-500">Total Dart Seeds Inserted</p>
+                <p className="text-sm text-gray-500">Total DaRT Sources Inserted</p>
                 <p className="font-medium text-green-600">{treatmentSummary.totalDartSeedsInserted}</p>
               </div>
               <div>
@@ -409,7 +409,7 @@ const UseList = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Seeds Inserted By (Full Name)</p>
+                <p className="text-sm text-gray-500">Sources Inserted By (Full Name)</p>
                 <p className="font-medium">{treatmentSummary.seedsInsertedBy}</p>
               </div>
             </div>
@@ -470,12 +470,12 @@ const UseList = () => {
             <li>• Only processed applicators are shown in the list</li>
             <li>• Active applicators (SEALED, OPENED, LOADED) are sorted to top</li>
             <li>• Finished applicators (INSERTED, FAULTY, etc.) are sorted to bottom</li>
-            <li>• Within groups, sorted by seed quantity (highest first)</li>
+            <li>• Within groups, sorted by source quantity (highest first)</li>
             <li>• Row colors indicate status: Red (OPENED), Yellow (LOADED), Green (INSERTED), Black (Terminal states)</li>
             <li>• Use 'Edit' to modify processed applicator details</li>
             <li>• Use 'Back to Treatment' to scan and process another applicator</li>
             <li>• Use 'Finalize Treatment' to generate a signed PDF report and complete the treatment</li>
-            <li>• Total Activity = Total Seeds × Activity Per Seed</li>
+            <li>• Total Activity = Total Sources × Activity Per Source</li>
           </ul>
         </div>
       </div>

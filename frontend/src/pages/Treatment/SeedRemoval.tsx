@@ -8,7 +8,7 @@ import IndividualSeedReasonModal from '@/components/Dialogs/IndividualSeedReason
 import RemovalProcedureForm, { RemovalProcedureFormData } from '@/components/Treatment/RemovalProcedureForm';
 import SignatureModal from '@/components/Dialogs/SignatureModal';
 
-// Type for individual seed removal notes
+// Type for individual source removal notes
 interface IndividualSeedNote {
   reason: string;
   timestamp: string;
@@ -252,7 +252,7 @@ const SeedRemoval = () => {
 
   if (!currentTreatment) {
     return (
-      <Layout title='Seed Removal' showBackButton>
+      <Layout title='Source Removal' showBackButton>
         <div className='flex items-center justify-center py-10'>
           <p>No treatment selected. Please select a treatment first.</p>
         </div>
@@ -261,7 +261,7 @@ const SeedRemoval = () => {
   }
 
   return (
-    <Layout title='Seed Removal' showBackButton backPath='/treatment/select'>
+    <Layout title='Source Removal' showBackButton backPath='/treatment/select'>
       <div className='space-y-6'>
         <div className='rounded-lg border bg-white p-4 shadow-sm'>
           <h2 className='mb-4 text-lg font-medium'>Treatment Information</h2>
@@ -281,7 +281,7 @@ const SeedRemoval = () => {
               <p className='font-medium'>{new Date(currentTreatment.date).toLocaleDateString()}</p>
             </div>
             <div>
-              <p className='text-sm text-gray-500'>Total Seeds</p>
+              <p className='text-sm text-gray-500'>Total Sources</p>
               <p className='font-medium'>{currentTreatment.seedQuantity || totalSeeds}</p>
             </div>
             <div>
@@ -313,7 +313,7 @@ const SeedRemoval = () => {
           {daysSinceInsertion > 0 && (
             <div className='mt-4 rounded-md bg-blue-50 p-3'>
               <p className='text-sm text-blue-700'>
-                <span className='font-medium'>Note:</span> Seeds have been in place for {daysSinceInsertion} day{daysSinceInsertion !== 1 ? 's' : ''}.
+                <span className='font-medium'>Note:</span> Sources have been in place for {daysSinceInsertion} day{daysSinceInsertion !== 1 ? 's' : ''}.
               </p>
             </div>
           )}
@@ -323,16 +323,16 @@ const SeedRemoval = () => {
 
         <div className='rounded-lg border bg-white p-4 shadow-sm'>
           <div className='mb-6 flex items-center justify-between'>
-            <h2 className='text-lg font-medium'>Seed Removal Tracking</h2>
+            <h2 className='text-lg font-medium'>Source Removal Tracking</h2>
             <div className='flex items-center space-x-3'>
               <div className='flex items-center space-x-2'>
-                <span className='text-sm text-gray-600'>Total Seeds:</span>
+                <span className='text-sm text-gray-600'>Total Sources:</span>
                 <span className='font-medium'>{currentTreatment.seedQuantity || totalSeeds}</span>
                 <button
                   onClick={handleRemoveIndividualSeed}
                   disabled={individualSeedsRemoved >= (currentTreatment.seedQuantity || progressTotalSeeds)}
                   className='rounded-full p-1 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                  title='Remove individual seed'>
+                  title='Remove individual source'>
                   <MinusIcon className='h-4 w-4' />
                 </button>
               </div>
@@ -342,12 +342,12 @@ const SeedRemoval = () => {
             </div>
           </div>
 
-          {/* Individual seed counter display */}
+          {/* Individual source counter display */}
           {individualSeedsRemoved > 0 && (
             <div className='mb-4 rounded-md bg-orange-50 p-3'>
               <div className='flex items-center justify-between'>
                 <p className='text-sm text-orange-700'>
-                  <span className='font-medium'>Individual seeds removed:</span> {individualSeedsRemoved}
+                  <span className='font-medium'>Individual sources removed:</span> {individualSeedsRemoved}
                 </p>
                 <button
                   onClick={handleResetIndividualSeeds}
@@ -370,7 +370,7 @@ const SeedRemoval = () => {
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center space-x-4'>
                         <span className='text-sm font-medium text-gray-700'>
-                          {group.totalApplicators} applicator{group.totalApplicators !== 1 ? 's' : ''} of {group.seedCount} seed{group.seedCount !== 1 ? 's' : ''}
+                          {group.totalApplicators} applicator{group.totalApplicators !== 1 ? 's' : ''} of {group.seedCount} source{group.seedCount !== 1 ? 's' : ''}
                         </span>
                         <div className='flex items-center space-x-2'>
                           <span className='text-sm text-gray-600'>
@@ -386,7 +386,7 @@ const SeedRemoval = () => {
                         </div>
                       </div>
                       <div className='text-sm text-gray-500'>
-                        {(group.removedApplicators * group.seedCount)} / {(group.totalApplicators * group.seedCount)} seeds
+                        {(group.removedApplicators * group.seedCount)} / {(group.totalApplicators * group.seedCount)} sources
                       </div>
                     </div>
 
@@ -436,7 +436,7 @@ const SeedRemoval = () => {
                       <div>
                         <h4 className='text-md font-medium'>{applicator.serialNumber}</h4>
                         <p className='text-sm text-gray-500'>
-                          Seeds: {applicator.seedQuantity} | Usage:{' '}
+                          Sources: {applicator.seedQuantity} | Usage:{' '}
                           {applicator.usageType === 'full'
                             ? 'Full Use'
                             : applicator.usageType === 'faulty'
@@ -502,7 +502,7 @@ const SeedRemoval = () => {
               className={`text-lg font-medium ${
                 effectiveRemovedSeeds === effectiveTotalSeeds ? 'text-green-600' : 'text-red-600'
               }`}>
-              Total: {effectiveRemovedSeeds} / {effectiveTotalSeeds} Seeds Removed
+              Total: {effectiveRemovedSeeds} / {effectiveTotalSeeds} Sources Removed
             </div>
             <button
               onClick={handleCompleteTreatment}
@@ -512,13 +512,13 @@ const SeedRemoval = () => {
                 ? 'Completing...'
                 : effectiveRemovedSeeds === effectiveTotalSeeds
                   ? 'Complete Treatment'
-                  : 'Complete with Missing Seeds'}
+                  : 'Complete with Missing Sources'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Individual Seed Reason Modal */}
+      {/* Individual Source Reason Modal */}
       <IndividualSeedReasonModal
         isOpen={showReasonModal}
         onClose={() => setShowReasonModal(false)}
