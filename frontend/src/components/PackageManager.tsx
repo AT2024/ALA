@@ -47,7 +47,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Calculate summary data by applicator type (seed quantity)
+  // Calculate summary data by applicator type (source quantity)
   const calculateSummary = (): PackageSummary[] => {
     const summaryMap: { [key: number]: PackageSummary } = {};
 
@@ -84,7 +84,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
     return Object.values(summaryMap).sort((a, b) => a.seedQuantity - b.seedQuantity);
   };
 
-  // Get loaded applicators grouped by seed quantity
+  // Get loaded applicators grouped by source quantity
   const getLoadedApplicatorsByType = (): { [key: number]: Applicator[] } => {
     const grouped: { [key: number]: Applicator[] } = {};
 
@@ -135,7 +135,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
     const seedQuantities = new Set(selectedApps.map((app) => app.seedQuantity));
 
     if (seedQuantities.size > 1) {
-      return { valid: false, error: 'All selected applicators must be of the same type (seed quantity)' };
+      return { valid: false, error: 'All selected applicators must be of the same type (source quantity)' };
     }
 
     // Verify all are LOADED status
@@ -239,7 +239,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
               summary.map((item) => (
                 <tr key={item.seedQuantity}>
                   <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                    {item.seedQuantity} seed{item.seedQuantity > 1 ? 's' : ''}
+                    {item.seedQuantity} source{item.seedQuantity > 1 ? 's' : ''}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {item.inserted}
@@ -326,7 +326,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
                     {Object.entries(loadedByType).map(([seedQuantity, applicators]) => (
                       <div key={seedQuantity}>
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
-                          {seedQuantity} seed{parseInt(seedQuantity) > 1 ? 's' : ''} ({applicators.length} available)
+                          {seedQuantity} source{parseInt(seedQuantity) > 1 ? 's' : ''} ({applicators.length} available)
                         </h4>
                         <div className="space-y-2">
                           {applicators.map((app) => (

@@ -192,7 +192,7 @@ export const STATUS_DESCRIPTIONS: Record<ApplicatorStatus, string> = {
   [APPLICATOR_STATUSES.INSERTED]: 'successfully deployed',
   [APPLICATOR_STATUSES.FAULTY]: 'defective equipment',
   [APPLICATOR_STATUSES.DISPOSED]: 'discarded',
-  [APPLICATOR_STATUSES.DISCHARGED]: 'seeds expelled',
+  [APPLICATOR_STATUSES.DISCHARGED]: 'sources expelled',
   [APPLICATOR_STATUSES.DEPLOYMENT_FAILURE]: 'failed deployment',
 };
 

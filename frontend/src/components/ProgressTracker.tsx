@@ -68,19 +68,19 @@ const ProgressTracker = () => {
           color="bg-blue-500"
         />
 
-        {/* Seed Progress - Now shows actual total seeds */}
+        {/* Source Progress - Now shows actual total sources */}
         <ProgressBar
           current={actualInsertedSeeds}
           total={actualTotalSeeds}
-          label="Seeds Inserted"
+          label="Sources Inserted"
           color="bg-green-500"
         />
 
-        {/* Show actual total seeds info */}
+        {/* Show actual total sources info */}
         {actualTotalSeeds > 0 && (
           <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-sm text-blue-700">
-              <span className="font-semibold">Total Seeds Available:</span> {actualTotalSeeds} seeds
+              <span className="font-semibold">Total Sources Available:</span> {actualTotalSeeds} sources
               {progressStats.totalApplicators > 0 && (
                 <span className="block text-xs text-blue-600 mt-1">
                   From {progressStats.totalApplicators} applicators
@@ -146,7 +146,7 @@ const ProgressTracker = () => {
                   {getApplicatorSummary().map((item) => (
                     <tr key={item.seedQuantity}>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                        {item.seedQuantity} seed{item.seedQuantity !== 1 ? 's' : ''}
+                        {item.seedQuantity} source{item.seedQuantity !== 1 ? 's' : ''}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {item.inserted}
@@ -179,7 +179,7 @@ const ProgressTracker = () => {
               <p className="font-medium text-lg">{progressStats.completionPercentage}%</p>
             </div>
             <div>
-              <p className="text-gray-500">Seeds Remaining</p>
+              <p className="text-gray-500">Sources Remaining</p>
               <p className="font-medium text-lg">{progressStats.seedsRemaining}</p>
             </div>
             <div>
@@ -187,7 +187,7 @@ const ProgressTracker = () => {
               <p className="font-medium text-lg">{progressStats.applicatorsRemaining}</p>
             </div>
             <div>
-              <p className="text-gray-500">Seeds Inserted</p>
+              <p className="text-gray-500">Sources Inserted</p>
               <p className="font-medium text-lg">{actualInsertedSeeds}</p>
             </div>
           </div>
@@ -206,8 +206,8 @@ const ProgressTracker = () => {
           </p>
           <p>Type: {currentTreatment.type}</p>
           <p>Site: {currentTreatment.site}</p>
-          <p>Expected Seeds: {actualTotalSeeds || 'N/A'}</p>
-          <p>Actual Total Seeds: {actualInsertedSeeds || 'N/A'}</p>
+          <p>Expected Sources: {actualTotalSeeds || 'N/A'}</p>
+          <p>Actual Total Sources: {actualInsertedSeeds || 'N/A'}</p>
         </div>
       </div>
     </div>

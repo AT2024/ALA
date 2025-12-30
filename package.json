@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Accountability Log Application - Improved Version",
   "main": "run.js",
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  },
   "scripts": {
     "start": "node run.js",
     "run": "node run.js",

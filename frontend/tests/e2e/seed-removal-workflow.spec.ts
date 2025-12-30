@@ -2,11 +2,11 @@ import { test, expect, Page, BrowserContext } from '@playwright/test';
 import { format } from 'date-fns';
 
 /**
- * Comprehensive E2E Test for Seed Removal Workflow
- * Tests the complete seed removal process including:
+ * Comprehensive E2E Test for Source Removal Workflow
+ * Tests the complete source removal process including:
  * - Treatment selection and validation
  * - Applicator management and progress tracking
- * - Individual seed removal simulation
+ * - Individual source removal simulation
  * - PDF export verification
  * - Error handling scenarios
  * - Cross-browser compatibility
@@ -65,7 +65,7 @@ class SeedRemovalPage {
     return this.page.locator('[data-testid="removal-progress"]');
   }
 
-  get individualSeedButton() {
+  get individualSourceButton() {
     return this.page.locator('[data-testid="remove-individual-seed"]');
   }
 
@@ -221,7 +221,7 @@ class PDFExportHelper {
 }
 
 // Main test suite
-test.describe('Seed Removal Workflow', () => {
+test.describe('Source Removal Workflow', () => {
   let authHelper: AuthenticationHelper;
   let treatmentHelper: TreatmentSetupHelper;
   let seedRemovalPage: SeedRemovalPage;
@@ -290,16 +290,16 @@ test.describe('Seed Removal Workflow', () => {
     await expect(seedRemovalPage.page.locator('text=Removed: 75')).toBeVisible();
   });
 
-  test('should handle individual seed removal', async () => {
-    // Click individual seed removal button multiple times
+  test('should handle individual source removal', async () => {
+    // Click individual source removal button multiple times
     for (let i = 1; i <= 5; i++) {
-      await seedRemovalPage.individualSeedButton.click();
+      await seedRemovalPage.individualSourceButton.click();
 
-      // Verify individual seed counter updates
-      await expect(seedRemovalPage.page.locator(`text=Individual seeds removed: ${i}`)).toBeVisible();
+      // Verify individual source counter updates
+      await expect(seedRemovalPage.page.locator(`text=Individual sources removed: ${i}`)).toBeVisible();
     }
 
-    // Verify progress includes individual seeds
+    // Verify progress includes individual sources
     await expect(seedRemovalPage.page.locator('text=Removed: 5')).toBeVisible();
   });
 
@@ -322,7 +322,7 @@ test.describe('Seed Removal Workflow', () => {
     await expect(commentsField).toHaveValue(testComment);
   });
 
-  test('should complete treatment when all seeds are removed', async () => {
+  test('should complete treatment when all sources are removed', async () => {
     // Remove all applicators
     for (const applicator of TEST_DATA.APPLICATORS) {
       const checkbox = await seedRemovalPage.getApplicatorCheckbox(applicator.serialNumber);
@@ -339,13 +339,13 @@ test.describe('Seed Removal Workflow', () => {
     await expect(seedRemovalPage.page).toHaveURL(/.*\/treatment\/select/);
   });
 
-  test('should allow completion with missing seeds', async () => {
+  test('should allow completion with missing sources', async () => {
     // Remove only some applicators (partial removal)
     const checkbox = await seedRemovalPage.getApplicatorCheckbox(TEST_DATA.APPLICATORS[0].serialNumber);
     await checkbox.check();
 
     // Verify button text changes for partial completion
-    await expect(seedRemovalPage.completeTreatmentButton).toHaveText(/Complete with Missing Seeds/);
+    await expect(seedRemovalPage.completeTreatmentButton).toHaveText(/Complete with Missing Sources/);
 
     // Should still be able to complete
     await expect(seedRemovalPage.completeTreatmentButton).toBeEnabled();
@@ -385,49 +385,49 @@ test.describe('Seed Removal Workflow', () => {
 
   test('should validate progress calculations', async () => {
     // Calculate expected totals
-    const expectedTotalSeeds = TEST_DATA.APPLICATORS.reduce((sum, app) => sum + app.seedQuantity, 0);
+    const expectedTotalSources = TEST_DATA.APPLICATORS.reduce((sum, app) => sum + app.seedQuantity, 0);
 
-    // Verify total seeds display
-    await expect(seedRemovalPage.page.locator(`text=/ ${expectedTotalSeeds}`)).toBeVisible();
+    // Verify total sources display
+    await expect(seedRemovalPage.page.locator(`text=/ ${expectedTotalSources}`)).toBeVisible();
 
     // Remove applicators one by one and verify calculations
-    let removedSeeds = 0;
+    let removedSources = 0;
     for (const applicator of TEST_DATA.APPLICATORS) {
       const checkbox = await seedRemovalPage.getApplicatorCheckbox(applicator.serialNumber);
       await checkbox.check();
 
-      removedSeeds += applicator.seedQuantity;
+      removedSources += applicator.seedQuantity;
 
       // Verify running total
-      await expect(seedRemovalPage.page.locator(`text=Removed: ${removedSeeds}`)).toBeVisible();
+      await expect(seedRemovalPage.page.locator(`text=Removed: ${removedSources}`)).toBeVisible();
 
       // Verify percentage calculation
-      const expectedPercentage = Math.round((removedSeeds / expectedTotalSeeds) * 100);
-      // Note: Exact percentage matching might vary due to individual seeds, so we check for approximate values
+      const expectedPercentage = Math.round((removedSources / expectedTotalSources) * 100);
+      // Note: Exact percentage matching might vary due to individual sources, so we check for approximate values
     }
   });
 
-  test('should handle reset of individual seeds', async () => {
-    // Add individual seeds
+  test('should handle reset of individual sources', async () => {
+    // Add individual sources
     for (let i = 0; i < 3; i++) {
-      await seedRemovalPage.individualSeedButton.click();
+      await seedRemovalPage.individualSourceButton.click();
     }
 
-    // Verify individual seeds counter
-    await expect(seedRemovalPage.page.locator('text=Individual seeds removed: 3')).toBeVisible();
+    // Verify individual sources counter
+    await expect(seedRemovalPage.page.locator('text=Individual sources removed: 3')).toBeVisible();
 
-    // Reset individual seeds
+    // Reset individual sources
     await seedRemovalPage.page.locator('[data-testid="reset-individual-seeds"]').click();
 
     // Verify reset
-    await expect(seedRemovalPage.page.locator('text=Individual seeds removed:')).not.toBeVisible();
+    await expect(seedRemovalPage.page.locator('text=Individual sources removed:')).not.toBeVisible();
   });
 
   test('should display applicator details correctly', async () => {
     // Verify each applicator displays correct information
     for (const applicator of TEST_DATA.APPLICATORS) {
       await expect(seedRemovalPage.page.locator(`text=${applicator.serialNumber}`)).toBeVisible();
-      await expect(seedRemovalPage.page.locator(`text=Seeds: ${applicator.seedQuantity}`)).toBeVisible();
+      await expect(seedRemovalPage.page.locator(`text=Sources: ${applicator.seedQuantity}`)).toBeVisible();
 
       // Check usage type display
       const expectedUsageText = applicator.usageType === 'full' ? 'Full Use' :
@@ -460,7 +460,7 @@ test.describe('Cross-Browser Compatibility', () => {
 
     // Basic functionality test for each browser
     const page = test.info().annotations.find(a => a.type === 'browser')?.description;
-    console.log(`Running seed removal test on ${page}`);
+    console.log(`Running source removal test on ${page}`);
 
     // Test basic page load and functionality
     // (Previous test logic can be reused here)

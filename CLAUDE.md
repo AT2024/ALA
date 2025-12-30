@@ -1,8 +1,8 @@
 # ALA Medical Treatment Tracking System
 
 ## Project Context
-Medical treatment tracking application for seed applicator procedures with Priority ERP integration.
-- **Purpose**: Real-time tracking and validation of medical seed applicator treatments
+Medical treatment tracking application for source applicator procedures with Priority ERP integration.
+- **Purpose**: Real-time tracking and validation of medical source applicator treatments
 - **Critical**: Patient safety system - accuracy and data integrity are paramount
 - **Tech Stack**: React/TypeScript/Tailwind frontend, Express/TypeScript backend, PostgreSQL database
 - **Key Integration**: Priority ERP for patient data, site access, and applicator validation

@@ -747,7 +747,7 @@ const TreatmentSelection = () => {
                     <span className="font-medium">Surgeon:</span> {removalCandidate.surgeon}
                   </div>
                   <div>
-                    <span className="font-medium">Seeds:</span> {removalCandidate.seedQuantity}
+                    <span className="font-medium">Sources:</span> {removalCandidate.seedQuantity}
                   </div>
                   <div>
                     <span className="font-medium">Activity:</span> {removalCandidate.activity} µCi
@@ -835,10 +835,10 @@ const TreatmentSelection = () => {
                 />
               </div>
             )}
-            {/* Seed Quantity Field (Read-only) */}
+            {/* Source Quantity Field (Read-only) */}
             <div>
               <label htmlFor="seedQty" className="block text-sm font-medium text-gray-700 mb-2">
-                Seed Qty.
+                Source Qty.
               </label>
               <input
                 type="text"
@@ -850,10 +850,10 @@ const TreatmentSelection = () => {
               />
             </div>
 
-            {/* Activity Per Seed Field (Read-only) */}
+            {/* Activity Per Source Field (Read-only) */}
             <div>
               <label htmlFor="activityPerSeed" className="block text-sm font-medium text-gray-700 mb-2">
-                Activity Per Seed (µCi)
+                Activity Per Source (µCi)
               </label>
               <input
                 type="text"
@@ -934,7 +934,7 @@ const TreatmentSelection = () => {
             {procedureType === 'insertion' && (
               <>
                 <li>• Patient data is loaded from Priority ORDERS table</li>
-                <li>• Seed quantity (SBD_SEEDQTY) and activity (SBD_PREFACTIV) auto-filled</li>
+                <li>• Source quantity (SBD_SEEDQTY) and activity (SBD_PREFACTIV) auto-filled</li>
                 <li>• Date format: DD.MMM.YYYY (e.g., 04.Jun.2025)</li>
               </>
             )}

@@ -81,7 +81,7 @@ const IndividualSeedReasonModal = ({
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                 <div className="flex items-center justify-between mb-4">
                   <Dialog.Title className="text-lg font-medium text-gray-900">
-                    Add Individual Seed Removal
+                    Add Individual Source Removal
                   </Dialog.Title>
                   <button
                     onClick={handleClose}
@@ -92,7 +92,7 @@ const IndividualSeedReasonModal = ({
                 </div>
 
                 <p className="text-sm text-gray-600 mb-4">
-                  Please select a reason for removing this individual seed.
+                  Please select a reason for removing this individual source.
                 </p>
 
                 {error && (
@@ -136,7 +136,7 @@ const IndividualSeedReasonModal = ({
                       onChange={(e) => setCustomText(e.target.value)}
                       rows={2}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                      placeholder="Enter reason for seed removal..."
+                      placeholder="Enter reason for source removal..."
                     />
                   </div>
                 )}

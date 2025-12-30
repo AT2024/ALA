@@ -49,7 +49,11 @@
       "Bash(done)",
       "Bash(for f in \"c:\\\\Users\\\\amitaik\\\\Desktop\\\\ala-improved\\\\backend\\\\src\\\\controllers\"*.ts)",
       "Bash(find:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Skill(cc10x:planning-patterns)",
+      "Skill(cc10x:planning-patterns:*)"
     ],
     "deny": []
   }

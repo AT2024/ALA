@@ -1,10 +1,10 @@
 # Accountability Log Application (ALA) - Improved
 
-A comprehensive medical treatment tracking system for real-time seed applicator management with Priority ERP integration. Deployed and running in production on Azure VM.
+A comprehensive medical treatment tracking system for real-time source applicator management with Priority ERP integration. Deployed and running in production on Azure VM.
 
 ## 🏥 Overview
 
-This application tracks medical treatments using seed applicators with real-time validation against the Priority system. It handles insertion and removal procedures, progress tracking, and comprehensive documentation with PDF/JSON export capabilities.
+This application tracks medical treatments using source applicators with real-time validation against the Priority system. It handles insertion and removal procedures, progress tracking, and comprehensive documentation with PDF/JSON export capabilities.
 
 **Production Status**: ✅ Deployed at https://ala-app.israelcentral.cloudapp.azure.com
 
@@ -130,7 +130,7 @@ ala-improved/
 - **Real-time Progress Tracking**: Live calculation of treatment completion percentages
 - **Applicator Validation**: 5-scenario validation against Priority system
   - Already scanned, wrong treatment type, no use, not allowed, valid
-- **Seed Management**: Track Full use, Faulty, and No use applicators
+- **Source Management**: Track Full use, Faulty, and No use applicators
 - **Treatment Documentation**: Generate PDF and JSON treatment reports
 - **Barcode Scanning**: Html5QrcodeScanner integration for applicator identification
 
