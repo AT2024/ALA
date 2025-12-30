@@ -4,6 +4,16 @@ import { MinusIcon } from '@heroicons/react/24/outline';
 import Layout from '@/components/Layout';
 import { useTreatment, ApplicatorGroup } from '@/context/TreatmentContext';
 import { treatmentService, Applicator } from '@/services/treatmentService';
+import IndividualSeedReasonModal from '@/components/Dialogs/IndividualSeedReasonModal';
+import RemovalProcedureForm, { RemovalProcedureFormData } from '@/components/Treatment/RemovalProcedureForm';
+import SignatureModal from '@/components/Dialogs/SignatureModal';
+
+// Type for individual seed removal notes
+interface IndividualSeedNote {
+  reason: string;
+  timestamp: string;
+  count: number;
+}
 
 const SeedRemoval = () => {
   const navigate = useNavigate();
@@ -22,6 +32,10 @@ const SeedRemoval = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [individualSeedNotes, setIndividualSeedNotes] = useState<IndividualSeedNote[]>([]);
+  const [removalProcedureData, setRemovalProcedureData] = useState<RemovalProcedureFormData | null>(null);
 
   // Get data from context methods
   const applicatorGroups = getApplicatorGroups();
@@ -148,26 +162,92 @@ const SeedRemoval = () => {
   };
 
   const handleRemoveIndividualSeed = () => {
+    setShowReasonModal(true);
+  };
+
+  const handleReasonConfirm = (reason: string) => {
+    const note: IndividualSeedNote = {
+      reason,
+      timestamp: new Date().toISOString(),
+      count: 1,
+    };
+    setIndividualSeedNotes(prev => [...prev, note]);
     setIndividualSeedsRemoved(individualSeedsRemoved + 1);
+    setShowReasonModal(false);
   };
 
   const handleResetIndividualSeeds = () => {
     setIndividualSeedsRemoved(0);
+    setIndividualSeedNotes([]);
   };
 
   const handleCompleteTreatment = async () => {
-    if (!currentTreatment) return;
+    if (!currentTreatment || !removalProcedureData) {
+      setError('Please fill in the removal procedure form');
+      return;
+    }
+
+    // Validate required fields
+    if (!removalProcedureData.removalDate) {
+      setError('Please select a removal date');
+      return;
+    }
+    if (removalProcedureData.allSourcesSameDate === null) {
+      setError('Please indicate if all sources were removed on the same date');
+      return;
+    }
+
+    // Validate discrepancy clarification if there's a mismatch
+    const insertedSources = currentTreatment.seedQuantity || totalSeeds;
+    if (effectiveRemovedSeeds !== insertedSources) {
+      if (!removalProcedureData.discrepancyClarification) {
+        setError('Please clarify the discrepancy between removed and inserted sources');
+        return;
+      }
+
+      // Validate that discrepancy amounts sum correctly
+      const clarification = removalProcedureData.discrepancyClarification;
+      const totalClarified =
+        (clarification.lost.checked ? clarification.lost.amount : 0) +
+        (clarification.retrievedToSite.checked ? clarification.retrievedToSite.amount : 0) +
+        (clarification.removalFailure.checked ? clarification.removalFailure.amount : 0) +
+        (clarification.other.checked ? clarification.other.amount : 0);
+
+      const sourcesNotRemoved = insertedSources - effectiveRemovedSeeds;
+      if (totalClarified !== sourcesNotRemoved) {
+        setError(`Discrepancy clarification total (${totalClarified}) must equal sources not removed (${sourcesNotRemoved})`);
+        return;
+      }
+    }
 
     setIsCompleting(true);
+    setError(null);
 
     try {
-      await treatmentService.completeTreatment(currentTreatment.id);
-      navigate('/treatment/select');
+      // Save removal procedure data first
+      await treatmentService.updateRemovalProcedure(currentTreatment.id, {
+        removalDate: removalProcedureData.removalDate,
+        allSourcesSameDate: removalProcedureData.allSourcesSameDate ?? false,
+        additionalRemovalDate: removalProcedureData.additionalRemovalDate,
+        reasonNotSameDate: removalProcedureData.reasonNotSameDate,
+        discrepancyClarification: removalProcedureData.discrepancyClarification,
+        individualSeedsRemoved: individualSeedsRemoved,
+        individualSeedNotes: individualSeedNotes,
+        removalGeneralComments: removalProcedureData.removalGeneralComments,
+      });
+
+      // Show signature modal for finalization
+      setShowSignatureModal(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to complete treatment');
+      setError(err.message || 'Failed to save removal procedure data');
     } finally {
       setIsCompleting(false);
     }
+  };
+
+  const handleSignatureSuccess = () => {
+    setShowSignatureModal(false);
+    navigate('/treatment/select');
   };
 
   if (!currentTreatment) {
@@ -406,8 +486,18 @@ const SeedRemoval = () => {
               </div>
             )}
           </div>
+        </div>
 
-          <div className='mt-6 flex items-center justify-between border-t pt-6'>
+        {/* Removal Procedure Form - Summary at bottom after seed tracking */}
+        <RemovalProcedureForm
+          totalSourcesRemoved={effectiveRemovedSeeds}
+          insertedSources={currentTreatment?.seedQuantity || totalSeeds}
+          onUpdate={setRemovalProcedureData}
+        />
+
+        {/* Complete Treatment Button */}
+        <div className='rounded-lg border bg-white p-4 shadow-sm'>
+          <div className='flex items-center justify-between'>
             <div
               className={`text-lg font-medium ${
                 effectiveRemovedSeeds === effectiveTotalSeeds ? 'text-green-600' : 'text-red-600'
@@ -427,6 +517,22 @@ const SeedRemoval = () => {
           </div>
         </div>
       </div>
+
+      {/* Individual Seed Reason Modal */}
+      <IndividualSeedReasonModal
+        isOpen={showReasonModal}
+        onClose={() => setShowReasonModal(false)}
+        onConfirm={handleReasonConfirm}
+      />
+
+      {/* Signature Modal for Treatment Finalization */}
+      <SignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        treatmentId={currentTreatment?.id || ''}
+        treatmentSite={currentTreatment?.site || ''}
+        onSuccess={handleSignatureSuccess}
+      />
     </Layout>
   );
 };

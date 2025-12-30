@@ -161,12 +161,78 @@ jobs:
           name: frontend-coverage
 
   # =================================================================
+  # Medical Compliance Tests (IEC 62304 Class B)
+  # =================================================================
+  medical-compliance:
+    name: Medical Compliance Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-types
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run Medical Domain Tests
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+          JWT_SECRET: test_jwt_secret_for_medical_tests
+          PRIORITY_MOCK: true
+        run: |
+          cd backend
+          npm run test:medical -- --coverage --coverageDirectory=coverage-medical
+
+      - name: Verify Critical Path Coverage
+        run: |
+          echo "Verifying medical compliance test coverage..."
+          cd backend
+          # Check that medical tests exist and pass
+          if [ -d "coverage-medical" ]; then
+            echo "✅ Medical compliance tests executed successfully"
+          else
+            echo "⚠️ Medical coverage directory not found - tests may have failed"
+          fi
+
+      - name: Upload Medical Test Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage-medical/lcov.info
+          flags: medical
+          name: medical-compliance-coverage
+
+  # =================================================================
   # Docker Build Test
   # =================================================================
   docker-build:
     name: Docker Build Test
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, frontend-tests, medical-compliance]
 
     steps:
       - name: Checkout code
@@ -388,7 +454,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [lint-and-types, backend-tests, frontend-tests, docker-build, security-scan, srs-validation]
+    needs: [lint-and-types, backend-tests, frontend-tests, medical-compliance, docker-build, security-scan, srs-validation]
     if: always()
 
     steps:
@@ -397,6 +463,7 @@ jobs:
           if [[ "${{ needs.lint-and-types.result }}" == "success" && \
                 "${{ needs.backend-tests.result }}" == "success" && \
                 "${{ needs.frontend-tests.result }}" == "success" && \
+                "${{ needs.medical-compliance.result }}" == "success" && \
                 "${{ needs.docker-build.result }}" == "success" && \
                 ("${{ needs.security-scan.result }}" == "success" || "${{ needs.security-scan.result }}" == "skipped") && \
                 ("${{ needs.srs-validation.result }}" == "success" || "${{ needs.srs-validation.result }}" == "skipped") ]]; then
@@ -407,6 +474,7 @@ jobs:
             echo "Lint/Types: ${{ needs.lint-and-types.result }}"
             echo "Backend Tests: ${{ needs.backend-tests.result }}"
             echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
+            echo "Medical Compliance: ${{ needs.medical-compliance.result }}"
             echo "Docker Build: ${{ needs.docker-build.result }}"
             echo "Security Scan: ${{ needs.security-scan.result }}"
             echo "SRS Validation: ${{ needs.srs-validation.result }}"

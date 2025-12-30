@@ -18,10 +18,20 @@ interface TreatmentAttributes {
   seedQuantity?: number; // Number of seeds for the treatment
   activityPerSeed?: number; // Activity per seed
   surgeon?: string; // Surgeon performing the treatment
+  // Removal procedure fields
+  removalDate?: Date;
+  allSourcesSameDate?: boolean;
+  additionalRemovalDate?: Date;
+  reasonNotSameDate?: string;
+  discrepancyClarification?: string; // JSON string
+  discrepancyDocPath?: string;
+  individualSeedsRemoved?: number;
+  individualSeedNotes?: string; // JSON string
+  removalGeneralComments?: string;
 }
 
 // For creating a new treatment
-type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName'>
+type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName' | 'removalDate' | 'allSourcesSameDate' | 'additionalRemovalDate' | 'reasonNotSameDate' | 'discrepancyClarification' | 'discrepancyDocPath' | 'individualSeedsRemoved' | 'individualSeedNotes' | 'removalGeneralComments'>
 
 class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> implements TreatmentAttributes {
   public id!: string;
@@ -39,6 +49,16 @@ class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> 
   public seedQuantity?: number;
   public activityPerSeed?: number;
   public surgeon?: string;
+  // Removal procedure fields
+  public removalDate?: Date;
+  public allSourcesSameDate?: boolean;
+  public additionalRemovalDate?: Date;
+  public reasonNotSameDate?: string;
+  public discrepancyClarification?: string;
+  public discrepancyDocPath?: string;
+  public individualSeedsRemoved?: number;
+  public individualSeedNotes?: string;
+  public removalGeneralComments?: string;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -128,6 +148,53 @@ Treatment.init(
     surgeon: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    // Removal procedure fields
+    removalDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'removal_date',
+    },
+    allSourcesSameDate: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      field: 'all_sources_same_date',
+    },
+    additionalRemovalDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'additional_removal_date',
+    },
+    reasonNotSameDate: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'reason_not_same_date',
+    },
+    discrepancyClarification: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'discrepancy_clarification',
+    },
+    discrepancyDocPath: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      field: 'discrepancy_doc_path',
+    },
+    individualSeedsRemoved: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      field: 'individual_seeds_removed',
+    },
+    individualSeedNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'individual_seed_notes',
+    },
+    removalGeneralComments: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'removal_general_comments',
     },
   },
   {

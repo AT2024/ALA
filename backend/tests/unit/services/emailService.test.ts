@@ -32,15 +32,15 @@ jest.mock('@azure/communication-email', () => ({
 }));
 
 // Mock the logger
-jest.mock('../../src/utils/logger', () => ({
+jest.mock('../../../src/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn()
 }));
 
 // Import after setting up mocks and env vars
-import emailService, { sendVerificationCode, sendSignedPdf, isEmailConfigured, getPdfRecipientEmail } from '../../src/services/emailService';
-import logger from '../../src/utils/logger';
+import emailService, { sendVerificationCode, sendSignedPdf, isEmailConfigured, getPdfRecipientEmail } from '../../../src/services/emailService';
+import logger from '../../../src/utils/logger';
 
 describe('EmailService', () => {
   beforeEach(() => {

@@ -16,14 +16,14 @@ jest.mock('bcryptjs');
 const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 // Mock the database config
-jest.mock('../../src/config/database', () => ({
+jest.mock('../../../src/config/database', () => ({
   default: {
     define: jest.fn(),
   },
 }));
 
 // Mock the logger
-jest.mock('../../src/utils/logger', () => ({
+jest.mock('../../../src/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),

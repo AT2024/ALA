@@ -181,6 +181,33 @@ export const completeTreatment = asyncHandler(async (req: Request, res: Response
   });
 });
 
+// @desc    Update removal procedure data
+// @route   PUT /api/treatments/:id/removal-procedure
+// @access  Private
+export const updateRemovalProcedure = asyncHandler(async (req: Request, res: Response) => {
+  const treatment = await treatmentService.getTreatmentById(req.params.id);
+
+  // Check if user has access to this treatment
+  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized to update this treatment');
+  }
+
+  // Validate treatment type
+  if (treatment.type !== 'removal') {
+    res.status(400);
+    throw new Error('This endpoint is only for removal treatments');
+  }
+
+  const updatedTreatment = await treatmentService.updateRemovalProcedure(req.params.id, req.body);
+
+  res.status(200).json({
+    success: true,
+    treatment: updatedTreatment,
+    message: 'Removal procedure data saved successfully'
+  });
+});
+
 // @desc    Update treatment status in Priority
 // @route   PATCH /api/treatments/:id/status
 // @access  Private
@@ -1167,57 +1194,69 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
     ...unusedApplicators
   ];
 
-  // Generate PDF with signature
-  const signatureDetails = {
-    type: 'alphatau_verified' as const,
-    signerName,
-    signerEmail: verification.targetEmail,
-    signerPosition,
-    signedAt: new Date()
-  };
+  // Only generate and send PDF for insertion treatments (not removal)
+  let pdfId: string | null = null;
+  let emailStatus: string | null = null;
 
-  const pdfBuffer = await generateTreatmentPdf(
-    {
-      id: treatment.id,
-      type: treatment.type,
-      subjectId: treatment.subjectId,
-      site: treatment.site,
-      date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
-      surgeon: treatment.surgeon,
-      activityPerSeed: treatment.activityPerSeed,
-      patientName: treatment.patientName
-    },
-    allApplicators,
-    signatureDetails
-  );
+  if (treatment.type === 'insertion') {
+    // Generate PDF with signature
+    const signatureDetails = {
+      type: 'alphatau_verified' as const,
+      signerName,
+      signerEmail: verification.targetEmail,
+      signerPosition,
+      signedAt: new Date()
+    };
 
-  // Store PDF in database
-  const treatmentPdf = await TreatmentPdf.create({
-    treatmentId: treatment.id,
-    pdfData: pdfBuffer,
-    pdfSizeBytes: pdfBuffer.length,
-    signatureType: 'alphatau_verified',
-    signerName,
-    signerEmail: verification.targetEmail,
-    signerPosition,
-    signedAt: new Date(),
-    emailStatus: 'pending'
-  });
+    const pdfBuffer = await generateTreatmentPdf(
+      {
+        id: treatment.id,
+        type: treatment.type,
+        subjectId: treatment.subjectId,
+        site: treatment.site,
+        date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
+        surgeon: treatment.surgeon,
+        activityPerSeed: treatment.activityPerSeed,
+        patientName: treatment.patientName
+      },
+      allApplicators,
+      signatureDetails
+    );
 
-  // Send PDF to clinic email
-  const recipientEmail = getPdfRecipientEmail();
-  try {
-    await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
-    treatmentPdf.emailSentAt = new Date();
-    treatmentPdf.emailSentTo = recipientEmail;
-    treatmentPdf.emailStatus = 'sent';
-    await treatmentPdf.save();
-    logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
-  } catch (emailError: any) {
-    logger.error(`Failed to send PDF email: ${emailError.message}`);
-    treatmentPdf.emailStatus = 'failed';
-    await treatmentPdf.save();
-    // Don't fail the whole operation - PDF is stored
+    // Store PDF in database
+    const treatmentPdf = await TreatmentPdf.create({
+      treatmentId: treatment.id,
+      pdfData: pdfBuffer,
+      pdfSizeBytes: pdfBuffer.length,
+      signatureType: 'alphatau_verified',
+      signerName,
+      signerEmail: verification.targetEmail,
+      signerPosition,
+      signedAt: new Date(),
+      emailStatus: 'pending'
+    });
+
+    pdfId = treatmentPdf.id;
+
+    // Send PDF to clinic email
+    const recipientEmail = getPdfRecipientEmail();
+    try {
+      await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
+      treatmentPdf.emailSentAt = new Date();
+      treatmentPdf.emailSentTo = recipientEmail;
+      treatmentPdf.emailStatus = 'sent';
+      await treatmentPdf.save();
+      logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
+    } catch (emailError: any) {
+      logger.error(`Failed to send PDF email: ${emailError.message}`);
+      treatmentPdf.emailStatus = 'failed';
+      await treatmentPdf.save();
+      // Don't fail the whole operation - PDF is stored
+    }
+
+    emailStatus = treatmentPdf.emailStatus;
+  } else {
+    logger.info(`Skipping PDF generation for removal treatment ${treatment.id}`);
   }
 
   // Mark treatment as complete
@@ -1225,15 +1264,17 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
 
   res.status(200).json({
     success: true,
-    message: 'Treatment finalized successfully',
-    pdfId: treatmentPdf.id,
+    message: treatment.type === 'removal'
+      ? 'Removal treatment finalized successfully (no PDF generated)'
+      : 'Treatment finalized successfully',
+    pdfId,
     signatureDetails: {
       signerName,
       signerPosition,
-      signedAt: treatmentPdf.signedAt,
+      signedAt: new Date(),
       type: 'alphatau_verified'
     },
-    emailStatus: treatmentPdf.emailStatus
+    emailStatus
   });
 });
 
@@ -1321,57 +1362,69 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
     ...unusedApplicators
   ];
 
-  // Generate PDF with auto-signature
-  const signatureDetails = {
-    type: 'hospital_auto' as const,
-    signerName,
-    signerEmail: req.user.email,
-    signerPosition,
-    signedAt: new Date()
-  };
+  // Only generate and send PDF for insertion treatments (not removal)
+  let pdfId: string | null = null;
+  let emailStatus: string | null = null;
 
-  const pdfBuffer = await generateTreatmentPdf(
-    {
-      id: treatment.id,
-      type: treatment.type,
-      subjectId: treatment.subjectId,
-      site: treatment.site,
-      date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
-      surgeon: treatment.surgeon,
-      activityPerSeed: treatment.activityPerSeed,
-      patientName: treatment.patientName
-    },
-    allApplicators,
-    signatureDetails
-  );
+  if (treatment.type === 'insertion') {
+    // Generate PDF with auto-signature
+    const signatureDetails = {
+      type: 'hospital_auto' as const,
+      signerName,
+      signerEmail: req.user.email,
+      signerPosition,
+      signedAt: new Date()
+    };
 
-  // Store PDF in database
-  const treatmentPdf = await TreatmentPdf.create({
-    treatmentId: treatment.id,
-    pdfData: pdfBuffer,
-    pdfSizeBytes: pdfBuffer.length,
-    signatureType: 'hospital_auto',
-    signerName,
-    signerEmail: req.user.email,
-    signerPosition,
-    signedAt: new Date(),
-    emailStatus: 'pending'
-  });
+    const pdfBuffer = await generateTreatmentPdf(
+      {
+        id: treatment.id,
+        type: treatment.type,
+        subjectId: treatment.subjectId,
+        site: treatment.site,
+        date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
+        surgeon: treatment.surgeon,
+        activityPerSeed: treatment.activityPerSeed,
+        patientName: treatment.patientName
+      },
+      allApplicators,
+      signatureDetails
+    );
 
-  // Send PDF to clinic email
-  const recipientEmail = getPdfRecipientEmail();
-  try {
-    await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
-    treatmentPdf.emailSentAt = new Date();
-    treatmentPdf.emailSentTo = recipientEmail;
-    treatmentPdf.emailStatus = 'sent';
-    await treatmentPdf.save();
-    logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
-  } catch (emailError: any) {
-    logger.error(`Failed to send PDF email: ${emailError.message}`);
-    treatmentPdf.emailStatus = 'failed';
-    await treatmentPdf.save();
-    // Don't fail the whole operation - PDF is stored
+    // Store PDF in database
+    const treatmentPdf = await TreatmentPdf.create({
+      treatmentId: treatment.id,
+      pdfData: pdfBuffer,
+      pdfSizeBytes: pdfBuffer.length,
+      signatureType: 'hospital_auto',
+      signerName,
+      signerEmail: req.user.email,
+      signerPosition,
+      signedAt: new Date(),
+      emailStatus: 'pending'
+    });
+
+    pdfId = treatmentPdf.id;
+
+    // Send PDF to clinic email
+    const recipientEmail = getPdfRecipientEmail();
+    try {
+      await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
+      treatmentPdf.emailSentAt = new Date();
+      treatmentPdf.emailSentTo = recipientEmail;
+      treatmentPdf.emailStatus = 'sent';
+      await treatmentPdf.save();
+      logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
+    } catch (emailError: any) {
+      logger.error(`Failed to send PDF email: ${emailError.message}`);
+      treatmentPdf.emailStatus = 'failed';
+      await treatmentPdf.save();
+      // Don't fail the whole operation - PDF is stored
+    }
+
+    emailStatus = treatmentPdf.emailStatus;
+  } else {
+    logger.info(`Skipping PDF generation for removal treatment ${treatment.id}`);
   }
 
   // Mark treatment as complete
@@ -1379,15 +1432,17 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
 
   res.status(200).json({
     success: true,
-    message: 'Treatment finalized successfully',
-    pdfId: treatmentPdf.id,
+    message: treatment.type === 'removal'
+      ? 'Removal treatment finalized successfully (no PDF generated)'
+      : 'Treatment finalized successfully',
+    pdfId,
     signatureDetails: {
-      signerName: req.user.name,
+      signerName,
       signerPosition,
-      signedAt: treatmentPdf.signedAt,
+      signedAt: new Date(),
       type: 'hospital_auto'
     },
-    emailStatus: treatmentPdf.emailStatus
+    emailStatus
   });
 });
 
@@ -1398,6 +1453,7 @@ export default {
   createTreatment,
   updateTreatment,
   completeTreatment,
+  updateRemovalProcedure,
   updateTreatmentStatus,
   getTreatmentApplicators,
   addApplicator,
