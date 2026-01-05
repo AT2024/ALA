@@ -11,6 +11,9 @@ version: '3.8'
 services:
   api:
     image: ala-api:${VERSION:-latest}
+    # Override entrypoint to bypass dumb-init (Alpine 3.23+ compatibility issue)
+    entrypoint: ["node", "dist/app/src/server.js"]
+    command: []
     networks:
       - ala-network
     environment:
