@@ -7,10 +7,48 @@ import sequelize from '../config/database';
 import { Treatment, TreatmentPdf, SignatureVerification } from '../models';
 import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger';
-import { generateTreatmentPdf } from '../services/pdfGenerationService';
-import { sendSignedPdf, sendVerificationCode, getPdfRecipientEmail } from '../services/emailService';
+import { ContinuationInfo } from '../services/pdfGenerationService';
+import { sendVerificationCode } from '../services/emailService';
 import { config } from '../config/appConfig';
 import { formatAndEnrichApplicators, fetchSeedLength } from '../utils/applicatorFormatter';
+import { parseOrderIds } from '../utils/priorityIdParser';
+import {
+  requireTreatmentAccess,
+  isAlphaTauAdmin,
+  buildUserContext,
+} from '../utils/authorizationUtils';
+import {
+  mergeApplicatorsForPdf,
+  finalizeAndSendPdf,
+  SignatureDetails,
+} from '../utils/finalizationHelpers';
+
+// Helper function to get continuation info for PDF generation
+async function getContinuationInfo(treatment: Treatment): Promise<ContinuationInfo | undefined> {
+  if (!treatment.parentTreatmentId) return undefined;
+
+  const parentPdf = await TreatmentPdf.findOne({
+    where: { treatmentId: treatment.parentTreatmentId }
+  });
+
+  if (!parentPdf) {
+    logger.warn(`[CONTINUATION] Parent treatment ${treatment.parentTreatmentId} has no PDF`, {
+      treatmentId: treatment.id,
+      parentTreatmentId: treatment.parentTreatmentId
+    });
+    return undefined;
+  }
+
+  logger.info(`[CONTINUATION] Found parent PDF created at ${parentPdf.signedAt}`, {
+    treatmentId: treatment.id,
+    parentTreatmentId: treatment.parentTreatmentId
+  });
+
+  return {
+    parentTreatmentId: treatment.parentTreatmentId,
+    parentPdfCreatedAt: parentPdf.signedAt
+  };
+}
 
 // @desc    Get all treatments with optional filtering
 // @route   GET /api/treatments
@@ -33,13 +71,10 @@ export const getTreatments = asyncHandler(async (req: Request, res: Response) =>
 // @access  Private
 export const getTreatmentById = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to access this treatment');
-  }
-  
+  requireTreatmentAccess(treatment, req.user);
+
   res.status(200).json(treatment);
 });
 
@@ -68,13 +103,10 @@ export const createTreatment = asyncHandler(async (req: Request, res: Response) 
 // @access  Private
 export const updateTreatment = asyncHandler(async (req: Request, res: Response) => {
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to update this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to update this treatment');
-  }
-  
+  requireTreatmentAccess(treatment, req.user);
+
   const updatedTreatment = await treatmentService.updateTreatment(req.params.id, req.body);
   res.status(200).json(updatedTreatment);
 });
@@ -86,24 +118,12 @@ export const completeTreatment = asyncHandler(async (req: Request, res: Response
   const treatment = await treatmentService.getTreatmentById(req.params.id);
 
   // Check if user has access to complete this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to complete this treatment');
-  }
+  requireTreatmentAccess(treatment, req.user);
 
   let priorityUpdateStatus = null;
 
-  // Parse priorityId - it could be a single ID or a JSON array for combined pancreas treatments
-  let orderIds: string[] = [];
-  if (treatment.priorityId) {
-    try {
-      const parsed = JSON.parse(treatment.priorityId);
-      orderIds = Array.isArray(parsed) ? parsed : [parsed];
-    } catch {
-      // Not JSON, treat as single ID
-      orderIds = [treatment.priorityId];
-    }
-  }
+  // Parse priorityId - handles both single IDs and JSON arrays for combined treatments
+  const orderIds = parseOrderIds(treatment.priorityId);
 
   logger.info(`Completing treatment with ${orderIds.length} Priority order(s): ${orderIds.join(', ')}`);
 
@@ -188,10 +208,7 @@ export const updateRemovalProcedure = asyncHandler(async (req: Request, res: Res
   const treatment = await treatmentService.getTreatmentById(req.params.id);
 
   // Check if user has access to this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to update this treatment');
-  }
+  requireTreatmentAccess(treatment, req.user);
 
   // Validate treatment type
   if (treatment.type !== 'removal') {
@@ -213,20 +230,17 @@ export const updateRemovalProcedure = asyncHandler(async (req: Request, res: Res
 // @access  Private
 export const updateTreatmentStatus = asyncHandler(async (req: Request, res: Response) => {
   const { status } = req.body;
-  
+
   if (!['Performed', 'Removed'].includes(status)) {
     res.status(400);
     throw new Error('Status must be either "Performed" or "Removed"');
   }
-  
+
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to update this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to update this treatment');
-  }
-  
+  requireTreatmentAccess(treatment, req.user);
+
   // Update treatment status in Priority system
   const statusResult = await applicatorService.updateTreatmentStatusInPriority(
     req.params.id, 
@@ -248,32 +262,26 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
   const treatment = await treatmentService.getTreatmentById(req.params.id);
 
   // Check if user has access to this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to access this treatment');
-  }
+  requireTreatmentAccess(treatment, req.user);
 
   logger.info(`Getting applicators for treatment ${req.params.id}, type: ${treatment.type}, user: ${req.user.email}`);
 
-  // Parse priorityId - it could be a single ID or a JSON array for combined pancreas treatments
-  let orderIds: string[] = [];
-  if (treatment.priorityId) {
-    try {
-      const parsed = JSON.parse(treatment.priorityId);
-      orderIds = Array.isArray(parsed) ? parsed : [parsed];
-    } catch {
-      // Not JSON, treat as single ID
-      orderIds = [treatment.priorityId];
-    }
+  // For completed treatments, use local database which has accurate 8-state status values
+  // Priority API only has 3-state USINGTYPE, so status would be lost if we fetch from there
+  if (treatment.isComplete) {
+    logger.info(`Treatment ${req.params.id} is complete - fetching from local database to preserve status`);
+    const applicators = await applicatorService.getApplicators(req.params.id, treatment.type);
+    res.status(200).json(applicators);
+    return;
   }
+
+  // Parse priorityId - handles both single IDs and JSON arrays for combined treatments
+  const orderIds = parseOrderIds(treatment.priorityId);
 
   logger.info(`Treatment has ${orderIds.length} Priority order(s): ${orderIds.join(', ')}`);
 
   // Build user context for test mode support
-  const userContext = {
-    identifier: req.user.email || req.user.id || '',
-    userMetadata: req.user.metadata
-  };
+  const userContext = buildUserContext(req);
 
   // For combined treatments (pancreas), fetch applicators from Priority API for ALL orders
   if (orderIds.length > 1) {
@@ -871,13 +879,10 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
 export const exportTreatment = asyncHandler(async (req: Request, res: Response) => {
   const { format = 'csv' } = req.query;
   const treatment = await treatmentService.getTreatmentById(req.params.id);
-  
+
   // Check if user has access to this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to access this treatment');
-  }
-  
+  requireTreatmentAccess(treatment, req.user);
+
   const applicators = await applicatorService.getApplicators(req.params.id);
   
   // Generate export data based on format
@@ -911,10 +916,7 @@ export const initializeFinalization = asyncHandler(async (req: Request, res: Res
   const treatment = await treatmentService.getTreatmentById(req.params.id);
 
   // Check if user has access to this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to finalize this treatment');
-  }
+  requireTreatmentAccess(treatment, req.user);
 
   // Check if treatment is already finalized (has a PDF)
   const existingPdf = await TreatmentPdf.findOne({ where: { treatmentId: treatment.id } });
@@ -925,21 +927,19 @@ export const initializeFinalization = asyncHandler(async (req: Request, res: Res
       existingSignature: {
         signerName: existingPdf.signerName,
         signedAt: existingPdf.signedAt,
-        signatureType: existingPdf.signatureType
-      }
+        signatureType: existingPdf.signatureType,
+      },
     });
     return;
   }
 
   // Determine user flow based on position code
-  // Use Number() to handle both string and number types from JSON storage
-  const positionCode = req.user.metadata?.positionCode;
-  const isAlphaTau = Number(positionCode) === 99;
+  const isAlphaTau = isAlphaTauAdmin(req.user);
 
   logger.info(`Finalization initiated for treatment ${treatment.id}`, {
     userId: req.user.id,
-    positionCode,
-    flow: isAlphaTau ? 'alphatau_verification' : 'hospital_auto'
+    positionCode: req.user.metadata?.positionCode,
+    flow: isAlphaTau ? 'alphatau_verification' : 'hospital_auto',
   });
 
   if (isAlphaTau) {
@@ -969,9 +969,7 @@ export const initializeFinalization = asyncHandler(async (req: Request, res: Res
 // @access  Private (Position 99 only)
 export const getSiteUsersForFinalization = asyncHandler(async (req: Request, res: Response) => {
   // Only Position 99 users can access this
-  // Use Number() to handle both string and number types from JSON storage
-  const positionCode = req.user.metadata?.positionCode;
-  if (Number(positionCode) !== 99) {
+  if (!isAlphaTauAdmin(req.user)) {
     res.status(403);
     throw new Error('Only Alpha Tau administrators can access site users');
   }
@@ -1014,9 +1012,7 @@ export const sendFinalizationCode = asyncHandler(async (req: Request, res: Respo
   const { targetEmail } = req.body;
 
   // Only Position 99 users can send codes
-  // Use Number() to handle both string and number types from JSON storage
-  const positionCode = req.user.metadata?.positionCode;
-  if (Number(positionCode) !== 99) {
+  if (!isAlphaTauAdmin(req.user)) {
     res.status(403);
     throw new Error('Only Alpha Tau administrators can send verification codes');
   }
@@ -1171,105 +1167,29 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
   logger.info(`Verification successful for treatment ${treatment.id}`, {
     signerName,
     signerPosition,
-    targetEmail: verification.targetEmail
+    targetEmail: verification.targetEmail,
   });
 
-  // Get applicators for the treatment
+  // Get applicators and merge with unused available applicators
   const processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+  const allApplicators = mergeApplicatorsForPdf(processedApplicators, availableApplicators);
 
-  // Merge unused applicators from availableApplicators list
-  const processedSerials = new Set(processedApplicators.map((a: any) => a.serialNumber));
-  const unusedApplicators = (availableApplicators || [])
-    .filter((a: any) => !processedSerials.has(a.serialNumber))
-    .map((a: any) => ({
-      id: a.id,
-      serialNumber: a.serialNumber,
-      applicatorType: a.applicatorType,
-      seedQuantity: a.seedQuantity,
-      usageType: 'sealed',
-      insertionTime: '',
-      insertedSeedsQty: 0,
-      comments: 'Not used'
-    }));
+  // Build signature details and generate/send PDF
+  const signatureDetails: SignatureDetails = {
+    type: 'alphatau_verified',
+    signerName,
+    signerEmail: verification.targetEmail,
+    signerPosition,
+    signedAt: new Date(),
+  };
 
-  const allApplicators = [
-    ...processedApplicators.map((app: any) => ({
-      id: app.id,
-      serialNumber: app.serialNumber,
-      applicatorType: app.applicatorType,
-      seedQuantity: app.seedQuantity,
-      usageType: app.usageType,
-      insertionTime: app.insertionTime,
-      insertedSeedsQty: app.insertedSeedsQty,
-      comments: app.comments
-    })),
-    ...unusedApplicators
-  ];
-
-  // Only generate and send PDF for insertion treatments (not removal)
-  let pdfId: string | null = null;
-  let emailStatus: string | null = null;
-
-  if (treatment.type === 'insertion') {
-    // Generate PDF with signature
-    const signatureDetails = {
-      type: 'alphatau_verified' as const,
-      signerName,
-      signerEmail: verification.targetEmail,
-      signerPosition,
-      signedAt: new Date()
-    };
-
-    const pdfBuffer = await generateTreatmentPdf(
-      {
-        id: treatment.id,
-        type: treatment.type,
-        subjectId: treatment.subjectId,
-        site: treatment.site,
-        date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
-        surgeon: treatment.surgeon,
-        activityPerSeed: treatment.activityPerSeed,
-        patientName: treatment.patientName
-      },
-      allApplicators,
-      signatureDetails
-    );
-
-    // Store PDF in database
-    const treatmentPdf = await TreatmentPdf.create({
-      treatmentId: treatment.id,
-      pdfData: pdfBuffer,
-      pdfSizeBytes: pdfBuffer.length,
-      signatureType: 'alphatau_verified',
-      signerName,
-      signerEmail: verification.targetEmail,
-      signerPosition,
-      signedAt: new Date(),
-      emailStatus: 'pending'
-    });
-
-    pdfId = treatmentPdf.id;
-
-    // Send PDF to clinic email
-    const recipientEmail = getPdfRecipientEmail();
-    try {
-      await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
-      treatmentPdf.emailSentAt = new Date();
-      treatmentPdf.emailSentTo = recipientEmail;
-      treatmentPdf.emailStatus = 'sent';
-      await treatmentPdf.save();
-      logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
-    } catch (emailError: any) {
-      logger.error(`Failed to send PDF email: ${emailError.message}`);
-      treatmentPdf.emailStatus = 'failed';
-      await treatmentPdf.save();
-      // Don't fail the whole operation - PDF is stored
-    }
-
-    emailStatus = treatmentPdf.emailStatus;
-  } else {
-    logger.info(`Skipping PDF generation for removal treatment ${treatment.id}`);
-  }
+  const continuationInfo = await getContinuationInfo(treatment);
+  const { pdfId, emailStatus } = await finalizeAndSendPdf(
+    treatment,
+    allApplicators,
+    signatureDetails,
+    continuationInfo
+  );
 
   // Mark treatment as complete
   await treatmentService.completeTreatment(treatment.id, req.user.id);
@@ -1284,7 +1204,7 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
       signerName,
       signerPosition,
       signedAt: new Date(),
-      type: 'alphatau_verified'
+      type: 'alphatau_verified',
     },
     emailStatus
   });
@@ -1295,9 +1215,7 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
 // @access  Private (Non-Position 99 users)
 export const autoFinalize = asyncHandler(async (req: Request, res: Response) => {
   // Only non-Position 99 users can auto-finalize
-  // Use Number() to handle both string and number types from JSON storage
-  const positionCode = req.user.metadata?.positionCode;
-  if (Number(positionCode) === 99) {
+  if (isAlphaTauAdmin(req.user)) {
     res.status(403);
     throw new Error('Alpha Tau administrators must use verification flow');
   }
@@ -1305,10 +1223,7 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   const treatment = await treatmentService.getTreatmentById(req.params.id);
 
   // Check if user has access to this treatment
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to finalize this treatment');
-  }
+  requireTreatmentAccess(treatment, req.user);
 
   // Check if treatment is already finalized
   const existingPdf = await TreatmentPdf.findOne({ where: { treatmentId: treatment.id } });
@@ -1319,8 +1234,8 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
       existingSignature: {
         signerName: existingPdf.signerName,
         signedAt: existingPdf.signedAt,
-        signatureType: existingPdf.signatureType
-      }
+        signatureType: existingPdf.signatureType,
+      },
     });
     return;
   }
@@ -1329,6 +1244,7 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   const { signerName: requestSignerName, signerPosition: requestSignerPosition, availableApplicators } = req.body;
 
   // Use provided values or fall back to user data
+  const positionCode = req.user.metadata?.positionCode;
   const signerName = requestSignerName?.trim() || req.user.name;
   const signerPosition = requestSignerPosition || positionCode?.toString() || 'hospital_staff';
 
@@ -1339,105 +1255,29 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
     providedSignerName: requestSignerName,
     providedSignerPosition: requestSignerPosition,
     effectiveSignerName: signerName,
-    effectiveSignerPosition: signerPosition
+    effectiveSignerPosition: signerPosition,
   });
 
-  // Get applicators for the treatment
+  // Get applicators and merge with unused available applicators
   const processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+  const allApplicators = mergeApplicatorsForPdf(processedApplicators, availableApplicators);
 
-  // Merge unused applicators from availableApplicators list
-  const processedSerials = new Set(processedApplicators.map((a: any) => a.serialNumber));
-  const unusedApplicators = (availableApplicators || [])
-    .filter((a: any) => !processedSerials.has(a.serialNumber))
-    .map((a: any) => ({
-      id: a.id,
-      serialNumber: a.serialNumber,
-      applicatorType: a.applicatorType,
-      seedQuantity: a.seedQuantity,
-      usageType: 'sealed',
-      insertionTime: '',
-      insertedSeedsQty: 0,
-      comments: 'Not used'
-    }));
+  // Build signature details and generate/send PDF
+  const signatureDetails: SignatureDetails = {
+    type: 'hospital_auto',
+    signerName,
+    signerEmail: req.user.email,
+    signerPosition,
+    signedAt: new Date(),
+  };
 
-  const allApplicators = [
-    ...processedApplicators.map((app: any) => ({
-      id: app.id,
-      serialNumber: app.serialNumber,
-      applicatorType: app.applicatorType,
-      seedQuantity: app.seedQuantity,
-      usageType: app.usageType,
-      insertionTime: app.insertionTime,
-      insertedSeedsQty: app.insertedSeedsQty,
-      comments: app.comments
-    })),
-    ...unusedApplicators
-  ];
-
-  // Only generate and send PDF for insertion treatments (not removal)
-  let pdfId: string | null = null;
-  let emailStatus: string | null = null;
-
-  if (treatment.type === 'insertion') {
-    // Generate PDF with auto-signature
-    const signatureDetails = {
-      type: 'hospital_auto' as const,
-      signerName,
-      signerEmail: req.user.email,
-      signerPosition,
-      signedAt: new Date()
-    };
-
-    const pdfBuffer = await generateTreatmentPdf(
-      {
-        id: treatment.id,
-        type: treatment.type,
-        subjectId: treatment.subjectId,
-        site: treatment.site,
-        date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
-        surgeon: treatment.surgeon,
-        activityPerSeed: treatment.activityPerSeed,
-        patientName: treatment.patientName
-      },
-      allApplicators,
-      signatureDetails
-    );
-
-    // Store PDF in database
-    const treatmentPdf = await TreatmentPdf.create({
-      treatmentId: treatment.id,
-      pdfData: pdfBuffer,
-      pdfSizeBytes: pdfBuffer.length,
-      signatureType: 'hospital_auto',
-      signerName,
-      signerEmail: req.user.email,
-      signerPosition,
-      signedAt: new Date(),
-      emailStatus: 'pending'
-    });
-
-    pdfId = treatmentPdf.id;
-
-    // Send PDF to clinic email
-    const recipientEmail = getPdfRecipientEmail();
-    try {
-      await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
-      treatmentPdf.emailSentAt = new Date();
-      treatmentPdf.emailSentTo = recipientEmail;
-      treatmentPdf.emailStatus = 'sent';
-      await treatmentPdf.save();
-      logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
-    } catch (emailError: any) {
-      logger.error(`Failed to send PDF email: ${emailError.message}`);
-      treatmentPdf.emailStatus = 'failed';
-      await treatmentPdf.save();
-      // Don't fail the whole operation - PDF is stored
-    }
-
-    emailStatus = treatmentPdf.emailStatus;
-  } else {
-    logger.info(`Skipping PDF generation for removal treatment ${treatment.id}`);
-  }
+  const continuationInfo = await getContinuationInfo(treatment);
+  const { pdfId, emailStatus } = await finalizeAndSendPdf(
+    treatment,
+    allApplicators,
+    signatureDetails,
+    continuationInfo
+  );
 
   // Mark treatment as complete
   await treatmentService.completeTreatment(treatment.id, req.user.id);
@@ -1452,9 +1292,127 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
       signerName,
       signerPosition,
       signedAt: new Date(),
-      type: 'hospital_auto'
+      type: 'hospital_auto',
     },
-    emailStatus
+    emailStatus,
+  });
+});
+
+// ============================================================================
+// TREATMENT CONTINUATION ENDPOINTS
+// ============================================================================
+
+/**
+ * @desc    Check if treatment can be continued (within 24-hour window)
+ * @route   GET /api/treatments/:id/continuable
+ * @access  Private
+ */
+export const checkContinuable = asyncHandler(async (req: Request, res: Response) => {
+  const treatmentId = req.params.id;
+
+  logger.info(`[TREATMENT_CONTINUATION] Checking continuability for treatment ${treatmentId}`, {
+    userId: req.user?.id,
+    treatmentId
+  });
+
+  const eligibility = await treatmentService.checkContinuationEligibility(treatmentId);
+
+  res.status(200).json({
+    success: true,
+    ...eligibility
+  });
+});
+
+/**
+ * @desc    Create a continuation treatment
+ * @route   POST /api/treatments/:id/continue
+ * @access  Private
+ */
+export const createContinuation = asyncHandler(async (req: Request, res: Response) => {
+  const parentTreatmentId = req.params.id;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    res.status(401);
+    throw new Error('User not authenticated');
+  }
+
+  logger.info(`[TREATMENT_CONTINUATION] Creating continuation for treatment ${parentTreatmentId}`, {
+    userId,
+    parentTreatmentId
+  });
+
+  // Check eligibility first
+  const eligibility = await treatmentService.checkContinuationEligibility(parentTreatmentId);
+  if (!eligibility.canContinue) {
+    res.status(400);
+    throw new Error(eligibility.reason || 'Treatment cannot be continued');
+  }
+
+  // Create the continuation treatment
+  const continuation = await treatmentService.createContinuationTreatment(parentTreatmentId, userId);
+
+  logger.info(`[TREATMENT_CONTINUATION] Continuation created successfully`, {
+    parentTreatmentId,
+    continuationId: continuation.id,
+    userId
+  });
+
+  res.status(201).json({
+    success: true,
+    treatment: continuation
+  });
+});
+
+/**
+ * @desc    Get all continuation treatments for a parent
+ * @route   GET /api/treatments/:id/continuations
+ * @access  Private
+ */
+export const getContinuations = asyncHandler(async (req: Request, res: Response) => {
+  const treatmentId = req.params.id;
+
+  logger.info(`[TREATMENT_CONTINUATION] Getting continuations for treatment ${treatmentId}`, {
+    userId: req.user?.id,
+    treatmentId
+  });
+
+  const continuations = await treatmentService.getContinuations(treatmentId);
+
+  res.status(200).json({
+    success: true,
+    continuations,
+    count: continuations.length
+  });
+});
+
+/**
+ * @desc    Get parent treatment for a continuation
+ * @route   GET /api/treatments/:id/parent
+ * @access  Private
+ */
+export const getParentTreatment = asyncHandler(async (req: Request, res: Response) => {
+  const treatmentId = req.params.id;
+
+  logger.info(`[TREATMENT_CONTINUATION] Getting parent treatment for ${treatmentId}`, {
+    userId: req.user?.id,
+    treatmentId
+  });
+
+  const parentTreatment = await treatmentService.getParentTreatment(treatmentId);
+
+  if (!parentTreatment) {
+    res.status(200).json({
+      success: true,
+      parentTreatment: null,
+      message: 'This treatment is not a continuation'
+    });
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    parentTreatment
   });
 });
 
@@ -1476,5 +1434,9 @@ export default {
   getSiteUsersForFinalization,
   sendFinalizationCode,
   verifyAndFinalize,
-  autoFinalize
+  autoFinalize,
+  checkContinuable,
+  createContinuation,
+  getContinuations,
+  getParentTreatment
 };

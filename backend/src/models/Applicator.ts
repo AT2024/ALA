@@ -34,10 +34,14 @@ interface ApplicatorAttributes {
   catalog: string | null;
   // Seed length from Priority SIBD_SEEDLEN field
   seedLength: number | null;
+  // Offline sync fields
+  version: number; // Optimistic locking version
+  createdOffline: boolean; // True if created while offline
+  syncedAt?: Date; // Last successful sync timestamp
 }
 
 // For creating a new applicator
-type ApplicatorCreationAttributes = Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType' | 'catalog' | 'seedLength'>
+type ApplicatorCreationAttributes = Optional<ApplicatorAttributes, 'id' | 'status' | 'packageLabel' | 'comments' | 'imagePath' | 'isRemoved' | 'removalComments' | 'removalImagePath' | 'removalTime' | 'removedBy' | 'attachmentFilename' | 'attachmentFileCount' | 'attachmentSizeBytes' | 'attachmentSyncStatus' | 'applicatorType' | 'catalog' | 'seedLength' | 'version' | 'createdOffline' | 'syncedAt'>
 
 class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttributes> implements ApplicatorAttributes {
   public id!: string;
@@ -67,6 +71,10 @@ class Applicator extends Model<ApplicatorAttributes, ApplicatorCreationAttribute
   public catalog!: string | null;
   // Seed length from Priority SIBD_SEEDLEN field
   public seedLength!: number | null;
+  // Offline sync fields
+  public version!: number;
+  public createdOffline!: boolean;
+  public syncedAt?: Date;
 
   // Timestamps
   public readonly createdAt!: Date;
@@ -211,6 +219,23 @@ Applicator.init(
       type: DataTypes.DECIMAL(5, 2),
       allowNull: true,
       field: 'seed_length',
+    },
+    // Offline sync fields
+    version: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
+    createdOffline: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: 'created_offline',
+    },
+    syncedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'synced_at',
     },
   },
   {

@@ -3,6 +3,42 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { execSync } from 'child_process';
+
+// Kill any existing process on port 5000 to prevent EADDRINUSE errors
+const killPortProcess = (port: number) => {
+  try {
+    if (process.platform === 'win32') {
+      // Windows: Find and kill process using the port
+      const result = execSync(`netstat -ano | findstr :${port}`, { encoding: 'utf-8' });
+      const lines = result.split('\n').filter(line => line.includes('LISTENING'));
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+        if (pid && pid !== '0') {
+          try {
+            execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' });
+          } catch {
+            // Process may have already exited
+          }
+        }
+      }
+    } else {
+      // Unix/Mac: Use fuser or lsof
+      try {
+        execSync(`fuser -k ${port}/tcp 2>/dev/null || lsof -ti:${port} | xargs kill -9 2>/dev/null`, { stdio: 'ignore' });
+      } catch {
+        // No process found or already killed
+      }
+    }
+  } catch {
+    // No process found on port - this is fine
+  }
+};
+
+// Kill any existing process on port 5000 before starting
+killPortProcess(5000);
+
 // Validate environment variables immediately after loading
 import { validateEnvironment } from './config/validateEnv';
 validateEnvironment();
@@ -30,6 +66,8 @@ import treatmentRoutes from './routes/treatmentRoutes';
 import applicatorRoutes from './routes/applicatorRoutes';
 import adminRoutes from './routes/adminRoutes';
 import priorityRoutes from './routes/priorityRoutes';
+import offlineRoutes from './routes/offlineRoutes';
+import timeRoutes from './routes/timeRoutes';
 import { initializeDatabase } from './config/database';
 import './models'; // Import models to ensure they're loaded before database sync
 import logger from './utils/logger';
@@ -37,7 +75,7 @@ import { config } from './config/appConfig';
 
 // Initialize express app
 const app = express();
-app.set('trust proxy', true); // Trust nginx proxy headers
+app.set('trust proxy', 1); // Trust first proxy (nginx) - required by express-rate-limit
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
@@ -115,6 +153,8 @@ app.use('/api/treatments', apiRateLimit, treatmentRoutes);
 app.use('/api/applicators', apiRateLimit, applicatorRoutes);
 app.use('/api/admin', apiRateLimit, adminRoutes);
 app.use('/api/proxy/priority', apiRateLimit, priorityRoutes);
+app.use('/api/offline', offlineRoutes);
+app.use('/api/time', timeRoutes);
 
 // 404 handler
 app.use(notFound);

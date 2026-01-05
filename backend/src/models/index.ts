@@ -4,6 +4,8 @@ import Applicator from './Applicator';
 import ApplicatorAuditLog from './ApplicatorAuditLog';
 import TreatmentPdf from './TreatmentPdf';
 import SignatureVerification from './SignatureVerification';
+import SyncConflict from './SyncConflict';
+import OfflineAuditLog from './OfflineAuditLog';
 
 // Define model associations
 User.hasMany(Treatment, {
@@ -76,4 +78,42 @@ SignatureVerification.belongsTo(Treatment, {
   as: 'treatment',
 });
 
-export { User, Treatment, Applicator, ApplicatorAuditLog, TreatmentPdf, SignatureVerification };
+// SyncConflict associations
+User.hasMany(SyncConflict, {
+  foreignKey: 'userId',
+  as: 'syncConflicts',
+});
+SyncConflict.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user',
+});
+
+User.hasMany(SyncConflict, {
+  foreignKey: 'resolvedBy',
+  as: 'resolvedConflicts',
+});
+SyncConflict.belongsTo(User, {
+  foreignKey: 'resolvedBy',
+  as: 'resolver',
+});
+
+// OfflineAuditLog associations
+User.hasMany(OfflineAuditLog, {
+  foreignKey: 'changedBy',
+  as: 'offlineAuditLogs',
+});
+OfflineAuditLog.belongsTo(User, {
+  foreignKey: 'changedBy',
+  as: 'changedByUser',
+});
+
+export {
+  User,
+  Treatment,
+  Applicator,
+  ApplicatorAuditLog,
+  TreatmentPdf,
+  SignatureVerification,
+  SyncConflict,
+  OfflineAuditLog,
+};
