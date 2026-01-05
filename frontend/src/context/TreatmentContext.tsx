@@ -1,80 +1,21 @@
-import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { TERMINAL_STATUSES, ApplicatorStatus } from '@/utils/applicatorStatus';
+import { networkStatus } from '@/services/networkStatus';
+import { offlineDb, OfflineApplicator, PendingChange, ChangeOperation } from '@/services/indexedDbService';
+import { isValidOfflineStatusTransition, CONFIRMATION_REQUIRED_STATUSES, TreatmentType } from '@/services/offlineValidationService';
 
-interface Treatment {
-  id: string;
-  type: 'insertion' | 'removal' | 'pancreas_insertion' | 'prostate_insertion' | 'skin_insertion';
-  subjectId: string;
-  site: string;
-  date: string;
-  isComplete: boolean;
-  email?: string;
-  seedQuantity?: number;
-  activityPerSeed?: number;
-  surgeon?: string;
-  daysSinceInsertion?: number;
-  patientName?: string;
-  priorityId?: string; // Priority order ID (e.g., "PANC-HEAD-001") for workflow detection
-}
+// Import shared types - single source of truth for Treatment and Applicator
+import type {
+  Treatment,
+  Applicator,
+  ApplicatorGroup,
+  ProgressStats,
+  RemovalProgress,
+} from '@shared/types';
 
-interface Applicator {
-  id: string;
-  serialNumber: string;
-  applicatorType?: string;
-  seedQuantity: number;
-  usageType: 'full' | 'faulty' | 'none';
-  insertionTime: string;
-  insertedSeedsQty?: number;
-  comments?: string;
-  image?: string;
-  isRemoved?: boolean;
-  removalComments?: string;
-  removalImage?: string;
-  returnedFromNoUse?: boolean;
-  patientId?: string;
-  // Upload/sync fields
-  attachmentFileCount?: number;
-  attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
-  attachmentFilename?: string;
-  // 8-state workflow field (replaces usageType) - uses shared ApplicatorStatus type
-  status?: ApplicatorStatus;
-  // Package label for pancreas/prostate treatments
-  package_label?: string;
-  // Catalog number from Priority PARTNAME field
-  catalog?: string;
-  // Seed length from Priority SIBD_SEEDLEN field
-  seedLength?: number;
-}
-
-interface ProgressStats {
-  totalApplicators: number;
-  usedApplicators: number;
-  totalSeeds: number;
-  insertedSeeds: number;
-  completionPercentage: number;
-  usageTypeDistribution: {
-    full: number;
-    faulty: number;
-    none: number;
-  };
-  seedsRemaining: number;
-  applicatorsRemaining: number;
-}
-
-export interface ApplicatorGroup {
-  seedCount: number;
-  totalApplicators: number;
-  removedApplicators: number;
-  applicators: Applicator[];
-}
-
-interface RemovalProgress {
-  totalSeeds: number;
-  removedSeeds: number;
-  effectiveTotalSeeds: number;
-  effectiveRemovedSeeds: number;
-}
+// Re-export for backwards compatibility
+export type { ApplicatorGroup } from '@shared/types';
 
 interface TreatmentContextType {
   currentTreatment: Treatment | null;
@@ -119,6 +60,11 @@ interface TreatmentContextType {
     loaded: number;
     packaged: number;
   }[];
+  // Offline support
+  isOfflineMode: boolean;
+  canProcessOffline: (applicator: Applicator, newStatus: ApplicatorStatus, previousStatus?: ApplicatorStatus | null) => Promise<{ allowed: boolean; requiresConfirmation: boolean; message: string }>;
+  processApplicatorOffline: (applicator: Applicator, confirmed?: boolean, originalStatus?: ApplicatorStatus | null) => Promise<boolean>;
+  loadFromOfflineDb: () => Promise<void>;
 }
 
 const TreatmentContext = createContext<TreatmentContextType | undefined>(undefined);
@@ -182,6 +128,17 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('procedureType');
     return stored as 'insertion' | 'removal' | null;
   });
+
+  // Offline mode state
+  const [isOfflineMode, setIsOfflineMode] = useState(!networkStatus.isOnline);
+
+  // Subscribe to network status changes
+  useEffect(() => {
+    const unsubscribe = networkStatus.subscribe((online) => {
+      setIsOfflineMode(!online);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Persist treatment state to sessionStorage whenever it changes
   useEffect(() => {
@@ -286,7 +243,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
       setAvailableApplicators((prev) =>
         prev.map(app =>
           app.serialNumber === applicator.serialNumber
-            ? { ...app, status: applicator.status, returnedFromNoUse: applicator.usageType === 'none' }
+            ? { ...app, status: applicator.status }
             : app
         )
       );
@@ -561,6 +518,230 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     return Object.values(summaryMap).sort((a, b) => a.seedQuantity - b.seedQuantity);
   };
 
+  // ==========================================================================
+  // Offline Support Functions
+  // ==========================================================================
+
+  /**
+   * Check if an applicator can be processed offline
+   * @param applicator - The applicator to process
+   * @param newStatus - The new status to transition to
+   * @param previousStatus - Optional: the original status before user made changes (for accurate validation)
+   */
+  const canProcessOffline = useCallback(async (
+    applicator: Applicator,
+    newStatus: ApplicatorStatus,
+    previousStatus?: ApplicatorStatus | null
+  ): Promise<{ allowed: boolean; requiresConfirmation: boolean; message: string }> => {
+    if (!currentTreatment) {
+      return { allowed: false, requiresConfirmation: false, message: 'No active treatment' };
+    }
+
+    // If online, always allow (validation will happen server-side)
+    if (!isOfflineMode) {
+      return { allowed: true, requiresConfirmation: false, message: 'Online mode' };
+    }
+
+    // Helper to determine treatment type for validation (SAME rules as online)
+    const getTreatmentType = (): TreatmentType => {
+      const site = currentTreatment.site?.toLowerCase() || '';
+      const type = currentTreatment.type?.toLowerCase() || '';
+
+      if (site.includes('pancreas') || site.includes('prostate') ||
+          type.includes('pancreas') || type.includes('prostate')) {
+        return 'panc_pros';
+      }
+      if (site.includes('skin') || type.includes('skin')) {
+        return 'skin';
+      }
+      return 'generic';
+    };
+
+    // Validate the status transition for offline mode
+    // Use previousStatus if provided (from form's originalApplicatorStatus), otherwise use applicator's current status
+    const currentStatus = previousStatus !== undefined
+      ? previousStatus
+      : (applicator.status || 'SEALED') as ApplicatorStatus;
+    const result = isValidOfflineStatusTransition(currentStatus, newStatus, getTreatmentType());
+
+    // Check if this status requires confirmation
+    const requiresConfirmation = CONFIRMATION_REQUIRED_STATUSES.includes(newStatus);
+
+    return {
+      allowed: result.allowed,
+      requiresConfirmation,
+      message: result.message,
+    };
+  }, [currentTreatment, isOfflineMode]);
+
+  /**
+   * Process an applicator while offline, queueing for later sync
+   * @param applicator - The applicator with new status set
+   * @param confirmed - Whether user has confirmed (for INSERTED/FAULTY statuses)
+   * @param originalStatus - The original status before user made changes (for accurate validation)
+   */
+  const processApplicatorOffline = useCallback(async (
+    applicator: Applicator,
+    confirmed: boolean = false,
+    originalStatus?: ApplicatorStatus | null
+  ): Promise<boolean> => {
+    if (!currentTreatment) {
+      return false;
+    }
+
+    const newStatus = (applicator.status || 'SEALED') as ApplicatorStatus;
+
+    // Validate the transition using originalStatus if provided
+    // This is critical: the applicator object already has newStatus set,
+    // so we need originalStatus to compare the actual transition
+    const validation = await canProcessOffline(applicator, newStatus, originalStatus);
+    if (!validation.allowed) {
+      return false;
+    }
+
+    if (validation.requiresConfirmation && !confirmed) {
+      return false;
+    }
+
+    try {
+      // Get current user from localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || 'unknown';
+
+      // Generate stable offline ID if not present
+      const offlineId = applicator.id || `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Convert applicator to offline format
+      const offlineApplicator: OfflineApplicator = {
+        id: offlineId,
+        serialNumber: applicator.serialNumber,
+        seedQuantity: applicator.seedQuantity,
+        status: newStatus,
+        packageLabel: applicator.package_label || null,
+        insertionTime: applicator.insertionTime,
+        comments: applicator.comments,
+        treatmentId: currentTreatment.id,
+        addedBy: userId,
+        isRemoved: applicator.isRemoved || false,
+        removalComments: applicator.removalComments,
+        applicatorType: applicator.applicatorType,
+        catalog: applicator.catalog,
+        seedLength: applicator.seedLength,
+        version: 1,
+        syncStatus: 'pending',
+        createdOffline: true,
+      };
+
+      // Save to IndexedDB
+      await offlineDb.saveApplicator(offlineApplicator);
+
+      // Create pending change for sync
+      const changeHash = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(JSON.stringify({ id: applicator.id, status: newStatus, time: Date.now() }))
+      ).then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+      const pendingChange: Omit<PendingChange, 'id'> = {
+        entityType: 'applicator',
+        entityId: applicator.id,
+        operation: 'status_change' as ChangeOperation,
+        data: {
+          applicatorId: applicator.id,
+          serialNumber: applicator.serialNumber,
+          treatmentId: currentTreatment.id,
+          status: newStatus,
+          insertedSeedsQty: applicator.insertedSeedsQty,
+          comments: applicator.comments,
+          catalog: applicator.catalog,
+          seedLength: applicator.seedLength,
+        },
+        createdAt: new Date().toISOString(),
+        retryCount: 0,
+        status: 'pending',
+        offlineSince: networkStatus.offlineStartTime?.toISOString() || new Date().toISOString(),
+        changeHash,
+      };
+
+      await offlineDb.addPendingChange(pendingChange);
+
+      // Update local state using existing processApplicator
+      // Use consistent ID and usageType for proper state management
+      const processedApplicator: Applicator = {
+        ...applicator,
+        id: offlineId,
+        usageType: newStatus === 'INSERTED' ? 'full' as const :
+                   newStatus === 'FAULTY' ? 'faulty' as const : 'none' as const,
+      };
+      processApplicator(processedApplicator);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [currentTreatment, canProcessOffline, processApplicator]);
+
+  /**
+   * Load treatment data from offline IndexedDB
+   */
+  const loadFromOfflineDb = useCallback(async (): Promise<void> => {
+    if (!currentTreatment) {
+      return;
+    }
+
+    try {
+      // Load treatment from IndexedDB
+      const offlineTreatment = await offlineDb.getTreatment(currentTreatment.id);
+      if (!offlineTreatment) {
+        return;
+      }
+
+      // Load applicators for this treatment
+      const offlineApplicators = await offlineDb.getApplicatorsByTreatment(currentTreatment.id);
+
+      // Convert offline applicators to local format
+      const localApplicators: Applicator[] = offlineApplicators.map(oa => ({
+        id: oa.id,
+        serialNumber: oa.serialNumber,
+        seedQuantity: oa.seedQuantity,
+        usageType: oa.status === 'INSERTED' ? 'full' as const :
+                   oa.status === 'FAULTY' ? 'faulty' as const : 'none' as const,
+        insertionTime: oa.insertionTime || new Date().toISOString(),
+        comments: oa.comments,
+        status: oa.status as ApplicatorStatus,
+        package_label: oa.packageLabel || undefined,
+        catalog: oa.catalog,
+        seedLength: oa.seedLength,
+        applicatorType: oa.applicatorType,
+        isRemoved: oa.isRemoved,
+        removalComments: oa.removalComments,
+      }));
+
+      // Merge with existing data using Map for guaranteed uniqueness by serialNumber
+      setAvailableApplicators(prev => {
+        const applicatorMap = new Map<string, Applicator>();
+        // Add existing applicators first
+        prev.forEach(a => applicatorMap.set(a.serialNumber, a));
+        // Add/update with offline applicators (non-terminal only for available list)
+        localApplicators
+          .filter(a => !TERMINAL_STATUSES.includes(a.status as ApplicatorStatus))
+          .forEach(a => applicatorMap.set(a.serialNumber, a));
+        return Array.from(applicatorMap.values());
+      });
+
+      setProcessedApplicators(prev => {
+        const applicatorMap = new Map<string, Applicator>();
+        // Add existing processed applicators first
+        prev.forEach(a => applicatorMap.set(a.serialNumber, a));
+        // Add/update with offline applicators (terminal only for processed list)
+        localApplicators
+          .filter(a => TERMINAL_STATUSES.includes(a.status as ApplicatorStatus))
+          .forEach(a => applicatorMap.set(a.serialNumber, a));
+        return Array.from(applicatorMap.values());
+      });
+    } catch {
+      // Failed to load offline data - handled by caller
+    }
+  }, [currentTreatment]);
+
   // Calculate totals for removal treatment
   const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
   const removedSeeds = applicators.reduce((sum, app) =>
@@ -627,7 +808,12 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         setIndividualSeedsRemoved,
         getIndividualSeedsRemoved,
         sortApplicatorsByStatus,
-        isPancreasOrProstate
+        isPancreasOrProstate,
+        // Offline support
+        isOfflineMode,
+        canProcessOffline,
+        processApplicatorOffline,
+        loadFromOfflineDb,
       }}
     >
       {children}

@@ -3,9 +3,12 @@ import { lazy, Suspense } from 'react';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { TreatmentProvider } from '@/context/TreatmentContext';
+import { OfflineProvider } from '@/context/OfflineContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { EnvironmentBanner, useIsStaging } from '@/components/EnvironmentBanner';
 import { TestModeBanner, useIsTestMode } from '@/components/TestModeBanner';
+import { OfflineBanner } from '@/components/offline/OfflineBanner';
+import { UpdatePrompt } from '@/components/offline/UpdatePrompt';
 
 // Eager load authentication pages (needed immediately)
 import LoginPage from '@/pages/Auth/LoginPage';
@@ -20,6 +23,10 @@ const Dashboard = lazy(() => import('@/pages/Admin/Dashboard'));
 const ProjectDocPage = lazy(() => import('@/pages/ProjectDocPage'));
 const ProcedureTypePage = lazy(() => import('@/pages/Procedure/ProcedureTypePage'));
 const ModeSelectionPage = lazy(() => import('@/pages/ModeSelection/ModeSelectionPage'));
+
+// Lazy load offline pages
+const ConflictResolution = lazy(() => import('@/pages/Offline/ConflictResolution'));
+const DownloadManager = lazy(() => import('@/pages/Offline/DownloadManager'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -45,6 +52,10 @@ function AppContent() {
       <EnvironmentBanner />
       {/* Test mode banner - only shows when test mode is enabled */}
       <TestModeBanner />
+      {/* Offline banner - shows network status and sync info */}
+      <OfflineBanner />
+      {/* PWA update prompt */}
+      <UpdatePrompt />
 
       {/* Main content - conditional padding only when banner is visible */}
       <div className={topPadding}>
@@ -62,6 +73,9 @@ function AppContent() {
               <Route path="/treatment/list" element={<UseList />} />
               <Route path="/treatment/removal" element={<SeedRemoval />} />
               <Route path="/admin/dashboard" element={<Dashboard />} />
+              {/* Offline management pages */}
+              <Route path="/offline/conflicts" element={<ConflictResolution />} />
+              <Route path="/offline/downloads" element={<DownloadManager />} />
             </Route>
 
             <Route path="/" element={<Navigate to="/login" replace />} />
@@ -76,9 +90,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <TreatmentProvider>
-        <AppContent />
-      </TreatmentProvider>
+      <OfflineProvider>
+        <TreatmentProvider>
+          <AppContent />
+        </TreatmentProvider>
+      </OfflineProvider>
     </AuthProvider>
   );
 }

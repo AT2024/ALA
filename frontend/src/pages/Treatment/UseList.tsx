@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
-import { treatmentService } from '@/services/treatmentService';
+import { useOffline } from '@/context/OfflineContext';
+import { treatmentService, ContinuationEligibility, Treatment } from '@/services/treatmentService';
 import PackageManager from '@/components/PackageManager';
 import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
 import SignatureModal from '@/components/Dialogs/SignatureModal';
@@ -27,7 +28,8 @@ const getStatusBadgeColor = (status: string | undefined | null, usageType: strin
 
 const UseList = () => {
   const navigate = useNavigate();
-  const { currentTreatment, processedApplicators, setCurrentApplicator, sortApplicatorsByStatus, isPancreasOrProstate } = useTreatment();
+  const { currentTreatment, processedApplicators, setProcessedApplicators, setCurrentApplicator, sortApplicatorsByStatus, isPancreasOrProstate, setTreatment, clearTreatment } = useTreatment();
+  const { isOnline } = useOffline();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,88 @@ const UseList = () => {
     position?: string;
     site?: string;
   } | undefined>(undefined);
+
+  // Treatment continuation state
+  const [continuationEligibility, setContinuationEligibility] = useState<ContinuationEligibility | null>(null);
+  const [parentTreatment, setParentTreatment] = useState<Treatment | null>(null);
+  const [continuationLoading, setContinuationLoading] = useState(false);
+
+  // Check continuation eligibility for completed treatments
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (currentTreatment?.isComplete && isOnline) {
+        try {
+          const eligibility = await treatmentService.checkContinuable(currentTreatment.id);
+          setContinuationEligibility(eligibility);
+        } catch (err) {
+          console.error('Failed to check continuation eligibility:', err);
+        }
+      }
+    };
+    checkEligibility();
+  }, [currentTreatment?.id, currentTreatment?.isComplete, isOnline]);
+
+  // Fetch parent treatment if this is a continuation
+  useEffect(() => {
+    const fetchParent = async () => {
+      if (currentTreatment?.parentTreatmentId && isOnline) {
+        try {
+          const parent = await treatmentService.getParentTreatment(currentTreatment.id);
+          setParentTreatment(parent);
+        } catch (err) {
+          console.error('Failed to fetch parent treatment:', err);
+        }
+      }
+    };
+    fetchParent();
+  }, [currentTreatment?.id, currentTreatment?.parentTreatmentId, isOnline]);
+
+  // Load processed applicators from backend ONLY when returning to a completed treatment
+  // and the local processedApplicators list is empty (session was cleared or user returned later)
+  // This prevents overwriting active session data during normal workflow
+  useEffect(() => {
+    const loadApplicatorsFromBackend = async () => {
+      // Only load from backend if:
+      // 1. We have a treatment ID and are online
+      // 2. Local processedApplicators is empty (no active session data)
+      // 3. Treatment is already complete (viewing a finalized treatment)
+      if (!currentTreatment?.id || !isOnline) return;
+      if (processedApplicators.length > 0) return; // Don't overwrite active session
+      if (!currentTreatment.isComplete) return; // Only for completed treatments
+
+      try {
+        const applicators = await treatmentService.getApplicators(currentTreatment.id);
+        if (applicators && applicators.length > 0) {
+          // Transform backend data to match frontend Applicator interface
+          const formattedApplicators = applicators.map((app: any) => ({
+            id: app.id,
+            serialNumber: app.serialNumber,
+            seedQuantity: app.seedQuantity,
+            usageType: app.usageType || 'none',
+            insertionTime: app.insertionTime,
+            comments: app.comments,
+            status: app.status || undefined,
+            applicatorType: app.applicatorType,
+            insertedSeedsQty: app.insertedSeedsQty || app.seedQuantity,
+            attachmentFileCount: app.attachmentFileCount,
+            attachmentSyncStatus: app.attachmentSyncStatus,
+            catalog: app.catalog,
+            seedLength: app.seedLength,
+            package_label: app.packageLabel,
+          }));
+
+          setProcessedApplicators(formattedApplicators);
+        }
+      } catch (err) {
+        console.error('Failed to load applicators from backend:', err);
+        // Don't clear existing applicators on error - sessionStorage may have valid data
+      }
+    };
+
+    loadApplicatorsFromBackend();
+  // Note: processedApplicators.length is intentionally NOT in deps to prevent re-fetching
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTreatment?.id, currentTreatment?.isComplete, isOnline, setProcessedApplicators]);
 
   // Calculate treatment summary data using processed applicators
   const treatmentSummary = {
@@ -101,6 +185,13 @@ const UseList = () => {
   // User confirmed finalization - determine flow based on user type
   const handleConfirmFinalize = async () => {
     setShowConfirmDialog(false);
+
+    // Finalization requires network connection for signature verification
+    if (!isOnline) {
+      setError("You're working offline. Treatment data is saved locally. Please reconnect to finalize and submit this treatment.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -136,15 +227,8 @@ const UseList = () => {
     setLoading(false);
     setSuccess('Treatment finalized successfully! PDF report has been generated and sent.');
 
-    // Clear sessionStorage after successful finalization
-    try {
-      sessionStorage.removeItem('currentTreatment');
-      sessionStorage.removeItem('processedApplicators');
-      sessionStorage.removeItem('availableApplicators');
-      sessionStorage.removeItem('individualSeedsRemoved');
-    } catch (storageError) {
-      console.error('Failed to clear sessionStorage:', storageError);
-    }
+    // Clear treatment data using context method (single source of truth for sessionStorage)
+    clearTreatment();
 
     // Navigate back to procedure selection after a brief delay
     setTimeout(() => {
@@ -157,6 +241,41 @@ const UseList = () => {
     setShowSignatureModal(false);
     handleFinalizationSuccess();
   };
+
+  // Handle continuing a completed treatment
+  const handleContinueTreatment = async () => {
+    if (!currentTreatment || !continuationEligibility?.canContinue) {
+      return;
+    }
+
+    if (!isOnline) {
+      setError("You're working offline. Please reconnect to continue this treatment.");
+      return;
+    }
+
+    setContinuationLoading(true);
+    setError(null);
+
+    try {
+      const continuationTreatment = await treatmentService.createContinuation(currentTreatment.id);
+
+      // Update context with new continuation treatment (clears applicators for fresh start)
+      setTreatment(continuationTreatment);
+
+      setSuccess('Continuation treatment created! You can now add more applicators.');
+
+      // Navigate to scan page for the new treatment
+      setTimeout(() => {
+        navigate('/treatment/scan');
+      }, 1500);
+    } catch (err: any) {
+      console.error('Failed to create continuation treatment:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to create continuation treatment');
+    } finally {
+      setContinuationLoading(false);
+    }
+  };
+
   if (!currentTreatment) {
     return (
       <Layout title="Use List" showBackButton>
@@ -198,6 +317,88 @@ const UseList = () => {
             </div>
           </div>
         </div>
+
+        {/* Parent Treatment Reference - shown for continuation treatments */}
+        {currentTreatment.parentTreatmentId && parentTreatment && (
+          <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-800">Continuation Treatment</h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  This treatment continues from a previous session. Original treatment date:{' '}
+                  <span className="font-medium">{parentTreatment.date}</span>
+                </p>
+                <p className="mt-1 text-xs text-blue-600">
+                  OPENED and LOADED applicators from the original treatment can be scanned and used.
+                  Applicators in terminal states (INSERTED, FAULTY, etc.) cannot be reused.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Continue Treatment Option - shown for completed treatments within 24-hour window */}
+        {currentTreatment.isComplete && continuationEligibility?.canContinue && (
+          <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-amber-800">Continue This Treatment</h3>
+                <p className="mt-1 text-sm text-amber-700">
+                  You have <span className="font-bold">{Math.floor(continuationEligibility.hoursRemaining || 0)}</span> hours remaining to continue this treatment.
+                  {continuationEligibility.reusableApplicatorCount && continuationEligibility.reusableApplicatorCount > 0 && (
+                    <span className="ml-1">
+                      {continuationEligibility.reusableApplicatorCount} applicator(s) can still be used.
+                    </span>
+                  )}
+                </p>
+                <button
+                  onClick={handleContinueTreatment}
+                  disabled={continuationLoading || !isOnline}
+                  className="mt-3 inline-flex items-center rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50"
+                >
+                  {continuationLoading ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    'Continue Treatment'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Treatment completed but outside continuation window */}
+        {currentTreatment.isComplete && continuationEligibility && !continuationEligibility.canContinue && continuationEligibility.reason && (
+          <div className="rounded-lg border border-gray-300 bg-gray-50 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-gray-700">Treatment Completed</h3>
+                <p className="mt-1 text-sm text-gray-600">{continuationEligibility.reason}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         {error && (
@@ -271,8 +472,10 @@ const UseList = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {sortApplicatorsByStatus(processedApplicators)
-                    .map((applicator) => {
+                  {/* Deduplicate by serialNumber before rendering (Issue 5 fix) */}
+                  {Array.from(
+                    new Map(sortApplicatorsByStatus(processedApplicators).map(a => [a.serialNumber, a])).values()
+                  ).map((applicator) => {
                       // Get effective status for color coding (fallback to usageType if status is null)
                       const effectiveStatus = applicator.status || (applicator.usageType === 'full' ? 'INSERTED' : applicator.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
                       const rowColor = getStatusColor(effectiveStatus);
@@ -460,6 +663,7 @@ const UseList = () => {
             onSuccess={handleSignatureSuccess}
             flowType={finalizationFlowType}
             userData={finalizationUserData}
+            isContinuation={!!currentTreatment.parentTreatmentId}
           />
         )}
 

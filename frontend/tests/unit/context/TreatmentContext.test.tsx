@@ -149,7 +149,6 @@ describe('TreatmentContext', () => {
 
       expect(result.current.processedApplicators).toHaveLength(1);
       expect(result.current.availableApplicators).toHaveLength(1);
-      expect(result.current.availableApplicators[0].returnedFromNoUse).toBe(true);
     });
 
     it('should update applicator data', () => {

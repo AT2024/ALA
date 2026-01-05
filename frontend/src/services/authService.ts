@@ -50,7 +50,7 @@ export const authService = {
       
       return {
         success: true,
-        message: `Verification code sent to ${identifier}. Use code 123456 for verification.`,
+        message: `Verification code sent to ${identifier}.`,
         userData: response.data.userData
       };
     } catch (error: any) {

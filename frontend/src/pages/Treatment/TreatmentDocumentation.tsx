@@ -2,15 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { format, addMinutes, subMinutes } from 'date-fns';
+import { WifiOff } from 'lucide-react';
 import Layout from '@/components/Layout';
 import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
+import { OfflineInsertionConfirmDialog } from '@/components/offline/OfflineInsertionConfirmDialog';
+import { OfflineDownloadButton } from '@/components/offline/OfflineDownloadButton';
+import { isValidOfflineStatusTransition, validateOfflineScan, TreatmentType } from '@/services/offlineValidationService';
 import { useTreatment } from '@/context/TreatmentContext';
 import { useAuth } from '@/context/AuthContext';
+import { useOffline } from '@/context/OfflineContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
 import { priorityService } from '@/services/priorityService';
+import { offlineDb, OfflineApplicator } from '@/services/indexedDbService';
 import ProgressTracker from '@/components/ProgressTracker';
 import { generateUUID } from '@/utils/uuid';
-import { getAllowedNextStatuses, getListItemColor, getStatusEmoji, getStatusLabel, requiresComment, type ApplicatorStatus, type TreatmentContext } from '@/utils/applicatorStatus';
+import { getAllowedNextStatuses, getListItemColor, getStatusEmoji, getStatusLabel, requiresComment, TERMINAL_STATUSES, type ApplicatorStatus, type TreatmentContext } from '@/utils/applicatorStatus';
 
 const TreatmentDocumentation = () => {
   const {
@@ -22,9 +28,12 @@ const TreatmentDocumentation = () => {
     getFilteredAvailableApplicators,
     currentApplicator,
     clearCurrentApplicator,
-    setProcessedApplicators
+    setProcessedApplicators,
+    processApplicatorOffline,
+    loadFromOfflineDb,
   } = useTreatment();
   const { user } = useAuth();
+  const { isOnline, isDownloaded } = useOffline();
   const navigate = useNavigate();
 
   // File upload state
@@ -43,14 +52,19 @@ const TreatmentDocumentation = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingValidation, setPendingValidation] = useState<ApplicatorValidationResult | null>(null);
   const [showApplicatorList, setShowApplicatorList] = useState(true);
+  // Offline confirmation dialog state
+  const [showOfflineConfirmDialog, setShowOfflineConfirmDialog] = useState(false);
+  const [offlinePendingApplicator, setOfflinePendingApplicator] = useState<any>(null);
   const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [aSuffixQuery, setASuffixQuery] = useState('');
-  const [isReturnedFromNoUse, setIsReturnedFromNoUse] = useState(false);
   const [showFinalizeConfirmDialog, setShowFinalizeConfirmDialog] = useState(false);
   // Track the ORIGINAL status when applicator was selected (for Bug #5 fix)
   // This ensures all same-stage options remain visible even after selecting a terminal status
   const [originalApplicatorStatus, setOriginalApplicatorStatus] = useState<string | null>(null);
+  // Terminal status warning dialog (Issue 4 fix)
+  const [showTerminalWarning, setShowTerminalWarning] = useState(false);
+  const [pendingTerminalStatus, setPendingTerminalStatus] = useState<string | null>(null);
 
   // Store catalog and seedLength from validation response (for display in UseList)
   const [validatedCatalog, setValidatedCatalog] = useState<string | null>(null);
@@ -79,6 +93,21 @@ const TreatmentDocumentation = () => {
     priorityId: currentTreatment?.priorityId || currentTreatment?.subjectId,
     patientName: currentTreatment?.patientName,
     subjectId: currentTreatment?.subjectId
+  };
+
+  // Helper to determine treatment type for offline validation (SAME rules as online)
+  const getTreatmentType = (): TreatmentType => {
+    const site = currentTreatment?.site?.toLowerCase() || '';
+    const type = currentTreatment?.type?.toLowerCase() || '';
+
+    if (site.includes('pancreas') || site.includes('prostate') ||
+        type.includes('pancreas') || type.includes('prostate')) {
+      return 'panc_pros';
+    }
+    if (site.includes('skin') || type.includes('skin')) {
+      return 'skin';
+    }
+    return 'generic';
   };
 
   // Get allowed statuses based on current applicator status and treatment context
@@ -129,8 +158,8 @@ const TreatmentDocumentation = () => {
       if (scannerRef.current) {
         try {
           scannerRef.current.clear();
-        } catch (err) {
-          console.error('Error clearing scanner:', err);
+        } catch {
+          // Scanner cleanup errors are expected when component unmounts
         }
       }
     };
@@ -142,6 +171,26 @@ const TreatmentDocumentation = () => {
       loadAvailableApplicators();
     }
   }, [currentTreatment]);
+
+  // CRITICAL: Load from offline storage when offline and treatment is downloaded
+  useEffect(() => {
+    const loadOfflineDataIfNeeded = async () => {
+      // Only load from offline if:
+      // 1. We're offline
+      // 2. We have a current treatment
+      // 3. That treatment is downloaded for offline use
+      if (!isOnline && currentTreatment?.id && isDownloaded(currentTreatment.id)) {
+        try {
+          await loadFromOfflineDb();
+          setSuccess('Loaded from offline storage');
+        } catch {
+          setError('Failed to load offline data. Please reconnect to continue.');
+        }
+      }
+    };
+
+    loadOfflineDataIfNeeded();
+  }, [isOnline, currentTreatment?.id, isDownloaded, loadFromOfflineDb]);
 
   // Pre-populate form when in edit mode
   useEffect(() => {
@@ -162,22 +211,55 @@ const TreatmentDocumentation = () => {
       });
 
       setManualEntry(true); // Disable scanner in edit mode
-      setIsReturnedFromNoUse(currentApplicator.returnedFromNoUse || false);
     }
   }, [isEditMode, currentApplicator]);
 
+  // Helper to add offline applicators to context (eliminates duplicate code)
+  const addOfflineApplicatorsToContext = (offlineApplicators: OfflineApplicator[]) => {
+    offlineApplicators.forEach((app) => {
+      // Only add if status is null, SEALED, OPENED, or LOADED (not yet terminal)
+      if (!app.status || app.status === 'SEALED' || app.status === 'OPENED' || app.status === 'LOADED') {
+        addAvailableApplicator({
+          id: app.id || app.serialNumber || generateUUID(),
+          serialNumber: app.serialNumber,
+          applicatorType: app.applicatorType || '',
+          seedQuantity: app.seedQuantity || 0,
+          usageType: 'full' as const,
+          insertionTime: app.insertionTime || new Date().toISOString(),
+          insertedSeedsQty: 0,
+          comments: app.comments || '',
+          catalog: app.catalog,
+          seedLength: app.seedLength,
+        });
+      }
+    });
+  };
+
   const loadAvailableApplicators = async () => {
     if (!currentTreatment) return;
-    
+
+    // If offline and treatment is downloaded, load from IndexedDB
+    if (!isOnline && isDownloaded(currentTreatment.id)) {
+      try {
+        const offlineApplicators = await offlineDb.getApplicatorsByTreatment(currentTreatment.id);
+        addOfflineApplicatorsToContext(offlineApplicators);
+        return;
+      } catch (error) {
+        setError('Failed to load offline applicators');
+        return;
+      }
+    }
+
+    // Online path - existing code
     try {
       const response = await priorityService.getAvailableApplicators(
         currentTreatment.site,
         currentTreatment.date
       );
-      
+
       if (response.success) {
         const applicators = response.applicators || [];
-        
+
         // Add each applicator to the context
         applicators.forEach((applicator: any) => {
           addAvailableApplicator({
@@ -192,13 +274,22 @@ const TreatmentDocumentation = () => {
             patientId: applicator.patientId
           });
         });
-        
+
       } else {
-        console.error('Failed to load applicators:', response.message);
         setError(response.message || 'Failed to load available applicators');
       }
-    } catch (error) {
-      console.error('Error loading available applicators:', error);
+    } catch (error: any) {
+      // If online call fails and we have offline data, try that as fallback
+      if (isDownloaded(currentTreatment.id)) {
+        try {
+          const offlineApplicators = await offlineDb.getApplicatorsByTreatment(currentTreatment.id);
+          addOfflineApplicatorsToContext(offlineApplicators);
+          setSuccess('Loaded applicators from offline storage');
+          return;
+        } catch {
+          // Fall through to error message
+        }
+      }
       setError('Unable to load applicators. Please try refreshing the page.');
     }
   };
@@ -255,13 +346,12 @@ const TreatmentDocumentation = () => {
     await handleBarcodeScanned(decodedText);
   };
 
-  const onScanFailure = (error: any) => {
-    console.error('Scan failure:', error);
+  const onScanFailure = (_error: unknown) => {
+    // Scanner errors are expected during continuous scanning, no action needed
   };
 
   const handleBarcodeScanned = async (serialNumber: string) => {
     if (!currentTreatment) {
-      console.error('No current treatment available');
       setError('No treatment selected. Please go back and select a treatment.');
       return;
     }
@@ -271,14 +361,38 @@ const TreatmentDocumentation = () => {
     setLoading(true);
 
     try {
-      // Validate applicator against Priority system
+      // OFFLINE PATH: Use local validation when offline and treatment is downloaded
+      if (!isOnline && isDownloaded(currentTreatment.id)) {
+        const offlineValidation = await validateOfflineScan(serialNumber, currentTreatment.id);
+
+        if (!offlineValidation.allowed) {
+          setError(offlineValidation.message);
+          setLoading(false);
+          return;
+        }
+
+        // Get applicator data from IndexedDB
+        const offlineApplicator = await offlineDb.getApplicatorBySerial(serialNumber);
+
+        if (offlineApplicator) {
+          // Fill form with offline applicator data
+          fillFormWithOfflineApplicatorData(offlineApplicator);
+          setSuccess(`Applicator ${serialNumber} loaded from offline storage. Status: ${offlineApplicator.status || 'SEALED'}`);
+        } else {
+          setError('Applicator not found in offline storage. Only pre-downloaded applicators are available offline.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // ONLINE PATH: Validate applicator against Priority system
       const validation = await applicatorService.validateApplicator(
         serialNumber,
         currentTreatment.id,
         currentTreatment.subjectId,
         scannedApplicators
       );
-      
+
       if (validation.requiresConfirmation) {
         // Show confirmation dialog for scenarios that need user approval
         setPendingValidation(validation);
@@ -290,13 +404,21 @@ const TreatmentDocumentation = () => {
         // Show error for invalid applicators
         setError(validation.message);
       }
-    } catch (error: any) {
-      console.error('Error validating applicator:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+    } catch {
+      // If online call fails and we have offline data, try that as fallback
+      if (isDownloaded(currentTreatment.id)) {
+        try {
+          const offlineApplicator = await offlineDb.getApplicatorBySerial(serialNumber);
+          if (offlineApplicator) {
+            fillFormWithOfflineApplicatorData(offlineApplicator);
+            setSuccess(`Applicator ${serialNumber} loaded from offline cache (server unavailable).`);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Fall through to error
+        }
+      }
       setError('Failed to validate applicator. Please try again.');
     } finally {
       setLoading(false);
@@ -307,7 +429,6 @@ const TreatmentDocumentation = () => {
     const applicatorData = validation.applicatorData;
 
     if (!applicatorData) {
-      console.error('No applicator data in validation result:', validation);
       setError('No applicator data received from server.');
       return;
     }
@@ -316,20 +437,15 @@ const TreatmentDocumentation = () => {
     const serialNumber = applicatorData.serialNumber || '';
     const applicatorType = applicatorData.applicatorType || '';
     const seedQuantity = applicatorData.seedQuantity || 0;
-    const returnedFromNoUse = applicatorData.returnedFromNoUse || false;
 
     // Extract catalog and seedLength for UseList display
     const catalog = applicatorData.catalog || null;
     const seedLength = applicatorData.seedLength || null;
 
     if (!serialNumber) {
-      console.error('Missing serial number in applicator data:', applicatorData);
       setError('Invalid applicator data: missing serial number.');
       return;
     }
-
-    // Set the returned from no use flag
-    setIsReturnedFromNoUse(returnedFromNoUse);
 
     // Store catalog and seedLength for when applicator is created
     setValidatedCatalog(catalog);
@@ -350,10 +466,36 @@ const TreatmentDocumentation = () => {
       comments: ''
     });
 
-    if (returnedFromNoUse) {
-      setSuccess(`Applicator ${serialNumber} validated successfully! This applicator was previously marked as SEALED (unused) - you can select any status.`);
-    } else {
-      setSuccess(`Applicator ${serialNumber} validated successfully! Status set to SEALED - select appropriate status below.`);
+    setSuccess(`Applicator ${serialNumber} validated successfully! Status set to SEALED - select appropriate status below.`);
+  };
+
+  /**
+   * Fill form with offline applicator data from IndexedDB
+   * Used when working offline with pre-downloaded applicators
+   */
+  const fillFormWithOfflineApplicatorData = (applicator: OfflineApplicator) => {
+    // Set original status (null means SEALED for new applicators)
+    const currentStatus = applicator.status || 'SEALED';
+    setOriginalApplicatorStatus(currentStatus);
+
+    // Store catalog and seedLength for UseList display
+    setValidatedCatalog(applicator.catalog || null);
+    setValidatedSeedLength(applicator.seedLength || null);
+
+    setFormData({
+      serialNumber: applicator.serialNumber,
+      applicatorType: applicator.applicatorType || '',
+      seedsQty: (applicator.seedQuantity || 0).toString(),
+      insertionTime: applicator.insertionTime || new Date().toISOString(),
+      usingType: 'Full use', // Keep for backward compatibility
+      status: currentStatus,
+      insertedSeedsQty: '0',
+      comments: applicator.comments || ''
+    });
+
+    // Add to scanned list to prevent re-scanning
+    if (!scannedApplicators.includes(applicator.serialNumber)) {
+      setScannedApplicators(prev => [...prev, applicator.serialNumber]);
     }
   };
 
@@ -408,8 +550,7 @@ const TreatmentDocumentation = () => {
       } else {
         await handleBarcodeScanned(serialNumber);
       }
-    } catch (error) {
-      console.error('Error searching applicators:', error);
+    } catch {
       setError('Error searching applicators. Proceeding with validation...');
       await handleBarcodeScanned(serialNumber);
     } finally {
@@ -422,10 +563,7 @@ const TreatmentDocumentation = () => {
     setShowSuggestions(false);
     setSearchSuggestions([]);
     setError(null);
-    
-    // Set the returned from no use flag for suggestions too
-    setIsReturnedFromNoUse(suggestion.returnedFromNoUse || false);
-    
+
     handleBarcodeScanned(suggestion.serialNumber);
   };
 
@@ -434,10 +572,6 @@ const TreatmentDocumentation = () => {
     setShowApplicatorList(false);
     setError(null);
     setSuccess(null);
-
-    // Set the returned from no use flag
-    const isReturnedFromNoUse = applicator.returnedFromNoUse || false;
-    setIsReturnedFromNoUse(isReturnedFromNoUse);
 
     // Preserve the applicator's actual status - don't reset to SEALED!
     // This is critical for the 8-state workflow where OPENED/LOADED applicators
@@ -460,9 +594,7 @@ const TreatmentDocumentation = () => {
       comments: applicator.comments || ''
     });
 
-    if (isReturnedFromNoUse) {
-      setSuccess(`Applicator ${applicator.serialNumber} selected successfully! This applicator was previously marked as SEALED (unused) - you can select any status.`);
-    } else if (currentStatus !== 'SEALED') {
+    if (currentStatus !== 'SEALED') {
       setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Current status: ${currentStatus} - select next status below.`);
     } else {
       setSuccess(`Applicator ${applicator.serialNumber} selected successfully! Status set to SEALED - select appropriate status below.`);
@@ -509,6 +641,75 @@ const TreatmentDocumentation = () => {
       return;
     }
 
+    // OFFLINE MODE HANDLING
+    if (!isOnline) {
+      // Validate that this status transition is allowed offline
+      const previousStatus = originalApplicatorStatus as ApplicatorStatus | null;
+      const validation = isValidOfflineStatusTransition(previousStatus, currentStatus as ApplicatorStatus, getTreatmentType());
+
+      if (!validation.allowed) {
+        setError(validation.message);
+        return;
+      }
+
+      // Map status to usageType for offline Applicator object
+      const mapStatusToUsageType = (status: string): 'full' | 'faulty' | 'none' => {
+        if (status === 'INSERTED') return 'full';
+        if (status === 'FAULTY') return 'faulty';
+        return 'none';
+      };
+
+      const applicatorData = {
+        id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        serialNumber: formData.serialNumber,
+        applicatorType: formData.applicatorType,
+        seedQuantity: parseInt(formData.seedsQty) || 0,
+        usageType: mapStatusToUsageType(currentStatus),
+        insertionTime: formData.insertionTime,
+        status: currentStatus as ApplicatorStatus,
+        insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
+        comments: formData.comments,
+        catalog: validatedCatalog || undefined,
+        seedLength: validatedSeedLength || undefined,
+      };
+
+      // For INSERTED or FAULTY status, show confirmation dialog (medical-critical)
+      if (validation.requiresConfirmation) {
+        setOfflinePendingApplicator(applicatorData);
+        setShowOfflineConfirmDialog(true);
+        return; // Wait for confirmation before processing
+      }
+
+      // For other offline statuses (SEALED, OPENED, LOADED, etc.), process directly
+      try {
+        setLoading(true);
+        // Pass originalApplicatorStatus to enable accurate transition validation
+        await processApplicatorOffline(applicatorData, false, originalApplicatorStatus as ApplicatorStatus | null);
+
+        // Clear form for next applicator
+        setFormData({
+          serialNumber: '',
+          applicatorType: '',
+          seedsQty: '',
+          insertionTime: new Date().toISOString(),
+          usingType: '',
+          status: '',
+          insertedSeedsQty: '',
+          comments: ''
+        });
+        setOriginalApplicatorStatus(null);
+        setValidatedCatalog(null);
+        setValidatedSeedLength(null);
+        setSuccess('Applicator status saved offline. Will sync when connection is restored.');
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || 'Failed to save applicator offline');
+      } finally {
+        setLoading(false);
+      }
+      return; // Don't continue to online processing
+    }
+
     setLoading(true);
 
     try {
@@ -518,6 +719,7 @@ const TreatmentDocumentation = () => {
         seedQuantity: parseInt(formData.seedsQty) || 0,
         insertionTime: formData.insertionTime,
         usingType: formData.usingType as 'full' | 'partial' | 'faulty' | 'none',
+        status: formData.status || undefined,  // 8-state workflow status
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
         comments: formData.comments
       };
@@ -526,7 +728,6 @@ const TreatmentDocumentation = () => {
       const saveResult = await applicatorService.saveApplicatorData(currentTreatment.id, applicatorData);
 
       if (!saveResult.success) {
-        console.error('Failed to save applicator data:', saveResult.message);
         setError(saveResult.message || 'Failed to save applicator data');
         return;
       }
@@ -548,7 +749,6 @@ const TreatmentDocumentation = () => {
 
         if (!uploadResult.success) {
           // Files failed but applicator saved - warn user but continue
-          console.error('File upload failed:', uploadResult.message);
           setError(`Applicator saved, but file upload failed: ${uploadResult.message}`);
           uploadSyncStatus = 'failed';
           // Don't return - applicator was saved successfully
@@ -611,9 +811,6 @@ const TreatmentDocumentation = () => {
         insertedSeedsQty: '',
         comments: ''
       });
-      
-      // Reset the returned from no use flag
-      setIsReturnedFromNoUse(false);
 
       // Reset catalog and seedLength from validation
       setValidatedCatalog(null);
@@ -640,13 +837,7 @@ const TreatmentDocumentation = () => {
         );
       }
       setError(null);
-    } catch (error: any) {
-      console.error('Error saving applicator:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+    } catch {
       setError('Failed to save applicator data. Please try again.');
     } finally {
       setLoading(false);
@@ -704,13 +895,60 @@ const TreatmentDocumentation = () => {
   return (
     <Layout title="Treatment Documentation" showBackButton backPath="/treatment/select">
       <div className="mx-auto max-w-6xl space-y-6">
+        {/* Offline mode indicator */}
+        {!isOnline && (
+          <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+            <div className="flex items-center gap-2">
+              <WifiOff className="h-5 w-5 text-yellow-600" />
+              <div>
+                <h3 className="font-medium text-yellow-900">Working Offline</h3>
+                <p className="text-sm text-yellow-700">
+                  Changes will be saved locally and synced when connection is restored.
+                  Medical status changes (INSERTED/FAULTY) require confirmation.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mobile-first grid: single column on mobile, 2 columns on md, 3 columns on lg */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Left Column - Treatment Information and Progress */}
           <div className="space-y-4 md:space-y-6 md:col-span-1">
             {/* Treatment Information */}
             <div className="rounded-lg border bg-white p-4 shadow-sm">
-              <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium">Treatment Information</h2>
+                {currentTreatment?.id && isOnline && (
+                  <OfflineDownloadButton
+                    treatmentId={currentTreatment.id}
+                    size="sm"
+                    showLabel={false}
+                  />
+                )}
+              </div>
+
+              {/* Ready for offline indicator - Enhanced */}
+              {currentTreatment?.id && isDownloaded(currentTreatment.id) && (
+                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-green-500 rounded-full p-2">
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <span className="text-green-800 font-semibold block">
+                        Ready for offline use
+                      </span>
+                      <span className="text-green-600 text-sm">
+                        Don't close the app while working offline
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {currentTreatment ? (
                 <div className="space-y-3 text-sm">
                   <div>
@@ -915,7 +1153,6 @@ const TreatmentDocumentation = () => {
                               return b.seedQuantity - a.seedQuantity;
                             })
                             .map((applicator, index) => {
-                            const isNoUseReturned = applicator.returnedFromNoUse;
                             const applicatorStatus = applicator.status || 'SEALED';
                             const statusColor = getListItemColor(applicatorStatus);
                             const statusEmoji = getStatusEmoji(applicatorStatus);
@@ -925,18 +1162,13 @@ const TreatmentDocumentation = () => {
                               <button
                                 key={index}
                                 onClick={() => handleApplicatorSelect(applicator)}
-                                className={`w-full text-left p-2 rounded hover:opacity-80 border ${
-                                  isNoUseReturned
-                                    ? 'border-red-300 bg-red-50 hover:bg-red-100'
-                                    : statusColor
-                                }`}
+                                className={`w-full text-left p-2 rounded hover:opacity-80 border ${statusColor}`}
                                 disabled={loading}
                               >
                                 <div className="flex items-center justify-between">
-                                  <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                                  <div className="font-medium">
                                     <span className="mr-2">{statusEmoji}</span>
                                     {applicator.serialNumber}
-                                    {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
                                   </div>
                                   {applicatorStatus !== 'SEALED' && (
                                     <span className={`text-xs px-2 py-0.5 rounded ${
@@ -948,7 +1180,7 @@ const TreatmentDocumentation = () => {
                                     </span>
                                   )}
                                 </div>
-                                <div className={`text-sm ${isNoUseReturned ? 'text-red-600' : 'text-gray-500'}`}>
+                                <div className="text-sm text-gray-500">
                                   {applicator.applicatorType} • {applicator.seedQuantity} sources
                                 </div>
                               </button>
@@ -994,7 +1226,6 @@ const TreatmentDocumentation = () => {
                       </div>
                       <div className="space-y-1 p-2">
                         {searchSuggestions.map((suggestion, index) => {
-                          const isNoUseReturned = suggestion.returnedFromNoUse;
                           const suggestionStatus = suggestion.status || 'SEALED';
                           const statusEmoji = getStatusEmoji(suggestionStatus);
                           const statusLabel = getStatusLabel(suggestionStatus);
@@ -1003,18 +1234,13 @@ const TreatmentDocumentation = () => {
                             <button
                               key={index}
                               onClick={() => handleSuggestionSelect(suggestion)}
-                              className={`w-full text-left p-2 rounded text-sm ${
-                                isNoUseReturned
-                                  ? 'hover:bg-red-100 bg-red-50'
-                                  : getListItemColor(suggestionStatus)
-                              }`}
+                              className={`w-full text-left p-2 rounded text-sm ${getListItemColor(suggestionStatus)}`}
                               disabled={loading}
                             >
                               <div className="flex items-center justify-between">
-                                <div className={`font-medium ${isNoUseReturned ? 'text-red-700' : ''}`}>
+                                <div className="font-medium">
                                   <span className="mr-2">{statusEmoji}</span>
                                   {suggestion.serialNumber}
-                                  {isNoUseReturned && <span className="ml-2 text-xs text-red-500">(No Use)</span>}
                                 </div>
                                 {suggestionStatus !== 'SEALED' && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
@@ -1026,7 +1252,7 @@ const TreatmentDocumentation = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className={`${isNoUseReturned ? 'text-red-600' : 'text-gray-600'}`}>
+                              <div className="text-gray-600">
                                 {suggestion.applicatorType} • {suggestion.seedQuantity} sources
                               </div>
                             </button>
@@ -1080,6 +1306,28 @@ const TreatmentDocumentation = () => {
           confirmText="Yes"
           cancelText="No"
           type="info"
+          loading={false}
+        />
+
+        {/* Terminal Status Warning Dialog (Issue 4 fix) */}
+        <ConfirmationDialog
+          isOpen={showTerminalWarning}
+          onClose={() => {
+            setShowTerminalWarning(false);
+            setPendingTerminalStatus(null);
+          }}
+          onConfirm={() => {
+            setShowTerminalWarning(false);
+            if (pendingTerminalStatus) {
+              setFormData(prev => ({ ...prev, status: pendingTerminalStatus }));
+            }
+            setPendingTerminalStatus(null);
+          }}
+          title={`${pendingTerminalStatus} is a Permanent Status`}
+          message="This is a terminal status. Once saved, this applicator will be removed from the available list and you cannot change its status again. Are you sure you want to continue?"
+          confirmText={`Yes, Mark as ${pendingTerminalStatus}`}
+          cancelText="Cancel"
+          type="warning"
           loading={false}
         />
 
@@ -1162,19 +1410,21 @@ const TreatmentDocumentation = () => {
               <div>
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                   Status *
-                  {isReturnedFromNoUse && (
-                    <span className="ml-2 text-xs text-red-600 font-normal">
-                      (Previously marked as No Use)
-                    </span>
-                  )}
                 </label>
                 <select
                   id="status"
                   value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px] ${
-                    isReturnedFromNoUse ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
+                  onChange={(e) => {
+                    const newStatus = e.target.value;
+                    // Terminal statuses get a warning dialog
+                    if (TERMINAL_STATUSES.includes(newStatus as ApplicatorStatus)) {
+                      setPendingTerminalStatus(newStatus);
+                      setShowTerminalWarning(true);
+                      return;
+                    }
+                    setFormData(prev => ({ ...prev, status: newStatus }));
+                  }}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px]"
                   required
                   disabled={loading}
                 >
@@ -1188,11 +1438,6 @@ const TreatmentDocumentation = () => {
                   {shouldShowStatus('DISCHARGED') && <option value="DISCHARGED" className="text-gray-800">Discharged (sources expelled)</option>}
                   {shouldShowStatus('DEPLOYMENT_FAILURE') && <option value="DEPLOYMENT_FAILURE" className="text-gray-800">Deployment Failure</option>}
                 </select>
-                {isReturnedFromNoUse && (
-                  <p className="mt-1 text-xs text-red-600">
-                    This applicator was previously marked as "No Use". You can now select any status.
-                  </p>
-                )}
               </div>
 
               {/* Inserted Sources Qty */}
@@ -1376,6 +1621,27 @@ const TreatmentDocumentation = () => {
           </div>
         </div>
       </div>
+
+      {/* Offline Insertion Confirmation Dialog */}
+      <OfflineInsertionConfirmDialog
+        isOpen={showOfflineConfirmDialog}
+        onClose={() => {
+          setShowOfflineConfirmDialog(false);
+          setOfflinePendingApplicator(null);
+        }}
+        onConfirm={async () => {
+          if (offlinePendingApplicator) {
+            // Pass originalApplicatorStatus for accurate transition validation
+            await processApplicatorOffline(offlinePendingApplicator, true, originalApplicatorStatus as ApplicatorStatus | null);
+            setShowOfflineConfirmDialog(false);
+            setOfflinePendingApplicator(null);
+            setOriginalApplicatorStatus(null);
+            setSuccess('Applicator processed offline. Will sync when connection is restored.');
+          }
+        }}
+        applicatorSerial={offlinePendingApplicator?.serialNumber || ''}
+        status={offlinePendingApplicator?.status === 'FAULTY' ? 'FAULTY' : 'INSERTED'}
+      />
     </Layout>
   );
 };

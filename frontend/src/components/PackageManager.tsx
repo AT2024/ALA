@@ -2,29 +2,9 @@ import { useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import api from '@/services/api';
-import type { ApplicatorStatus } from '@/utils/applicatorStatus';
 
-interface Applicator {
-  id: string;
-  serialNumber: string;
-  applicatorType?: string;
-  seedQuantity: number;
-  usageType: 'full' | 'faulty' | 'none';
-  insertionTime: string;
-  insertedSeedsQty?: number;
-  comments?: string;
-  image?: string;
-  isRemoved?: boolean;
-  removalComments?: string;
-  removalImage?: string;
-  returnedFromNoUse?: boolean;
-  patientId?: string;
-  attachmentFileCount?: number;
-  attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
-  attachmentFilename?: string;
-  status?: ApplicatorStatus;
-  package_label?: string;
-}
+// Import shared types - single source of truth
+import type { Applicator, ApplicatorSummary } from '@shared/types';
 
 interface PackageManagerProps {
   treatmentId: string;
@@ -32,13 +12,8 @@ interface PackageManagerProps {
   onPackageCreated: () => void;
 }
 
-interface PackageSummary {
-  seedQuantity: number;
-  inserted: number;
-  available: number;
-  loaded: number;
-  packaged: number;
-}
+// Use shared type for package summary (same as ApplicatorSummary)
+type PackageSummary = ApplicatorSummary;
 
 const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }: PackageManagerProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

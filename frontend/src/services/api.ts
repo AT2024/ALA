@@ -68,6 +68,39 @@ const api = axios.create({
 // HttpOnly cookies are automatically sent by the browser with withCredentials: true
 // This is more secure than localStorage as the token is not accessible via JavaScript
 
+// Add request interceptor for offline handling
+api.interceptors.request.use(
+  async (config) => {
+    // Allow sync endpoint through even when offline (it handles its own queueing)
+    if (config.url?.includes('/offline/sync')) {
+      return config;
+    }
+
+    // Allow time sync endpoint (lightweight)
+    if (config.url === '/time') {
+      return config;
+    }
+
+    // Block mutating requests when offline (except offline-specific endpoints)
+    if (!navigator.onLine && config.method !== 'get') {
+      // Allow offline-specific endpoints
+      if (config.url?.includes('/offline/')) {
+        return config;
+      }
+
+      // Reject other mutations with a clear error
+      const error = new Error('This operation requires a network connection.');
+      (error as any).code = 'OFFLINE_ERROR';
+      return Promise.reject(error);
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {

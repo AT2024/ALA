@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { priorityService } from '@/services/priorityService';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { encryptionKeyService } from '@/services/encryptionKeyService';
 
 interface User {
   id: string;
@@ -132,6 +133,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // The cookie is automatically managed by browser - not accessible via JavaScript
       localStorage.setItem('user', JSON.stringify(result.user));
 
+      // Store encryption key material for offline PHI encryption
+      // This allows the app to derive the same encryption key on page refresh
+      await encryptionKeyService.storeCredentialMaterial(
+        result.user.id,
+        identifier,
+        code
+      );
+
       // Clear session storage
       sessionStorage.removeItem('loginIdentifier');
       sessionStorage.removeItem('priorityUserData');
@@ -173,6 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn('Error clearing Priority cache:', error);
     }
+
+    // Clear encryption key material to prevent access to previous user's offline data
+    encryptionKeyService.clearMaterial();
 
     navigate('/login');
   };

@@ -25,6 +25,7 @@ interface SignatureModalProps {
   onSuccess: () => void;
   flowType?: 'hospital_auto' | 'alphatau_verification';
   userData?: UserData;
+  isContinuation?: boolean; // True if this treatment is a continuation of another
 }
 
 type Step = 'email_selection' | 'code_entry' | 'signature_details' | 'hospital_confirmation';
@@ -37,6 +38,7 @@ const SignatureModal = ({
   onSuccess,
   flowType = 'alphatau_verification',
   userData,
+  isContinuation = false,
 }: SignatureModalProps) => {
   // Note: treatmentSite is available via _treatmentSite if needed for site-specific features
 
@@ -471,8 +473,30 @@ const SignatureModal = ({
     </div>
   );
 
+  // Render continuation notice for treatments that continue from a previous session
+  const renderContinuationNotice = () => {
+    if (!isContinuation) return null;
+
+    return (
+      <div className="mb-4 p-4 bg-amber-50 rounded-lg border-2 border-amber-300">
+        <div className="flex items-start gap-3">
+          <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <p className="font-semibold">Continuation Treatment</p>
+            <p className="mt-1">
+              This is a continuation of a previously finalized treatment. The PDF will include a notice
+              referencing the original treatment record.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSignatureDetails = () => (
     <div className="space-y-4">
+      {renderContinuationNotice()}
+
       <p className="text-sm text-gray-600">
         Please confirm your signature details to finalize the treatment.
       </p>
@@ -553,6 +577,8 @@ const SignatureModal = ({
 
   const renderHospitalConfirmation = () => (
     <div className="space-y-4">
+      {renderContinuationNotice()}
+
       <p className="text-sm text-gray-600">
         Please confirm your signature details to finalize the treatment record.
       </p>

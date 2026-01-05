@@ -26,7 +26,7 @@ const LoginPage = () => {
         
         // If login was successful, show success message and redirect to verification page
         if (result && result.success) {
-          setSuccessMessage(`Verification code sent to ${identifier}. Use code 123456 for verification.`);
+          setSuccessMessage(`Verification code sent to ${identifier}.`);
           
           // Add a slight delay before navigating to give user time to see the message
           setTimeout(() => {

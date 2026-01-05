@@ -13,7 +13,6 @@ export interface ApplicatorValidationResult {
     seedLength?: number;    // SIBD_SEEDLEN from Priority order
     intendedPatientId?: string;
     previousTreatmentId?: string;
-    returnedFromNoUse?: boolean;
   };
 }
 
@@ -23,6 +22,7 @@ export interface ApplicatorData {
   seedQuantity: number;
   insertionTime: string;
   usingType: 'full' | 'partial' | 'faulty' | 'none';
+  status?: string;       // 8-state workflow status (SEALED, OPENED, LOADED, INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)
   insertedSeedsQty: number;
   comments?: string;
   catalog?: string;      // PARTNAME from Priority
@@ -109,6 +109,7 @@ export const applicatorService = {
         seedQuantity: applicatorData.seedQuantity,
         insertionTime: applicatorData.insertionTime,
         usageType: applicatorData.usingType,
+        status: applicatorData.status,          // 8-state workflow status
         insertedSeedsQty: applicatorData.insertedSeedsQty,
         comments: applicatorData.comments,
         catalog: applicatorData.catalog,       // PARTNAME from Priority

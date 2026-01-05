@@ -161,15 +161,8 @@ export const priorityService = {
     return response.data;
   },
 
-  // Validate applicator for manual entry
-  async validateApplicator(serialNumber: string, currentSite: string, currentDate: string): Promise<any> {
-    const response = await api.post('/proxy/priority/validate-applicator', {
-      serialNumber,
-      currentSite,
-      currentDate
-    });
-    return response.data;
-  },
+  // NOTE: validateApplicator() moved to applicatorService.ts
+  // Use applicatorService.validateApplicator() for applicator validation
 
   // Get available applicators for a treatment
   async getAvailableApplicators(site: string, currentDate: string): Promise<any> {

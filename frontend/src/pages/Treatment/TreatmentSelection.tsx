@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, addDays, subDays } from 'date-fns';
 import { Combobox } from '@headlessui/react';
+import { WifiOff } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useTreatment } from '@/context/TreatmentContext';
 import { useAuth } from '@/context/AuthContext';
+import { useOffline } from '@/context/OfflineContext';
 import { priorityService } from '@/services/priorityService';
 import { treatmentService } from '@/services/treatmentService';
 import api from '@/services/api';
@@ -46,6 +48,7 @@ interface PrioritySite {
 const TreatmentSelection = () => {
   const { setTreatment, procedureType } = useTreatment();
   const { user } = useAuth();
+  const { isOnline, downloadedTreatments } = useOffline();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -551,6 +554,28 @@ const TreatmentSelection = () => {
   return (
     <Layout title="Treatment Selection" showBackButton={true}>
       <div className="space-y-6">
+        {/* Offline mode indicator */}
+        {!isOnline && (
+          <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+            <div className="flex items-center gap-2">
+              <WifiOff className="h-5 w-5 text-yellow-600" />
+              <div>
+                <h3 className="font-medium text-yellow-900">Offline Mode</h3>
+                <p className="text-sm text-yellow-700">
+                  Only pre-downloaded treatments are available. New treatments cannot be created until you're back online.
+                </p>
+              </div>
+            </div>
+            {downloadedTreatments.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-yellow-200">
+                <p className="text-sm text-yellow-800">
+                  <span className="font-medium">{downloadedTreatments.length}</span> treatment{downloadedTreatments.length !== 1 ? 's' : ''} available offline
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Header showing procedure type */}
         <div className="rounded-lg border bg-blue-50 p-4">
           <h2 className="text-lg font-medium text-blue-900">

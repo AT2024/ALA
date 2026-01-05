@@ -1,46 +1,12 @@
 import api from './api';
 import { priorityService } from './priorityService';
+import type { ApplicatorStatus } from '@/utils/applicatorStatus';
 
-export interface Treatment {
-  id: string;
-  type: 'insertion' | 'removal';
-  subjectId: string;
-  site: string;
-  date: string;
-  isComplete: boolean;
-  email?: string;
-  seedQuantity?: number;
-  activityPerSeed?: number;
-  surgeon?: string;
-  userId?: string;
-  priorityId?: string;
-  originalTreatmentId?: string; // For removal treatments - links to original insertion
-  createdAt?: string;
-  updatedAt?: string;
-  patientName?: string;
-}
+// Import shared types - single source of truth
+import type { Treatment, Applicator, ContinuationEligibility } from '@shared/types';
 
-export interface Applicator {
-  id: string;
-  serialNumber: string;
-  seedQuantity: number;
-  usageType: 'full' | 'faulty' | 'none';
-  insertionTime: string;
-  comments?: string;
-  image?: string;
-  isRemoved?: boolean;
-  removalComments?: string;
-  removalImage?: string;
-  // File attachment tracking fields (files stored in Priority ERP)
-  attachmentFileCount?: number;
-  attachmentSyncStatus?: 'pending' | 'syncing' | 'synced' | 'failed' | null;
-  attachmentFilename?: string;
-  attachmentSizeBytes?: number;
-  // Catalog number from Priority PARTNAME field
-  catalog?: string;
-  // Seed length from Priority SIBD_SEEDLEN field
-  seedLength?: number;
-}
+// Re-export for backwards compatibility
+export type { Treatment, Applicator, ContinuationEligibility } from '@shared/types';
 
 export const treatmentService = {
   // Get available treatments for selection
@@ -152,26 +118,17 @@ export const treatmentService = {
         attachmentSizeBytes: app.attachmentSizeBytes || 0,
         // Catalog and seed length from Priority
         catalog: app.catalog || app.PARTNAME || null,
-        seedLength: app.seedLength || app.SIBD_SEEDLEN || null
+        seedLength: app.seedLength || app.SIBD_SEEDLEN || null,
+        // 8-state workflow status
+        status: app.status as ApplicatorStatus | undefined
       }));
     }
 
     return response.data || [];
   },
 
-  // Validate applicator barcode
-  async validateApplicator(barcode: string, treatmentId: string): Promise<{
-    valid: boolean;
-    message: string;
-    requiresAdminApproval: boolean;
-    applicator?: Applicator;
-  }> {
-    const response = await api.post(`/applicators/validate`, {
-      barcode,
-      treatmentId,
-    });
-    return response.data;
-  },
+  // NOTE: validateApplicator() moved to applicatorService.ts
+  // Use applicatorService.validateApplicator() for applicator validation
 
   // Add an applicator to a treatment
   async addApplicator(treatmentId: string, applicator: Omit<Applicator, 'id'>): Promise<Applicator> {
@@ -302,5 +259,35 @@ export const treatmentService = {
       availableApplicators
     });
     return response.data;
+  },
+
+  // ===== Treatment Continuation Methods =====
+
+  // Check if a completed treatment can be continued (within 24-hour window)
+  async checkContinuable(treatmentId: string): Promise<ContinuationEligibility> {
+    const response = await api.get(`/treatments/${treatmentId}/continuable`);
+    return response.data;
+  },
+
+  // Create a continuation treatment linked to the parent
+  async createContinuation(treatmentId: string): Promise<Treatment> {
+    const response = await api.post(`/treatments/${treatmentId}/continue`);
+    return response.data;
+  },
+
+  // Get all continuation treatments for a parent treatment
+  async getContinuations(treatmentId: string): Promise<Treatment[]> {
+    const response = await api.get(`/treatments/${treatmentId}/continuations`);
+    return response.data;
+  },
+
+  // Get the parent treatment for a continuation
+  async getParentTreatment(treatmentId: string): Promise<Treatment | null> {
+    try {
+      const response = await api.get(`/treatments/${treatmentId}/parent`);
+      return response.data;
+    } catch (error) {
+      return null;
+    }
   }
 };
