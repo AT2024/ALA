@@ -31,4 +31,5 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **API Reference**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - Endpoints and auth
 - **Testing**: [docs/testing/README.md](docs/testing/README.md) - Test patterns and coverage
 - **Compounding Engineering**: [docs/COMPOUNDING-ENGINEERING-SETUP.md](docs/COMPOUNDING-ENGINEERING-SETUP.md) - Workflow system
+- **Multi-Agent Development**: [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md) - Parallel agent workflow
 - **Agent Behavior**: [.claude/settings.md](.claude/settings.md) - Claude Code guidelines
