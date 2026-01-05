@@ -82,6 +82,18 @@ export const FAILURE_STATUSES: ApplicatorStatus[] = [
 ];
 
 /**
+ * Medical statuses that require admin resolution when conflicts occur
+ * These statuses have patient safety implications and cannot be auto-resolved
+ * Used in offline sync conflict resolution
+ */
+export const ADMIN_REQUIRED_STATUSES: ApplicatorStatus[] = [
+  APPLICATOR_STATUSES.INSERTED,
+  APPLICATOR_STATUSES.FAULTY,
+  APPLICATOR_STATUSES.DISPOSED,
+  APPLICATOR_STATUSES.DEPLOYMENT_FAILURE,
+];
+
+/**
  * Statuses that require comments (for documentation/audit purposes)
  * All terminal failure statuses require a comment to explain why the applicator
  * was not used successfully (for medical audit trail)
@@ -317,6 +329,15 @@ export const isInProgressStatus = (status: ApplicatorStatus | string | null | un
 export const requiresComment = (status: ApplicatorStatus | string | null | undefined): boolean => {
   if (!status) return false;
   return COMMENT_REQUIRED_STATUSES.includes(status as ApplicatorStatus);
+};
+
+/**
+ * Check if a status requires admin resolution when conflicts occur
+ * Used in offline sync conflict detection
+ */
+export const requiresAdminForConflict = (status: ApplicatorStatus | string | null | undefined): boolean => {
+  if (!status) return false;
+  return ADMIN_REQUIRED_STATUSES.includes(status as ApplicatorStatus);
 };
 
 /**
