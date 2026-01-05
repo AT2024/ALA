@@ -17,6 +17,10 @@ import {
   sendFinalizationCode,
   verifyAndFinalize,
   autoFinalize,
+  checkContinuable,
+  createContinuation,
+  getContinuations,
+  getParentTreatment,
 } from '../controllers/treatmentController';
 import { updateApplicator } from '../controllers/applicatorController';
 import { protect } from '../middleware/authMiddleware';
@@ -56,6 +60,12 @@ router.get('/:id/finalize/site-users', validateUUID('id'), databaseHealthCheck, 
 router.post('/:id/finalize/send-code', validateUUID('id'), criticalOperationHealthCheck, sendFinalizationCode);
 router.post('/:id/finalize/verify', validateUUID('id'), criticalOperationHealthCheck, verifyAndFinalize);
 router.post('/:id/finalize/auto', validateUUID('id'), criticalOperationHealthCheck, autoFinalize);
+
+// Treatment continuation routes
+router.get('/:id/continuable', validateUUID('id'), databaseHealthCheck, checkContinuable);
+router.post('/:id/continue', validateUUID('id'), criticalOperationHealthCheck, createContinuation);
+router.get('/:id/continuations', validateUUID('id'), databaseHealthCheck, getContinuations);
+router.get('/:id/parent', validateUUID('id'), databaseHealthCheck, getParentTreatment);
 
 // Treatment applicator routes
 router.route('/:id/applicators')

@@ -52,6 +52,11 @@ export interface SignatureDetails {
   signedAt: Date;
 }
 
+export interface ContinuationInfo {
+  parentTreatmentId: string;
+  parentPdfCreatedAt: Date;
+}
+
 /**
  * Format a date for display with 3-letter month abbreviation
  */
@@ -227,11 +232,16 @@ export function calculateSummary(
 
 /**
  * Generate a treatment PDF report with digital signature
+ * @param treatment - Treatment data
+ * @param applicators - List of applicators
+ * @param signatureDetails - Signature information
+ * @param continuationInfo - Optional info if this is a continuation treatment
  */
 export async function generateTreatmentPdf(
   treatment: Treatment,
   applicators: Applicator[],
-  signatureDetails: SignatureDetails
+  signatureDetails: SignatureDetails,
+  continuationInfo?: ContinuationInfo
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
@@ -284,8 +294,41 @@ export async function generateTreatmentPdf(
       doc.fontSize(12).font('Helvetica');
       doc.text(`Generated: ${formatDate(new Date())}`, 0, 80, { align: 'center' });
 
-      // ===== TREATMENT INFORMATION =====
+      // ===== CONTINUATION NOTICE (if applicable) =====
       let yPosition = 110;
+
+      if (continuationInfo) {
+        // Draw amber/orange notice box for continuation treatments
+        const noticeBoxWidth = 400;
+        const noticeBoxHeight = 45;
+        const noticeBoxX = (doc.page.width - noticeBoxWidth) / 2;
+
+        // Box background and border
+        doc.strokeColor('#f97316').lineWidth(2);
+        doc.fillColor('#fff7ed');
+        doc.rect(noticeBoxX, yPosition, noticeBoxWidth, noticeBoxHeight).fillAndStroke();
+
+        // Notice title
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#c2410c');
+        doc.text('CONTINUATION TREATMENT', noticeBoxX, yPosition + 8, {
+          width: noticeBoxWidth,
+          align: 'center'
+        });
+
+        // Notice details
+        doc.fontSize(9).font('Helvetica').fillColor('#7c2d12');
+        doc.text(
+          `Original treatment PDF created at ${formatSignatureDate(continuationInfo.parentPdfCreatedAt)}`,
+          noticeBoxX + 10, yPosition + 25, {
+            width: noticeBoxWidth - 20,
+            align: 'center'
+          }
+        );
+
+        yPosition += noticeBoxHeight + 20;
+      }
+
+      // ===== TREATMENT INFORMATION =====
       doc.fontSize(16).font('Helvetica-Bold').fillColor('black');
       doc.text('Treatment Information', 50, yPosition);
       yPosition += 25;

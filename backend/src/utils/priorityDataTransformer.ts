@@ -1,4 +1,5 @@
 import logger from './logger';
+import { ApplicatorStatus, ALL_STATUSES } from '../../../shared/applicatorStatuses';
 
 /**
  * Priority Data Transformer Utility
@@ -8,6 +9,7 @@ import logger from './logger';
 export interface PriorityApplicatorData {
   serialNumber?: string;
   usageType?: string;
+  status?: string; // 8-state workflow status (SEALED, OPENED, LOADED, INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)
   insertionTime?: string | Date;
   seedQuantity?: number;
   insertedSeedsQty?: number;
@@ -22,6 +24,7 @@ export interface PriorityApplicatorData {
 export interface TransformedApplicatorData {
   serialNumber: string;
   usageType: 'full' | 'faulty' | 'none';
+  status?: ApplicatorStatus | null; // 8-state workflow status (SEALED, OPENED, LOADED, INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)
   insertionTime: Date;
   seedQuantity: number;
   insertedSeedsQty: number;
@@ -220,6 +223,16 @@ export const transformPriorityApplicatorData = (
           transformedData.seedLength = parsedLength;
           warnings.push(`Seed length converted from ${typeof rawData.seedLength} to number`);
         }
+      }
+    }
+
+    // Transform status (8-state workflow)
+    if (rawData.status) {
+      const normalizedStatus = String(rawData.status).toUpperCase().trim();
+      if (ALL_STATUSES.includes(normalizedStatus as ApplicatorStatus)) {
+        transformedData.status = normalizedStatus as ApplicatorStatus;
+      } else {
+        warnings.push(`Unknown status '${rawData.status}', ignoring`);
       }
     }
 

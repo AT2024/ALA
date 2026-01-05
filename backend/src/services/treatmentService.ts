@@ -1,9 +1,18 @@
-import { Treatment, Applicator, User } from '../models';
+import { Treatment, Applicator, User, TreatmentPdf } from '../models';
 import { Op } from 'sequelize';
 import sequelize from '../config/database';
 import logger from '../utils/logger';
 import priorityService from './priorityService';
 import { RemovalProcedureData } from '../types/removalProcedure';
+
+// Interface for continuation eligibility check result
+export interface ContinuationEligibility {
+  canContinue: boolean;
+  reason?: string;
+  hoursRemaining?: number;
+  parentPdfCreatedAt?: Date;
+  reusableApplicatorCount?: number;
+}
 
 interface TreatmentFilterParams {
   type?: 'insertion' | 'removal';
@@ -681,15 +690,17 @@ export const treatmentService = {
         throw new Error('User not found');
       }
 
+      // Note: Sites are stored as objects with custName property, need to extract codes
       const userSites = user.metadata?.sites || [];
-      const isAdmin = user.role === 'admin';
+      const userSiteCodes = userSites.map((s: { custName: string }) => s.custName);
+      const isAdmin = user.role === 'admin' || Number(user.metadata?.positionCode) === 99;
 
       // Check if user has access to the site
-      if (!isAdmin && !userSites.includes(site)) {
+      if (!isAdmin && !userSiteCodes.includes(site)) {
         logger.error(`[TREATMENT_SERVICE] [${queryId}] User does not have access to site`, {
           userId,
           site,
-          userSites,
+          userSiteCodes,
           userRole: user.role
         });
         throw new Error('User does not have access to this site');
@@ -804,6 +815,247 @@ export const treatmentService = {
           stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
           sqlMessage: error.original?.message,
           sqlCode: error.original?.code
+        },
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  // Check if a treatment can be continued (within 24-hour window)
+  async checkContinuationEligibility(treatmentId: string): Promise<ContinuationEligibility> {
+    const queryId = `checkContinuationEligibility_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info(`[TREATMENT_SERVICE] Starting checkContinuationEligibility`, {
+        queryId,
+        treatmentId,
+        timestamp: new Date().toISOString()
+      });
+
+      const treatment = await Treatment.findByPk(treatmentId, {
+        include: [{ model: Applicator, as: 'applicators' }]
+      });
+
+      if (!treatment) {
+        logger.warn(`[TREATMENT_SERVICE] [${queryId}] Treatment not found`, { treatmentId });
+        return { canContinue: false, reason: 'Treatment not found' };
+      }
+
+      // Must be completed to continue
+      if (!treatment.isComplete) {
+        logger.info(`[TREATMENT_SERVICE] [${queryId}] Treatment not complete`, { treatmentId });
+        return { canContinue: false, reason: 'Treatment must be completed before continuation' };
+      }
+
+      // Only insertion treatments can be continued
+      if (treatment.type !== 'insertion') {
+        logger.info(`[TREATMENT_SERVICE] [${queryId}] Not an insertion treatment`, {
+          treatmentId,
+          type: treatment.type
+        });
+        return { canContinue: false, reason: 'Only insertion treatments can be continued' };
+      }
+
+      // Check 24-hour window from lastActivityAt (or completedAt as fallback)
+      const lastActivity = treatment.lastActivityAt || treatment.completedAt || treatment.updatedAt;
+      const hoursSinceActivity = (Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60);
+
+      if (hoursSinceActivity > 24) {
+        logger.info(`[TREATMENT_SERVICE] [${queryId}] 24-hour window expired`, {
+          treatmentId,
+          hoursSinceActivity: Math.round(hoursSinceActivity),
+          lastActivity
+        });
+        return {
+          canContinue: false,
+          reason: `24-hour continuation window expired (${Math.round(hoursSinceActivity)} hours since last activity)`,
+          hoursRemaining: 0
+        };
+      }
+
+      // Count reusable applicators (OPENED or LOADED status)
+      const reusableStatuses = ['OPENED', 'LOADED'];
+      const reusableApplicators = treatment.applicators?.filter(
+        app => reusableStatuses.includes(app.status || '')
+      ) || [];
+
+      // Get parent PDF creation time if exists
+      const existingPdf = await TreatmentPdf.findOne({ where: { treatmentId } });
+
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Treatment is continuable`, {
+        treatmentId,
+        hoursRemaining: Math.round(24 - hoursSinceActivity),
+        reusableApplicatorCount: reusableApplicators.length,
+        hasPdf: !!existingPdf
+      });
+
+      return {
+        canContinue: true,
+        hoursRemaining: Math.round(24 - hoursSinceActivity),
+        parentPdfCreatedAt: existingPdf?.signedAt,
+        reusableApplicatorCount: reusableApplicators.length
+      };
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in checkContinuationEligibility`, {
+        queryId,
+        treatmentId,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  // Create a continuation treatment linked to parent
+  async createContinuationTreatment(parentTreatmentId: string, userId: string): Promise<Treatment> {
+    const queryId = `createContinuationTreatment_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info(`[TREATMENT_SERVICE] Starting createContinuationTreatment`, {
+        queryId,
+        parentTreatmentId,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Check eligibility first
+      const eligibility = await this.checkContinuationEligibility(parentTreatmentId);
+      if (!eligibility.canContinue) {
+        throw new Error(eligibility.reason || 'Treatment cannot be continued');
+      }
+
+      const parentTreatment = await Treatment.findByPk(parentTreatmentId);
+      if (!parentTreatment) {
+        throw new Error('Parent treatment not found');
+      }
+
+      // Create new treatment linked to parent
+      const continuation = await Treatment.create({
+        type: parentTreatment.type,
+        subjectId: parentTreatment.subjectId,
+        patientName: parentTreatment.patientName,
+        site: parentTreatment.site,
+        date: new Date(),
+        userId,
+        priorityId: parentTreatment.priorityId,
+        surgeon: parentTreatment.surgeon,
+        activityPerSeed: parentTreatment.activityPerSeed,
+        parentTreatmentId, // Link to parent
+        lastActivityAt: new Date(),
+        isComplete: false,
+        version: 1,
+        syncStatus: 'synced'
+      });
+
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Continuation treatment created`, {
+        continuationId: continuation.id,
+        parentTreatmentId,
+        userId,
+        site: parentTreatment.site,
+        subjectId: parentTreatment.subjectId
+      });
+
+      return continuation;
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in createContinuationTreatment`, {
+        queryId,
+        parentTreatmentId,
+        userId,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  // Get all continuation treatments for a parent treatment
+  async getContinuations(treatmentId: string): Promise<Treatment[]> {
+    const queryId = `getContinuations_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info(`[TREATMENT_SERVICE] Starting getContinuations`, {
+        queryId,
+        treatmentId,
+        timestamp: new Date().toISOString()
+      });
+
+      const continuations = await Treatment.findAll({
+        where: { parentTreatmentId: treatmentId },
+        include: [
+          { model: Applicator, as: 'applicators' },
+          { model: User, as: 'user', attributes: ['id', 'name', 'email', 'role'] }
+        ],
+        order: [['createdAt', 'ASC']]
+      });
+
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Found continuations`, {
+        parentTreatmentId: treatmentId,
+        count: continuations.length
+      });
+
+      return continuations;
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in getContinuations`, {
+        queryId,
+        treatmentId,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        },
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  },
+
+  // Get parent treatment for a continuation
+  async getParentTreatment(treatmentId: string): Promise<Treatment | null> {
+    const queryId = `getParentTreatment_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info(`[TREATMENT_SERVICE] Starting getParentTreatment`, {
+        queryId,
+        treatmentId,
+        timestamp: new Date().toISOString()
+      });
+
+      const treatment = await Treatment.findByPk(treatmentId);
+      if (!treatment || !treatment.parentTreatmentId) {
+        return null;
+      }
+
+      const parentTreatment = await Treatment.findByPk(treatment.parentTreatmentId, {
+        include: [
+          { model: Applicator, as: 'applicators' },
+          { model: User, as: 'user', attributes: ['id', 'name', 'email', 'role'] }
+        ]
+      });
+
+      logger.info(`[TREATMENT_SERVICE] [${queryId}] Found parent treatment`, {
+        treatmentId,
+        parentTreatmentId: treatment.parentTreatmentId,
+        parentFound: !!parentTreatment
+      });
+
+      return parentTreatment;
+    } catch (error: any) {
+      logger.error(`[TREATMENT_SERVICE] [${queryId}] Error in getParentTreatment`, {
+        queryId,
+        treatmentId,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         },
         timestamp: new Date().toISOString()
       });

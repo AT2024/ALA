@@ -20,7 +20,7 @@ import { getFirstOrderId } from '../utils/priorityIdParser';
 
 export interface ApplicatorValidationResult {
   isValid: boolean;
-  scenario: 'valid' | 'already_scanned' | 'wrong_treatment' | 'previously_no_use' | 'not_allowed' | 'error';
+  scenario: 'valid' | 'already_scanned' | 'wrong_treatment' | 'previously_no_use' | 'not_allowed' | 'error' | 'terminal_status_reuse';
   message: string;
   requiresConfirmation: boolean;
   applicatorData?: {
@@ -32,6 +32,27 @@ export interface ApplicatorValidationResult {
     intendedPatientId?: string;
     previousTreatmentId?: string;
   };
+  fromParentTreatment?: boolean; // True if applicator recognized from parent treatment
+}
+
+// Terminal statuses - applicators in these states cannot be reused
+const TERMINAL_STATUSES = ['INSERTED', 'FAULTY', 'DISPOSED', 'DISCHARGED', 'DEPLOYMENT_FAILURE'];
+
+// Reusable statuses - applicators in these states can be used in continuation treatments
+const REUSABLE_STATUSES = ['OPENED', 'LOADED'];
+
+/**
+ * Check if an applicator status is terminal (cannot be reused)
+ */
+function isTerminalStatus(status: string | null): boolean {
+  return status ? TERMINAL_STATUSES.includes(status) : false;
+}
+
+/**
+ * Check if an applicator status is reusable (can be used in continuation)
+ */
+function isReusableStatus(status: string | null): boolean {
+  return status ? REUSABLE_STATUSES.includes(status) : false;
 }
 
 /**
@@ -197,15 +218,34 @@ export const applicatorService = {
   async getApplicatorById(id: string) {
     try {
       const applicator = await Applicator.findByPk(id);
-      
+
       if (!applicator) {
         throw new Error('Applicator not found');
       }
-      
+
       return applicator;
     } catch (error) {
       logger.error(`Error fetching applicator by ID: ${error}`);
       throw error;
+    }
+  },
+
+  /**
+   * Find a reusable applicator from parent treatment (for continuation treatments)
+   * Returns the applicator if found in parent, otherwise null
+   */
+  async findApplicatorInParent(serialNumber: string, parentTreatmentId: string): Promise<Applicator | null> {
+    try {
+      const applicator = await Applicator.findOne({
+        where: {
+          serialNumber,
+          treatmentId: parentTreatmentId
+        }
+      });
+      return applicator;
+    } catch (error) {
+      logger.error(`Error finding applicator in parent treatment: ${error}`);
+      return null;
     }
   },
 
@@ -237,7 +277,51 @@ export const applicatorService = {
       if (!treatment) {
         throw new Error('Treatment not found');
       }
-      
+
+      // NEW: Check if this is a continuation treatment and applicator exists in parent
+      if (treatment.parentTreatmentId) {
+        const parentApplicator = await this.findApplicatorInParent(serialNumber, treatment.parentTreatmentId);
+
+        if (parentApplicator) {
+          // Check if applicator has a terminal status (cannot be reused)
+          if (isTerminalStatus(parentApplicator.status)) {
+            logger.info(`Applicator ${serialNumber} has terminal status ${parentApplicator.status} in parent treatment`, {
+              parentTreatmentId: treatment.parentTreatmentId,
+              status: parentApplicator.status
+            });
+            return {
+              isValid: false,
+              scenario: 'terminal_status_reuse',
+              message: `This applicator was ${parentApplicator.status?.toLowerCase()} in the original treatment and cannot be reused.`,
+              requiresConfirmation: false
+            };
+          }
+
+          // Applicator has reusable status (OPENED/LOADED) - allow use in continuation
+          if (isReusableStatus(parentApplicator.status)) {
+            logger.info(`Applicator ${serialNumber} found with reusable status ${parentApplicator.status} in parent treatment`, {
+              parentTreatmentId: treatment.parentTreatmentId,
+              status: parentApplicator.status
+            });
+            return {
+              isValid: true,
+              scenario: 'valid',
+              message: `Applicator recognized from original treatment (status: ${parentApplicator.status}).`,
+              requiresConfirmation: false,
+              applicatorData: {
+                serialNumber: parentApplicator.serialNumber,
+                applicatorType: parentApplicator.applicatorType || '',
+                seedQuantity: parentApplicator.seedQuantity,
+                catalog: parentApplicator.catalog || undefined,
+                seedLength: parentApplicator.seedLength || undefined,
+                previousTreatmentId: treatment.parentTreatmentId
+              },
+              fromParentTreatment: true
+            };
+          }
+        }
+      }
+
       // Scenario 2: Check if applicator exists in Priority SIBD_APPLICATUSELIST
       // Pass treatment.priorityId to also fetch seedLength from order
       const applicatorInPriority = await this.getApplicatorFromPriority(serialNumber, treatment.priorityId || undefined);
@@ -908,6 +992,13 @@ export const applicatorService = {
 
       const applicator = await Applicator.create(dbData, { transaction });
 
+      // STEP 6: Update treatment's lastActivityAt for 24-hour continuation window
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 6: Updating treatment lastActivityAt`);
+      await Treatment.update(
+        { lastActivityAt: new Date() },
+        { where: { id: treatment.id }, transaction }
+      );
+
       logger.info(`[APPLICATOR_SERVICE] [${requestId}] Successfully added applicator with transaction`, {
         treatmentId: treatment.id,
         applicatorId: applicator.id,
@@ -1027,6 +1118,14 @@ export const applicatorService = {
       }
 
       await applicator.update(data);
+
+      // Update treatment's lastActivityAt for 24-hour continuation window
+      if (applicator.treatmentId) {
+        await Treatment.update(
+          { lastActivityAt: new Date() },
+          { where: { id: applicator.treatmentId } }
+        );
+      }
 
       return applicator;
     } catch (error) {

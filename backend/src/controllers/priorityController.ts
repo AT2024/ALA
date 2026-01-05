@@ -190,10 +190,12 @@ export const getOrdersForSiteAndDate = asyncHandler(async (req: Request, res: Re
 
     // Validate user has access to this site
     // Use Number() to handle both string and number types from JSON storage
+    // Note: Sites are stored as objects with custName property, need to extract codes
     const userSites = req.user?.metadata?.sites || [];
+    const userSiteCodes = userSites.map((s: { custName: string }) => s.custName);
     const userHasFullAccess = Number(req.user?.metadata?.positionCode) === 99;
 
-    if (!userHasFullAccess && !userSites.includes(site)) {
+    if (!userHasFullAccess && !userSiteCodes.includes(site)) {
       res.status(403).json({
         error: 'Access denied to this site'
       });
@@ -403,19 +405,21 @@ export const getAvailableApplicators = asyncHandler(async (req: Request, res: Re
     
     // Validate user has access to this site
     // Use Number() to handle both string and number types from JSON storage
+    // Note: Sites are stored as objects with custName property, need to extract codes
     const userSites = req.user?.metadata?.sites || [];
+    const userSiteCodes = userSites.map((s: { custName: string }) => s.custName);
     const userHasFullAccess = Number(req.user?.metadata?.positionCode) === 99;
 
-    if (!userHasFullAccess && !userSites.includes(site)) {
-      logger.error(`User ${req.user?.email} does not have access to site ${site}. User sites: ${userSites.join(', ')}`);
+    if (!userHasFullAccess && !userSiteCodes.includes(site)) {
+      logger.error(`User ${req.user?.email} does not have access to site ${site}. User sites: ${userSiteCodes.join(', ')}`);
       res.status(403).json({
         success: false,
         error: `Access denied to site ${site}`,
-        userSites: userSites
+        userSites: userSiteCodes
       });
       return;
     }
-    
+
     logger.info(`User ${req.user?.email} has access to site ${site}. Getting available applicators...`);
 
     // Get available applicators from Priority service

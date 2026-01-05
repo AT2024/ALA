@@ -114,7 +114,6 @@ describe('Applicator 8-State Validation', () => {
         const recoveredState = {
           ...noUseState,
           status: 'RECOVERED',
-          returnedFromNoUse: true,
           availableForReuse: true,
         };
 
