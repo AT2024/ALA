@@ -41,7 +41,11 @@ interface TreatmentContextType {
   progressStats: ProgressStats;
   getApplicatorProgress: () => { used: number; total: number };
   getSeedProgress: () => { inserted: number; total: number };
-  getUsageTypeDistribution: () => { full: number; faulty: number; none: number };
+  getUsageTypeDistribution: () => {
+    sealed: number; opened: number; loaded: number; inserted: number;
+    faulty: number; disposed: number; discharged: number; deploymentFailure: number;
+    full: number; none: number;
+  };
   getActualTotalSeeds: () => number;
   getActualInsertedSeeds: () => number;
   getApplicatorTypeBreakdown: () => { seedCount: number; used: number; total: number }[];
@@ -326,12 +330,44 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const getUsageTypeDistribution = () => {
-    const distribution = { full: 0, faulty: 0, none: 0 };
+    // 8-state status distribution (replaces legacy 3-state usageType)
+    const distribution = {
+      sealed: 0,
+      opened: 0,
+      loaded: 0,
+      inserted: 0,
+      faulty: 0,
+      disposed: 0,
+      discharged: 0,
+      deploymentFailure: 0,
+      // Legacy fallback counts (for backward compatibility display)
+      full: 0,
+      none: 0
+    };
+
     processedApplicators.forEach(app => {
-      if (app.usageType === 'full') distribution.full++;
-      else if (app.usageType === 'faulty') distribution.faulty++;
-      else if (app.usageType === 'none') distribution.none++;
+      // Use status field if available, otherwise fall back to usageType mapping
+      const status = app.status ||
+        (app.usageType === 'full' ? 'INSERTED' :
+         app.usageType === 'faulty' ? 'FAULTY' :
+         app.usageType === 'none' ? 'SEALED' : 'SEALED');
+
+      switch (status.toUpperCase()) {
+        case 'SEALED': distribution.sealed++; break;
+        case 'OPENED': distribution.opened++; break;
+        case 'LOADED': distribution.loaded++; break;
+        case 'INSERTED': distribution.inserted++; distribution.full++; break;
+        case 'FAULTY': distribution.faulty++; break;
+        case 'DISPOSED': distribution.disposed++; break;
+        case 'DISCHARGED': distribution.discharged++; break;
+        case 'DEPLOYMENT_FAILURE': distribution.deploymentFailure++; break;
+        default: distribution.sealed++; break;
+      }
+
+      // Map to legacy none count for backward compatibility
+      if (status.toUpperCase() === 'SEALED') distribution.none++;
     });
+
     return distribution;
   };
 

@@ -95,21 +95,31 @@ const ProgressTracker = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-700">Status Distribution</h4>
             <div className="grid grid-cols-1 gap-2">
-              <UsageTypeIndicator
-                type="INSERTED"
-                count={progressStats.usageTypeDistribution.full}
-                color="bg-green-400"
-              />
-              <UsageTypeIndicator
-                type="FAULTY/DISPOSED"
-                count={progressStats.usageTypeDistribution.faulty}
-                color="bg-gray-700"
-              />
-              <UsageTypeIndicator
-                type="SEALED"
-                count={progressStats.usageTypeDistribution.none}
-                color="bg-gray-400"
-              />
+              {/* Show all 8 statuses with count > 0 */}
+              {progressStats.usageTypeDistribution.sealed > 0 && (
+                <UsageTypeIndicator type="SEALED" count={progressStats.usageTypeDistribution.sealed} color="bg-gray-400" />
+              )}
+              {progressStats.usageTypeDistribution.opened > 0 && (
+                <UsageTypeIndicator type="OPENED" count={progressStats.usageTypeDistribution.opened} color="bg-blue-400" />
+              )}
+              {progressStats.usageTypeDistribution.loaded > 0 && (
+                <UsageTypeIndicator type="LOADED" count={progressStats.usageTypeDistribution.loaded} color="bg-purple-400" />
+              )}
+              {progressStats.usageTypeDistribution.inserted > 0 && (
+                <UsageTypeIndicator type="INSERTED" count={progressStats.usageTypeDistribution.inserted} color="bg-green-500" />
+              )}
+              {progressStats.usageTypeDistribution.faulty > 0 && (
+                <UsageTypeIndicator type="FAULTY" count={progressStats.usageTypeDistribution.faulty} color="bg-red-500" />
+              )}
+              {progressStats.usageTypeDistribution.disposed > 0 && (
+                <UsageTypeIndicator type="DISPOSED" count={progressStats.usageTypeDistribution.disposed} color="bg-gray-600" />
+              )}
+              {progressStats.usageTypeDistribution.discharged > 0 && (
+                <UsageTypeIndicator type="DISCHARGED" count={progressStats.usageTypeDistribution.discharged} color="bg-yellow-500" />
+              )}
+              {progressStats.usageTypeDistribution.deploymentFailure > 0 && (
+                <UsageTypeIndicator type="DEPLOYMENT FAILURE" count={progressStats.usageTypeDistribution.deploymentFailure} color="bg-orange-500" />
+              )}
             </div>
           </div>
         )}

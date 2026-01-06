@@ -67,7 +67,8 @@ const UseList = () => {
     checkEligibility();
   }, [currentTreatment?.id, currentTreatment?.isComplete, isOnline]);
 
-  // Fetch parent treatment if this is a continuation
+  // Fetch parent treatment info if this is a continuation (for display purposes only)
+  // NOTE: Parent applicator inheritance is handled by TreatmentDocumentation.tsx
   useEffect(() => {
     const fetchParent = async () => {
       if (currentTreatment?.parentTreatmentId && isOnline) {
@@ -473,8 +474,18 @@ const UseList = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {/* Deduplicate by serialNumber before rendering (Issue 5 fix) */}
+                  {/* Filter out DISPOSED applicators - they should be hidden from UseList */}
                   {Array.from(
-                    new Map(sortApplicatorsByStatus(processedApplicators).map(a => [a.serialNumber, a])).values()
+                    new Map(
+                      sortApplicatorsByStatus(processedApplicators)
+                        .filter(app => {
+                          const status = app.status ||
+                            (app.usageType === 'full' ? 'INSERTED' :
+                             app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+                          return status.toUpperCase() !== 'DISPOSED';
+                        })
+                        .map(a => [a.serialNumber, a])
+                    ).values()
                   ).map((applicator) => {
                       // Get effective status for color coding (fallback to usageType if status is null)
                       const effectiveStatus = applicator.status || (applicator.usageType === 'full' ? 'INSERTED' : applicator.usageType === 'faulty' ? 'FAULTY' : 'SEALED');

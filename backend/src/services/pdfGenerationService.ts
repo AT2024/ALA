@@ -138,8 +138,7 @@ function drawTable(
   headers.forEach((header, i) => {
     doc.text(header, headerX + cellPadding, currentY + cellPadding, {
       width: columnWidths[i] - cellPadding * 2,
-      height: rowHeight - cellPadding * 2,
-      ellipsis: true
+      height: rowHeight - cellPadding * 2
     });
     headerX += columnWidths[i];
   });
@@ -166,16 +165,13 @@ function drawTable(
     doc.strokeColor('#dddddd').lineWidth(0.5);
     doc.rect(startX, currentY, columnWidths.reduce((a, b) => a + b, 0), rowHeight).stroke();
 
-    // Draw cell text
+    // Draw cell text - no ellipsis with landscape layout providing adequate width
     doc.fillColor('black');
     let cellX = startX;
     row.forEach((cell, i) => {
-      // Don't truncate Serial (0) and Catalog (1) columns - they must show full values
-      const noEllipsis = i === 0 || i === 1;
       doc.text(cell, cellX + cellPadding, currentY + cellPadding, {
         width: columnWidths[i] - cellPadding * 2,
-        height: rowHeight - cellPadding * 2,
-        ellipsis: !noEllipsis
+        height: rowHeight - cellPadding * 2
       });
       cellX += columnWidths[i];
     });
@@ -247,6 +243,7 @@ export async function generateTreatmentPdf(
     try {
       const doc = new PDFDocument({
         size: 'A4',
+        layout: 'landscape',
         margins: { top: 50, bottom: 50, left: 50, right: 50 }
       });
 
@@ -361,21 +358,21 @@ export async function generateTreatmentPdf(
       const tableHeaders = ['Serial', 'Catalog', 'Type', 'Sources', 'Length', 'Time', 'Usage', 'Inserted', 'Comments'];
 
       // Dynamic column width calculation - proportional widths with minimums
-      // Available width for content (A4 = 595pt, margins 50pt each side = 495pt usable)
-      const CONTENT_WIDTH = 495;
+      // Available width for content (A4 landscape = 842pt, margins 50pt each side = 742pt usable)
+      const CONTENT_WIDTH = 742;
 
       // Column configurations with minimum widths and flex weights
-      // Catalog column increased for full PARTNAME values like "FLEX-00101-FG"
+      // Landscape mode provides 742pt - widths increased to show full content
       const columnConfig = [
-        { minWidth: 45, flex: 1.0 },   // Serial
-        { minWidth: 85, flex: 1.5 },   // Catalog - increased from 50/1.1 for full values
-        { minWidth: 65, flex: 1.1 },   // Type - reduced from 75/1.4
-        { minWidth: 25, flex: 0.5 },   // Seeds
-        { minWidth: 28, flex: 0.5 },   // Length
-        { minWidth: 50, flex: 0.9 },   // Time
-        { minWidth: 35, flex: 0.6 },   // Usage
-        { minWidth: 32, flex: 0.5 },   // Inserted
-        { minWidth: 45, flex: 0.9 }    // Comments - reduced from 55/1.3
+        { minWidth: 70, flex: 1.0 },   // Serial - full serial numbers
+        { minWidth: 100, flex: 1.2 },  // Catalog - FLEX-00101-FG etc
+        { minWidth: 110, flex: 1.3 },  // Type - "Alpha Flex Applicator"
+        { minWidth: 45, flex: 0.6 },   // Sources
+        { minWidth: 45, flex: 0.6 },   // Length
+        { minWidth: 100, flex: 1.1 },  // Time - "06.Jan.2026 10:41"
+        { minWidth: 55, flex: 0.7 },   // Usage - "Full use"
+        { minWidth: 50, flex: 0.6 },   // Inserted
+        { minWidth: 100, flex: 1.2 }   // Comments - user notes
       ];
 
       // Calculate dynamic column widths

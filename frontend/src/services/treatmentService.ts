@@ -272,20 +272,20 @@ export const treatmentService = {
   // Create a continuation treatment linked to the parent
   async createContinuation(treatmentId: string): Promise<Treatment> {
     const response = await api.post(`/treatments/${treatmentId}/continue`);
-    return response.data;
+    return response.data.treatment;
   },
 
   // Get all continuation treatments for a parent treatment
   async getContinuations(treatmentId: string): Promise<Treatment[]> {
     const response = await api.get(`/treatments/${treatmentId}/continuations`);
-    return response.data;
+    return response.data.continuations;
   },
 
   // Get the parent treatment for a continuation
   async getParentTreatment(treatmentId: string): Promise<Treatment | null> {
     try {
       const response = await api.get(`/treatments/${treatmentId}/parent`);
-      return response.data;
+      return response.data.parentTreatment;
     } catch (error) {
       return null;
     }

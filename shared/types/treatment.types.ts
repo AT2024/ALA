@@ -93,8 +93,17 @@ export interface ProgressStats {
   insertedSeeds: number;
   completionPercentage: number;
   usageTypeDistribution: {
-    full: number;
+    // 8-state workflow statuses
+    sealed: number;
+    opened: number;
+    loaded: number;
+    inserted: number;
     faulty: number;
+    disposed: number;
+    discharged: number;
+    deploymentFailure: number;
+    // Legacy fallback counts (for backward compatibility)
+    full: number;
     none: number;
   };
   seedsRemaining: number;

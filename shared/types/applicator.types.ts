@@ -81,6 +81,10 @@ export interface Applicator {
 
   // Package label for pancreas/prostate treatments
   package_label?: string;
+
+  // Continuation treatment tracking
+  /** Indicates this applicator was inherited from a parent treatment (continuation workflow) */
+  fromParentTreatment?: boolean;
 }
 
 /**

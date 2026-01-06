@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useOffline } from '@/context/OfflineContext';
 import applicatorService, { ApplicatorValidationResult } from '@/services/applicatorService';
 import { priorityService } from '@/services/priorityService';
+import { treatmentService } from '@/services/treatmentService';
 import { offlineDb, OfflineApplicator } from '@/services/indexedDbService';
 import ProgressTracker from '@/components/ProgressTracker';
 import { generateUUID } from '@/utils/uuid';
@@ -258,7 +259,71 @@ const TreatmentDocumentation = () => {
       );
 
       if (response.success) {
-        const applicators = response.applicators || [];
+        let applicators = response.applicators || [];
+
+        // For continuation treatments:
+        // 1. Filter out TERMINAL applicators (INSERTED, FAULTY, etc.) from available count
+        // 2. Add REUSABLE applicators (OPENED, LOADED) to processedApplicators and availableApplicators
+        if (currentTreatment.parentTreatmentId) {
+          try {
+            const parentApplicators = await treatmentService.getApplicators(currentTreatment.parentTreatmentId);
+
+            // Identify terminal vs reusable applicators
+            // CONSERVATIVE: Only treat as reusable if EXPLICITLY has OPENED or LOADED status
+            const isReusable = (app: any) => {
+              // If status is null/undefined, we cannot determine if it's reusable
+              // This prevents DISPOSED applicators (with null status but usageType='none') from being treated as reusable
+              if (!app.status) {
+                return false;
+              }
+              return ['OPENED', 'LOADED'].includes(app.status.toUpperCase());
+            };
+
+            const reusableApplicators = parentApplicators.filter(isReusable);
+            // Note: terminalApplicators = parentApplicators that are NOT reusable (they're implicitly filtered below)
+
+            // Filter out ALL applicators that exist in parent treatment (both terminal AND reusable)
+            // This prevents duplicates - reusable ones will be added back via inherited mapping with correct status
+            const allParentSerialNumbers = new Set(
+              parentApplicators.map((app: any) => (app.serialNumber || '').toUpperCase())
+            );
+
+            const filteredCount = applicators.length;
+            applicators = applicators.filter(
+              (app: any) => !allParentSerialNumbers.has((app.serialNumber || '').toUpperCase())
+            );
+
+            console.log(`[CONTINUATION] Filtered out ${filteredCount - applicators.length} parent treatment applicators from Priority list`);
+
+            // Add REUSABLE applicators to processedApplicators (UseList) and availableApplicators (Choose from List)
+            if (reusableApplicators.length > 0 && processedApplicators.length === 0) {
+              const inherited = reusableApplicators.map((app: any) => ({
+                id: app.id || app.serialNumber,
+                serialNumber: app.serialNumber,
+                applicatorType: app.applicatorType || '',
+                seedQuantity: app.seedQuantity || 0,
+                usageType: 'none' as const, // Not yet used in this treatment
+                insertionTime: app.insertionTime || new Date().toISOString(),
+                insertedSeedsQty: 0,
+                comments: '',
+                status: app.status, // Preserve OPENED/LOADED status
+                fromParentTreatment: true,
+                patientId: currentTreatment.subjectId // Required for getFilteredAvailableApplicators filter
+              }));
+
+              // Add to processedApplicators for UseList display
+              setProcessedApplicators(inherited);
+
+              // Add to availableApplicators for "Choose from List"
+              inherited.forEach((app: any) => addAvailableApplicator(app));
+
+              console.log(`[CONTINUATION] Added ${inherited.length} reusable applicators (OPENED/LOADED) from parent`);
+            }
+          } catch (err) {
+            console.error('Failed to fetch parent applicators for filtering:', err);
+            // Continue with unfiltered applicators if parent fetch fails
+          }
+        }
 
         // Add each applicator to the context
         applicators.forEach((applicator: any) => {

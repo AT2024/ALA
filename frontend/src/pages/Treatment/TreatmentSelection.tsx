@@ -4,11 +4,12 @@ import { format, addDays, subDays } from 'date-fns';
 import { Combobox } from '@headlessui/react';
 import { WifiOff } from 'lucide-react';
 import Layout from '@/components/Layout';
+import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
 import { useTreatment } from '@/context/TreatmentContext';
 import { useAuth } from '@/context/AuthContext';
 import { useOffline } from '@/context/OfflineContext';
 import { priorityService } from '@/services/priorityService';
-import { treatmentService } from '@/services/treatmentService';
+import { treatmentService, type Treatment, type ContinuationEligibility } from '@/services/treatmentService';
 import api from '@/services/api';
 
 // Priority system integration - no more mock data needed
@@ -74,6 +75,12 @@ const TreatmentSelection = () => {
   const [removalCandidate, setRemovalCandidate] = useState<RemovalCandidate | null>(null);
   const [searchingTreatment, setSearchingTreatment] = useState(false);
   const [treatmentSearched, setTreatmentSearched] = useState(false);
+
+  // Treatment continuation state
+  const [showContinuationModal, setShowContinuationModal] = useState(false);
+  const [existingTreatment, setExistingTreatment] = useState<Treatment | null>(null);
+  const [continuationEligibility, setContinuationEligibility] = useState<ContinuationEligibility | null>(null);
+  const [continuationLoading, setContinuationLoading] = useState(false);
 
   // Load available sites and set default site based on user
   useEffect(() => {
@@ -379,7 +386,7 @@ const TreatmentSelection = () => {
     return formData.date === format(compareDate, 'dd.MMM.yyyy');
   };
 
-  const handlePatientSelection = (patientId: string) => {
+  const handlePatientSelection = async (patientId: string) => {
     const selectedPatient = availablePatients.find(p => p.id === patientId);
 
     if (selectedPatient) {
@@ -389,6 +396,11 @@ const TreatmentSelection = () => {
         seedQty: selectedPatient.seedQty.toString(),
         activityPerSeed: selectedPatient.activityPerSeed.toString()
       }));
+
+      // Check for existing continuable treatments (insertion only, when online)
+      if (procedureType === 'insertion' && isOnline && formData.site) {
+        await checkForContinuableTreatments(selectedPatient.id, formData.site);
+      }
     }
   };
   
@@ -409,6 +421,71 @@ const TreatmentSelection = () => {
       console.error('Error converting date:', error);
       return new Date().toISOString().split('T')[0]; // fallback to today
     }
+  };
+
+  // Check for existing continuable treatments for a patient
+  const checkForContinuableTreatments = async (patientId: string, site: string) => {
+    // Only check for insertion procedures when online
+    if (procedureType !== 'insertion' || !isOnline) {
+      return;
+    }
+
+    try {
+      // Get completed treatments for this patient and site
+      const treatments = await treatmentService.getTreatments({
+        subjectId: patientId,
+        site: site,
+        type: 'insertion'
+      });
+
+      // Filter for completed treatments and check continuability
+      const completedTreatments = treatments.filter((t: Treatment) => t.isComplete);
+
+      for (const treatment of completedTreatments) {
+        try {
+          const eligibility = await treatmentService.checkContinuable(treatment.id);
+          if (eligibility.canContinue) {
+            // Found a continuable treatment - show modal
+            setExistingTreatment(treatment);
+            setContinuationEligibility(eligibility);
+            setShowContinuationModal(true);
+            return; // Only show one (most recent will be first)
+          }
+        } catch (err) {
+          console.error('Error checking continuation eligibility:', err);
+        }
+      }
+    } catch (err) {
+      // Network error - silently allow new treatment (can't verify)
+      console.error('Error checking for continuable treatments:', err);
+    }
+  };
+
+  // Handler: Continue an existing treatment
+  const handleContinueTreatment = async () => {
+    if (!existingTreatment) return;
+
+    setContinuationLoading(true);
+    try {
+      const continuation = await treatmentService.createContinuation(existingTreatment.id);
+      setTreatment(continuation);
+      setShowContinuationModal(false);
+      navigate('/treatment/scan');
+    } catch (err: any) {
+      console.error('Failed to create continuation:', err);
+      setError(err.response?.data?.message || 'Failed to create continuation treatment');
+    } finally {
+      setContinuationLoading(false);
+    }
+  };
+
+  // Handler: Go back (cancel continuation, clear patient selection)
+  const handleGoBack = () => {
+    setShowContinuationModal(false);
+    setExistingTreatment(null);
+    setContinuationEligibility(null);
+    // Clear patient selection so user can choose a different patient
+    setFormData(prev => ({ ...prev, patientId: '', seedQty: '', activityPerSeed: '' }));
   };
 
   // Removal workflow: Search for treatment by number
@@ -983,6 +1060,24 @@ const TreatmentSelection = () => {
             <li>• Sites shown based on your Priority access level (POSITIONCODE)</li>
           </ul>
         </div>
+
+        {/* Treatment Continuation Modal */}
+        <ConfirmationDialog
+          isOpen={showContinuationModal}
+          onClose={handleGoBack}
+          onConfirm={handleContinueTreatment}
+          title="Existing Treatment Found"
+          message={`A treatment for patient ${existingTreatment?.subjectId || ''} was completed and can be continued.
+
+Time Remaining: ${Math.floor(continuationEligibility?.hoursRemaining || 0)} hours
+Reusable Applicators: ${continuationEligibility?.reusableApplicatorCount || 0}
+Treatment Date: ${existingTreatment?.date || ''}
+Surgeon: ${existingTreatment?.surgeon || ''}`}
+          type="info"
+          confirmText="Continue Treatment"
+          cancelText="Go Back"
+          loading={continuationLoading}
+        />
       </div>
     </Layout>
   );

@@ -975,8 +975,50 @@ export const applicatorService = {
         priorityResult: prioritySaveResult
       });
 
-      // STEP 5: Create the applicator in local database with transaction
-      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 5: Creating local database record`);
+      // STEP 5: Create or Update applicator in local database with transaction (UPSERT logic)
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Step 5: Checking for existing applicator`);
+
+      // Check if applicator already exists for this treatment (prevents duplicates)
+      const existingApplicator = await Applicator.findOne({
+        where: { treatmentId: treatment.id, serialNumber: transformedData.serialNumber },
+        transaction
+      });
+
+      if (existingApplicator) {
+        // UPDATE existing record instead of creating duplicate
+        logger.info(`[APPLICATOR_SERVICE] [${requestId}] Found existing applicator, updating instead of creating`, {
+          existingId: existingApplicator.id,
+          oldStatus: existingApplicator.status,
+          newStatus: transformedData.status
+        });
+
+        // Log status change to audit trail (reuses existing logStatusChange function)
+        if (transformedData.status && transformedData.status !== existingApplicator.status) {
+          await logStatusChange(
+            existingApplicator.id,
+            existingApplicator.status,
+            transformedData.status,
+            userId,
+            transformedData.comments,
+            requestId
+          );
+        }
+
+        await existingApplicator.update(transformedData, { transaction });
+        await Treatment.update({ lastActivityAt: new Date() }, { where: { id: treatment.id }, transaction });
+
+        logger.info(`[APPLICATOR_SERVICE] [${requestId}] Successfully updated existing applicator`, {
+          treatmentId: treatment.id,
+          applicatorId: existingApplicator.id,
+          serialNumber: transformedData.serialNumber,
+          status: transformedData.status
+        });
+
+        return existingApplicator;
+      }
+
+      // CREATE new applicator (existing code path for new applicators)
+      logger.debug(`[APPLICATOR_SERVICE] [${requestId}] Creating new local database record`);
       const dbData = {
         ...transformedData,
         treatmentId: treatment.id,
