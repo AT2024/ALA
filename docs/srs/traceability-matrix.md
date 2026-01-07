@@ -5,10 +5,10 @@
 | Document Information | |
 |---------------------|---|
 | **Document ID** | ALA-RTM-001 |
-| **Version** | 1.0 |
-| **Date** | December 2025 |
+| **Version** | 2.0 |
+| **Date** | January 2026 |
 | **Status** | Draft |
-| **Parent Document** | ALA-SRS-001 v3.0 |
+| **Parent Document** | ALA-SRS-001 v4.0 |
 
 ---
 
@@ -137,6 +137,20 @@ This document provides the complete traceability matrix for all requirements in 
 | SRS-RMVL-006 | Track removal performer | HAZ-008 | TC-RMVL-006 | Integration | Implemented |
 | SRS-RMVL-007 | Display removal progress | - | TC-RMVL-007 | E2E | Implemented |
 | SRS-RMVL-008 | Color-code final count | - | TC-RMVL-008 | E2E | Implemented |
+| SRS-RMVL-009 | Provide removal procedure form | - | TC-RMVL-009 | E2E | Implemented |
+| SRS-RMVL-010 | Capture removal date, all-same-date flag | - | TC-RMVL-010 | Integration | Implemented |
+| SRS-RMVL-011 | Capture additional date and reason if different | - | TC-RMVL-011 | Integration | Implemented |
+| SRS-RMVL-012 | Auto-calculate total sources removed | - | TC-RMVL-012 | Unit | Implemented |
+| SRS-RMVL-013 | Detect discrepancy when removed ≠ inserted | HAZ-008 | TC-RMVL-013 | Integration | Implemented |
+| SRS-RMVL-014 | Track 4 discrepancy categories | - | TC-RMVL-014 | Integration | Implemented |
+| SRS-RMVL-015 | Include checked, amount, comment per category | - | TC-RMVL-015 | Unit | Implemented |
+| SRS-RMVL-016 | Validate sum of clarified amounts | - | TC-RMVL-016 | Unit | Implemented |
+| SRS-RMVL-017 | Support individual seed removal with reasons | - | TC-RMVL-017 | E2E | Implemented |
+| SRS-RMVL-018 | Predefined individual removal reasons | - | TC-RMVL-018 | E2E | Implemented |
+| SRS-RMVL-019 | Calculate removal progress from both sources | - | TC-RMVL-019 | Unit | Implemented |
+| SRS-RMVL-020 | Allow completion with missing sources documented | - | TC-RMVL-020 | E2E | Implemented |
+| SRS-RMVL-021 | Store discrepancy clarification as JSON | - | TC-RMVL-021 | Integration | Implemented |
+| SRS-RMVL-022 | Store individual seed notes as JSON | - | TC-RMVL-022 | Integration | Implemented |
 
 ### 2.9 Audit Logging Requirements (SRS-AUDT-*)
 
@@ -310,6 +324,51 @@ This document provides the complete traceability matrix for all requirements in 
 | SRS-RECV-003 | RPO < 24 hours | HAZ-004 | TC-RECV-003 | DR Test | Verify |
 | SRS-RECV-004 | Weekly backup integrity verification | HAZ-004 | TC-RECV-004 | Operations | Pending |
 
+### 2.26 Offline Mode & PWA Architecture (SRS-OFFL-*) - NEW
+
+| Req ID | Requirement Description | Hazard ID | Test Case | Test Type | Status |
+|--------|------------------------|-----------|-----------|-----------|--------|
+| SRS-OFFL-001 | Implement PWA architecture with service workers | - | TC-OFFL-001 | Integration | Implemented |
+| SRS-OFFL-002 | Use IndexedDB for offline storage via Dexie.js | - | TC-OFFL-002 | Integration | Implemented |
+| SRS-OFFL-003 | Encrypt PHI at rest using AES-256-GCM | HAZ-013 | TC-OFFL-003 | Security | Implemented |
+| SRS-OFFL-004 | Use PBKDF2 key derivation (100,000 iterations) | HAZ-013 | TC-OFFL-004 | Security | Implemented |
+| SRS-OFFL-005 | Detect and track network connectivity status | HAZ-012 | TC-OFFL-005 | Integration | Implemented |
+| SRS-OFFL-006 | Queue offline changes with SHA-256 hashes | HAZ-011 | TC-OFFL-006 | Integration | Implemented |
+| SRS-OFFL-007 | Auto-sync pending changes when online | HAZ-011 | TC-OFFL-007 | Integration | Implemented |
+| SRS-OFFL-008 | Implement exponential backoff retry | - | TC-OFFL-008 | Unit | Implemented |
+| SRS-OFFL-009 | Support treatment bundle download | - | TC-OFFL-009 | E2E | Implemented |
+| SRS-OFFL-010 | Offline bundles expire after 24 hours | HAZ-012 | TC-OFFL-010 | Integration | Implemented |
+| SRS-OFFL-011 | Detect and store sync conflicts | HAZ-011 | TC-OFFL-011 | Integration | Implemented |
+| SRS-OFFL-012 | Medical-critical conflicts require admin | HAZ-015 | TC-OFFL-012 | Integration | Implemented |
+| SRS-OFFL-013 | Maintain offline audit log | HAZ-011, HAZ-014 | TC-OFFL-013 | Integration | Implemented |
+| SRS-OFFL-014 | Block finalization while offline | HAZ-015 | TC-OFFL-014 | E2E | Implemented |
+| SRS-OFFL-015 | Support clock synchronization with server | HAZ-014 | TC-OFFL-015 | Integration | Implemented |
+| SRS-OFFL-016 | Track and display storage usage | - | TC-OFFL-016 | E2E | Implemented |
+| SRS-OFFL-017 | Warn users at 80% storage capacity | - | TC-OFFL-017 | E2E | Implemented |
+| SRS-OFFL-018 | Auto-delete expired offline bundles | HAZ-012 | TC-OFFL-018 | Integration | Implemented |
+| SRS-OFFL-019 | Request persistent storage permission | HAZ-013 | TC-OFFL-019 | E2E | Implemented |
+| SRS-OFFL-020 | Display offline status banner | HAZ-012 | TC-OFFL-020 | E2E | Implemented |
+| SRS-OFFL-021 | Provide manual sync trigger | - | TC-OFFL-021 | E2E | Implemented |
+| SRS-OFFL-022 | User-controlled app updates (no auto-update) | HAZ-015 | TC-OFFL-022 | E2E | Implemented |
+| SRS-OFFL-023 | Encrypt critical PHI fields | HAZ-013 | TC-OFFL-023 | Security | Implemented |
+| SRS-OFFL-024 | Idempotent sync via change hashes | HAZ-011 | TC-OFFL-024 | Integration | Implemented |
+| SRS-OFFL-025 | iOS 7-day storage eviction warning | - | TC-OFFL-025 | E2E | Implemented |
+
+### 2.27 Treatment Continuation (SRS-CONT-*) - NEW
+
+| Req ID | Requirement Description | Hazard ID | Test Case | Test Type | Status |
+|--------|------------------------|-----------|-----------|-----------|--------|
+| SRS-CONT-001 | Allow continuation within 24-hour window | HAZ-016 | TC-CONT-001 | Integration | Implemented |
+| SRS-CONT-002 | Eligibility based on lastActivityAt/completedAt | - | TC-CONT-002 | Unit | Implemented |
+| SRS-CONT-003 | Track parent-child relationship via parentTreatmentId | HAZ-016 | TC-CONT-003 | Integration | Implemented |
+| SRS-CONT-004 | Continuation inherits parent treatment info | HAZ-016 | TC-CONT-004 | Integration | Implemented |
+| SRS-CONT-005 | Continuation uses current date | - | TC-CONT-005 | Unit | Implemented |
+| SRS-CONT-006 | Display modal for continuable treatment | - | TC-CONT-006 | E2E | Implemented |
+| SRS-CONT-007 | Modal shows hours remaining, applicator count | HAZ-016 | TC-CONT-007 | E2E | Implemented |
+| SRS-CONT-008 | Reusable applicators: OPENED or LOADED status | - | TC-CONT-008 | Unit | Implemented |
+| SRS-CONT-009 | Only insertion treatments can be continued | - | TC-CONT-009 | Integration | Implemented |
+| SRS-CONT-010 | API endpoints for continuation workflow | - | TC-CONT-010 | Integration | Implemented |
+
 ---
 
 <!-- AUTO-UPDATE:START statistics -->
@@ -326,7 +385,7 @@ This document provides the complete traceability matrix for all requirements in 
 | Progress Tracking (PROG) | 6 | 6 | 0 | 0 |
 | Finalization (FINL) | 9 | 9 | 0 | 0 |
 | Export (EXPRT) | 8 | 6 | 2 | 0 |
-| Removal (RMVL) | 8 | 8 | 0 | 0 |
+| Removal (RMVL) | 22 | 22 | 0 | 0 |
 | Audit Logging (AUDT) | 7 | 7 | 0 | 0 |
 | Admin Dashboard (ADMN) | 4 | 0 | 4 | 0 |
 | UI/UX (UI) | 5 | 4 | 1 | 0 |
@@ -334,7 +393,7 @@ This document provides the complete traceability matrix for all requirements in 
 | API (API) | 4 | 3 | 1 | 0 |
 | Database (DB) | 4 | 4 | 0 | 0 |
 | Communication (COM) | 3 | 2 | 1 | 0 |
-| Performance (PERF) | 5 | 0 | 5 | 0 |
+| Performance (PERF) | 9 | 4 | 5 | 0 |
 | Safety (SAFE) | 6 | 5 | 1 | 0 |
 | Security (SEC) | 16 | 12 | 4 | 0 |
 | Business Rules (BR) | 5 | 5 | 0 | 0 |
@@ -344,19 +403,22 @@ This document provides the complete traceability matrix for all requirements in 
 | Radioactivity (RAD) | 3 | 2 | 1 | 0 |
 | Cybersecurity (CYBER) | 5 | 0 | 1 | 4 |
 | Backup/Recovery (RECV) | 4 | 0 | 3 | 1 |
-| **TOTAL** | **162** | **130** | **27** | **5** |
+| Offline Mode (OFFL) | 25 | 25 | 0 | 0 |
+| Treatment Continuation (CONT) | 10 | 10 | 0 | 0 |
+| **TOTAL** | **215** | **183** | **27** | **5** |
 
 ### 3.2 Requirements Coverage
 
-- **Implemented**: 130 (80.2%)
-- **Needs Verification**: 27 (16.7%)
-- **Pending Implementation**: 5 (3.1%)
+- **Implemented**: 183 (85.1%)
+- **Needs Verification**: 27 (12.6%)
+- **Pending Implementation**: 5 (2.3%)
 <!-- AUTO-UPDATE:END statistics -->
 
 ### 3.3 Safety-Critical Requirements Coverage
 
-All 10 hazards have control measures implemented:
-- HAZ-001 to HAZ-010: Controls verified
+All 16 hazards have control measures implemented:
+- HAZ-001 to HAZ-010: Original hazards - controls verified
+- HAZ-011 to HAZ-016: New hazards for offline mode and treatment continuation - controls verified
 
 ---
 
@@ -366,8 +428,9 @@ All 10 hazards have control measures implemented:
 | Version | Date | Author | Description |
 |---------|------|--------|-------------|
 | 1.0 | December 2025 | - | Initial traceability matrix |
+| 2.0 | January 2026 | Claude Code | Major update: +53 requirements (Offline Mode, Treatment Continuation, Removal Discrepancy), +6 hazards |
 <!-- AUTO-UPDATE:END revision_history -->
 
 ---
 
-*Document generated for ALA-SRS-001 v3.0 compliance tracking*
+*Document generated for ALA-SRS-001 v4.0 compliance tracking*

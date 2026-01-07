@@ -5,10 +5,10 @@
 | Document Information | |
 |---------------------|---|
 | **Document ID** | ALA-HA-001 |
-| **Version** | 1.0 |
-| **Date** | December 2025 |
+| **Version** | 2.0 |
+| **Date** | January 2026 |
 | **Status** | Draft |
-| **Parent Document** | ALA-SRS-001 v3.0 |
+| **Parent Document** | ALA-SRS-001 v4.0 |
 | **Standard Reference** | ISO 14971:2019 |
 
 ---
@@ -338,6 +338,153 @@ The system does not directly cause patient harm but could contribute to hazardou
 
 ---
 
+### HAZ-011: Data Loss During Offline Sync (NEW)
+
+| Attribute | Value |
+|-----------|-------|
+| **Hazard ID** | HAZ-011 |
+| **Hazard Description** | Offline changes lost or corrupted during synchronization with server |
+| **Hazardous Situation** | Treatment data recorded offline not properly saved to server |
+| **Potential Harm** | Incomplete treatment records, regulatory non-compliance |
+| **Severity** | 4 (Major) |
+| **Initial Probability** | 2 (Unlikely) |
+| **Initial Risk** | Medium |
+
+**Risk Control Measures:**
+| Control ID | Control Measure | Type | Related Requirements |
+|------------|-----------------|------|----------------------|
+| RC-011-A | Queue offline changes with SHA-256 integrity hashes | Inherent Safety | SRS-OFFL-006 |
+| RC-011-B | Detect and store sync conflicts for resolution | Protective Measure | SRS-OFFL-011 |
+| RC-011-C | Support idempotent sync to prevent duplicates | Protective Measure | SRS-OFFL-024 |
+| RC-011-D | Maintain offline audit log | Protective Measure | SRS-OFFL-013 |
+
+**Residual Risk:**
+- Severity: 4 | Probability: 1 | Risk Level: **Medium (Acceptable with ALARP)**
+
+---
+
+### HAZ-012: Stale Offline Data Used in Treatment (NEW)
+
+| Attribute | Value |
+|-----------|-------|
+| **Hazard ID** | HAZ-012 |
+| **Hazard Description** | Outdated offline data used for treatment decisions |
+| **Hazardous Situation** | Treatment decisions based on expired or superseded data |
+| **Potential Harm** | Incorrect treatment documentation, potential patient safety issues |
+| **Severity** | 3 (Moderate) |
+| **Initial Probability** | 2 (Unlikely) |
+| **Initial Risk** | Medium |
+
+**Risk Control Measures:**
+| Control ID | Control Measure | Type | Related Requirements |
+|------------|-----------------|------|----------------------|
+| RC-012-A | Enforce 24-hour bundle expiry | Inherent Safety | SRS-OFFL-010 |
+| RC-012-B | Auto-delete expired offline bundles | Protective Measure | SRS-OFFL-018 |
+| RC-012-C | Display offline status banner | Information | SRS-OFFL-020 |
+| RC-012-D | Sync clock with server | Protective Measure | SRS-OFFL-015 |
+
+**Residual Risk:**
+- Severity: 3 | Probability: 1 | Risk Level: **Low (Acceptable)**
+
+---
+
+### HAZ-013: Unauthorized Offline PHI Access (NEW)
+
+| Attribute | Value |
+|-----------|-------|
+| **Hazard ID** | HAZ-013 |
+| **Hazard Description** | Protected Health Information accessed by unauthorized party from offline storage |
+| **Hazardous Situation** | PHI stored in IndexedDB accessed without authentication |
+| **Potential Harm** | HIPAA violation, patient privacy breach |
+| **Severity** | 4 (Major) |
+| **Initial Probability** | 2 (Unlikely) |
+| **Initial Risk** | Medium |
+
+**Risk Control Measures:**
+| Control ID | Control Measure | Type | Related Requirements |
+|------------|-----------------|------|----------------------|
+| RC-013-A | Encrypt PHI at rest using AES-256-GCM | Inherent Safety | SRS-OFFL-003 |
+| RC-013-B | Use PBKDF2 key derivation with 100,000 iterations | Protective Measure | SRS-OFFL-004 |
+| RC-013-C | Encrypt critical fields (patientName, subjectId, surgeon, etc.) | Protective Measure | SRS-OFFL-023 |
+| RC-013-D | Request persistent storage permission | Protective Measure | SRS-OFFL-019 |
+
+**Residual Risk:**
+- Severity: 4 | Probability: 1 | Risk Level: **Medium (Acceptable with ALARP)**
+
+---
+
+### HAZ-014: Clock Skew Causing Timestamp Errors (NEW)
+
+| Attribute | Value |
+|-----------|-------|
+| **Hazard ID** | HAZ-014 |
+| **Hazard Description** | Device clock drift causes incorrect timestamps on treatment records |
+| **Hazardous Situation** | Treatment timestamps inaccurate, affecting medical record integrity |
+| **Potential Harm** | Incorrect treatment timing documentation |
+| **Severity** | 2 (Minor) |
+| **Initial Probability** | 3 (Possible) |
+| **Initial Risk** | Low |
+
+**Risk Control Measures:**
+| Control ID | Control Measure | Type | Related Requirements |
+|------------|-----------------|------|----------------------|
+| RC-014-A | Sync clock with server (5-minute tolerance) | Inherent Safety | SRS-OFFL-015 |
+| RC-014-B | Record both offline timestamp and sync timestamp | Protective Measure | SRS-OFFL-013 |
+
+**Residual Risk:**
+- Severity: 2 | Probability: 1 | Risk Level: **Low (Acceptable)**
+
+---
+
+### HAZ-015: Treatment Finalized Offline Without Verification (NEW)
+
+| Attribute | Value |
+|-----------|-------|
+| **Hazard ID** | HAZ-015 |
+| **Hazard Description** | Treatment marked complete while offline without proper signature verification |
+| **Hazardous Situation** | Treatment finalized without required digital signature |
+| **Potential Harm** | Invalid treatment records, regulatory non-compliance |
+| **Severity** | 4 (Major) |
+| **Initial Probability** | 1 (Rare) |
+| **Initial Risk** | Medium |
+
+**Risk Control Measures:**
+| Control ID | Control Measure | Type | Related Requirements |
+|------------|-----------------|------|----------------------|
+| RC-015-A | Block treatment finalization while offline | Inherent Safety | SRS-OFFL-014 |
+| RC-015-B | Medical-critical status conflicts require admin resolution | Protective Measure | SRS-OFFL-012 |
+| RC-015-C | User-controlled app updates (no auto-update during treatment) | Protective Measure | SRS-OFFL-022 |
+
+**Residual Risk:**
+- Severity: 4 | Probability: 1 | Risk Level: **Medium (Acceptable with ALARP)**
+
+---
+
+### HAZ-016: Continuation on Wrong Patient (NEW)
+
+| Attribute | Value |
+|-----------|-------|
+| **Hazard ID** | HAZ-016 |
+| **Hazard Description** | Continuation treatment created for wrong patient or wrong parent treatment |
+| **Hazardous Situation** | New treatment linked to incorrect parent, documenting applicators for wrong patient |
+| **Potential Harm** | Incorrect patient documentation, potential patient safety risk |
+| **Severity** | 5 (Catastrophic) |
+| **Initial Probability** | 1 (Rare) |
+| **Initial Risk** | Medium |
+
+**Risk Control Measures:**
+| Control ID | Control Measure | Type | Related Requirements |
+|------------|-----------------|------|----------------------|
+| RC-016-A | Track parent-child relationship via parentTreatmentId | Inherent Safety | SRS-CONT-003 |
+| RC-016-B | Inherit patient info from parent treatment | Protective Measure | SRS-CONT-004 |
+| RC-016-C | Require same patient + site for continuation | Protective Measure | SRS-CONT-001 |
+| RC-016-D | Display parent treatment details in confirmation modal | Information | SRS-CONT-007 |
+
+**Residual Risk:**
+- Severity: 5 | Probability: 1 | Risk Level: **Medium (Acceptable with ALARP)**
+
+---
+
 ## 4. Risk Summary
 
 ### 4.1 Risk Overview
@@ -354,6 +501,12 @@ The system does not directly cause patient harm but could contribute to hazardou
 | HAZ-008 | Wrong removal treatment | Medium | Medium | ALARP |
 | HAZ-009 | Session hijacking | Medium | Low | Acceptable |
 | HAZ-010 | Brute force attack | Low | Low | Acceptable |
+| HAZ-011 | Data loss during offline sync | Medium | Medium | ALARP |
+| HAZ-012 | Stale offline data | Medium | Low | Acceptable |
+| HAZ-013 | Unauthorized offline PHI access | Medium | Medium | ALARP |
+| HAZ-014 | Clock skew timestamp errors | Low | Low | Acceptable |
+| HAZ-015 | Offline finalization | Medium | Medium | ALARP |
+| HAZ-016 | Continuation wrong patient | Medium | Medium | ALARP |
 
 ### 4.2 Benefit-Risk Analysis
 
@@ -377,6 +530,12 @@ All identified hazards have been reduced to acceptable or ALARP levels through t
 | HAZ-008 | SRS-RMVL-001, SRS-TSEL-007, SRS-RMVL-002, SRS-RMVL-006 |
 | HAZ-009 | SRS-AUTH-007, SRS-SEC-016, SRS-SEC-011, SRS-AUTH-013 |
 | HAZ-010 | SRS-SEC-003, SRS-AUTH-004, SRS-AUTH-008, SRS-AUTH-005 |
+| HAZ-011 | SRS-OFFL-006, SRS-OFFL-011, SRS-OFFL-024, SRS-OFFL-013 |
+| HAZ-012 | SRS-OFFL-010, SRS-OFFL-018, SRS-OFFL-020, SRS-OFFL-015 |
+| HAZ-013 | SRS-OFFL-003, SRS-OFFL-004, SRS-OFFL-023, SRS-OFFL-019 |
+| HAZ-014 | SRS-OFFL-015, SRS-OFFL-013 |
+| HAZ-015 | SRS-OFFL-014, SRS-OFFL-012, SRS-OFFL-022 |
+| HAZ-016 | SRS-CONT-003, SRS-CONT-004, SRS-CONT-001, SRS-CONT-007 |
 
 ### 5.2 Safety-Critical Requirements
 
@@ -390,6 +549,10 @@ The following requirements are classified as safety-critical based on their role
 | SRS-AUTH-007 | HttpOnly secure cookies | HAZ-003, HAZ-009 |
 | SRS-FINL-009 | Immutable finalized treatments | HAZ-007 |
 | SRS-SEC-003 | Rate limiting on auth | HAZ-003, HAZ-010 |
+| SRS-OFFL-003 | Encrypt PHI at rest using AES-256-GCM | HAZ-013 |
+| SRS-OFFL-006 | Queue offline changes with SHA-256 integrity hashes | HAZ-011 |
+| SRS-OFFL-014 | Block treatment finalization while offline | HAZ-015 |
+| SRS-CONT-003 | Track parent-child treatment relationship | HAZ-016 |
 
 ---
 
@@ -398,6 +561,7 @@ The following requirements are classified as safety-critical based on their role
 | Version | Date | Author | Description |
 |---------|------|--------|-------------|
 | 1.0 | December 2025 | - | Initial hazard analysis |
+| 2.0 | January 2026 | - | Added HAZ-011 to HAZ-016 for Offline Mode and Treatment Continuation features |
 
 ---
 

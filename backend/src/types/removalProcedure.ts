@@ -31,7 +31,10 @@ export interface RemovalProcedureData {
   discrepancyClarification?: DiscrepancyClarification;
   individualSeedsRemoved: number;
   individualSeedNotes: IndividualSeedNote[];
+  topGeneralComments?: string;
   removalGeneralComments?: string;
+  groupComments?: Record<number, string>;
+  individualSeedComment?: string;
 }
 
 // Validation helper
