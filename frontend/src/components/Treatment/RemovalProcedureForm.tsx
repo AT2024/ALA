@@ -6,6 +6,8 @@ interface RemovalProcedureFormProps {
   totalSourcesRemoved: number;
   insertedSources: number;
   onUpdate: (data: RemovalProcedureFormData) => void;
+  topGeneralComment?: string;
+  onTopGeneralCommentChange?: (comment: string) => void;
 }
 
 export interface RemovalProcedureFormData {
@@ -13,6 +15,7 @@ export interface RemovalProcedureFormData {
   allSourcesSameDate: boolean | null;
   additionalRemovalDate?: string;
   reasonNotSameDate?: string;
+  topGeneralComments?: string;
   removalGeneralComments?: string;
   discrepancyClarification?: DiscrepancyClarificationData;
 }
@@ -21,6 +24,8 @@ const RemovalProcedureForm = ({
   totalSourcesRemoved,
   insertedSources,
   onUpdate,
+  topGeneralComment = '',
+  onTopGeneralCommentChange,
 }: RemovalProcedureFormProps) => {
   const [removalDate, setRemovalDate] = useState<string>(
     new Date().toISOString().split('T')[0]
@@ -42,14 +47,31 @@ const RemovalProcedureForm = ({
       allSourcesSameDate,
       additionalRemovalDate: !allSourcesSameDate ? additionalRemovalDate : undefined,
       reasonNotSameDate: !allSourcesSameDate ? reasonNotSameDate : undefined,
+      topGeneralComments: topGeneralComment || undefined,
       removalGeneralComments: generalComments || undefined,
       discrepancyClarification: !isRemovedEqualInserted ? discrepancyClarification || undefined : undefined,
     });
-  }, [removalDate, allSourcesSameDate, additionalRemovalDate, reasonNotSameDate, generalComments, discrepancyClarification, isRemovedEqualInserted]);
+  }, [removalDate, allSourcesSameDate, additionalRemovalDate, reasonNotSameDate, topGeneralComment, generalComments, discrepancyClarification, isRemovedEqualInserted]);
 
   return (
     <div className="rounded-lg border bg-white p-4 shadow-sm space-y-4">
       <h2 className="text-lg font-medium">Removal Procedure Form</h2>
+
+      {/* General Notes (Top) */}
+      {onTopGeneralCommentChange && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <label className="block text-sm font-medium text-blue-800 mb-1">
+            General Notes
+          </label>
+          <textarea
+            value={topGeneralComment}
+            onChange={(e) => onTopGeneralCommentChange(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Enter any general notes about the removal procedure..."
+          />
+        </div>
+      )}
 
       {/* 1. Date of removal */}
       <div>

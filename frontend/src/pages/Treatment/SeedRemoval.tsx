@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MinusIcon } from '@heroicons/react/24/outline';
 import Layout from '@/components/Layout';
 import { useTreatment, ApplicatorGroup } from '@/context/TreatmentContext';
 import { treatmentService, Applicator } from '@/services/treatmentService';
 import IndividualSeedReasonModal from '@/components/Dialogs/IndividualSeedReasonModal';
 import RemovalProcedureForm, { RemovalProcedureFormData } from '@/components/Treatment/RemovalProcedureForm';
+import RemovalTable from '@/components/Treatment/RemovalTable';
 import SignatureModal from '@/components/Dialogs/SignatureModal';
 
 // Type for individual source removal notes
@@ -36,6 +36,9 @@ const SeedRemoval = () => {
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [individualSeedNotes, setIndividualSeedNotes] = useState<IndividualSeedNote[]>([]);
   const [removalProcedureData, setRemovalProcedureData] = useState<RemovalProcedureFormData | null>(null);
+  const [topGeneralComment, setTopGeneralComment] = useState('');
+  const [groupComments, setGroupComments] = useState<Record<number, string>>({});
+  const [individualSeedComment, setIndividualSeedComment] = useState('');
 
   // Get data from context methods
   const applicatorGroups = getApplicatorGroups();
@@ -111,42 +114,6 @@ const SeedRemoval = () => {
     }
   };
 
-  const handleAddComment = async (applicator: Applicator, comment: string) => {
-    if (!currentTreatment) return;
-
-    try {
-      const updatedApplicator = {
-        ...applicator,
-        removalComments: comment,
-      };
-
-      // Update in backend
-      await treatmentService.updateApplicator(
-        currentTreatment.id,
-        applicator.id,
-        updatedApplicator
-      );
-
-      // Update in state
-      updateApplicator(applicator.id, updatedApplicator);
-    } catch (err: any) {
-      setError(err.message || 'Failed to update comment');
-    }
-  };
-
-  const handleCommentChange = (
-    applicator: Applicator,
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-    const updatedApplicator = {
-      ...applicator,
-      removalComments: e.target.value,
-    };
-
-    // Just update in state for now (will be saved on blur or form submit)
-    updateApplicator(applicator.id, updatedApplicator);
-  };
-
   const handleRemoveApplicatorGroup = async (group: ApplicatorGroup) => {
     if (!currentTreatment) return;
 
@@ -179,6 +146,10 @@ const SeedRemoval = () => {
   const handleResetIndividualSeeds = () => {
     setIndividualSeedsRemoved(0);
     setIndividualSeedNotes([]);
+  };
+
+  const handleGroupCommentChange = (seedCount: number, comment: string) => {
+    setGroupComments(prev => ({ ...prev, [seedCount]: comment }));
   };
 
   const handleCompleteTreatment = async () => {
@@ -233,7 +204,10 @@ const SeedRemoval = () => {
         discrepancyClarification: removalProcedureData.discrepancyClarification,
         individualSeedsRemoved: individualSeedsRemoved,
         individualSeedNotes: individualSeedNotes,
+        topGeneralComments: removalProcedureData.topGeneralComments,
         removalGeneralComments: removalProcedureData.removalGeneralComments,
+        groupComments: groupComments,
+        individualSeedComment: individualSeedComment,
       });
 
       // Show signature modal for finalization
@@ -322,92 +296,7 @@ const SeedRemoval = () => {
         {error && <div className='rounded-md bg-red-50 p-4 text-sm text-red-700'>{error}</div>}
 
         <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <div className='mb-6 flex items-center justify-between'>
-            <h2 className='text-lg font-medium'>Source Removal Tracking</h2>
-            <div className='flex items-center space-x-3'>
-              <div className='flex items-center space-x-2'>
-                <span className='text-sm text-gray-600'>Total Sources:</span>
-                <span className='font-medium'>{currentTreatment.seedQuantity || totalSeeds}</span>
-                <button
-                  onClick={handleRemoveIndividualSeed}
-                  disabled={individualSeedsRemoved >= (currentTreatment.seedQuantity || progressTotalSeeds)}
-                  className='rounded-full p-1 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                  title='Remove individual source'>
-                  <MinusIcon className='h-4 w-4' />
-                </button>
-              </div>
-              <div className='rounded-md bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700'>
-                Removed: {effectiveRemovedSeeds} / {effectiveTotalSeeds}
-              </div>
-            </div>
-          </div>
-
-          {/* Individual source counter display */}
-          {individualSeedsRemoved > 0 && (
-            <div className='mb-4 rounded-md bg-orange-50 p-3'>
-              <div className='flex items-center justify-between'>
-                <p className='text-sm text-orange-700'>
-                  <span className='font-medium'>Individual sources removed:</span> {individualSeedsRemoved}
-                </p>
-                <button
-                  onClick={handleResetIndividualSeeds}
-                  className='text-xs text-orange-600 hover:text-orange-800 underline'>
-                  Reset
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Applicator Groups */}
-          {applicatorGroups.length > 0 && (
-            <div className='mb-6'>
-              <h3 className='mb-3 text-md font-medium text-gray-700'>Applicator Groups</h3>
-              <div className='space-y-3'>
-                {applicatorGroups.map((group) => (
-                  <div
-                    key={group.seedCount}
-                    className='rounded-lg border border-gray-200 bg-gray-50 p-4'>
-                    <div className='flex items-center justify-between'>
-                      <div className='flex items-center space-x-4'>
-                        <span className='text-sm font-medium text-gray-700'>
-                          {group.totalApplicators} applicator{group.totalApplicators !== 1 ? 's' : ''} of {group.seedCount} source{group.seedCount !== 1 ? 's' : ''}
-                        </span>
-                        <div className='flex items-center space-x-2'>
-                          <span className='text-sm text-gray-600'>
-                            Removed: {group.removedApplicators} / {group.totalApplicators}
-                          </span>
-                          <button
-                            onClick={() => handleRemoveApplicatorGroup(group)}
-                            disabled={group.removedApplicators >= group.totalApplicators}
-                            className='rounded-full p-1 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                            title='Remove one applicator from this group'>
-                            <MinusIcon className='h-4 w-4' />
-                          </button>
-                        </div>
-                      </div>
-                      <div className='text-sm text-gray-500'>
-                        {(group.removedApplicators * group.seedCount)} / {(group.totalApplicators * group.seedCount)} sources
-                      </div>
-                    </div>
-
-                    {/* Progress bar for this group */}
-                    <div className='mt-2'>
-                      <div className='flex items-center justify-between text-xs text-gray-500 mb-1'>
-                        <span>Progress</span>
-                        <span>{Math.round((group.removedApplicators / group.totalApplicators) * 100)}%</span>
-                      </div>
-                      <div className='w-full bg-gray-200 rounded-full h-2'>
-                        <div
-                          className='bg-green-600 h-2 rounded-full transition-all duration-300'
-                          style={{ width: `${(group.removedApplicators / group.totalApplicators) * 100}%` }}>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <h2 className='text-lg font-medium mb-4'>Source Removal Tracking</h2>
 
           {loading && (
             <div className='flex justify-center py-8'>
@@ -415,77 +304,22 @@ const SeedRemoval = () => {
             </div>
           )}
 
-          {/* Detailed Applicator List */}
-          <div className='border-t pt-6'>
-            <h3 className='mb-4 text-md font-medium text-gray-700'>Detailed Applicator List</h3>
-            {applicators.length === 0 ? (
-              <div className='rounded-md bg-yellow-50 p-4 text-sm text-yellow-700'>
-                No applicators found for this treatment.
-              </div>
-            ) : (
-              <div className='space-y-4'>
-                {applicators.map((applicator) => (
-                  <div
-                    key={applicator.id}
-                    className={`rounded-lg border p-4 ${
-                      applicator.isRemoved
-                        ? 'border-green-200 bg-green-50'
-                        : 'border-gray-200 bg-white'
-                    }`}>
-                    <div className='flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0'>
-                      <div>
-                        <h4 className='text-md font-medium'>{applicator.serialNumber}</h4>
-                        <p className='text-sm text-gray-500'>
-                          Sources: {applicator.seedQuantity} | Usage:{' '}
-                          {applicator.usageType === 'full'
-                            ? 'Full Use'
-                            : applicator.usageType === 'faulty'
-                              ? 'Faulty'
-                              : 'No Use'}
-                        </p>
-                      </div>
-
-                      <div className='flex items-center space-x-4'>
-                        <div className='flex items-center'>
-                          <input
-                            id={`isRemoved-${applicator.id}`}
-                            type='checkbox'
-                            checked={applicator.isRemoved}
-                            onChange={() => handleToggleRemoval(applicator)}
-                            className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
-                          />
-                          <label
-                            htmlFor={`isRemoved-${applicator.id}`}
-                            className='ml-2 text-sm font-medium text-gray-700'>
-                            {applicator.isRemoved ? 'Removed' : 'Mark as Removed'}
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className='mt-4'>
-                      <label
-                        htmlFor={`comments-${applicator.id}`}
-                        className='block text-sm font-medium text-gray-700'>
-                        Removal Comments
-                      </label>
-                      <textarea
-                        id={`comments-${applicator.id}`}
-                        value={applicator.removalComments || ''}
-                        onChange={(e) => handleCommentChange(applicator, e)}
-                        onBlur={() =>
-                          applicator.removalComments &&
-                          handleAddComment(applicator, applicator.removalComments)
-                        }
-                        rows={2}
-                        className='mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm'
-                        placeholder='Add removal comments...'></textarea>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {!loading && (
+            <RemovalTable
+              applicatorGroups={applicatorGroups}
+              individualSeedsRemoved={individualSeedsRemoved}
+              maxIndividualSeeds={currentTreatment.seedQuantity || progressTotalSeeds}
+              totalSources={effectiveTotalSeeds}
+              totalRemoved={effectiveRemovedSeeds}
+              onRemoveFromGroup={handleRemoveApplicatorGroup}
+              onRemoveIndividualSeed={handleRemoveIndividualSeed}
+              onResetIndividualSeeds={handleResetIndividualSeeds}
+              groupComments={groupComments}
+              onGroupCommentChange={handleGroupCommentChange}
+              individualSeedComment={individualSeedComment}
+              onIndividualSeedCommentChange={setIndividualSeedComment}
+            />
+          )}
         </div>
 
         {/* Removal Procedure Form - Summary at bottom after seed tracking */}
@@ -493,6 +327,8 @@ const SeedRemoval = () => {
           totalSourcesRemoved={effectiveRemovedSeeds}
           insertedSources={currentTreatment?.seedQuantity || totalSeeds}
           onUpdate={setRemovalProcedureData}
+          topGeneralComment={topGeneralComment}
+          onTopGeneralCommentChange={setTopGeneralComment}
         />
 
         {/* Complete Treatment Button */}

@@ -475,7 +475,10 @@ export const treatmentService = {
         discrepancyClarification: data.discrepancyClarification ? JSON.stringify(data.discrepancyClarification) : undefined,
         individualSeedsRemoved: data.individualSeedsRemoved || 0,
         individualSeedNotes: data.individualSeedNotes ? JSON.stringify(data.individualSeedNotes) : undefined,
+        topGeneralComments: data.topGeneralComments || undefined,
         removalGeneralComments: data.removalGeneralComments || undefined,
+        groupComments: data.groupComments ? JSON.stringify(data.groupComments) : undefined,
+        individualSeedComment: data.individualSeedComment || undefined,
       });
 
       logger.info(`Updated removal procedure data for treatment ${treatmentId}`);

@@ -8,8 +8,8 @@
 | Document Information | |
 |---------------------|---|
 | **Document ID** | ALA-SRS-001 |
-| **Version** | 3.0 |
-| **Date** | December 2025 |
+| **Version** | 4.0 |
+| **Date** | January 2026 |
 | **Status** | Draft |
 | **Classification** | Internal |
 | **Safety Classification** | IEC 62304 Class B |
@@ -36,6 +36,7 @@
 | 1.0 | 2024 | - | Initial SRS for ALA |
 | 2.0 | December 2025 | - | Complete rewrite reflecting current implementation |
 | 3.0 | December 2025 | - | Full overhaul: Added risk integration (ISO 14971), HIPAA 2025 compliance, cybersecurity section, missing features (attachments, treatment types, radioactivity), populated traceability matrix |
+| 4.0 | January 2026 | - | Major update: Added Offline Mode/PWA (Section 3.14), Treatment Continuation (Section 3.15), Enhanced Removal Procedure with Discrepancy Tracking (Section 3.8), new hazards (HAZ-011 to HAZ-016), updated data dictionary |
 <!-- AUTO-UPDATE:END revision_history -->
 
 ---
@@ -45,6 +46,9 @@
 1. [Introduction](#1-introduction)
 2. [Overall Description](#2-overall-description)
 3. [System Features](#3-system-features)
+   - 3.1-3.13: Core Features
+   - 3.14: [Offline Mode & PWA Architecture](#314-offline-mode--pwa-architecture)
+   - 3.15: [Treatment Continuation](#315-treatment-continuation)
 4. [External Interface Requirements](#4-external-interface-requirements)
 5. [Non-Functional Requirements](#5-non-functional-requirements)
 6. [Data Requirements](#6-data-requirements)
@@ -481,9 +485,29 @@ The system shall generate comprehensive treatment documentation in PDF format.
 #### 3.8.1 Description and Priority
 **Priority:** High
 
-The system shall support tracking of seed removal procedures.
+The system shall support tracking of seed removal procedures with comprehensive discrepancy tracking to document any difference between inserted and removed sources.
 
-#### 3.8.2 Functional Requirements
+#### 3.8.2 Stimulus/Response Sequences
+
+**Removal Procedure Flow:**
+1. User selects removal procedure for eligible treatment (30+ days post-insertion)
+2. System loads applicators from original insertion
+3. User marks applicators as removed (group removal)
+4. User optionally tracks individual seed removals
+5. System auto-calculates total sources removed
+6. If discrepancy detected (removed ≠ inserted), user clarifies discrepancy
+7. User completes removal procedure form
+8. User finalizes treatment
+
+**Discrepancy Clarification Flow:**
+1. System detects removed sources ≠ inserted sources
+2. System displays discrepancy clarification section
+3. User selects applicable categories (Lost, Retrieved to site, Remained in tissue, Other)
+4. User enters amounts per category
+5. System validates sum of amounts equals sources not removed
+6. User provides comments per category as needed
+
+#### 3.8.3 Functional Requirements
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -495,6 +519,20 @@ The system shall support tracking of seed removal procedures.
 | SRS-RMVL-006 | The system shall track who performed each removal | High |
 | SRS-RMVL-007 | The system shall display removal progress (seeds removed vs. total seeds) | High |
 | SRS-RMVL-008 | The system shall color-code final count: green if zero seeds remain, red otherwise | Medium |
+| SRS-RMVL-009 | The system shall provide a removal procedure form for capturing removal details | High |
+| SRS-RMVL-010 | Removal procedure form shall capture: removal date, all-same-date flag | High |
+| SRS-RMVL-011 | If sources removed on different dates, system shall capture additional date and reason | High |
+| SRS-RMVL-012 | The system shall auto-calculate total sources removed from applicators + individual seeds | High |
+| SRS-RMVL-013 | The system shall detect discrepancy when removed sources ≠ inserted sources | Critical |
+| SRS-RMVL-014 | Discrepancy clarification shall track 4 categories: Lost, Retrieved to site, Remained in tissue (removal failure), Other | High |
+| SRS-RMVL-015 | Each discrepancy category shall include: checked flag, amount, and comment fields | High |
+| SRS-RMVL-016 | Sum of clarified amounts must equal the number of sources not removed | High |
+| SRS-RMVL-017 | The system shall support individual seed removal with predefined reasons | Medium |
+| SRS-RMVL-018 | Individual seed removal reasons shall include: Applicator rupture, Patient arrived from home, Other | Medium |
+| SRS-RMVL-019 | The system shall calculate removal progress from applicator removals + individual seed removals | High |
+| SRS-RMVL-020 | The system shall allow treatment completion with missing sources when properly documented | Medium |
+| SRS-RMVL-021 | The system shall store discrepancy clarification data as JSON | High |
+| SRS-RMVL-022 | The system shall store individual seed removal notes as JSON | Medium |
 
 ---
 
@@ -591,6 +629,113 @@ The system shall track radioactivity levels (activity per seed) for treatment do
 
 ---
 
+### 3.14 Offline Mode & PWA Architecture
+
+#### 3.14.1 Description and Priority
+**Priority:** Critical
+
+The system shall implement Progressive Web App (PWA) capabilities enabling offline operation with HIPAA-compliant data encryption and automatic synchronization when connectivity is restored.
+
+#### 3.14.2 Stimulus/Response Sequences
+
+**Offline Download Flow:**
+1. User selects treatment for offline use
+2. System validates user has site access
+3. System downloads treatment bundle (treatment + applicators)
+4. System encrypts PHI using AES-256-GCM
+5. System stores encrypted data in IndexedDB
+6. Bundle marked with 24-hour expiry
+
+**Offline Operation Flow:**
+1. Network connectivity lost (or user goes offline)
+2. System displays offline status banner
+3. User can view downloaded treatments
+4. User can add/update applicators offline
+5. Changes queued with SHA-256 integrity hashes
+6. Finalization BLOCKED until online
+
+**Sync Flow (Reconnection):**
+1. Network connectivity restored
+2. System auto-triggers sync
+3. Pending changes pushed to server (idempotent)
+4. Server validates and detects conflicts
+5. Conflicts stored for resolution
+6. Medical-critical conflicts require admin resolution
+
+#### 3.14.3 Functional Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| SRS-OFFL-001 | The system shall implement Progressive Web App (PWA) architecture with service workers | Critical |
+| SRS-OFFL-002 | The system shall use IndexedDB for offline data storage via Dexie.js | Critical |
+| SRS-OFFL-003 | The system shall encrypt PHI at rest using AES-256-GCM (HIPAA 2025 compliant) | Critical |
+| SRS-OFFL-004 | The system shall use PBKDF2 key derivation with 100,000 iterations (OWASP 2024) | Critical |
+| SRS-OFFL-005 | The system shall detect and track network connectivity status in real-time | High |
+| SRS-OFFL-006 | The system shall queue offline changes with SHA-256 integrity hashes | Critical |
+| SRS-OFFL-007 | The system shall auto-sync pending changes when network connectivity restores | High |
+| SRS-OFFL-008 | The system shall implement exponential backoff retry (1s initial, 60s max, 5 retries) | High |
+| SRS-OFFL-009 | The system shall support treatment bundle download for offline use | High |
+| SRS-OFFL-010 | Offline bundles shall expire after 24 hours | High |
+| SRS-OFFL-011 | The system shall detect and store sync conflicts for resolution | Critical |
+| SRS-OFFL-012 | Medical-critical status conflicts (INSERTED, FAULTY) shall require admin resolution | Critical |
+| SRS-OFFL-013 | The system shall maintain offline audit log with device ID and timestamps | Critical |
+| SRS-OFFL-014 | Treatment finalization shall be BLOCKED while offline (requires digital signature) | Critical |
+| SRS-OFFL-015 | The system shall support clock synchronization with server (5-minute tolerance) | High |
+| SRS-OFFL-016 | The system shall track and display storage usage statistics | Medium |
+| SRS-OFFL-017 | The system shall warn users at 80% storage capacity | Medium |
+| SRS-OFFL-018 | The system shall auto-delete expired offline bundles | Medium |
+| SRS-OFFL-019 | The system shall request persistent storage permission from browser | Medium |
+| SRS-OFFL-020 | The system shall display offline status banner with pending change count | High |
+| SRS-OFFL-021 | The system shall provide manual sync trigger button | Medium |
+| SRS-OFFL-022 | The system shall implement user-controlled app updates (no auto-update during treatment) | Critical |
+| SRS-OFFL-023 | Encrypted fields shall include: patientName, subjectId, surgeon, serialNumber, comments, removalComments | Critical |
+| SRS-OFFL-024 | The system shall support idempotent sync using change hashes (prevent duplicate processing) | High |
+| SRS-OFFL-025 | The system shall warn iOS users about 7-day storage eviction risk | Medium |
+
+---
+
+### 3.15 Treatment Continuation
+
+#### 3.15.1 Description and Priority
+**Priority:** High
+
+The system shall allow users to continue a completed insertion treatment within a 24-hour window, enabling additional applicators to be added in follow-up sessions.
+
+#### 3.15.2 Stimulus/Response Sequences
+
+**Continuation Detection Flow:**
+1. User selects patient for insertion procedure
+2. System checks for completed treatments with same patient + site
+3. System evaluates 24-hour eligibility window (from lastActivityAt or completedAt)
+4. If eligible treatment found, system displays continuation modal
+5. Modal shows: hours remaining, reusable applicator count, parent details
+6. User confirms continuation or cancels
+
+**Continuation Creation Flow:**
+1. User confirms continuation
+2. System creates new treatment with parentTreatmentId linking to parent
+3. New treatment inherits: type, subjectId, patientName, site, surgeon, priority info
+4. New treatment uses current date (not parent date)
+5. User navigates to treatment documentation to add applicators
+6. Continuation treatment finalized separately from parent
+
+#### 3.15.3 Functional Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| SRS-CONT-001 | The system shall allow continuation of completed insertion treatments within 24-hour window | High |
+| SRS-CONT-002 | Continuation eligibility shall be based on lastActivityAt or completedAt timestamp | High |
+| SRS-CONT-003 | The system shall track parent-child treatment relationship via parentTreatmentId | High |
+| SRS-CONT-004 | Continuation treatment shall inherit: type, subjectId, patientName, site, surgeon, priority info | High |
+| SRS-CONT-005 | Continuation treatment shall use current date (not parent treatment date) | High |
+| SRS-CONT-006 | The system shall display modal when continuable treatment detected | Medium |
+| SRS-CONT-007 | Continuation modal shall show: hours remaining, reusable applicator count, parent details | Medium |
+| SRS-CONT-008 | Reusable applicators are those with OPENED or LOADED status | High |
+| SRS-CONT-009 | Only insertion treatments can be continued (removal treatments cannot be continued) | High |
+| SRS-CONT-010 | The system shall provide API endpoints for continuation eligibility check and creation | High |
+
+---
+
 ## 4. External Interface Requirements
 
 ### 4.1 User Interfaces
@@ -670,6 +815,10 @@ The system shall track radioactivity levels (activity per seed) for treatment do
 | SRS-PERF-003 | QR code scanning shall decode within 500ms | High | < 500ms |
 | SRS-PERF-004 | PDF generation shall complete within 10 seconds | Medium | < 10000ms |
 | SRS-PERF-005 | System shall support 50 concurrent users | Medium | 50 users |
+| SRS-PERF-006 | Offline bundle download shall complete within 30 seconds | High | < 30000ms |
+| SRS-PERF-007 | Offline sync operation shall complete within 60 seconds | High | < 60000ms |
+| SRS-PERF-008 | IndexedDB read/write operations shall complete within 500ms | High | < 500ms |
+| SRS-PERF-009 | PHI encryption/decryption shall complete within 100ms per record | High | < 100ms |
 
 ### 5.2 Safety Requirements (IEC 62304)
 
@@ -811,8 +960,23 @@ The system shall track radioactivity levels (activity per seed) for treatment do
 | seedQuantity | INTEGER | nullable | Total seed count |
 | activityPerSeed | FLOAT | nullable | Radiation activity per seed (Bq) |
 | surgeon | VARCHAR(255) | nullable | Performing surgeon |
+| parentTreatmentId | UUID | FK→treatments, nullable | Links continuation to parent treatment |
+| lastActivityAt | TIMESTAMP | nullable | Last applicator activity for 24-hour continuation window |
+| removalDate | DATE | nullable | Date of removal procedure |
+| allSourcesSameDate | BOOLEAN | nullable | Whether all sources removed on same day |
+| additionalRemovalDate | DATE | nullable | Secondary removal date if different |
+| reasonNotSameDate | TEXT | nullable | Reason for different removal dates |
+| discrepancyClarification | JSON | nullable | Discrepancy tracking data (Lost, Retrieved, Remained, Other) |
+| individualSeedsRemoved | INTEGER | nullable, default 0 | Count of individually removed seeds |
+| individualSeedNotes | JSON | nullable | Notes for individual seed removals |
+| removalGeneralComments | TEXT | nullable | General removal comments |
+| syncStatus | ENUM | nullable | Offline sync status (pending, syncing, synced, failed) |
+| version | INTEGER | NOT NULL, default 1 | Optimistic locking version for sync conflicts |
 
-**Note:** The `priorityId` field may contain a JSON array when treatments combine multiple Priority orders (e.g., pancreas multi-stage treatments).
+**Notes:**
+- The `priorityId` field may contain a JSON array when treatments combine multiple Priority orders (e.g., pancreas multi-stage treatments).
+- The `parentTreatmentId` links continuation treatments to their parent (24-hour continuation window).
+- The `discrepancyClarification` stores JSON with structure: `{ lost: {checked, amount, comment}, retrievedToSite: {...}, remainedInTissue: {...}, other: {..., description} }`.
 
 #### 6.2.3 Applicators Table
 
@@ -850,6 +1014,42 @@ The system shall track radioactivity levels (activity per seed) for treatment do
 | reason | TEXT | nullable | Reason for change |
 | requestId | VARCHAR(100) | nullable | Correlation ID |
 
+#### 6.2.5 SyncConflict Table (NEW - Offline Support)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | UUID | PK, auto-generated | Unique conflict identifier |
+| entityType | ENUM | NOT NULL | Type: 'treatment' or 'applicator' |
+| entityId | UUID | NOT NULL, indexed | ID of the conflicting entity |
+| localData | JSON | NOT NULL | Data from offline device |
+| serverData | JSON | NOT NULL | Data currently on server |
+| conflictType | VARCHAR(50) | NOT NULL | Type: 'version_mismatch', 'status_conflict', 'field_conflict' |
+| resolution | ENUM | nullable | Resolution: 'local_wins', 'server_wins', 'merged', null (unresolved) |
+| resolvedBy | UUID | FK→users, nullable | User who resolved conflict |
+| resolvedAt | TIMESTAMP | nullable | When conflict was resolved |
+| requiresAdmin | BOOLEAN | NOT NULL, default false | Medical-critical conflicts require admin resolution |
+| deviceId | VARCHAR(100) | NOT NULL | Device that created offline change |
+| overwrittenData | JSON | nullable | Data that was overwritten (HIPAA audit trail) |
+| createdAt | TIMESTAMP | NOT NULL, default NOW() | When conflict was detected |
+
+#### 6.2.6 OfflineAuditLog Table (NEW - Offline Support)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | UUID | PK, auto-generated | Unique audit entry identifier |
+| entityType | ENUM | NOT NULL | Type: 'treatment' or 'applicator' |
+| entityId | UUID | NOT NULL, indexed | ID of the affected entity |
+| operation | ENUM | NOT NULL | Operation: 'create', 'update', 'status_change', 'sync' |
+| deviceId | VARCHAR(100) | NOT NULL | Device that performed operation |
+| userId | UUID | FK→users, NOT NULL | User who performed operation |
+| beforeState | JSON | nullable | Entity state before change |
+| afterState | JSON | NOT NULL | Entity state after change |
+| offlineAt | TIMESTAMP | NOT NULL | When operation occurred offline |
+| syncedAt | TIMESTAMP | nullable | When operation was synced to server |
+| changeHash | VARCHAR(64) | NOT NULL, indexed | SHA-256 hash for idempotency checking |
+| metadata | JSON | nullable | Additional operation metadata |
+| createdAt | TIMESTAMP | NOT NULL, default NOW() | When audit entry was created |
+
 ### 6.3 Data Integrity and Retention
 
 | ID | Requirement | Priority |
@@ -875,10 +1075,12 @@ The system shall track radioactivity levels (activity per seed) for treatment do
 | Progress (SRS-PROG-*) | Frontend component tests |
 | Finalization (SRS-FINL-*) | E2E tests, manual QA verification |
 | Export (SRS-EXPRT-*) | Integration tests, manual PDF review |
-| Removal (SRS-RMVL-*) | Integration tests |
+| Removal (SRS-RMVL-*) | Integration tests, E2E tests for discrepancy tracking |
 | Audit (SRS-AUDT-*) | Database queries, integration tests |
 | Security (SRS-SEC-*) | Security scanning, penetration testing |
 | Performance (SRS-PERF-*) | Load testing, performance monitoring |
+| Offline Mode (SRS-OFFL-*) | PWA testing, offline simulation, sync conflict tests, encryption validation |
+| Treatment Continuation (SRS-CONT-*) | Integration tests, 24-hour window validation, E2E tests |
 
 ### 7.2 Traceability Matrix
 
@@ -887,16 +1089,16 @@ The complete requirements traceability matrix is maintained in a separate docume
 **See:** [srs/traceability-matrix.md](srs/traceability-matrix.md)
 
 The traceability matrix includes:
-- All 162 requirements with unique IDs
+- All 215 requirements with unique IDs
 - Hazard linkage (from ISO 14971 analysis)
 - Test case references
 - Implementation status
 
 **Summary Statistics:**
-- Total Requirements: 162
-- Implemented: 130 (80.2%)
-- Needs Verification: 27 (16.7%)
-- Pending Implementation: 5 (3.1%)
+- Total Requirements: 215
+- Implemented: 183 (85.1%)
+- Needs Verification: 27 (12.6%)
+- Pending Implementation: 5 (2.3%)
 
 ---
 
@@ -933,6 +1135,12 @@ The complete hazard analysis is maintained in a separate document:
 | HAZ-008 | Removal on wrong treatment | Medium | ALARP | SRS-RMVL-001, SRS-TSEL-007 |
 | HAZ-009 | Session hijacking | Medium | Low | SRS-AUTH-007, SRS-SEC-016 |
 | HAZ-010 | Brute force attack | Low | Low | SRS-SEC-003, SRS-AUTH-004 |
+| HAZ-011 | Data loss during offline sync | Medium | ALARP | SRS-OFFL-006, SRS-OFFL-011 |
+| HAZ-012 | Stale offline data used in treatment | Medium | Low | SRS-OFFL-010, SRS-OFFL-015 |
+| HAZ-013 | Unauthorized offline PHI access | Medium | ALARP | SRS-OFFL-003, SRS-OFFL-004, SRS-OFFL-023 |
+| HAZ-014 | Clock skew causing timestamp errors | Low | Low | SRS-OFFL-015, SRS-AUDT-003 |
+| HAZ-015 | Treatment finalized offline without verification | Medium | ALARP | SRS-OFFL-014 |
+| HAZ-016 | Continuation on wrong patient | Medium | ALARP | SRS-CONT-003, SRS-CONT-004, SRS-CONT-009 |
 
 ### 8.4 Safety-Critical Requirements
 
@@ -946,6 +1154,12 @@ The following requirements are classified as safety-critical based on their role
 | SRS-AUTH-007 | HttpOnly secure cookies | HAZ-003, HAZ-009 |
 | SRS-FINL-009 | Immutable finalized treatments | HAZ-007 |
 | SRS-SEC-003 | Rate limiting on authentication | HAZ-003, HAZ-010 |
+| SRS-OFFL-003 | Encrypt PHI at rest using AES-256-GCM | HAZ-013 |
+| SRS-OFFL-006 | Queue offline changes with integrity hashes | HAZ-011 |
+| SRS-OFFL-011 | Detect and store sync conflicts | HAZ-011 |
+| SRS-OFFL-012 | Medical-critical conflicts require admin resolution | HAZ-011, HAZ-012 |
+| SRS-OFFL-014 | Block treatment finalization offline | HAZ-015 |
+| SRS-CONT-003 | Track parent-child treatment relationship | HAZ-016 |
 
 ### 8.5 Risk Control Verification
 

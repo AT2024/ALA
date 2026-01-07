@@ -30,7 +30,10 @@ interface TreatmentAttributes {
   discrepancyDocPath?: string;
   individualSeedsRemoved?: number;
   individualSeedNotes?: string; // JSON string
+  topGeneralComments?: string;
   removalGeneralComments?: string;
+  groupComments?: string; // JSON string
+  individualSeedComment?: string;
   // Offline sync fields
   version: number; // Optimistic locking version
   lastSyncedAt?: Date; // Last successful sync timestamp
@@ -42,7 +45,7 @@ interface TreatmentAttributes {
 }
 
 // For creating a new treatment
-type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName' | 'removalDate' | 'allSourcesSameDate' | 'additionalRemovalDate' | 'reasonNotSameDate' | 'discrepancyClarification' | 'discrepancyDocPath' | 'individualSeedsRemoved' | 'individualSeedNotes' | 'removalGeneralComments' | 'version' | 'lastSyncedAt' | 'syncStatus' | 'deviceId' | 'parentTreatmentId' | 'lastActivityAt'>
+type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName' | 'removalDate' | 'allSourcesSameDate' | 'additionalRemovalDate' | 'reasonNotSameDate' | 'discrepancyClarification' | 'discrepancyDocPath' | 'individualSeedsRemoved' | 'individualSeedNotes' | 'topGeneralComments' | 'removalGeneralComments' | 'groupComments' | 'individualSeedComment' | 'version' | 'lastSyncedAt' | 'syncStatus' | 'deviceId' | 'parentTreatmentId' | 'lastActivityAt'>
 
 class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> implements TreatmentAttributes {
   public id!: string;
@@ -69,7 +72,10 @@ class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> 
   public discrepancyDocPath?: string;
   public individualSeedsRemoved?: number;
   public individualSeedNotes?: string;
+  public topGeneralComments?: string;
   public removalGeneralComments?: string;
+  public groupComments?: string;
+  public individualSeedComment?: string;
   // Offline sync fields
   public version!: number;
   public lastSyncedAt?: Date;
@@ -210,10 +216,25 @@ Treatment.init(
       allowNull: true,
       field: 'individual_seed_notes',
     },
+    topGeneralComments: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'top_general_comments',
+    },
     removalGeneralComments: {
       type: DataTypes.TEXT,
       allowNull: true,
       field: 'removal_general_comments',
+    },
+    groupComments: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'group_comments',
+    },
+    individualSeedComment: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'individual_seed_comment',
     },
     // Offline sync fields
     version: {

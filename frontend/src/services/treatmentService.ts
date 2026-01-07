@@ -164,7 +164,10 @@ export const treatmentService = {
       };
       individualSeedsRemoved: number;
       individualSeedNotes: Array<{ reason: string; timestamp: string; count: number }>;
+      topGeneralComments?: string;
       removalGeneralComments?: string;
+      groupComments?: Record<number, string>;
+      individualSeedComment?: string;
     }
   ): Promise<{ success: boolean; treatment: Treatment }> {
     const response = await api.put(`/treatments/${treatmentId}/removal-procedure`, data);
