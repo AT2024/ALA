@@ -53,7 +53,10 @@
       "Bash(npx tsc:*)",
       "Bash(npm test:*)",
       "Skill(cc10x:planning-patterns)",
-      "Skill(cc10x:planning-patterns:*)"
+      "Skill(cc10x:planning-patterns:*)",
+      "Skill(prompt-improver:prompt-improver)",
+      "Skill(cc10x:cc10x-router)",
+      "mcp__sequential-thinking__sequentialthinking"
     ],
     "deny": []
   }
