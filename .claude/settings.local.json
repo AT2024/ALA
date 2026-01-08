@@ -56,7 +56,8 @@
       "Skill(cc10x:planning-patterns:*)",
       "Skill(prompt-improver:prompt-improver)",
       "Skill(cc10x:cc10x-router)",
-      "mcp__sequential-thinking__sequentialthinking"
+      "mcp__sequential-thinking__sequentialthinking",
+      "mcp__octocode__githubViewRepoStructure"
     ],
     "deny": []
   }
