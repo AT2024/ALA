@@ -11,11 +11,16 @@ version: '3.8'
 services:
   api:
     image: ala-api:${VERSION:-latest}
-    # Override entrypoint to bypass dumb-init (Alpine 3.23+ compatibility issue)
+    # PARITY NOTE: Override entrypoint to bypass dumb-init (Alpine 3.23+ compatibility issue)
+    # Local uses dumb-init from Dockerfile for signal handling.
+    # See docs/design-logs/2026-01-environment-alignment.md Gap #2 for details.
     entrypoint: ["node", "dist/app/src/server.js"]
     command: []
     networks:
       - ala-network
+    # PARITY FIX: Add uploads volume (Gap #1 - prevents data loss on container recreate)
+    volumes:
+      - uploads-data:/usr/src/app/uploads
     environment:
       # Core configuration
       - NODE_ENV=${NODE_ENV:-production}
@@ -114,6 +119,12 @@ services:
 networks:
   ala-network:
     external: true
+
+# PARITY FIX: Define uploads volume (Gap #1)
+# Matches local docker-compose.yml uploads-data volume
+volumes:
+  uploads-data:
+    driver: local
 
 # Notes:
 # - Database runs in separate Docker Compose (docker-compose.db.yml)
