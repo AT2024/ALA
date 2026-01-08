@@ -1056,16 +1056,16 @@ const TreatmentDocumentation = () => {
 
         {/* Edit Mode Banner */}
         {isEditMode && (
-          <div className="rounded-lg border-2 border-blue-500 bg-blue-50 p-4 shadow-sm">
+          <div className="rounded-lg border-2 border-primary bg-primary/10 p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-blue-900">Editing Applicator</p>
-                <p className="text-sm text-blue-700 font-mono">{editingSerialNumber}</p>
+                <p className="text-sm font-semibold text-primary">Editing Applicator</p>
+                <p className="text-sm text-primary font-mono">{editingSerialNumber}</p>
               </div>
             </div>
           </div>
@@ -1101,7 +1101,7 @@ const TreatmentDocumentation = () => {
           )}
 
           {loading && (
-            <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm text-blue-700 border border-blue-200">
+            <div className="mb-4 rounded-md bg-primary/10 p-4 text-sm text-primary border border-primary/20">
               Validating applicator with Priority system...
             </div>
           )}
@@ -1167,7 +1167,7 @@ const TreatmentDocumentation = () => {
                       )}
                     </div>
                     {aSuffixQuery && (
-                      <p className="mt-1 text-xs text-blue-600">
+                      <p className="mt-1 text-xs text-primary">
                         Showing applicators ending with "-A{aSuffixQuery}"
                       </p>
                     )}
@@ -1189,7 +1189,7 @@ const TreatmentDocumentation = () => {
                       return filteredApplicators.length > 0 ? (
                         <div className="space-y-1 p-2">
                           {aSuffixQuery && (
-                            <div className="p-2 border-b bg-blue-50 text-sm font-medium text-blue-800">
+                            <div className="p-2 border-b bg-primary/10 text-sm font-medium text-primary">
                               {filteredApplicators.length} applicator(s) {aSuffixQuery ? `ending with "-A${aSuffixQuery}"` : 'available'}
                             </div>
                           )}
@@ -1649,7 +1649,7 @@ const TreatmentDocumentation = () => {
                   ((requiresComment(formData.status) || formData.usingType === 'Faulty') &&
                    (!formData.comments || formData.comments.trim().length === 0))
                 }
-                className="flex-1 min-h-[44px] rounded-md bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                className="flex-1 min-h-[44px] rounded-md bg-primary px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? 'Saving...' : isEditMode ? 'Update Applicator' : 'Insert'}
               </button>

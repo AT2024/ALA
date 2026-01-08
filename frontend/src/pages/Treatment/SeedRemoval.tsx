@@ -276,7 +276,7 @@ const SeedRemoval = () => {
             </div>
             <div>
               <p className='text-sm text-gray-500'>Days Since Insertion</p>
-              <p className='font-medium text-blue-600'>{daysSinceInsertion} days</p>
+              <p className='font-medium text-primary'>{daysSinceInsertion} days</p>
             </div>
             <div>
               <p className='text-sm text-gray-500'>Type</p>
@@ -285,8 +285,8 @@ const SeedRemoval = () => {
           </div>
 
           {daysSinceInsertion > 0 && (
-            <div className='mt-4 rounded-md bg-blue-50 p-3'>
-              <p className='text-sm text-blue-700'>
+            <div className='mt-4 rounded-md bg-primary/10 p-3'>
+              <p className='text-sm text-primary'>
                 <span className='font-medium'>Note:</span> Sources have been in place for {daysSinceInsertion} day{daysSinceInsertion !== 1 ? 's' : ''}.
               </p>
             </div>

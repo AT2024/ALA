@@ -186,7 +186,7 @@ export function DownloadManager() {
             {isOnline && (
               <button
                 onClick={() => navigate('/procedure')}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
               >
                 <Download className="h-4 w-4" />
                 Start New Treatment
