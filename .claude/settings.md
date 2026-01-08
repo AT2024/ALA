@@ -2,6 +2,53 @@
 
 This file contains behavioral guidelines for Claude Code when working on the ALA project.
 
+## Design Log Methodology (Four Pillars)
+
+Before making significant changes, follow the [Wix Engineering Design Log Methodology](https://www.wix.engineering/post/why-i-stop-prompting-and-start-logging-the-design-log-methodology):
+
+| Pillar | Description |
+|--------|-------------|
+| **Read Before Write** | Check `DESIGN_LOG.md` and `docs/design-logs/` before significant changes |
+| **Design Before Implement** | Create design log entry before production code for significant changes |
+| **Immutable History** | Design freezes once implementation starts; changes appended as "Results" |
+| **Socratic Method** | Questions asked in the log become permanent record |
+
+### What is a "Significant Change"?
+
+A change requires a design log entry if it involves:
+- **Database schema** - migrations, new tables, column modifications
+- **API contracts** - new endpoints, breaking changes, auth modifications
+- **Azure infrastructure** - Docker config, networking, environment variables
+- **Security** - authentication, permissions, data handling patterns
+
+### What Does NOT Require a Design Log?
+
+These changes can proceed without a design log entry:
+- **Documentation-only** - README, comments, JSDoc, markdown files
+- **Test-only** - New tests, test fixtures, test configuration
+- **Minor fixes** - Typos, linting errors, import ordering
+- **Dependencies** - Patch/minor version updates (major versions DO require log)
+- **Config tweaks** - Log levels, timeouts, non-breaking environment variables
+
+### Environment Safety Rules
+
+**Before Azure Production Changes:**
+1. Run `/azure-check` to validate Local vs Azure parity
+2. Check `docs/design-logs/` for related pending decisions
+3. Ensure database backup exists if schema changes involved
+4. Use the `deployment-azure` agent for deployment tasks
+
+**Azure-Specific Considerations:**
+- Changes to `docker-stack.yml` affect production replicas
+- Swarm uses rolling updates (old containers run until new healthy)
+- SSL certificates are bind-mounted from `/home/azureuser/ala-improved/ssl-certs/`
+- External overlay network `ala-network` must exist before stack deploy
+- See `docs/design-logs/2026-01-environment-alignment.md` for parity gaps
+
+### Quick Commands
+- `/design` - Start a new design log entry
+- `/azure-check` - Validate Azure parity before deployment
+
 ## Quick Decision Framework
 
 ⚠️ **Evaluate before responding to ANY request**

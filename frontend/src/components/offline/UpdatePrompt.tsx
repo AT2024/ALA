@@ -43,7 +43,7 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
     <div
       className={cn(
         'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50',
-        'rounded-lg bg-blue-600 text-white shadow-lg',
+        'rounded-lg bg-primary text-white shadow-lg',
         'animate-in slide-in-from-bottom duration-300',
         className
       )}
@@ -54,19 +54,19 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
         <RefreshCw className="h-5 w-5 flex-shrink-0 mt-0.5" />
         <div className="flex-1">
           <h4 className="font-medium">Update Available</h4>
-          <p className="mt-1 text-sm text-blue-100">
+          <p className="mt-1 text-sm text-white/80">
             A new version of the app is available. Update when you&apos;re ready.
           </p>
           <div className="mt-3 flex gap-3">
             <button
               onClick={handleUpdate}
-              className="rounded bg-white px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+              className="rounded bg-white px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               Update Now
             </button>
             <button
               onClick={handleDismiss}
-              className="rounded border border-blue-400 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="rounded border border-white/40 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 transition-colors"
             >
               Later
             </button>
@@ -74,7 +74,7 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
         </div>
         <button
           onClick={handleDismiss}
-          className="rounded p-1 hover:bg-blue-700"
+          className="rounded p-1 hover:bg-primary/80"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

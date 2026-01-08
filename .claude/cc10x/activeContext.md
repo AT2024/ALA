@@ -1,96 +1,41 @@
-# Active Context - SRS Automation Implementation
+# Active Context - Version Display Feature
 
-## Session Date: 2025-12-29
+## Session Date: 2026-01-08
 
 ## Current Focus
 
-Implemented automatic SRS documentation update system integrated with GitHub CI/CD workflow.
+Planning implementation for adding version number display to all pages of ALA app.
 
-## Recent Changes
+## Requirements (User Confirmed)
 
-- Created `docs/srs/requirement-mapping.json` - Maps 162 requirements to code files
-- Created `scripts/srs/detect-changes.ts` - Detects affected requirements from git diff
-- Created `scripts/srs/update-traceability.ts` - Updates traceability matrix status
-- Created `scripts/srs/verify-integrity.ts` - Validates SRS document consistency
-- Created `scripts/srs/prompts/srs-update-prompt.md` - Claude Code prompt template
-- Created `.github/workflows/srs-update.yml` - GitHub Action for auto-updates
-- Created `docs/srs/change-log.md` - Audit trail for IEC 62304 compliance
-- Updated `docs/ALA_SRS.md` - Added AUTO-UPDATE markers
-- Updated `docs/srs/traceability-matrix.md` - Added AUTO-UPDATE markers
-- Updated `.github/workflows/test-and-build.yml` - Added SRS validation step
+- **Placement**: Footer on authenticated pages, bottom of auth pages
+- **Format**: `v0.1.0` - simple format from package.json
+- **Interaction**: Static text only
 
-## Next Steps
+## Implementation Plan
 
-1. Test the workflow with a sample PR merge
-2. Add ANTHROPIC_API_KEY to GitHub secrets (for Claude Code integration)
-3. Consider adding SBOM auto-generation to satisfy SRS-CYBER-001
-4. Review and refine the requirement-mapping.json for accuracy
+5 files to modify:
+1. `frontend/vite.config.ts` - Add define block for APP_VERSION
+2. `frontend/src/vite-env.d.ts` - TypeScript declaration
+3. `frontend/src/components/Layout.tsx` - Footer version display
+4. `frontend/src/pages/Auth/LoginPage.tsx` - Bottom version display
+5. `frontend/src/pages/Auth/VerificationPage.tsx` - Bottom version display
 
 ## Active Decisions
 
 | Decision | Choice | Why |
 |----------|--------|-----|
-| Update trigger | PR merge to main | IEC 62304 requires reviewed code matches docs |
-| Human review | Required via PR | Medical device compliance - no fully auto commits |
-| Auto-update scope | Status/stats/revision only | Safety-critical sections need manual review |
-| Codebase scan approach | Lookup table (requirement-mapping.json) | O(1) lookup vs O(n) scan each time |
+| Version injection | Vite `define` block | Build-time replacement, zero runtime cost |
+| Source | package.json | Auto-updates when version bumped |
+| Auth page positioning | absolute bottom-4 | Non-intrusive, doesn't affect form layout |
 
-## Learnings This Session
+## Next Steps
 
-- IEC 62304 requires human-in-the-loop for documentation changes
-- requirement-mapping.json pattern allows incremental updates without full codebase scan
-- AUTO-UPDATE markers in docs help scripts identify safe sections
-- GitHub Actions can create PRs for documentation requiring human approval
-- Using ts-node in CI requires explicit type dependency installation
-
-## Files Created
-
-| File | Purpose |
-|------|---------|
-| docs/srs/requirement-mapping.json | Maps 162 SRS requirements to implementation files |
-| scripts/srs/detect-changes.ts | Analyzes git diff to find affected requirements |
-| scripts/srs/update-traceability.ts | Updates matrix status and statistics |
-| scripts/srs/verify-integrity.ts | Validates SRS document consistency |
-| scripts/srs/prompts/srs-update-prompt.md | Claude Code prompt for targeted analysis |
-| .github/workflows/srs-update.yml | GitHub Action workflow for automation |
-| docs/srs/change-log.md | Audit trail for compliance |
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| docs/ALA_SRS.md | Added AUTO-UPDATE markers around revision history |
-| docs/srs/traceability-matrix.md | Added AUTO-UPDATE markers around statistics and revision |
-| .github/workflows/test-and-build.yml | Added SRS validation step |
-
-## Workflow Architecture
-
-```
-PR Merged to Main
-       |
-       v
-GitHub Action: srs-update.yml
-       |
-       +---> Git diff to identify changed files
-       |
-       v
-Requirement Impact Analysis (requirement-mapping.json lookup)
-       |
-       v
-Run tests and collect results
-       |
-       v
-Update traceability matrix status
-       |
-       v
-Create Documentation Update PR
-       |
-       v
-Human Review (IEC 62304 compliance)
-       |
-       v
-Merge Documentation PR
-```
+1. Get user approval for plan
+2. Implement changes in order
+3. Test on dev server
+4. Verify TypeScript compiles
+5. Test production build
 
 ## Last Updated
-2025-12-29
+2026-01-08

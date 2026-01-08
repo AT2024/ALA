@@ -84,7 +84,7 @@ const RemovalTable = ({
                       <div className="w-24 bg-gray-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
-                            isComplete ? 'bg-green-600' : 'bg-blue-600'
+                            isComplete ? 'bg-green-600' : 'bg-primary'
                           }`}
                           style={{ width: `${progress}%` }}
                         />
@@ -107,7 +107,7 @@ const RemovalTable = ({
                       value={groupComments[group.seedCount] || ''}
                       onChange={(e) => onGroupCommentChange(group.seedCount, e.target.value)}
                       rows={2}
-                      className="w-full min-w-[150px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full min-w-[150px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Add comment..."
                     />
                   </td>
@@ -157,7 +157,7 @@ const RemovalTable = ({
                     value={individualSeedComment}
                     onChange={(e) => onIndividualSeedCommentChange(e.target.value)}
                     rows={2}
-                    className="w-full min-w-[150px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full min-w-[150px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     placeholder="Add comment..."
                   />
                 </td>

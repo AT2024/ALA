@@ -292,7 +292,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
                   )}
 
                   {/* Selection info */}
-                  <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm text-blue-700">
+                  <div className="mb-4 rounded-md bg-primary/10 p-4 text-sm text-primary">
                     Selected: {selectedApplicators.length} / 4 applicators
                   </div>
 

@@ -898,9 +898,19 @@ export const exportTreatment = asyncHandler(async (req: Request, res: Response) 
     res.setHeader('Content-Disposition', `attachment; filename=treatment-${treatment.id}.csv`);
     res.send(csv);
   } else if (format === 'pdf') {
-    // For PDF, in a real application, you would use a PDF generation library
-    // For now, we'll just send a response indicating PDF generation
-    res.status(200).send('PDF generation would happen here');
+    // Return stored PDF from database
+    const pdf = await TreatmentPdf.findOne({ where: { treatmentId: treatment.id } });
+    if (!pdf) {
+      res.status(404);
+      throw new Error('PDF not found - treatment may not be finalized');
+    }
+
+    logger.info(`PDF downloaded for treatment ${treatment.id} by user ${req.user?.id}`);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=treatment-${treatment.id}.pdf`);
+    res.setHeader('Content-Length', pdf.pdfSizeBytes.toString());
+    res.send(pdf.pdfData);
   } else {
     res.status(400);
     throw new Error('Unsupported export format');

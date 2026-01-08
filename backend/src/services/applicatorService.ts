@@ -701,8 +701,8 @@ export const applicatorService = {
    *
    * Status mappings:
    * - INSERTED → 'full' (applicator successfully used)
-   * - FAULTY, DEPLOYMENT_FAILURE → 'faulty' (applicator has issues)
-   * - DISPOSED, DISCHARGED → 'none' (applicator not used)
+   * - FAULTY → 'faulty' (applicator has issues, partial seeds may be inserted)
+   * - DEPLOYMENT_FAILURE, DISPOSED, DISCHARGED → 'none' (applicator not used, no seeds counted)
    * - SEALED, OPENED, LOADED → null (intermediate states, don't sync yet)
    *
    * @param status - Internal applicator status
@@ -723,11 +723,11 @@ export const applicatorService = {
       // Terminal state - successful insertion
       'INSERTED': 'full',
 
-      // Terminal states - faulty applicator
+      // Terminal state - faulty applicator (partial seeds may be inserted)
       'FAULTY': 'faulty',
-      'DEPLOYMENT_FAILURE': 'faulty',
 
-      // Terminal states - not used
+      // Terminal states - not used (no seeds counted for activity)
+      'DEPLOYMENT_FAILURE': 'none',
       'DISPOSED': 'none',
       'DISCHARGED': 'none',
 

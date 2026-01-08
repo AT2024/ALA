@@ -36,14 +36,14 @@ const ConfirmationDialog = ({
     warning: 'text-yellow-600',
     success: 'text-green-600',
     error: 'text-red-600',
-    info: 'text-blue-600',
+    info: 'text-primary',
   };
 
   const buttonColorMap = {
     warning: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
     success: 'bg-green-600 hover:bg-green-700 focus:ring-green-500',
     error: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
-    info: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
+    info: 'bg-primary hover:bg-primary/90 focus:ring-primary',
   };
 
   const Icon = iconMap[type];

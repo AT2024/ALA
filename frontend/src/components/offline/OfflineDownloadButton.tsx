@@ -187,7 +187,7 @@ export function OfflineDownloadButton({
               'flex items-center justify-center rounded-full transition-colors',
               sizeClasses[size],
               isOnline
-                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                ? 'bg-primary/20 text-primary hover:bg-primary/30'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed',
               className
             )}
@@ -202,7 +202,7 @@ export function OfflineDownloadButton({
         return (
           <div
             className={cn(
-              'flex items-center justify-center rounded-full bg-blue-100 text-blue-600',
+              'flex items-center justify-center rounded-full bg-primary/20 text-primary',
               sizeClasses[size],
               className
             )}

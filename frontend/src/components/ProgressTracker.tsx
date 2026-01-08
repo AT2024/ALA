@@ -16,7 +16,7 @@ const ProgressTracker = () => {
   const actualTotalSeeds = getActualTotalSeeds();
   const actualInsertedSeeds = getActualInsertedSeeds();
 
-  const ProgressBar = ({ current, total, label, color = 'bg-blue-500' }: {
+  const ProgressBar = ({ current, total, label, color = 'bg-primary' }: {
     current: number;
     total: number;
     label: string;
@@ -65,7 +65,7 @@ const ProgressTracker = () => {
           current={progressStats.usedApplicators}
           total={progressStats.totalApplicators}
           label="Applicators Processed"
-          color="bg-blue-500"
+          color="bg-primary"
         />
 
         {/* Source Progress - Now shows actual total sources */}
@@ -78,11 +78,11 @@ const ProgressTracker = () => {
 
         {/* Show actual total sources info */}
         {actualTotalSeeds > 0 && (
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
+          <div className="bg-primary/10 rounded-lg p-3">
+            <p className="text-sm text-primary">
               <span className="font-semibold">Total Sources Available:</span> {actualTotalSeeds} sources
               {progressStats.totalApplicators > 0 && (
-                <span className="block text-xs text-blue-600 mt-1">
+                <span className="block text-xs text-primary mt-1">
                   From {progressStats.totalApplicators} applicators
                 </span>
               )}
@@ -100,7 +100,7 @@ const ProgressTracker = () => {
                 <UsageTypeIndicator type="SEALED" count={progressStats.usageTypeDistribution.sealed} color="bg-gray-400" />
               )}
               {progressStats.usageTypeDistribution.opened > 0 && (
-                <UsageTypeIndicator type="OPENED" count={progressStats.usageTypeDistribution.opened} color="bg-blue-400" />
+                <UsageTypeIndicator type="OPENED" count={progressStats.usageTypeDistribution.opened} color="bg-primary" />
               )}
               {progressStats.usageTypeDistribution.loaded > 0 && (
                 <UsageTypeIndicator type="LOADED" count={progressStats.usageTypeDistribution.loaded} color="bg-purple-400" />
