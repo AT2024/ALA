@@ -25,6 +25,8 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 ```
 
 ## Documentation
+- **Design Log**: [DESIGN_LOG.md](DESIGN_LOG.md) - Active design decisions and questions
+- **Design History**: [docs/design-logs/](docs/design-logs/) - Historical design records
 - **Deployment**: [docs/deployment/](docs/deployment/) - Azure VM and local setup
 - **Troubleshooting**: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Common issues and pitfalls
 - **Priority API**: [docs/PRIORITY_INTEGRATION.md](docs/PRIORITY_INTEGRATION.md) - Integration rules
@@ -33,3 +35,7 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **Compounding Engineering**: [docs/COMPOUNDING-ENGINEERING-SETUP.md](docs/COMPOUNDING-ENGINEERING-SETUP.md) - Workflow system
 - **Multi-Agent Development**: [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md) - Parallel agent workflow
 - **Agent Behavior**: [.claude/settings.md](.claude/settings.md) - Claude Code guidelines
+
+## Design Log Commands
+- `/design` - Start a new design log entry (for significant changes)
+- `/azure-check` - Validate Local vs Azure parity before deployment
