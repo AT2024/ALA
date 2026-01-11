@@ -25,6 +25,7 @@
 ### Recent Decisions
 | Date | Decision | Log Link |
 |------|----------|----------|
+| 2026-01-11 | Removal PDF Fix (DL-004) | [Link](docs/design-logs/2026-01-removal-pdf-fix.md) |
 | 2026-01-07 | Environment Alignment Strategy | [Link](docs/design-logs/2026-01-environment-alignment.md) |
 
 ---
