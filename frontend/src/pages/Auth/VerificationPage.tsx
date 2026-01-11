@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { authService } from '@/services/authService';
@@ -11,8 +11,12 @@ const VerificationPage = () => {
   const navigate = useNavigate();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Start countdown for resend button
-  useEffect(() => {
+  // Start countdown timer
+  const startCountdown = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setRemainingTime(10);
+    setResendDisabled(true);
+
     timerRef.current = setInterval(() => {
       setRemainingTime((prev) => {
         if (prev <= 1) {
@@ -23,11 +27,15 @@ const VerificationPage = () => {
         return prev - 1;
       });
     }, 1000);
+  }, []);
 
+  // Start countdown on mount
+  useEffect(() => {
+    startCountdown();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [startCountdown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,24 +55,7 @@ const VerificationPage = () => {
       }
 
       await authService.resendVerificationCode(identifier);
-      
-      // Reset timer
-      setRemainingTime(10);
-      setResendDisabled(true);
-      
-      // Restart timer
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = setInterval(() => {
-        setRemainingTime((prev) => {
-          if (prev <= 1) {
-            setResendDisabled(false);
-            if (timerRef.current) clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
+      startCountdown();
     } catch (err) {
       console.error('Failed to resend code:', err);
     }
@@ -195,6 +186,7 @@ const VerificationPage = () => {
             </button>
           </div>
         </form>
+        <p className="mt-8 text-center text-xs text-gray-400">v{APP_VERSION}</p>
       </div>
     </div>
   );
