@@ -48,7 +48,13 @@ const SignatureModal = ({
   const { availableApplicators, applicators, currentTreatment } = useTreatment();
 
   // Determine which applicators to pass based on treatment type
-  const applicatorsForPdf = currentTreatment?.type === 'removal' ? applicators : availableApplicators;
+  // For removal: map isRemoved → usageType so backend counts them correctly
+  const applicatorsForPdf = currentTreatment?.type === 'removal'
+    ? applicators.map(app => ({
+        ...app,
+        usageType: app.isRemoved ? 'full' as const : (app.usageType || 'none' as const)
+      }))
+    : availableApplicators;
 
   // Step management - hospital flow starts at confirmation, alphatau at email selection
   const [currentStep, setCurrentStep] = useState<Step>(
