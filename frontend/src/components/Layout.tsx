@@ -196,6 +196,7 @@ export default function Layout({
 
       <footer className="border-t bg-secondary p-4 text-center text-sm text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} AlphaTau Medical Ltd. All rights reserved.</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">v{APP_VERSION}</p>
       </footer>
     </div>
   );

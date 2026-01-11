@@ -2,9 +2,17 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+
+// Read version from package.json for build-time injection
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const version = packageJson.version;
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    APP_VERSION: JSON.stringify(version),
+  },
   plugins: [
     react(),
     VitePWA({
