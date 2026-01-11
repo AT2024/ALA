@@ -54,4 +54,6 @@ A change requires a design log entry if it involves:
 
 | ID | Title | Status | Created |
 |----|-------|--------|---------|
-| DL-001 | [Environment Alignment](docs/design-logs/2026-01-environment-alignment.md) | Draft | 2026-01-07 |
+| DL-001 | [Environment Alignment](docs/design-logs/2026-01-environment-alignment.md) | Implemented | 2026-01-07 |
+| DL-002 | [Parallel Worktree Workflow](docs/design-logs/2026-01-parallel-worktree-workflow.md) | Implemented | 2026-01-08 |
+| DL-003 | [Version Display](docs/design-logs/2026-01-version-display.md) | Implemented | 2026-01-11 |

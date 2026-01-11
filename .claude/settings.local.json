@@ -57,7 +57,11 @@
       "Skill(prompt-improver:prompt-improver)",
       "Skill(cc10x:cc10x-router)",
       "mcp__sequential-thinking__sequentialthinking",
-      "mcp__octocode__githubViewRepoStructure"
+      "mcp__octocode__githubViewRepoStructure",
+      "Bash(./scripts/setup-parallel-worker.sh:*)",
+      "Bash(bash scripts/setup-parallel-worker.sh:*)",
+      "WebFetch(domain:www.philschmid.de)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

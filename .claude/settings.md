@@ -183,3 +183,117 @@ These changes can proceed without a design log entry:
 - Priority API integration modifications → validate business logic
 - Data integrity or patient safety concerns → raise immediately
 - Missing foundational choices (framework, UI type, hosting) → use `raise_missing_requirements`
+
+## Development Standards
+
+### Code Quality Gates
+
+All code changes must satisfy these quality gates before completion:
+
+1. **Build Verification**: `npm run build` must pass in affected packages
+2. **Type Check**: `npm run typecheck` (if available) must pass
+3. **Lint Clean**: No new lint warnings/errors introduced
+4. **Test Pass**: Relevant tests must pass (`npm test` in backend/ and frontend/)
+
+Use `/spawn test` for async test verification during development.
+
+### Test-Driven Development
+
+For robust code, follow TDD principles:
+
+- **Bug fixes**: Write failing test FIRST that reproduces the bug, then fix
+- **New features**: Define test cases before implementation
+- **Refactoring**: Ensure test coverage exists before changing code
+- **Medical safety features**: MANDATORY tests before code changes
+
+### Commit Guidelines
+
+For a medical safety system, clean commit history is critical:
+
+- **Atomic commits**: One logical change per commit
+- **No bundling**: Never mix refactoring with bug fixes or features
+- **Clear messages**: Format as `type(scope): description`
+  - Types: feat, fix, refactor, test, docs, chore
+  - Example: `fix(applicator): validate status before removal`
+- **Medical changes**: Require separate commit with explicit safety context
+
+## Parallel Worktree Isolation Rules
+
+### Worktree Detection
+
+When working in a worktree (path contains `.worktrees/`):
+1. You are in an ISOLATED environment
+2. Your scope is limited to THIS worktree only
+3. The parent repo is OFF-LIMITS for modifications
+
+### Isolation Checklist (Before ANY Modification)
+
+Before modifying files in a parallel worktree environment:
+- [ ] Am I in my assigned worktree?
+- [ ] Is this file within my allowed scope?
+- [ ] Have I avoided accessing other worktrees?
+- [ ] Am I NOT modifying shared contracts without approval?
+
+### Port Awareness
+
+Each worktree has unique ports. When starting services:
+- Check `.env.worker` or `.env` for port assignments
+- Do NOT assume default ports (3000, 5000, 5432)
+- Use port from environment variables
+
+**Port Formula:** `port = base_port + (worker_number * 100)`
+- Worker 1: Frontend 3100, Backend 5100
+- Worker 2: Frontend 3200, Backend 5200
+
+### Spawn Agent Behavior
+
+The `/spawn` command runs analysis agents synchronously (not in background):
+- Output is always captured and displayed
+- Agent completes before returning control
+
+**Why synchronous?** Claude Code's `run_in_background: true` has known output capture issues (GitHub #9905, #14521). Background agents often complete with empty output.
+
+**Spawn agent constraints:**
+1. LIMITED to analysis/verification only
+2. CANNOT write files - attempting to do so will fail
+3. Output findings as text (captured by orchestrator)
+
+**Available /spawn tasks:** test, lint, review, security, coverage
+
+### Conflict Prevention
+
+When working on files that might conflict:
+1. Check if file is in LOCKED list (from `docs/MULTI_AGENT_WORKFLOW.md`)
+2. If locked, do NOT modify - report to human coordinator
+3. If borderline scope, ask before proceeding
+
+**Locked files** (require human coordination):
+- `shared/applicatorStatuses.ts`
+- `frontend/src/context/TreatmentContext.tsx`
+- `backend/src/models/*.ts`
+- `backend/src/services/priorityService.ts`
+- `package.json` (all)
+
+### Emergency Stop Conditions
+
+**STOP and notify human coordinator if:**
+- You need to modify a file outside your scope
+- You detect another agent working in same area
+- Database schema changes are needed
+- Priority API modifications required
+- Any patient safety-related changes
+
+### Human Coordinator Role
+
+The human developer is the ONLY coordination point:
+- Creates worktrees with `./scripts/setup-parallel-worker.sh`
+- Assigns agent scopes and branches
+- Merges branches from different worktrees
+- Resolves conflicts between parallel work
+- Reviews and approves cross-worktree changes
+
+**You (the agent) should NEVER:**
+- Coordinate with other agents directly
+- Leave messages for other agents in files
+- Assume knowledge of other worktrees' state
+- Access files in `.worktrees/` subdirectories other than your own

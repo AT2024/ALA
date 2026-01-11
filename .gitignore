@@ -137,6 +137,9 @@ ssl-certs/
 # Claude settings - local configuration
 .claude/settings.local.json
 
+# Git Worktrees for parallel development
+.worktrees/
+
 # Generated documentation
 docs/generated/
 
