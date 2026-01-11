@@ -1028,11 +1028,18 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
   // Get applicators and merge with unused available applicators
   let processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
 
-  // For test user removal with no DB applicators, load from test data
-  if (treatment.type === 'removal' && processedApplicators.length === 0) {
-    const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
-    if (testApplicators.length > 0) {
-      processedApplicators = testApplicators;
+  // For removal treatments, use frontend applicators which have correct isRemoved→usageType mapping
+  // This fixes the bug where test data overrides frontend state with all applicators marked as 'full'
+  if (treatment.type === 'removal') {
+    if (availableApplicators && availableApplicators.length > 0) {
+      // Frontend sends applicators with correct usageType based on user's removal selections
+      processedApplicators = availableApplicators;
+    } else if (processedApplicators.length === 0) {
+      // Fallback for edge cases: load test data only if no frontend data available
+      const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
+      if (testApplicators.length > 0) {
+        processedApplicators = testApplicators;
+      }
     }
   }
 
@@ -1125,11 +1132,18 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   // Get applicators and merge with unused available applicators
   let processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
 
-  // For test user removal with no DB applicators, load from test data
-  if (treatment.type === 'removal' && processedApplicators.length === 0) {
-    const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
-    if (testApplicators.length > 0) {
-      processedApplicators = testApplicators;
+  // For removal treatments, use frontend applicators which have correct isRemoved→usageType mapping
+  // This fixes the bug where test data overrides frontend state with all applicators marked as 'full'
+  if (treatment.type === 'removal') {
+    if (availableApplicators && availableApplicators.length > 0) {
+      // Frontend sends applicators with correct usageType based on user's removal selections
+      processedApplicators = availableApplicators;
+    } else if (processedApplicators.length === 0) {
+      // Fallback for edge cases: load test data only if no frontend data available
+      const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
+      if (testApplicators.length > 0) {
+        processedApplicators = testApplicators;
+      }
     }
   }
 
