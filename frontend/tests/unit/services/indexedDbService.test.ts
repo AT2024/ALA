@@ -5,6 +5,9 @@
  * Target: 100% code coverage
  *
  * Uses fake-indexeddb for realistic IndexedDB testing.
+ *
+ * NOTE: This file is excluded in CI via vitest.config.ts because
+ * SubtleCrypto's importKey fails in GitHub Actions' jsdom environment.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

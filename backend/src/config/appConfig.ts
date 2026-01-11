@@ -24,7 +24,10 @@ export const config = {
   dbHealthThresholdMs: parseInt(process.env.DB_HEALTH_THRESHOLD_MS || '5000', 10),
   dbReconnectIntervalMs: parseInt(process.env.DB_RECONNECT_INTERVAL_MS || '30000', 10),
 
-  // Email (retry configuration)
+  // Email configuration
+  emailSenderAddress: process.env.AZURE_EMAIL_SENDER_ADDRESS || 'www.ala@alphatau.com',
+  emailConnectionString: process.env.AZURE_COMMUNICATION_CONNECTION_STRING || '',
+  pdfRecipientEmail: process.env.PDF_RECIPIENT_EMAIL || '',
   emailMaxRetries: parseInt(process.env.EMAIL_MAX_RETRIES || '3', 10),
   emailRetryDelayMs: parseInt(process.env.EMAIL_RETRY_DELAY_MS || '1000', 10),
 

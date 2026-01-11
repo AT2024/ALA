@@ -5,7 +5,6 @@ import applicatorService from '../services/applicatorService';
 import priorityService from '../services/priorityService';
 import sequelize from '../config/database';
 import { Treatment, TreatmentPdf, SignatureVerification } from '../models';
-import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger';
 import { ContinuationInfo } from '../services/pdfGenerationService';
 import { sendVerificationCode } from '../services/emailService';
@@ -48,6 +47,63 @@ async function getContinuationInfo(treatment: Treatment): Promise<ContinuationIn
     parentTreatmentId: treatment.parentTreatmentId,
     parentPdfCreatedAt: parentPdf.signedAt
   };
+}
+
+/**
+ * Helper function to load test user applicators for removal PDF generation
+ *
+ * When test users finalize a removal treatment, there are no applicators in the database
+ * (because there was no real insertion). This function loads the applicators from test-data.json
+ * via priorityService.getOrderSubform() and marks them as removed for the PDF.
+ *
+ * @param treatment - The removal treatment
+ * @param userEmail - The user's email to check if test user
+ * @param userId - The user's ID for test context
+ * @returns Array of applicators formatted for PDF, or empty array if not applicable
+ */
+async function loadTestUserRemovalApplicators(
+  treatment: Treatment,
+  userEmail: string,
+  userId: string
+): Promise<any[]> {
+  // Only applies to test user removal treatments
+  const testUserEmail = config.testUserEmail || 'test@example.com';
+  const isTestUser = userEmail === testUserEmail;
+
+  if (!isTestUser || treatment.type !== 'removal') {
+    return [];
+  }
+
+  const treatmentNumber = treatment.priorityId || treatment.subjectId;
+  if (!treatmentNumber) {
+    logger.warn(`Test user removal but no treatment number found for treatment ${treatment.id}`);
+    return [];
+  }
+
+  try {
+    const testContext = { email: userEmail, identifier: userId };
+    const testApplicators = await priorityService.getOrderSubform(treatmentNumber, testContext, 'removal');
+
+    if (testApplicators && testApplicators.length > 0) {
+      const formattedApplicators = testApplicators.map((app: any) => ({
+        serialNumber: app.SERNUM,
+        seedQuantity: app.INTDATA2,
+        usageType: 'full',  // All marked as removed for removal PDF
+        applicatorType: app.PARTDES,
+        catalog: app.PARTNAME,
+        insertionTime: app.INSERTIONDATE,
+        insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2,
+        comments: app.INSERTIONCOMMENTS || '',
+      }));
+
+      logger.info(`Test user removal: loaded ${formattedApplicators.length} applicators from test data for treatment ${treatment.id}`);
+      return formattedApplicators;
+    }
+  } catch (error) {
+    logger.error(`Error loading test user removal applicators: ${error}`);
+  }
+
+  return [];
 }
 
 // @desc    Get all treatments with optional filtering
@@ -410,152 +466,58 @@ export const getTreatmentApplicators = asyncHandler(async (req: Request, res: Re
 // @access  Private
 export const addApplicator = asyncHandler(async (req: Request, res: Response) => {
   const treatmentId = req.params.id;
-  const requestId = `addApplicator_${Math.random().toString(36).substr(2, 9)}`;
-  
-  logger.info(`[TREATMENT_CONTROLLER] Starting addApplicator process`, {
-    requestId,
-    treatmentId,
-    userId: req.user?.id,
-    userRole: req.user?.role,
-    requestBody: req.body,
-    requestHeaders: {
-      'content-type': req.headers['content-type'],
-      'user-agent': req.headers['user-agent']
-    },
-    timestamp: new Date().toISOString()
-  });
 
-  // STEP 1: Validate request parameters
-  logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 1: Validating request parameters`);
   if (!treatmentId) {
-    logger.error(`[TREATMENT_CONTROLLER] [${requestId}] Missing treatment ID in request`, {
-      params: req.params,
-      url: req.originalUrl
-    });
     res.status(400);
     throw new Error('Treatment ID is required');
   }
 
   if (!req.user?.id) {
-    logger.error(`[TREATMENT_CONTROLLER] [${requestId}] Missing user information`, {
-      user: req.user,
-      headers: req.headers.authorization ? '[PRESENT]' : '[MISSING]'
-    });
     res.status(401);
     throw new Error('User authentication required');
   }
 
-  // STEP 2: Start database transaction
-  logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 2: Starting database transaction`);
-  const transaction = await sequelize.transaction();
-  
-  try {
-    // STEP 3: Get treatment within the transaction
-    logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 3: Fetching treatment from database`);
-    logger.info(`[TREATMENT_CONTROLLER] [${requestId}] Attempting to fetch treatment`, {
-      treatmentId,
-      hasTransaction: !!transaction,
-      userId: req.user.id
-    });
+  logger.info(`Adding applicator to treatment ${treatmentId}`, {
+    userId: req.user.id,
+    serialNumber: req.body.serialNumber
+  });
 
+  const transaction = await sequelize.transaction();
+
+  try {
     const treatment = await treatmentService.getTreatmentById(treatmentId, transaction);
-    
-    logger.info(`[TREATMENT_CONTROLLER] [${requestId}] Treatment lookup result`, {
-      treatmentId,
-      treatmentFound: !!treatment,
-      treatmentData: treatment ? {
-        id: treatment.id,
-        type: treatment.type,
-        userId: treatment.userId,
-        isComplete: treatment.isComplete,
-        subjectId: treatment.subjectId,
-        site: treatment.site
-      } : null,
-      hasTransaction: !!transaction
-    });
-    
-    // STEP 4: Check user authorization
-    logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 4: Checking user authorization`);
+
+    // Check user authorization
     if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-      logger.warn(`[TREATMENT_CONTROLLER] [${requestId}] Unauthorized access attempt`, {
-        treatmentId,
-        requestingUserId: req.user.id,
-        treatmentOwnerId: treatment.userId,
-        userRole: req.user.role,
-        isAdmin: req.user.role === 'admin'
-      });
       await transaction.rollback();
       res.status(403);
       throw new Error('Not authorized to modify this treatment');
     }
 
-    // STEP 5: Validate treatment state
-    logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 5: Validating treatment state`);
+    // Validate treatment state
     if (treatment.isComplete) {
-      logger.warn(`[TREATMENT_CONTROLLER] [${requestId}] Attempt to modify completed treatment`, {
-        treatmentId,
-        isComplete: treatment.isComplete,
-        userId: req.user.id
-      });
       await transaction.rollback();
       res.status(400);
       throw new Error('Cannot add applicator to a completed treatment');
     }
 
-    // STEP 6: Call applicator service
-    logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 6: Calling applicator service`);
-    logger.info(`[TREATMENT_CONTROLLER] [${requestId}] Calling addApplicatorWithTransaction`, {
-      treatmentId,
-      treatmentType: treatment.type,
-      requestData: req.body,
-      userId: req.user.id,
-      transactionActive: !!transaction
-    });
-    
     const applicator = await applicatorService.addApplicatorWithTransaction(
-      treatment, 
-      req.body, 
-      req.user.id, 
+      treatment,
+      req.body,
+      req.user.id,
       transaction
     );
-    
-    // STEP 7: Commit transaction
-    logger.debug(`[TREATMENT_CONTROLLER] [${requestId}] Step 7: Committing transaction`);
+
     await transaction.commit();
-    
-    logger.info(`[TREATMENT_CONTROLLER] [${requestId}] Successfully added applicator`, {
-      treatmentId,
-      applicatorId: applicator.id,
-      serialNumber: applicator.serialNumber,
-      usageType: applicator.usageType,
-      userId: req.user.id,
-      processingTime: new Date().toISOString()
-    });
-    
+
+    logger.info(`Applicator ${applicator.serialNumber} added to treatment ${treatmentId}`);
+
     res.status(201).json(applicator);
   } catch (error: any) {
-    // Rollback the transaction in case of error
     await transaction.rollback();
-    
-    logger.error(`[TREATMENT_CONTROLLER] [${requestId}] Error in addApplicator process`, {
-      requestId,
-      treatmentId,
-      userId: req.user?.id,
-      step: 'unknown', // This could be enhanced to track which step failed
-      requestBody: req.body,
-      error: {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-        sqlMessage: error.original?.message,
-        sqlCode: error.original?.code,
-        constraint: error.original?.constraint
-      },
-      transactionRolledBack: true,
-      timestamp: new Date().toISOString()
-    });
-    
+
+    logger.error(`Failed to add applicator to treatment ${treatmentId}: ${error.message}`);
+
     // Return appropriate HTTP status based on error type
     if (error.message === 'Treatment not found') {
       res.status(404);
@@ -566,125 +528,8 @@ export const addApplicator = asyncHandler(async (req: Request, res: Response) =>
     } else if (!res.statusCode || res.statusCode === 200) {
       res.status(500);
     }
-    
+
     throw error;
-  }
-});
-
-// @desc    Debug treatment existence
-// @route   GET /api/treatments/:id/debug
-// @access  Private
-export const debugTreatment = asyncHandler(async (req: Request, res: Response) => {
-  const treatmentId = req.params.id;
-  const debugId = `debug_${Math.random().toString(36).substr(2, 9)}`;
-  
-  logger.info(`[TREATMENT_DEBUG] Starting treatment debug`, {
-    debugId,
-    treatmentId,
-    userId: req.user?.id
-  });
-
-  try {
-    // Check if treatment exists without transaction
-    const treatmentDirect = await Treatment.findByPk(treatmentId);
-    
-    // Check if treatment exists with transaction
-    const transaction = await sequelize.transaction();
-    let treatmentWithTransaction;
-    try {
-      treatmentWithTransaction = await Treatment.findByPk(treatmentId, { transaction });
-      await transaction.commit();
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-    
-    // Get all treatments for this user to see what exists
-    const userTreatments = await Treatment.findAll({
-      where: { userId: req.user.id },
-      attributes: ['id', 'type', 'subjectId', 'site', 'isComplete', 'createdAt'],
-      limit: 10,
-      order: [['createdAt', 'DESC']]
-    });
-    
-    // Check database table directly
-    const [treatmentExists] = await sequelize.query(
-      'SELECT id, type, "subjectId", site, "isComplete", "userId", "createdAt" FROM treatments WHERE id = :treatmentId',
-      {
-        replacements: { treatmentId },
-        type: QueryTypes.SELECT
-      }
-    );
-    
-    const debugInfo = {
-      treatmentId,
-      checks: {
-        existsDirectQuery: !!treatmentDirect,
-        existsWithTransaction: !!treatmentWithTransaction,
-        existsRawQuery: !!treatmentExists
-      },
-      treatmentData: {
-        direct: treatmentDirect ? {
-          id: treatmentDirect.id,
-          type: treatmentDirect.type,
-          userId: treatmentDirect.userId,
-          isComplete: treatmentDirect.isComplete,
-          createdAt: treatmentDirect.createdAt
-        } : null,
-        withTransaction: treatmentWithTransaction ? {
-          id: treatmentWithTransaction.id,
-          type: treatmentWithTransaction.type,
-          userId: treatmentWithTransaction.userId,
-          isComplete: treatmentWithTransaction.isComplete,
-          createdAt: treatmentWithTransaction.createdAt
-        } : null,
-        rawQuery: treatmentExists || null
-      },
-      userTreatments: userTreatments.map((t: any) => ({
-        id: t.id,
-        type: t.type,
-        subjectId: t.subjectId,
-        site: t.site,
-        isComplete: t.isComplete,
-        createdAt: t.createdAt
-      })),
-      requestInfo: {
-        userId: req.user.id,
-        userRole: req.user.role,
-        treatmentIdFormat: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(treatmentId)
-      }
-    };
-    
-    logger.info(`[TREATMENT_DEBUG] Debug information collected`, {
-      debugId,
-      treatmentId,
-      found: debugInfo.checks,
-      userTreatmentsCount: userTreatments.length
-    });
-    
-    res.status(200).json({
-      success: true,
-      debug: debugInfo,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error: any) {
-    logger.error(`[TREATMENT_DEBUG] Error in debug endpoint`, {
-      debugId,
-      treatmentId,
-      error: {
-        message: error.message,
-        name: error.name,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      }
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      debugId,
-      timestamp: new Date().toISOString()
-    });
   }
 });
 
@@ -898,9 +743,19 @@ export const exportTreatment = asyncHandler(async (req: Request, res: Response) 
     res.setHeader('Content-Disposition', `attachment; filename=treatment-${treatment.id}.csv`);
     res.send(csv);
   } else if (format === 'pdf') {
-    // For PDF, in a real application, you would use a PDF generation library
-    // For now, we'll just send a response indicating PDF generation
-    res.status(200).send('PDF generation would happen here');
+    // Return stored PDF from database
+    const pdf = await TreatmentPdf.findOne({ where: { treatmentId: treatment.id } });
+    if (!pdf) {
+      res.status(404);
+      throw new Error('PDF not found - treatment may not be finalized');
+    }
+
+    logger.info(`PDF downloaded for treatment ${treatment.id} by user ${req.user?.id}`);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=treatment-${treatment.id}.pdf`);
+    res.setHeader('Content-Length', pdf.pdfSizeBytes.toString());
+    res.send(pdf.pdfData);
   } else {
     res.status(400);
     throw new Error('Unsupported export format');
@@ -1171,7 +1026,23 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
   });
 
   // Get applicators and merge with unused available applicators
-  const processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+  let processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+
+  // For removal treatments, use frontend applicators which have correct isRemoved→usageType mapping
+  // This fixes the bug where test data overrides frontend state with all applicators marked as 'full'
+  if (treatment.type === 'removal') {
+    if (availableApplicators && availableApplicators.length > 0) {
+      // Frontend sends applicators with correct usageType based on user's removal selections
+      processedApplicators = availableApplicators;
+    } else if (processedApplicators.length === 0) {
+      // Fallback for edge cases: load test data only if no frontend data available
+      const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
+      if (testApplicators.length > 0) {
+        processedApplicators = testApplicators;
+      }
+    }
+  }
+
   const allApplicators = mergeApplicatorsForPdf(processedApplicators, availableApplicators);
 
   // Build signature details and generate/send PDF
@@ -1259,7 +1130,23 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   });
 
   // Get applicators and merge with unused available applicators
-  const processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+  let processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
+
+  // For removal treatments, use frontend applicators which have correct isRemoved→usageType mapping
+  // This fixes the bug where test data overrides frontend state with all applicators marked as 'full'
+  if (treatment.type === 'removal') {
+    if (availableApplicators && availableApplicators.length > 0) {
+      // Frontend sends applicators with correct usageType based on user's removal selections
+      processedApplicators = availableApplicators;
+    } else if (processedApplicators.length === 0) {
+      // Fallback for edge cases: load test data only if no frontend data available
+      const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
+      if (testApplicators.length > 0) {
+        processedApplicators = testApplicators;
+      }
+    }
+  }
+
   const allApplicators = mergeApplicatorsForPdf(processedApplicators, availableApplicators);
 
   // Build signature details and generate/send PDF
@@ -1427,7 +1314,6 @@ export default {
   updateTreatmentStatus,
   getTreatmentApplicators,
   addApplicator,
-  debugTreatment,
   getRemovalCandidates,
   exportTreatment,
   initializeFinalization,

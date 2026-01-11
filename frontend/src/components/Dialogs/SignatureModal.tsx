@@ -42,8 +42,15 @@ const SignatureModal = ({
 }: SignatureModalProps) => {
   // Note: treatmentSite is available via _treatmentSite if needed for site-specific features
 
-  // Get available applicators from treatment context to include in PDF
-  const { availableApplicators } = useTreatment();
+  // Get applicators from treatment context to include in PDF
+  // For removal treatments, use `applicators` (the removal tracking list)
+  // For insertion treatments, use `availableApplicators` (the scanned applicators list)
+  const { availableApplicators, applicators, currentTreatment } = useTreatment();
+
+  // Map isRemoved → usageType for removal PDF generation
+  const applicatorsForPdf = currentTreatment?.type === 'removal'
+    ? applicators.map(app => ({ ...app, usageType: app.isRemoved ? 'full' as const : 'none' as const }))
+    : availableApplicators;
 
   // Step management - hospital flow starts at confirmation, alphatau at email selection
   const [currentStep, setCurrentStep] = useState<Step>(
@@ -209,7 +216,7 @@ const SignatureModal = ({
         verificationCode,
         signerName.trim(),
         signerPosition,
-        availableApplicators
+        applicatorsForPdf
       );
       onSuccess();
       onClose();
@@ -250,7 +257,7 @@ const SignatureModal = ({
     setError(null);
 
     try {
-      await treatmentService.autoFinalize(treatmentId, signerName.trim(), signerPosition, availableApplicators);
+      await treatmentService.autoFinalize(treatmentId, signerName.trim(), signerPosition, applicatorsForPdf);
       onSuccess();
       onClose();
     } catch (err: any) {
