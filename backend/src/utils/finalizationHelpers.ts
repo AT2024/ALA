@@ -73,6 +73,7 @@ export function mergeApplicatorsForPdf(
   const processedSerials = new Set(processedApplicators.map((a) => a.serialNumber));
 
   // Map unused applicators (those in available but not processed)
+  // Preserve usageType from frontend (e.g., 'full' for removed applicators in removal workflow)
   const unusedApplicators: ApplicatorForPdf[] = (availableApplicators || [])
     .filter((a) => !processedSerials.has(a.serialNumber))
     .map((a) => ({
@@ -80,10 +81,10 @@ export function mergeApplicatorsForPdf(
       serialNumber: a.serialNumber,
       applicatorType: a.applicatorType,
       seedQuantity: a.seedQuantity,
-      usageType: 'sealed' as const,
-      insertionTime: '',
-      insertedSeedsQty: 0,
-      comments: 'Not used',
+      usageType: (a.usageType as ApplicatorUsageType) || 'sealed',
+      insertionTime: a.insertionTime || '',
+      insertedSeedsQty: a.insertedSeedsQty || 0,
+      comments: a.comments || 'Not used',
     }));
 
   // Combine processed applicators (formatted) with unused ones
