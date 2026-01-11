@@ -19,24 +19,22 @@ const LoginPage = () => {
       setLocalError(`Please enter a valid ${identifierType === 'email' ? 'email address' : 'phone number'}`);
       return;
     }
-    
-    if (identifier) {
-      try {
-        const result = await login(identifier);
-        
-        // If login was successful, show success message and redirect to verification page
-        if (result && result.success) {
-          setSuccessMessage(`Verification code sent to ${identifier}.`);
-          
-          // Add a slight delay before navigating to give user time to see the message
-          setTimeout(() => {
-            navigate('/verify');
-          }, 1500);
-        }
-      } catch (err: any) {
-        console.error("Login error:", err);
-        setLocalError(err.message || 'Failed to process login. Please try again.');
+
+    try {
+      const result = await login(identifier);
+
+      // If login was successful, show success message and redirect to verification page
+      if (result && result.success) {
+        setSuccessMessage(`Verification code sent to ${identifier}.`);
+
+        // Add a slight delay before navigating to give user time to see the message
+        setTimeout(() => {
+          navigate('/verify');
+        }, 1500);
       }
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setLocalError(err.message || 'Failed to process login. Please try again.');
     }
   };
 
@@ -185,6 +183,7 @@ const LoginPage = () => {
             </button>
           </div>
         </form>
+        <p className="mt-8 text-center text-xs text-gray-400">v{APP_VERSION}</p>
       </div>
     </div>
   );
