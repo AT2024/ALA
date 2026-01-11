@@ -1,10 +1,11 @@
 import { EmailClient, EmailMessage, KnownEmailSendStatus } from '@azure/communication-email';
 import logger from '../utils/logger';
+import { config } from '../config/appConfig';
 
-// Configuration
-const AZURE_CONNECTION_STRING = process.env.AZURE_COMMUNICATION_CONNECTION_STRING || '';
-const SENDER_ADDRESS = process.env.AZURE_EMAIL_SENDER_ADDRESS || '';
-const PDF_RECIPIENT_EMAIL = process.env.PDF_RECIPIENT_EMAIL || '';
+// Configuration (from centralized appConfig - single source of truth)
+const AZURE_CONNECTION_STRING = config.emailConnectionString;
+const SENDER_ADDRESS = config.emailSenderAddress;
+const PDF_RECIPIENT_EMAIL = config.pdfRecipientEmail;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // In development, skip actual email sending unless explicitly configured
@@ -12,9 +13,9 @@ const IS_PRODUCTION = NODE_ENV === 'production';
 const FORCE_EMAIL_IN_DEV = process.env.FORCE_EMAIL_IN_DEV === 'true';
 const SHOULD_SEND_EMAILS = IS_PRODUCTION || FORCE_EMAIL_IN_DEV;
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
+// Retry configuration (from centralized appConfig)
+const MAX_RETRIES = config.emailMaxRetries;
+const RETRY_DELAY_MS = config.emailRetryDelayMs;
 
 // Email client singleton
 let emailClient: EmailClient | null = null;
