@@ -10,7 +10,6 @@ import {
   getTreatmentApplicators,
   addApplicator,
   exportTreatment,
-  debugTreatment,
   getRemovalCandidates,
   initializeFinalization,
   getSiteUsersForFinalization,
@@ -52,7 +51,6 @@ router.post('/:id/complete', validateUUID('id'), criticalOperationHealthCheck, c
 router.put('/:id/removal-procedure', validateUUID('id'), criticalOperationHealthCheck, updateRemovalProcedure);
 router.patch('/:id/status', validateUUID('id'), criticalOperationHealthCheck, updateTreatmentStatus);
 router.get('/:id/export', validateUUID('id'), databaseHealthCheck, exportTreatment);
-router.get('/:id/debug', validateUUID('id'), databaseHealthCheck, debugTreatment);
 
 // Treatment finalization routes (PDF generation and digital signature)
 router.post('/:id/finalize/initiate', validateUUID('id'), databaseHealthCheck, initializeFinalization);
