@@ -14,12 +14,9 @@ const HEADER_BLUE = '#428bca';
 const REMOVAL_GREEN = '#22c55e';    // green-600 - complete state
 const REMOVAL_GREEN_LIGHT = '#dcfce7'; // green-100 - complete row background
 const REMOVAL_PRIMARY = '#428bca';  // primary - in-progress
-const REMOVAL_ORANGE = '#f97316';   // orange-500 - individual seeds
 const REMOVAL_RED = '#dc2626';      // red-600 - discrepancy/error
-const REMOVAL_AMBER = '#f59e0b';    // amber-500 - warning
 const REMOVAL_AMBER_LIGHT = '#fffbeb'; // amber-50 - warning background
 const REMOVAL_AMBER_BORDER = '#fcd34d'; // amber-300 - warning border
-const GRAY_BACKGROUND = '#e5e7eb';  // gray-200 - progress bar background
 const GRAY_TEXT = '#6b7280';        // gray-500 - labels
 
 export interface Treatment {
@@ -258,36 +255,6 @@ function drawTable(
 // ===== REMOVAL PDF DRAWING FUNCTIONS =====
 
 /**
- * Draw a progress bar with configurable colors
- */
-function drawProgressBar(
-  doc: PDFKit.PDFDocument,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  progress: number,
-  options: { isComplete?: boolean; isIndividual?: boolean } = {}
-): void {
-  const { isComplete = false, isIndividual = false } = options;
-
-  // Background bar (gray, rounded)
-  doc.fillColor(GRAY_BACKGROUND);
-  doc.roundedRect(x, y, width, height, height / 2).fill();
-
-  // Progress fill
-  const progressWidth = Math.min(width * (progress / 100), width);
-  if (progressWidth > 0) {
-    const barColor = isComplete ? REMOVAL_GREEN : isIndividual ? REMOVAL_ORANGE : REMOVAL_PRIMARY;
-    doc.fillColor(barColor);
-    doc.roundedRect(x, y, progressWidth, height, height / 2).fill();
-  }
-
-  // Reset fill color
-  doc.fillColor('black');
-}
-
-/**
  * Draw removal PDF header with logo and title
  */
 function drawRemovalHeader(doc: PDFKit.PDFDocument, _startY: number): number {
@@ -379,9 +346,9 @@ function drawRemovalTrackingTable(
   doc.text('Source Removal Tracking', 50, y);
   y += 20;
 
-  // Table configuration
-  const headers = ['Group', 'Total Sources', 'Removed', 'Progress', 'Comment'];
-  const colWidths = [200, 100, 80, 150, 212];
+  // Table configuration (Progress column removed per user request)
+  const headers = ['Group', 'Total Sources', 'Removed', 'Comment'];
+  const colWidths = [200, 100, 80, 362];  // Redistributed Progress width to Comment
   const rowHeight = 28;
   const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
@@ -431,24 +398,15 @@ function drawRemovalTrackingTable(
     doc.text(group.removedSources.toString(), cellX + 5, y + 9, { width: colWidths[2] - 10, align: 'center' });
     cellX += colWidths[2];
 
-    // Progress bar + percentage
-    drawProgressBar(doc, cellX + 5, y + 10, 96, 8, group.progressPercent, { isComplete });
-    doc.fillColor('black').fontSize(8);
-    doc.text(`${group.progressPercent}%`, cellX + 105, y + 9);
-    cellX += colWidths[3];
-
-    // Comment
+    // Comment (Progress column removed)
     doc.fontSize(8).fillColor('black');
-    doc.text(group.comment || '-', cellX + 5, y + 9, { width: colWidths[4] - 10 });
+    doc.text(group.comment || '-', cellX + 5, y + 9, { width: colWidths[3] - 10 });
 
     y += rowHeight;
   });
 
   // Individual seeds row (if applicable)
   if (data.individualSeeds.total > 0) {
-    const individualProgress = data.individualSeeds.total > 0
-      ? Math.round((data.individualSeeds.removed / data.individualSeeds.total) * 100)
-      : 0;
     const isComplete = data.individualSeeds.removed >= data.individualSeeds.total;
 
     // Row background
@@ -471,12 +429,8 @@ function drawRemovalTrackingTable(
     doc.text(data.individualSeeds.removed.toString(), cellX + 5, y + 9, { width: colWidths[2] - 10, align: 'center' });
     cellX += colWidths[2];
 
-    drawProgressBar(doc, cellX + 5, y + 10, 96, 8, individualProgress, { isComplete, isIndividual: !isComplete });
-    doc.fillColor('black').fontSize(8);
-    doc.text(`${individualProgress}%`, cellX + 105, y + 9);
-    cellX += colWidths[3];
-
-    doc.fontSize(8).text(data.individualSeeds.comment || '-', cellX + 5, y + 9, { width: colWidths[4] - 10 });
+    // Comment (Progress column removed)
+    doc.fontSize(8).text(data.individualSeeds.comment || '-', cellX + 5, y + 9, { width: colWidths[3] - 10 });
     y += rowHeight;
   }
 
