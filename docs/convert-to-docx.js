@@ -12,13 +12,19 @@ const { marked } = require('marked');
 const mdPath = path.join(__dirname, 'ALA_SRS.md');
 const markdown = fs.readFileSync(mdPath, 'utf-8');
 
+// Strip HTML comments before parsing
+const cleanedMarkdown = markdown.replace(/<!--[\s\S]*?-->/g, '');
+
 // Parse markdown into tokens
-const tokens = marked.lexer(markdown);
+const tokens = marked.lexer(cleanedMarkdown);
 
 // Convert tokens to docx elements
 const children = [];
 
 function parseInlineText(text) {
+    // Convert markdown links to just text (strip URLs)
+    text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
     // Simple inline parsing for bold and code
     const runs = [];
     let remaining = text;
@@ -182,6 +188,17 @@ const doc = new Document({
     title: 'ALA Software Requirements Specification',
     description: 'Software Requirements Specification for Accountability Log Application',
     creator: 'Alpha Tau Medical',
+    numbering: {
+        config: [{
+            reference: 'default-numbering',
+            levels: [{
+                level: 0,
+                format: 'decimal',
+                text: '%1.',
+                alignment: AlignmentType.LEFT,
+            }],
+        }],
+    },
     sections: [{
         properties: {},
         children: children,
