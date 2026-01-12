@@ -124,10 +124,10 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 3000,
+    port: 3600, // Worker port (see .env.worker)
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000', // For local dev: proxy to backend Docker container (127.0.0.1 for Windows Docker)
+        target: 'http://127.0.0.1:5600', // Worker backend port (see .env.worker)
         changeOrigin: true,
       },
     },

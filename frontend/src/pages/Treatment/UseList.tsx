@@ -142,11 +142,9 @@ const UseList = () => {
     totalApplicatorUse: processedApplicators.filter(app => app.usageType === 'full' || app.usageType === 'faulty').length,
     faultyApplicator: processedApplicators.filter(app => app.usageType === 'faulty').length,
     notUsedApplicators: processedApplicators.filter(app => app.usageType === 'none').length,
-    totalDartSeedsInserted: processedApplicators.reduce((sum, app) => {
-      if (app.usageType === 'full') return sum + app.seedQuantity;
-      if (app.usageType === 'faulty') return sum + (app.insertedSeedsQty || 0);
-      return sum;
-    }, 0),
+    totalDartSeedsInserted: processedApplicators
+      .filter(app => app.status === 'INSERTED')
+      .reduce((sum, app) => sum + app.seedQuantity, 0),
     seedsInsertedBy: currentTreatment?.surgeon || 'Unknown'
   };
 

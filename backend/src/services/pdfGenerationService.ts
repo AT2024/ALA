@@ -36,6 +36,7 @@ export interface Applicator {
   applicatorType?: string;
   seedQuantity: number;
   usageType: 'full' | 'faulty' | 'none' | 'sealed';
+  status?: 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | null;
   insertionTime: string;
   insertedSeedsQty?: number;
   comments?: string;
@@ -735,14 +736,9 @@ export function calculateSummary(
     ? new Date(Math.min(...insertionTimes)).toISOString()
     : '';
 
-  // Calculate total seeds inserted
-  let totalSeeds = 0;
-  fullUseApplicators.forEach(a => {
-    totalSeeds += a.seedQuantity;
-  });
-  faultyApplicators.forEach(a => {
-    totalSeeds += a.insertedSeedsQty || 0;
-  });
+  const totalSeeds = applicators
+    .filter(a => a.status === 'INSERTED')
+    .reduce((sum, a) => sum + a.seedQuantity, 0);
 
   // Calculate total activity
   const activityPerSeed = treatment.activityPerSeed || 0;
