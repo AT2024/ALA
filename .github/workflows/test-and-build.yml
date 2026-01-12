@@ -275,8 +275,8 @@ jobs:
           JWT_SECRET=test_jwt_secret
           EOF
 
-          # Test docker-compose build
-          docker-compose -f deployment/docker/docker-compose.dev.yml build
+          # Test docker compose build (using new 'docker compose' syntax)
+          docker compose -f deployment/docker/docker-compose.dev.yml build
 
   # =================================================================
   # Security Scan (Enhance existing)
