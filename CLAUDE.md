@@ -41,9 +41,9 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - `/azure-check` - Validate Local vs Azure parity before deployment
 - `/spawn` - Launch background agent for analysis (see [settings.md](.claude/settings.md))
 - `/test` - Run tests and verify build passes
-- `/worker create <name>` - Create parallel worktree (fast, skips npm install)
-- `/worker create <name> --full` - Create worktree with npm install
-- `/worker remove <name>` - Remove a worktree
+- `/worker create <name>` - Create parallel worktree with isolated database (recommended)
+- `/worker create <name> --skip-install` - Create worktree fast (skips npm install, may break dev server)
+- `/worker remove <name>` - Remove a worktree and its isolated database
 - `/worker list` - List active workers
 
 ## Testing
@@ -53,5 +53,6 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 
 ## Parallel Development
 - **Setup**: `/worker create <name>` or `./scripts/setup-parallel-worker.sh create --branch BRANCH --name NAME`
+- **Database Isolation**: Each worker gets its own PostgreSQL database (`ala_worker_<name>`), copied from main. Changes in workers don't affect main database.
 - **Rules**: See "Parallel Worktree Isolation Rules" in [settings.md](.claude/settings.md)
 - **Guide**: [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md)

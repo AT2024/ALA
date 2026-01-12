@@ -24,9 +24,15 @@
 #   Worker 2: Frontend 3200, Backend 5200
 #   Worker N: Frontend 3N00, Backend 5N00
 #
+# Database Isolation:
+#   Each worker gets its own PostgreSQL database (ala_worker_<name>)
+#   copied from the main database. This allows testing features without
+#   affecting production data.
+#
 # Requirements:
 #   - Git 2.15+ (for worktree support)
 #   - Node.js 18+ (for npm install)
+#   - psql (optional, for database isolation)
 
 set -euo pipefail
 
@@ -290,18 +296,13 @@ cmd_create() {
     # Copy and patch .env files
     log "Setting up environment files..."
 
-    # Frontend .env
-    if [ -f "$PROJECT_ROOT/frontend/.env" ]; then
-        cp "$PROJECT_ROOT/frontend/.env" "$worktree_path/frontend/.env"
-        # Patch VITE_API_URL to use worker's backend port
-        if grep -q "VITE_API_URL" "$worktree_path/frontend/.env"; then
-            sed -i "s|localhost:5000|localhost:$backend_port|g" "$worktree_path/frontend/.env"
-            sed -i "s|:5000/api|:$backend_port/api|g" "$worktree_path/frontend/.env"
-        fi
-        success "  Frontend .env copied and patched"
-    else
-        warning "  No frontend/.env found to copy"
-    fi
+    # Frontend .env - always create with relative /api URL (uses Vite proxy)
+    cat > "$worktree_path/frontend/.env" << FRONTEND_ENV
+# Worker Frontend Environment
+# Uses relative /api URL to go through Vite's proxy (port $backend_port)
+VITE_API_URL=/api
+FRONTEND_ENV
+    success "  Frontend .env created with VITE_API_URL=/api (uses Vite proxy)"
 
     # Backend .env
     if [ -f "$PROJECT_ROOT/backend/.env" ]; then
@@ -312,9 +313,85 @@ cmd_create() {
         else
             echo "PORT=$backend_port" >> "$worktree_path/backend/.env"
         fi
-        success "  Backend .env copied and patched (PORT=$backend_port)"
+        # Add worker frontend port to CORS_ORIGIN
+        if grep -q "^CORS_ORIGIN=" "$worktree_path/backend/.env"; then
+            sed -i "s|^CORS_ORIGIN=|CORS_ORIGIN=http://localhost:$frontend_port,http://127.0.0.1:$frontend_port,|g" "$worktree_path/backend/.env"
+        fi
+        success "  Backend .env copied and patched (PORT=$backend_port, CORS includes $frontend_port)"
     else
         warning "  No backend/.env found to copy"
+    fi
+
+    # ======================================================================
+    # Database Isolation
+    # ======================================================================
+    # Create isolated database for this worker (copies from main database)
+    local worker_db_name="ala_worker_${name}"
+    log "Setting up isolated database: $worker_db_name"
+
+    # Read database credentials from parent .env
+    local db_user=""
+    local db_pass=""
+    local db_host="localhost"
+    local db_port="5432"
+    local source_db="ala_production"
+
+    if [ -f "$PROJECT_ROOT/backend/.env" ]; then
+        # Extract credentials from DATABASE_URL or individual vars
+        if grep -q "^DATABASE_URL=" "$PROJECT_ROOT/backend/.env"; then
+            local db_url
+            db_url=$(grep "^DATABASE_URL=" "$PROJECT_ROOT/backend/.env" | cut -d'=' -f2-)
+            # Parse: postgresql://user:pass@host:port/dbname
+            db_user=$(echo "$db_url" | sed -n 's|postgresql://\([^:]*\):.*|\1|p')
+            db_pass=$(echo "$db_url" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p')
+            source_db=$(echo "$db_url" | sed -n 's|.*/\([^?]*\).*|\1|p')
+        fi
+        # Fallback to individual vars
+        if [ -z "$db_user" ]; then
+            db_user=$(grep "^POSTGRES_USER=" "$PROJECT_ROOT/backend/.env" | cut -d'=' -f2- || echo "ala_user")
+        fi
+        if [ -z "$db_pass" ]; then
+            db_pass=$(grep "^POSTGRES_PASSWORD=" "$PROJECT_ROOT/backend/.env" | cut -d'=' -f2- || echo "")
+        fi
+    fi
+
+    # Try to create isolated database (non-fatal if it fails)
+    if command -v psql &> /dev/null && [ -n "$db_pass" ]; then
+        log "  Creating database $worker_db_name from template $source_db..."
+
+        # First check if database already exists
+        if PGPASSWORD="$db_pass" psql -h "$db_host" -p "$db_port" -U "$db_user" -d postgres -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$worker_db_name"; then
+            warning "  Database $worker_db_name already exists, will reuse it"
+        else
+            # Create database with template (copies all data and schema)
+            if PGPASSWORD="$db_pass" psql -h "$db_host" -p "$db_port" -U "$db_user" -d postgres -c "CREATE DATABASE \"$worker_db_name\" WITH TEMPLATE \"$source_db\";" 2>/dev/null; then
+                success "  Database $worker_db_name created with data from $source_db"
+            else
+                warning "  Could not create isolated database (template in use?). Trying empty database..."
+                # Try creating empty database and run migrations later
+                if PGPASSWORD="$db_pass" psql -h "$db_host" -p "$db_port" -U "$db_user" -d postgres -c "CREATE DATABASE \"$worker_db_name\";" 2>/dev/null; then
+                    success "  Empty database $worker_db_name created"
+                    warning "  NOTE: You may need to run migrations manually"
+                else
+                    warning "  Could not create database. Worker will share main database."
+                    worker_db_name=""  # Clear to indicate shared DB
+                fi
+            fi
+        fi
+
+        # Patch DATABASE_URL in worker's .env if we created a database
+        if [ -n "$worker_db_name" ] && [ -f "$worktree_path/backend/.env" ]; then
+            sed -i "s|DATABASE_URL=postgresql://\([^:]*\):\([^@]*\)@\([^:]*\):\([0-9]*\)/[^?]*|DATABASE_URL=postgresql://\1:\2@\3:\4/$worker_db_name|g" "$worktree_path/backend/.env"
+            success "  DATABASE_URL patched to use $worker_db_name"
+        fi
+    else
+        if ! command -v psql &> /dev/null; then
+            warning "  psql not found - cannot create isolated database"
+        else
+            warning "  Database password not found - cannot create isolated database"
+        fi
+        warning "  Worker will share main database ($source_db)"
+        worker_db_name=""  # Clear to indicate shared DB
     fi
 
     # Create worker metadata file
@@ -330,9 +407,22 @@ WORKER_NUMBER=$worker_num
 FRONTEND_PORT=$frontend_port
 BACKEND_PORT=$backend_port
 PARENT_REPO=$PROJECT_ROOT
+DATABASE=${worker_db_name:-shared}
 CREATED=$(date -Iseconds 2>/dev/null || date)
 EOF
     success "  Worker metadata created (.env.worker)"
+
+    # Patch vite.config.ts to use worker ports
+    log "Patching vite.config.ts for worker ports..."
+    if [ -f "$worktree_path/frontend/vite.config.ts" ]; then
+        # Update frontend port (default 3000 -> worker port)
+        sed -i "s|port: 3000|port: $frontend_port|g" "$worktree_path/frontend/vite.config.ts"
+        # Update proxy target (default 5000 -> worker backend port)
+        sed -i "s|127.0.0.1:5000|127.0.0.1:$backend_port|g" "$worktree_path/frontend/vite.config.ts"
+        success "  vite.config.ts patched (frontend: $frontend_port, backend proxy: $backend_port)"
+    else
+        warning "  No frontend/vite.config.ts found to patch"
+    fi
 
     # Install dependencies
     if [ "$skip_install" = false ]; then
@@ -353,6 +443,8 @@ EOF
         success "  Backend dependencies installed"
     else
         warning "Skipping npm install (--skip-install)"
+        warning "⚠️  If you see native module errors (e.g., @rollup/rollup-win32-x64-msvc):"
+        warning "   cd $worktree_path/frontend && rm -rf node_modules package-lock.json && npm install"
     fi
 
     # Register worker
@@ -379,6 +471,14 @@ EOF
     echo "Ports:"
     echo "  Frontend: http://localhost:$frontend_port"
     echo "  Backend:  http://localhost:$backend_port"
+    echo ""
+    echo "Database:"
+    if [ -n "$worker_db_name" ]; then
+        echo "  Isolated: $worker_db_name (copy of $source_db)"
+        echo "  Changes in this worker will NOT affect the main database"
+    else
+        echo "  Shared: $source_db (WARNING: changes affect main database)"
+    fi
     echo ""
     echo "Claude Code:"
     echo "  Open a new Claude Code session in $worktree_path"
@@ -489,6 +589,53 @@ cmd_remove() {
             error "Non-interactive mode detected. Use --force to skip confirmation."
             echo "Usage: $0 remove --name $name --force"
             exit 1
+        fi
+    fi
+
+    # ======================================================================
+    # Database Cleanup
+    # ======================================================================
+    # Check if worker has an isolated database and drop it
+    if [ -f "$worktree_path/.env.worker" ]; then
+        local worker_db
+        worker_db=$(grep "^DATABASE=" "$worktree_path/.env.worker" 2>/dev/null | cut -d'=' -f2-)
+
+        if [ -n "$worker_db" ] && [ "$worker_db" != "shared" ]; then
+            log "Cleaning up isolated database: $worker_db"
+
+            # Read credentials from worker's .env
+            local db_user=""
+            local db_pass=""
+            if [ -f "$worktree_path/backend/.env" ]; then
+                db_user=$(grep "^POSTGRES_USER=" "$worktree_path/backend/.env" 2>/dev/null | cut -d'=' -f2- || echo "")
+                db_pass=$(grep "^POSTGRES_PASSWORD=" "$worktree_path/backend/.env" 2>/dev/null | cut -d'=' -f2- || echo "")
+
+                # Try extracting from DATABASE_URL if individual vars not found
+                if [ -z "$db_user" ] || [ -z "$db_pass" ]; then
+                    local db_url
+                    db_url=$(grep "^DATABASE_URL=" "$worktree_path/backend/.env" 2>/dev/null | cut -d'=' -f2-)
+                    if [ -n "$db_url" ]; then
+                        db_user=$(echo "$db_url" | sed -n 's|postgresql://\([^:]*\):.*|\1|p')
+                        db_pass=$(echo "$db_url" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p')
+                    fi
+                fi
+            fi
+
+            if command -v psql &> /dev/null && [ -n "$db_pass" ]; then
+                # Terminate existing connections to the database
+                PGPASSWORD="$db_pass" psql -h localhost -p 5432 -U "$db_user" -d postgres -c \
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$worker_db' AND pid <> pg_backend_pid();" 2>/dev/null || true
+
+                # Drop the database
+                if PGPASSWORD="$db_pass" psql -h localhost -p 5432 -U "$db_user" -d postgres -c "DROP DATABASE IF EXISTS \"$worker_db\";" 2>/dev/null; then
+                    success "  Database $worker_db dropped"
+                else
+                    warning "  Could not drop database $worker_db (may need manual cleanup)"
+                fi
+            else
+                warning "  Cannot drop database (psql not available or missing credentials)"
+                warning "  Manual cleanup may be needed: DROP DATABASE \"$worker_db\";"
+            fi
         fi
     fi
 
