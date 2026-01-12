@@ -405,13 +405,13 @@ This document provides the complete traceability matrix for all requirements in 
 | Backup/Recovery (RECV) | 4 | 0 | 3 | 1 |
 | Offline Mode (OFFL) | 25 | 25 | 0 | 0 |
 | Treatment Continuation (CONT) | 10 | 10 | 0 | 0 |
-| **TOTAL** | **215** | **183** | **27** | **5** |
+| **TOTAL** | **211** | **179** | **27** | **5** |
 
 ### 3.2 Requirements Coverage
 
-- **Implemented**: 183 (85.1%)
-- **Needs Verification**: 27 (12.6%)
-- **Pending Implementation**: 5 (2.3%)
+- **Implemented**: 179 (84.8%)
+- **Needs Verification**: 27 (12.8%)
+- **Pending Implementation**: 5 (2.4%)
 <!-- AUTO-UPDATE:END statistics -->
 
 ### 3.3 Safety-Critical Requirements Coverage

@@ -54,7 +54,7 @@
     "date-fns": "^3.4.0",
     "dexie": "^4.2.1",
     "html5-qrcode": "^2.3.8",
-    "jspdf": "^3.0.2",
+    "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.407.0",
     "react": "^18.2.0",

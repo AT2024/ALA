@@ -88,5 +88,7 @@ Examples:
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
-| DL-001 | [Environment Alignment](2026-01-environment-alignment.md) | Draft | 2026-01-07 |
+| DL-001 | [Environment Alignment](2026-01-environment-alignment.md) | Implemented | 2026-01-07 |
+| DL-002 | [Parallel Worktree Workflow](2026-01-parallel-worktree-workflow.md) | Implemented | 2026-01-08 |
+| DL-003 | [Version Display](2026-01-version-display.md) | Implemented | 2026-01-11 |
 | DL-004 | [Removal PDF Fix](2026-01-removal-pdf-fix.md) | Implemented | 2026-01-11 |
