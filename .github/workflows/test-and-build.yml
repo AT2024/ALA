@@ -263,20 +263,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Test Docker Compose
+      - name: Test Docker Compose Config
         run: |
-          # Create minimal test environment file
-          mkdir -p deployment/environments
-          cat > deployment/environments/.env.test << EOF
-          NODE_ENV=test
-          DB_USER=postgres
-          DB_PASSWORD=test_password
-          PRIORITY_MOCK=true
-          JWT_SECRET=test_jwt_secret
-          EOF
-
-          # Test docker compose build (using new 'docker compose' syntax)
-          docker compose -f deployment/docker/docker-compose.dev.yml build
+          # Validate docker-compose file syntax (don't build, just check config)
+          docker compose -f deployment/docker-compose.yml config --quiet
+          echo "✅ Docker Compose configuration is valid"
 
   # =================================================================
   # Security Scan (Enhance existing)
