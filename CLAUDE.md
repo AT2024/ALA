@@ -51,6 +51,13 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **Frontend**: `cd frontend && npm test`
 - **TDD**: Write failing test before fixing bugs (see [settings.md](.claude/settings.md#test-driven-development))
 
+## Database Migrations
+- **Development**: Auto-sync via `sequelize.sync({ alter: true })` - columns auto-created
+- **Production**: ALWAYS create migration file in `backend/src/migrations/`
+- **Rule**: Any model column addition MUST have a corresponding `.sql` migration file
+- **Apply**: `ssh azureuser@20.217.84.100 "docker exec ala-db psql -U ala_user -d ala_production -c 'SQL_HERE'"`
+- **Design Log**: See [DL-005](docs/design-logs/2026-01-database-migration-process.md) for details
+
 ## Parallel Development
 - **Setup**: `/worker create <name>` or `./scripts/setup-parallel-worker.sh create --branch BRANCH --name NAME`
 - **Database Isolation**: Each worker gets its own PostgreSQL database (`ala_worker_<name>`), copied from main. Changes in workers don't affect main database.
