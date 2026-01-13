@@ -726,3 +726,28 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 - **Solution**: Automated cleanup added to deploy scripts - runs after successful deployment
 - **Prevention**: Disk usage warning shows before deployment, automatic cleanup frees 1-3.5GB per deployment cycle
 - **Manual cleanup**: `docker system prune -f` if emergency space needed
+
+### Worktree npm Issues
+
+#### Error: Cannot find module @rollup/rollup-win32-x64-msvc
+
+**Symptom**: When running `npm run dev` in a worktree, you get:
+```
+Error: Cannot find module @rollup/rollup-win32-x64-msvc
+```
+
+**Cause**: Worktree was created with `--quick` flag (or the old `--skip-install` default), and platform-specific native modules weren't installed properly by npm.
+
+**Fix**:
+```bash
+# In the worktree directory
+cd .worktrees/<worker-name>/frontend
+rm -rf node_modules package-lock.json
+npm install
+
+cd ../backend
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Prevention**: Use `/worker create <name>` without the `--quick` flag. The default now runs npm install which properly resolves platform-specific dependencies.

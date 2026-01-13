@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { authService } from '@/services/authService';
 
-const VerificationPage = () => {
+function VerificationPage() {
   const { verify, error, clearError, isLoading } = useAuth();
   const [code, setCode] = useState('');
   const [remainingTime, setRemainingTime] = useState(10); // 10 seconds timeout
@@ -65,9 +65,9 @@ const VerificationPage = () => {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <img 
-            src="/logo.png" 
-            alt="AlphaTau Logo" 
+          <img
+            src="/alphataulogo.png"
+            alt="AlphaTau Medical" 
             className="mx-auto mb-4 h-16 w-auto"
           />
           <h1 className="text-2xl font-bold text-gray-900">
@@ -190,6 +190,6 @@ const VerificationPage = () => {
       </div>
     </div>
   );
-};
+}
 
 export default VerificationPage;

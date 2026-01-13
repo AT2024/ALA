@@ -61,7 +61,8 @@
       "Bash(./scripts/setup-parallel-worker.sh:*)",
       "Bash(bash scripts/setup-parallel-worker.sh:*)",
       "WebFetch(domain:www.philschmid.de)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }

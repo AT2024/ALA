@@ -22,6 +22,7 @@ export default function Layout({
   const { user, logout } = useAuth();
   const { navigateBack, navigateNext, getCurrentStepInfo } = useWorkflowNavigation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const stepInfo = getCurrentStepInfo();
 
   const handleBack = () => {
     if (backPath) {
@@ -31,8 +32,6 @@ export default function Layout({
     }
   };
 
-  // FIXED: Helper function to navigate through the workflow-aware treatment flow
-  // This replaces the hardcoded TREATMENT_FLOW that caused the bug
   const navigateSequential = (direction: 'next' | 'prev') => {
     if (direction === 'prev') {
       navigateBack(); // Uses workflow-aware navigation
@@ -102,9 +101,7 @@ export default function Layout({
                   {mobileMenuOpen ? (
                     <path d="M18 6 6 18M6 6l12 12" />
                   ) : (
-                    <>
-                      <path d="M3 12h18M3 6h18M3 18h18" />
-                    </>
+                    <path d="M3 12h18M3 6h18M3 18h18" />
                   )}
                 </svg>
               </button>
@@ -114,14 +111,11 @@ export default function Layout({
             <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} flex-col items-start gap-3 md:flex md:flex-col md:items-center`}>
               {/* Flow position indicator */}
               <div className="text-xs text-white/70 md:mb-1 truncate max-w-full">
-                {(() => {
-                  const stepInfo = getCurrentStepInfo();
-                  return stepInfo.isInWorkflow && (
-                    <span className="truncate">
-                      Step {stepInfo.currentStep}/{stepInfo.totalSteps} - {stepInfo.procedureType?.toUpperCase()} Flow
-                    </span>
-                  );
-                })()}
+                {stepInfo.isInWorkflow && (
+                  <span className="truncate">
+                    Step {stepInfo.currentStep}/{stepInfo.totalSteps} - {stepInfo.procedureType?.toUpperCase()} Flow
+                  </span>
+                )}
               </div>
               <div className="flex w-full items-center gap-2 md:w-auto md:gap-1">
                 <button

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
-const LoginPage = () => {
+function LoginPage() {
   const { login, error, clearError, isLoading } = useAuth();
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
@@ -32,9 +32,10 @@ const LoginPage = () => {
           navigate('/verify');
         }, 1500);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login error:", err);
-      setLocalError(err.message || 'Failed to process login. Please try again.');
+      const message = err instanceof Error ? err.message : 'Failed to process login. Please try again.';
+      setLocalError(message);
     }
   };
 
@@ -187,6 +188,6 @@ const LoginPage = () => {
       </div>
     </div>
   );
-};
+}
 
 export default LoginPage;

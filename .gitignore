@@ -117,6 +117,7 @@ coverage/
 
 # Temp files
 nul
+tmpclaude-*
 
 # SSL/TLS Certificates - NEVER commit these to version control!
 ssl-certs/
