@@ -55,22 +55,14 @@ async function getContinuationInfo(treatment: Treatment): Promise<ContinuationIn
  * When test users finalize a removal treatment, there are no applicators in the database
  * (because there was no real insertion). This function loads the applicators from test-data.json
  * via priorityService.getOrderSubform() and marks them as removed for the PDF.
- *
- * @param treatment - The removal treatment
- * @param userEmail - The user's email to check if test user
- * @param userId - The user's ID for test context
- * @returns Array of applicators formatted for PDF, or empty array if not applicable
  */
 async function loadTestUserRemovalApplicators(
   treatment: Treatment,
   userEmail: string,
   userId: string
 ): Promise<any[]> {
-  // Only applies to test user removal treatments
   const testUserEmail = config.testUserEmail || 'test@example.com';
-  const isTestUser = userEmail === testUserEmail;
-
-  if (!isTestUser || treatment.type !== 'removal') {
+  if (userEmail !== testUserEmail || treatment.type !== 'removal') {
     return [];
   }
 
@@ -88,7 +80,7 @@ async function loadTestUserRemovalApplicators(
       const formattedApplicators = testApplicators.map((app: any) => ({
         serialNumber: app.SERNUM,
         seedQuantity: app.INTDATA2,
-        usageType: 'full',  // All marked as removed for removal PDF
+        usageType: 'full',
         applicatorType: app.PARTDES,
         catalog: app.PARTNAME,
         insertionTime: app.INSERTIONDATE,
@@ -104,6 +96,26 @@ async function loadTestUserRemovalApplicators(
   }
 
   return [];
+}
+
+/**
+ * Get applicators for removal treatment finalization.
+ * Prioritizes frontend applicators (which have correct removal state), falls back to test data.
+ */
+async function getRemovalApplicators(
+  treatment: Treatment,
+  availableApplicators: any[] | undefined,
+  dbApplicators: any[],
+  userEmail: string,
+  userId: string
+): Promise<any[]> {
+  if (availableApplicators && availableApplicators.length > 0) {
+    return availableApplicators;
+  }
+  if (dbApplicators.length === 0) {
+    return loadTestUserRemovalApplicators(treatment, userEmail, userId);
+  }
+  return dbApplicators;
 }
 
 // @desc    Get all treatments with optional filtering
@@ -1040,24 +1052,14 @@ export const verifyAndFinalize = asyncHandler(async (req: Request, res: Response
   // Get applicators and merge with unused available applicators
   let processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
 
-  // For removal treatments, use frontend applicators which have correct isRemoved→usageType mapping
-  // This fixes the bug where test data overrides frontend state with all applicators marked as 'full'
   if (treatment.type === 'removal') {
-    if (availableApplicators && availableApplicators.length > 0) {
-      // Frontend sends applicators with correct usageType based on user's removal selections
-      processedApplicators = availableApplicators;
-    } else if (processedApplicators.length === 0) {
-      // Fallback for edge cases: load test data only if no frontend data available
-      const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
-      if (testApplicators.length > 0) {
-        processedApplicators = testApplicators;
-      }
-    }
+    processedApplicators = await getRemovalApplicators(
+      treatment, availableApplicators, processedApplicators, req.user.email, req.user.id
+    );
   }
 
   const allApplicators = mergeApplicatorsForPdf(processedApplicators, availableApplicators);
 
-  // Build signature details and generate/send PDF
   const signatureDetails: SignatureDetails = {
     type: 'alphatau_verified',
     signerName,
@@ -1144,24 +1146,14 @@ export const autoFinalize = asyncHandler(async (req: Request, res: Response) => 
   // Get applicators and merge with unused available applicators
   let processedApplicators = await applicatorService.getApplicators(treatment.id, treatment.type);
 
-  // For removal treatments, use frontend applicators which have correct isRemoved→usageType mapping
-  // This fixes the bug where test data overrides frontend state with all applicators marked as 'full'
   if (treatment.type === 'removal') {
-    if (availableApplicators && availableApplicators.length > 0) {
-      // Frontend sends applicators with correct usageType based on user's removal selections
-      processedApplicators = availableApplicators;
-    } else if (processedApplicators.length === 0) {
-      // Fallback for edge cases: load test data only if no frontend data available
-      const testApplicators = await loadTestUserRemovalApplicators(treatment, req.user.email, req.user.id);
-      if (testApplicators.length > 0) {
-        processedApplicators = testApplicators;
-      }
-    }
+    processedApplicators = await getRemovalApplicators(
+      treatment, availableApplicators, processedApplicators, req.user.email, req.user.id
+    );
   }
 
   const allApplicators = mergeApplicatorsForPdf(processedApplicators, availableApplicators);
 
-  // Build signature details and generate/send PDF
   const signatureDetails: SignatureDetails = {
     type: 'hospital_auto',
     signerName,

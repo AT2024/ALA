@@ -17,6 +17,14 @@ import type {
 // Re-export for backwards compatibility
 export type { ApplicatorGroup } from '@shared/types';
 
+// Helper to get effective status from applicator (status field or usageType fallback)
+function getEffectiveStatus(app: Applicator): ApplicatorStatus {
+  if (app.status) return app.status as ApplicatorStatus;
+  if (app.usageType === 'full') return 'INSERTED';
+  if (app.usageType === 'faulty') return 'FAULTY';
+  return 'SEALED';
+}
+
 interface TreatmentContextType {
   currentTreatment: Treatment | null;
   applicators: Applicator[];
@@ -144,7 +152,7 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Persist treatment state to sessionStorage whenever it changes
+  // Persist state to sessionStorage whenever it changes
   useEffect(() => {
     try {
       if (currentTreatment) {
@@ -152,37 +160,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
       } else {
         sessionStorage.removeItem('currentTreatment');
       }
-    } catch (error) {
-      console.error('Failed to persist treatment to sessionStorage:', error);
-    }
-  }, [currentTreatment]);
-
-  // Persist processed applicators to sessionStorage whenever they change
-  useEffect(() => {
-    try {
       sessionStorage.setItem('processedApplicators', JSON.stringify(processedApplicators));
-    } catch (error) {
-      console.error('Failed to persist processed applicators to sessionStorage:', error);
-    }
-  }, [processedApplicators]);
-
-  // Persist available applicators to sessionStorage whenever they change
-  useEffect(() => {
-    try {
       sessionStorage.setItem('availableApplicators', JSON.stringify(availableApplicators));
-    } catch (error) {
-      console.error('Failed to persist available applicators to sessionStorage:', error);
-    }
-  }, [availableApplicators]);
-
-  // Persist individual seeds removed to sessionStorage whenever it changes
-  useEffect(() => {
-    try {
       sessionStorage.setItem('individualSeedsRemoved', JSON.stringify(individualSeedsRemoved));
     } catch (error) {
-      console.error('Failed to persist individual seeds removed to sessionStorage:', error);
+      console.error('Failed to persist state to sessionStorage:', error);
     }
-  }, [individualSeedsRemoved]);
+  }, [currentTreatment, processedApplicators, availableApplicators, individualSeedsRemoved]);
 
   const setTreatment = (treatment: Treatment) => {
     setCurrentTreatment(treatment);
@@ -228,14 +212,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     });
 
     // Handle available applicators based on STATUS field (8-state workflow)
-    // In-progress statuses (SEALED, OPENED, LOADED) should STAY in available list
-    // Terminal statuses (INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) should be REMOVED
-    const effectiveStatus = applicator.status ||
-      (applicator.usageType === 'full' ? 'INSERTED' :
-       applicator.usageType === 'faulty' ? 'FAULTY' :
-       applicator.usageType === 'none' ? 'SEALED' : null);
-
-    const isTerminal = effectiveStatus && TERMINAL_STATUSES.includes(effectiveStatus as ApplicatorStatus);
+    const effectiveStatus = getEffectiveStatus(applicator);
+    const isTerminal = TERMINAL_STATUSES.includes(effectiveStatus);
 
     if (isTerminal) {
       // Terminal status: Remove from available list
@@ -289,30 +267,18 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   // Centralized filtering function - single source of truth
-  // Uses status field (8-state workflow) instead of usageType (3-state legacy)
-  // Terminal statuses are imported from @shared/applicatorStatuses
   const getFilteredAvailableApplicators = (): Applicator[] => {
     if (!currentTreatment) return [];
 
-    // Get serial numbers of applicators that have reached a terminal state
-    // In-progress statuses (SEALED, OPENED, LOADED) STAY in the list so user can continue working
-    // Terminal statuses (INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) are REMOVED
     const terminalApplicatorSerialNumbers = new Set(
       processedApplicators
-        .filter(app => {
-          // Use status field if available, otherwise fall back to usageType mapping
-          const effectiveStatus = app.status ||
-            (app.usageType === 'full' ? 'INSERTED' :
-             app.usageType === 'faulty' ? 'FAULTY' :
-             null);
-          return effectiveStatus && TERMINAL_STATUSES.includes(effectiveStatus as ApplicatorStatus);
-        })
+        .filter(app => TERMINAL_STATUSES.includes(getEffectiveStatus(app)))
         .map(app => app.serialNumber)
     );
 
     return availableApplicators.filter(app =>
-      app.patientId === currentTreatment.subjectId && // Current patient only
-      !terminalApplicatorSerialNumbers.has(app.serialNumber) // Only exclude terminal status applicators
+      app.patientId === currentTreatment.subjectId &&
+      !terminalApplicatorSerialNumbers.has(app.serialNumber)
     );
   };
 
@@ -330,30 +296,16 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const getUsageTypeDistribution = () => {
-    // 8-state status distribution (replaces legacy 3-state usageType)
     const distribution = {
-      sealed: 0,
-      opened: 0,
-      loaded: 0,
-      inserted: 0,
-      faulty: 0,
-      disposed: 0,
-      discharged: 0,
-      deploymentFailure: 0,
-      // Legacy fallback counts (for backward compatibility display)
-      full: 0,
-      none: 0
+      sealed: 0, opened: 0, loaded: 0, inserted: 0,
+      faulty: 0, disposed: 0, discharged: 0, deploymentFailure: 0,
+      full: 0, none: 0
     };
 
     processedApplicators.forEach(app => {
-      // Use status field if available, otherwise fall back to usageType mapping
-      const status = app.status ||
-        (app.usageType === 'full' ? 'INSERTED' :
-         app.usageType === 'faulty' ? 'FAULTY' :
-         app.usageType === 'none' ? 'SEALED' : 'SEALED');
-
-      switch (status.toUpperCase()) {
-        case 'SEALED': distribution.sealed++; break;
+      const status = getEffectiveStatus(app);
+      switch (status) {
+        case 'SEALED': distribution.sealed++; distribution.none++; break;
         case 'OPENED': distribution.opened++; break;
         case 'LOADED': distribution.loaded++; break;
         case 'INSERTED': distribution.inserted++; distribution.full++; break;
@@ -361,11 +313,8 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         case 'DISPOSED': distribution.disposed++; break;
         case 'DISCHARGED': distribution.discharged++; break;
         case 'DEPLOYMENT_FAILURE': distribution.deploymentFailure++; break;
-        default: distribution.sealed++; break;
+        default: distribution.sealed++; distribution.none++; break;
       }
-
-      // Map to legacy none count for backward compatibility
-      if (status.toUpperCase() === 'SEALED') distribution.none++;
     });
 
     return distribution;
@@ -480,18 +429,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     const activeStates = ['SEALED', 'OPENED', 'LOADED'];
 
     return [...applicators].sort((a, b) => {
-      // Get status from status field, fallback to usageType for backward compatibility
-      const statusA = a.status || (a.usageType === 'full' ? 'INSERTED' : a.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
-      const statusB = b.status || (b.usageType === 'full' ? 'INSERTED' : b.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
-
+      const statusA = getEffectiveStatus(a);
+      const statusB = getEffectiveStatus(b);
       const aIsActive = activeStates.includes(statusA);
       const bIsActive = activeStates.includes(statusB);
 
-      // Active states go to top
       if (aIsActive && !bIsActive) return -1;
       if (!aIsActive && bIsActive) return 1;
-
-      // Within same group (both active or both terminal), sort by seedQuantity descending
       return b.seedQuantity - a.seedQuantity;
     });
   };
@@ -513,15 +457,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
 
   // Get applicator summary by seed quantity (for table views)
   const getApplicatorSummary = () => {
-    const summaryMap: {
-      [key: number]: {
-        seedQuantity: number;
-        inserted: number;
-        available: number;
-        loaded: number;
-        packaged: number;
-      };
-    } = {};
+    const summaryMap: Record<number, {
+      seedQuantity: number;
+      inserted: number;
+      available: number;
+      loaded: number;
+      packaged: number;
+    }> = {};
 
     processedApplicators.forEach((app) => {
       if (!summaryMap[app.seedQuantity]) {
@@ -534,29 +476,13 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      // Determine effective status (new 8-state or backward compatible)
-      const status = app.status || (app.usageType === 'full' ? 'INSERTED' :
-                                     app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+      const status = getEffectiveStatus(app);
+      const entry = summaryMap[app.seedQuantity];
 
-      // Count inserted applicators
-      if (status === 'INSERTED') {
-        summaryMap[app.seedQuantity].inserted++;
-      }
-
-      // Count available applicators (all active states: SEALED + OPENED + LOADED)
-      if (['SEALED', 'OPENED', 'LOADED'].includes(status)) {
-        summaryMap[app.seedQuantity].available++;
-      }
-
-      // Count loaded applicators (subset of available for separate tracking)
-      if (status === 'LOADED') {
-        summaryMap[app.seedQuantity].loaded++;
-      }
-
-      // Count packaged applicators
-      if (app.package_label) {
-        summaryMap[app.seedQuantity].packaged++;
-      }
+      if (status === 'INSERTED') entry.inserted++;
+      if (['SEALED', 'OPENED', 'LOADED'].includes(status)) entry.available++;
+      if (status === 'LOADED') entry.loaded++;
+      if (app.package_label) entry.packaged++;
     });
 
     return Object.values(summaryMap).sort((a, b) => a.seedQuantity - b.seedQuantity);
