@@ -2,6 +2,7 @@ import User from './User';
 import Treatment from './Treatment';
 import Applicator from './Applicator';
 import ApplicatorAuditLog from './ApplicatorAuditLog';
+import ApplicatorCache from './ApplicatorCache';
 import TreatmentPdf from './TreatmentPdf';
 import SignatureVerification from './SignatureVerification';
 import SyncConflict from './SyncConflict';
@@ -112,6 +113,7 @@ export {
   Treatment,
   Applicator,
   ApplicatorAuditLog,
+  ApplicatorCache,
   TreatmentPdf,
   SignatureVerification,
   SyncConflict,

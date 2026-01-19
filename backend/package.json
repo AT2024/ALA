@@ -28,6 +28,7 @@
     "test:medical": "jest --testPathPattern=tests/medical/.*\\.test\\.ts$",
     "test:debug": "jest --verbose --no-cache --runInBand",
     "db:init": "ts-node src/dbInit.ts",
+    "db:check-diff": "ts-node -r tsconfig-paths/register scripts/check-model-migration-diff.ts",
     "env:setup": "node ../scripts/setup.js setup",
     "env:validate": "node ../scripts/setup.js validate",
     "env:switch": "node ../scripts/setup.js switch",
