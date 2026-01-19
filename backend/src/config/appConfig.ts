@@ -25,7 +25,7 @@ export const config = {
   dbReconnectIntervalMs: parseInt(process.env.DB_RECONNECT_INTERVAL_MS || '30000', 10),
 
   // Email configuration
-  emailSenderAddress: process.env.AZURE_EMAIL_SENDER_ADDRESS || 'www.ala@alphatau.com',
+  emailSenderAddress: process.env.AZURE_EMAIL_SENDER_ADDRESS || 'DoNotReply@alphatau.com',
   emailConnectionString: process.env.AZURE_COMMUNICATION_CONNECTION_STRING || '',
   pdfRecipientEmail: process.env.PDF_RECIPIENT_EMAIL || '',
   emailMaxRetries: parseInt(process.env.EMAIL_MAX_RETRIES || '3', 10),
