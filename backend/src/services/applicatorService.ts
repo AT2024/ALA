@@ -743,9 +743,23 @@ export const applicatorService = {
   /**
    * Get the appropriate transition map based on treatment type
    * @param treatmentType - Treatment type string (e.g., 'pancreas_insertion', 'skin_insertion')
+   * @param indication - Treatment indication from Priority SIBD_INDICATION (optional, takes priority)
    * @returns The transition map for the treatment type
    */
-  getTransitionsForTreatment(treatmentType?: string): Record<ApplicatorStatus, ApplicatorStatus[]> {
+  getTransitionsForTreatment(treatmentType?: string, indication?: string | null): Record<ApplicatorStatus, ApplicatorStatus[]> {
+    // Check indication first (from Priority SIBD_INDICATION) - highest priority
+    if (indication) {
+      const lowerIndication = indication.toLowerCase();
+      if (lowerIndication === 'skin') {
+        return SKIN_TRANSITIONS;
+      }
+      if (lowerIndication === 'pancreas' || lowerIndication === 'prostate') {
+        return PANC_PROS_TRANSITIONS;
+      }
+      return GENERIC_TRANSITIONS;
+    }
+
+    // Fallback: Legacy keyword detection from treatmentType
     if (!treatmentType) {
       return GENERIC_TRANSITIONS;
     }
@@ -777,12 +791,14 @@ export const applicatorService = {
    * @param currentStatus - Current applicator status
    * @param newStatus - Requested new status
    * @param treatmentType - Optional treatment type for treatment-specific validation
+   * @param indication - Optional treatment indication from Priority SIBD_INDICATION
    * @returns Validation result with error message if invalid
    */
   validateStatusTransition(
     currentStatus: string | null,
     newStatus: string,
-    treatmentType?: string
+    treatmentType?: string,
+    indication?: string | null
   ): { valid: boolean; error?: string } {
     // If no current status, any initial status is allowed (backward compatibility)
     if (!currentStatus) {
@@ -790,7 +806,7 @@ export const applicatorService = {
     }
 
     // Get treatment-specific transition rules
-    const transitions = this.getTransitionsForTreatment(treatmentType);
+    const transitions = this.getTransitionsForTreatment(treatmentType, indication);
 
     // Check if current status is valid
     if (!transitions[currentStatus as ApplicatorStatus]) {

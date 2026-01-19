@@ -499,6 +499,14 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   // Check if treatment is pancreas or prostate (requires packaging)
   const isPancreasOrProstate = (): boolean => {
     if (!currentTreatment) return false;
+
+    // Check indication field first (from Priority SIBD_INDICATION)
+    if (currentTreatment.indication) {
+      const ind = currentTreatment.indication.toLowerCase();
+      return ind === 'pancreas' || ind === 'prostate';
+    }
+
+    // Fallback: Legacy keyword detection from type field
     const type = currentTreatment.type.toLowerCase();
     return type.includes('pancreas') || type.includes('prostate');
   };

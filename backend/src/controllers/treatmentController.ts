@@ -119,7 +119,10 @@ export const getTreatments = asyncHandler(async (req: Request, res: Response) =>
     date: date as string | undefined,
   }, req.user.id);
   
-  res.status(200).json(treatments);
+  // Serialize Sequelize models to avoid circular references
+  res.status(200).json(treatments.map(t =>
+    typeof t.toJSON === 'function' ? t.toJSON() : t
+  ));
 });
 
 // @desc    Get a single treatment by ID
@@ -131,7 +134,10 @@ export const getTreatmentById = asyncHandler(async (req: Request, res: Response)
   // Check if user has access to this treatment
   requireTreatmentAccess(treatment, req.user);
 
-  res.status(200).json(treatment);
+  // Serialize to avoid circular references from Sequelize associations
+  res.status(200).json(
+    typeof treatment.toJSON === 'function' ? treatment.toJSON() : treatment
+  );
 });
 
 // @desc    Create a new treatment
@@ -680,10 +686,16 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
       // Get applicators for this treatment
       const applicators = await applicatorService.getApplicators(treatment.id);
 
+      // Serialize to avoid circular references from Sequelize associations
+      const treatmentJson = typeof treatment.toJSON === 'function' ? treatment.toJSON() : treatment;
+      const applicatorsJson = applicators.map(a =>
+        typeof a.toJSON === 'function' ? a.toJSON() : a
+      );
+
       res.status(200).json({
         success: true,
         treatment: {
-          ...treatment,
+          ...treatmentJson,
           daysSinceInsertion,
           isEligible: isEligible && isInsertion && isCompleted,
           eligibilityReasons: {
@@ -693,7 +705,7 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
             isCompleted
           }
         },
-        applicators
+        applicators: applicatorsJson
       });
     } else {
       // Find all treatments eligible for removal for this site

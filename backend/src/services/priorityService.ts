@@ -753,10 +753,8 @@ export const priorityService = {
       const site = order.CUSTNAME || '';
       const treatDay = order.SIBD_TREATDAY || order.CURDATE || '';
 
-      // Only group if we have valid patient ID (skip orders without patient identifier)
+      // Skip orders without valid patient ID - don't show in patient dropdown
       if (!patientId) {
-        const key = `UNGROUPED_${order.ORDNAME}`;
-        grouped.set(key, [order]);
         return;
       }
 
@@ -868,19 +866,20 @@ export const priorityService = {
       const response = await priorityApi.get('/ORDERS', {
         params: {
           $filter: filterParam,
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN',
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN,SIBD_INDICATION',
         },
         timeout: config.priorityApiTimeout, // Configurable timeout
       });
 
       logger.info(`Retrieved ${response.data.value.length} orders for site ${custName}`);
 
-      // Map DETAILS field to patientName for treatment creation with validation
+      // Map DETAILS field to patientName and SIBD_INDICATION to indication for treatment creation
       const mappedOrders = response.data.value.map((order: any) => ({
         ...order,
         patientName: (order.DETAILS && typeof order.DETAILS === 'string' && order.DETAILS.trim())
           ? order.DETAILS.trim()
-          : null
+          : null,
+        indication: order.SIBD_INDICATION || null, // Treatment indication from Priority
       }));
 
       // Detect and combine pancreas treatments (multiple orders for same patient/date/site)

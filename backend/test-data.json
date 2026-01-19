@@ -41,7 +41,8 @@
       "SBD_SEEDQTY": 20,
       "SBD_PREFACTIV": 2.8,
       "DETAILS": "Patient Main-015",
-      "SIBD_SEEDLEN": 10
+      "SIBD_SEEDLEN": 10,
+      "SIBD_INDICATION": "pancreas"
     },
     {
       "ORDNAME": "SO25000010",
@@ -54,7 +55,8 @@
       "SBD_SEEDQTY": 15,
       "SBD_PREFACTIV": 2.5,
       "DETAILS": "Patient Alpha-001",
-      "SIBD_SEEDLEN": 10
+      "SIBD_SEEDLEN": 10,
+      "SIBD_INDICATION": "prostate"
     },
     {
       "ORDNAME": "SO25000011",
@@ -67,7 +69,8 @@
       "SBD_SEEDQTY": 12,
       "SBD_PREFACTIV": 3.0,
       "DETAILS": "Patient Beta-002",
-      "SIBD_SEEDLEN": 10
+      "SIBD_SEEDLEN": 10,
+      "SIBD_INDICATION": "skin"
     },
     {
       "ORDNAME": "SO25000012",
@@ -80,7 +83,8 @@
       "SBD_SEEDQTY": 20,
       "SBD_PREFACTIV": 2.0,
       "DETAILS": "Patient Gamma-003",
-      "SIBD_SEEDLEN": 10
+      "SIBD_SEEDLEN": 10,
+      "SIBD_INDICATION": null
     },
     {
       "ORDNAME": "SO25000013",
@@ -132,7 +136,8 @@
       "SBD_SEEDQTY": 30,
       "SBD_PREFACTIV": 2.5,
       "DETAILS": "PANC-09-01-005",
-      "SIBD_SEEDLEN": 20
+      "SIBD_SEEDLEN": 20,
+      "SIBD_INDICATION": "pancreas"
     },
     {
       "ORDNAME": "PANC-TAIL-001",
@@ -145,6 +150,7 @@
       "SBD_SEEDQTY": 25,
       "SBD_PREFACTIV": 2.5,
       "DETAILS": "PANC-09-01-005",
+      "SIBD_INDICATION": "pancreas",
       "SIBD_SEEDLEN": 20
     },
     {

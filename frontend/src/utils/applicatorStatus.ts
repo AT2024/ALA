@@ -83,6 +83,7 @@ export interface TreatmentContext {
   priorityId?: string;     // Order ID (e.g., "PANC-HEAD-001", "PROST-LEFT-001")
   patientName?: string;    // Patient details (may contain PANC-, PROST- patterns)
   subjectId?: string;      // Patient reference (may contain patterns)
+  indication?: string | null;  // Treatment indication from Priority SIBD_INDICATION (pancreas, prostate, skin)
   getApplicatorSummary?: () => { sealed: number; opened: number; loaded: number; inserted: number; total: number };
 }
 
@@ -99,7 +100,15 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
 
   if (!context) return false;
 
-  // Check site field for treatment type keywords
+  // Check indication field first (from Priority SIBD_INDICATION) - highest priority
+  if (context.indication) {
+    const indLower = context.indication.toLowerCase();
+    if (indLower === 'pancreas' || indLower === 'prostate') {
+      return true;
+    }
+  }
+
+  // Fallback: Check site field for treatment type keywords
   if (context.site) {
     const siteLower = context.site.toLowerCase();
     if (siteLower.includes('pancreas') || siteLower.includes('prostate') || siteLower.includes('לבלב')) {
@@ -147,7 +156,15 @@ export const isSkin = (context?: TreatmentContext | string): boolean => {
 
   if (!context) return false;
 
-  // Check site field for skin keywords
+  // Check indication field first (from Priority SIBD_INDICATION) - highest priority
+  if (context.indication) {
+    const indLower = context.indication.toLowerCase();
+    if (indLower === 'skin') {
+      return true;
+    }
+  }
+
+  // Fallback: Check site field for skin keywords
   if (context.site) {
     const siteLower = context.site.toLowerCase();
     if (siteLower.includes('skin') || siteLower.includes('עור')) {

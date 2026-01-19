@@ -59,6 +59,7 @@ export const treatmentService = {
     originalTreatmentId?: string; // For removal treatments
     patientName?: string; // Patient identifier from Priority DETAILS field
     priorityId?: string; // Priority order ID (e.g., "PANC-HEAD-001") for workflow detection
+    indication?: string | null; // Treatment indication from Priority SIBD_INDICATION (pancreas, prostate, skin)
   }): Promise<Treatment> {
     const response = await api.post('/treatments', treatmentData);
     return response.data;

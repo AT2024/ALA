@@ -10,6 +10,7 @@ interface TreatmentAttributes {
   type: 'insertion' | 'removal';
   subjectId: string;
   patientName?: string; // Patient identifier from Priority DETAILS field
+  indication?: string | null; // Treatment indication from Priority SIBD_INDICATION (pancreas, prostate, skin, etc.)
   site: string;
   date: Date;
   isComplete: boolean;
@@ -45,13 +46,14 @@ interface TreatmentAttributes {
 }
 
 // For creating a new treatment
-type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName' | 'removalDate' | 'allSourcesSameDate' | 'additionalRemovalDate' | 'reasonNotSameDate' | 'discrepancyClarification' | 'discrepancyDocPath' | 'individualSeedsRemoved' | 'individualSeedNotes' | 'topGeneralComments' | 'removalGeneralComments' | 'groupComments' | 'individualSeedComment' | 'version' | 'lastSyncedAt' | 'syncStatus' | 'deviceId' | 'parentTreatmentId' | 'lastActivityAt'>
+type TreatmentCreationAttributes = Optional<TreatmentAttributes, 'id' | 'isComplete' | 'priorityId' | 'completedBy' | 'completedAt' | 'email' | 'seedQuantity' | 'activityPerSeed' | 'surgeon' | 'patientName' | 'indication' | 'removalDate' | 'allSourcesSameDate' | 'additionalRemovalDate' | 'reasonNotSameDate' | 'discrepancyClarification' | 'discrepancyDocPath' | 'individualSeedsRemoved' | 'individualSeedNotes' | 'topGeneralComments' | 'removalGeneralComments' | 'groupComments' | 'individualSeedComment' | 'version' | 'lastSyncedAt' | 'syncStatus' | 'deviceId' | 'parentTreatmentId' | 'lastActivityAt'>
 
 class Treatment extends Model<TreatmentAttributes, TreatmentCreationAttributes> implements TreatmentAttributes {
   public id!: string;
   public type!: 'insertion' | 'removal';
   public subjectId!: string;
   public patientName?: string;
+  public indication?: string | null;
   public site!: string;
   public date!: Date;
   public isComplete!: boolean;
@@ -113,6 +115,11 @@ Treatment.init(
       type: DataTypes.STRING(255),
       allowNull: true,
       field: 'patient_name', // Map to database column name
+    },
+    indication: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'indication', // Treatment indication from Priority SIBD_INDICATION
     },
     site: {
       type: DataTypes.STRING,

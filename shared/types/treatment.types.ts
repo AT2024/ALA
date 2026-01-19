@@ -21,6 +21,12 @@ export type TreatmentType =
   | 'skin_insertion';
 
 /**
+ * Treatment indication type from Priority SIBD_INDICATION field
+ * Used to determine applicator workflow (pancreas/prostate use 3-stage, skin uses 2-stage)
+ */
+export type TreatmentIndication = 'pancreas' | 'prostate' | 'skin' | string | null;
+
+/**
  * Canonical Treatment interface
  *
  * Contains all treatment-related fields used across the application.
@@ -48,6 +54,7 @@ export interface Treatment {
   // Priority ERP integration
   priorityId?: string; // Priority order ID (e.g., "PANC-HEAD-001")
   originalTreatmentId?: string; // For removal treatments - links to original insertion
+  indication?: TreatmentIndication; // Treatment indication from Priority SIBD_INDICATION
 
   // Treatment continuation (24-hour window)
   parentTreatmentId?: string; // Reference to parent treatment for continuations

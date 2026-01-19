@@ -23,6 +23,7 @@ interface PriorityPatient {
   reference?: string;
   patientName?: string;
   details?: string;
+  indication?: string | null; // Treatment indication from Priority SIBD_INDICATION
 }
 
 interface RemovalCandidate {
@@ -246,7 +247,8 @@ const TreatmentSelection = () => {
           ordName: order.ORDNAME,
           reference: order.REFERENCE || null,
           patientName: order.DETAILS || null,
-          details: order.DETAILS || null
+          details: order.DETAILS || null,
+          indication: order.indication || order.SIBD_INDICATION || null, // Treatment indication from Priority
         }));
       
       // Helper function to follow reference chain and find root order
@@ -576,7 +578,8 @@ const TreatmentSelection = () => {
           seedQuantity: parseInt(formData.seedQty) || 0,
           activityPerSeed: parseFloat(formData.activityPerSeed) || 0,
           surgeon: formData.surgeon,
-          patientName: selectedPatient?.patientName || selectedPatient?.details
+          patientName: selectedPatient?.patientName || selectedPatient?.details,
+          indication: selectedPatient?.indication, // Treatment indication from Priority SIBD_INDICATION
         };
       } else {
         // Create removal treatment linked to original insertion
@@ -846,8 +849,8 @@ const TreatmentSelection = () => {
                     <span className="font-medium">Patient ID:</span> {removalCandidate.patientName ? (
                       <span>{removalCandidate.patientName}</span>
                     ) : (
-                      <span className="text-amber-600" title="Using order number (patient name not available)">
-                        Order: {removalCandidate.subjectId}
+                      <span className="text-amber-600" title="Patient name not available from Priority">
+                        {removalCandidate.subjectId}
                       </span>
                     )}
                   </div>
@@ -901,7 +904,7 @@ const TreatmentSelection = () => {
                     <option value="">Select Patient ID</option>
                     {availablePatients.map((patient, index) => (
                       <option key={patient.id || `patient-${index}`} value={patient.id}>
-                        {patient.patientName ? patient.patientName : `Order: ${patient.id}`}
+                        {patient.patientName ? patient.patientName : patient.id}
                       </option>
                     ))}
                   </select>
@@ -909,7 +912,7 @@ const TreatmentSelection = () => {
                   <div className="space-y-2">
                     <input
                       type="text"
-                      value={availablePatients[0].patientName ? availablePatients[0].patientName : `Order: ${availablePatients[0].id}`}
+                      value={availablePatients[0].patientName ? availablePatients[0].patientName : availablePatients[0].id}
                       readOnly
                       className={`block w-full rounded-md border px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px] ${
                         availablePatients[0].patientName
@@ -920,7 +923,7 @@ const TreatmentSelection = () => {
                     <p className={`text-sm ${availablePatients[0].patientName ? 'text-green-600' : 'text-amber-600'}`}>
                       {availablePatients[0].patientName
                         ? '✓ Patient automatically selected (only one available)'
-                        : '⚠ Using order number (patient name not available)'}
+                        : '⚠ Patient name not available from Priority'}
                     </p>
                   </div>
                 ) : (

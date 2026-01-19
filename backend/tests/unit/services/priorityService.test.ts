@@ -325,7 +325,7 @@ describe('Priority Service', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ORDERS', {
         params: {
           $filter: expect.stringContaining("CUSTNAME eq '100078'"),
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN'
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN,SIBD_INDICATION'
         },
         timeout: 30000
       });
@@ -504,7 +504,7 @@ describe('Priority Service', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ORDERS', {
         params: {
           $filter: expect.stringMatching(/CUSTNAME eq '100078' and SIBD_TREATDAY ge 2025-07-10T00:00:00Z and SIBD_TREATDAY lt 2025-07-11T00:00:00Z/),
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN'
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN,SIBD_INDICATION'
         },
         timeout: 30000
       });
@@ -518,7 +518,7 @@ describe('Priority Service', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ORDERS', {
         params: {
           $filter: "CUSTNAME eq '100078'",
-          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN'
+          $select: 'ORDNAME,CUSTNAME,REFERENCE,CURDATE,SIBD_TREATDAY,ORDSTATUSDES,SBD_SEEDQTY,SBD_PREFACTIV,DETAILS,SIBD_SEEDLEN,SIBD_INDICATION'
         },
         timeout: 30000
       });

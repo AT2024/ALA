@@ -93,11 +93,21 @@ const TreatmentDocumentation = () => {
     site: currentTreatment?.site,
     priorityId: currentTreatment?.priorityId || currentTreatment?.subjectId,
     patientName: currentTreatment?.patientName,
-    subjectId: currentTreatment?.subjectId
+    subjectId: currentTreatment?.subjectId,
+    indication: currentTreatment?.indication, // Treatment indication from Priority SIBD_INDICATION
   };
 
   // Helper to determine treatment type for offline validation (SAME rules as online)
   const getTreatmentType = (): TreatmentType => {
+    // Check indication field first (from Priority SIBD_INDICATION)
+    if (currentTreatment?.indication) {
+      const ind = currentTreatment.indication.toLowerCase();
+      if (ind === 'pancreas' || ind === 'prostate') return 'panc_pros';
+      if (ind === 'skin') return 'skin';
+      return 'generic';
+    }
+
+    // Fallback: Legacy keyword detection from site/type fields
     const site = currentTreatment?.site?.toLowerCase() || '';
     const type = currentTreatment?.type?.toLowerCase() || '';
 
@@ -1021,8 +1031,8 @@ const TreatmentDocumentation = () => {
                     {currentTreatment.patientName ? (
                       <p className="font-medium">{currentTreatment.patientName}</p>
                     ) : (
-                      <p className="font-medium text-amber-600" title="Using order number (patient name not available)">
-                        Order: {currentTreatment.subjectId}
+                      <p className="font-medium text-amber-600" title="Patient name not available from Priority">
+                        {currentTreatment.subjectId}
                       </p>
                     )}
                   </div>
