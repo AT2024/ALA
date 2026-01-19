@@ -209,8 +209,8 @@ const ProgressTracker = () => {
             Patient: {currentTreatment.patientName ? (
               <span>{currentTreatment.patientName}</span>
             ) : (
-              <span className="text-amber-600" title="Using order number (patient name not available)">
-                Order: {currentTreatment.subjectId}
+              <span className="text-amber-600" title="Patient name not available from Priority">
+                {currentTreatment.subjectId}
               </span>
             )}
           </p>

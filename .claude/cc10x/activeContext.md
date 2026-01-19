@@ -1,56 +1,41 @@
-# Active Context - Winston Logging Documentation Repository
+# Active Context - Circular JSON Fix
 
-## Session Date: 2026-01-12
+## Session Date: 2026-01-14
 
 ## Current Focus
 
-Planning creation of a standalone GitHub repository documenting the Winston-based logging system from ALA for reuse in other projects.
+Fixing "Converting circular structure to JSON" error in production Azure deployment.
 
-## Recent Changes
+## Root Cause
 
-- Explored ALA logging system implementation
-- Identified 5 key source files to extract and generalize
-- Created comprehensive plan for winston-express-logging repository
-- Plan saved to `C:\Users\amitaik\.claude\plans\nested-launching-sonnet.md`
+Sequelize model instances with bidirectional associations (Treatment ↔ Applicator ↔ User) are passed directly to `res.json()` without serialization.
 
-## Key Files to Extract From
+## Key Finding (cc10x Review)
 
-| ALA Source | Purpose |
-|------------|---------|
-| `backend/src/utils/logger.ts` | Core Winston logger with lazy init |
-| `backend/src/middleware/requestLoggingMiddleware.ts` | Request correlation IDs |
-| `backend/src/middleware/errorMiddleware.ts` | Error handling |
-| `backend/src/middleware/databaseHealthMiddleware.ts` | Health checks |
-| `backend/src/config/appConfig.ts` | Configuration |
+**WRONG**: `.get({ plain: true })` - does not exist in Sequelize
+**CORRECT**: `.toJSON()` - already used in 10+ places in codebase
 
-## Next Steps
+## Files to Fix
 
-1. Create new repository at `C:\Users\amitaik\Desktop\winston-express-logging\`
-2. Extract and generalize code from ALA
-3. Write documentation (8 guides)
-4. Create examples (basic + full-featured)
-5. Add tests
-6. Push to GitHub
+| File | Line | Function |
+|------|------|----------|
+| `treatmentController.ts` | 122 | `getTreatments()` |
+| `treatmentController.ts` | 134 | `getTreatmentById()` |
+| `treatmentController.ts` | 686 | `getRemovalCandidates()` |
 
-## Active Decisions
+## Pattern to Use
 
-| Decision | Choice | Why |
-|----------|--------|-----|
-| Repository location | New GitHub repo | Standalone, reusable |
-| Primary language | TypeScript-first | Modern best practice |
-| JS alternatives | Yes | Wider accessibility |
-| Health check pattern | Interface-based | ORM agnostic |
+```typescript
+// For single model
+res.json(model.toJSON());
 
-## Logging System Features
+// For array (mixed types from DB/Priority)
+res.json(items.map(t => typeof t.toJSON === 'function' ? t.toJSON() : t));
+```
 
-- Lazy initialization with Proxy pattern
-- Dual transports (console + file) with rotation
-- Request correlation IDs
-- Performance monitoring with thresholds
-- Sensitive data masking
-- Database health check caching
-- Structured metadata logging
-- Tagged logging prefixes
+## Plan Location
+
+`C:\Users\amitaik\.claude\plans\warm-enchanting-horizon.md`
 
 ## Last Updated
-2026-01-12
+2026-01-14

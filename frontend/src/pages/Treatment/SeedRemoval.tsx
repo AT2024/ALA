@@ -245,8 +245,8 @@ const SeedRemoval = () => {
               {currentTreatment.patientName ? (
                 <p className='font-medium'>{currentTreatment.patientName}</p>
               ) : (
-                <p className='font-medium text-amber-600' title="Using order number (patient name not available)">
-                  Order: {currentTreatment.subjectId}
+                <p className='font-medium text-amber-600' title="Patient name not available from Priority">
+                  {currentTreatment.subjectId}
                 </p>
               )}
             </div>
