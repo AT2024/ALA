@@ -104,6 +104,33 @@ Done:    2 replicas running new version, ZERO downtime!
 - If new replica fails health check → automatic rollback
 - Zero service interruption
 
+### Restart Policy (Local vs Azure Parity Gap #5)
+
+**Azure Swarm restart policy** (in docker-stack.yml):
+```yaml
+restart_policy:
+  condition: on-failure     # Only restart if container fails
+  delay: 5s                 # Wait 5s between restarts
+  max_attempts: 3           # Maximum 3 restart attempts
+  window: 120s              # Reset counter after 120s window
+```
+
+**Local Docker Compose restart policy** (in docker-compose.yml):
+```yaml
+restart: always             # Always restart, no limit
+```
+
+**Why the difference?**
+- **Azure (Production)**: Uses circuit breaker pattern - if a container fails 3 times in 2 minutes, stop retrying to prevent cascading failures and allow investigation
+- **Local (Development)**: Always restart for convenience during development cycles
+
+**Impact:**
+- In production, persistent failures will be surfaced instead of silently restarting
+- Check `docker service ps ala_api` to see failed task history
+- After fixing the issue, services will resume normal operation
+
+See `docs/design-logs/2026-01-environment-alignment.md` for complete parity gap documentation.
+
 ---
 
 ## Monitoring & Health Checks

@@ -657,11 +657,11 @@ const TreatmentSelection = () => {
         )}
 
         {/* Header showing procedure type */}
-        <div className="rounded-lg border bg-blue-50 p-4">
-          <h2 className="text-lg font-medium text-blue-900">
+        <div className="rounded-lg border bg-primary/10 p-4">
+          <h2 className="text-lg font-medium text-primary">
             {procedureType === 'insertion' ? 'Treatment Insertion' : 'Treatment Removal'} Setup
           </h2>
-          <p className="text-sm text-blue-700">
+          <p className="text-sm text-primary">
             Please fill in the treatment details below
           </p>
         </div>
@@ -817,7 +817,7 @@ const TreatmentSelection = () => {
                     type="button"
                     onClick={searchTreatmentForRemoval}
                     disabled={searchingTreatment || !formData.site || !formData.treatmentNumber.trim()}
-                    className="min-h-[44px] whitespace-nowrap rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+                    className="min-h-[44px] whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
                   >
                     {searchingTreatment ? (
                       <div className="flex items-center justify-center gap-2">

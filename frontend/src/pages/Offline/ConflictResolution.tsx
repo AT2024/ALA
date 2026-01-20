@@ -94,7 +94,7 @@ export function ConflictResolution() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
+        <RefreshCw className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -139,7 +139,7 @@ export function ConflictResolution() {
             </p>
             <button
               onClick={() => navigate('/')}
-              className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              className="mt-4 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
             >
               Return Home
             </button>
@@ -185,7 +185,7 @@ export function ConflictResolution() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-2 text-left font-medium text-gray-600">Field</th>
-                          <th className="px-4 py-2 text-left font-medium text-blue-600">Your Change</th>
+                          <th className="px-4 py-2 text-left font-medium text-primary">Your Change</th>
                           <th className="px-4 py-2 text-left font-medium text-green-600">Server Value</th>
                         </tr>
                       </thead>
@@ -193,7 +193,7 @@ export function ConflictResolution() {
                         {changes.map((change, idx) => (
                           <tr key={change.field} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                             <td className="px-4 py-2 font-medium text-gray-900">{change.field}</td>
-                            <td className="px-4 py-2 text-blue-700">{formatValue(change.local)}</td>
+                            <td className="px-4 py-2 text-primary">{formatValue(change.local)}</td>
                             <td className="px-4 py-2 text-green-700">{formatValue(change.server)}</td>
                           </tr>
                         ))}
@@ -223,7 +223,7 @@ export function ConflictResolution() {
                         'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white',
                         resolving === conflict.id || conflict.requiresAdmin
                           ? 'cursor-not-allowed bg-gray-400'
-                          : 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-primary hover:bg-primary/90'
                       )}
                     >
                       {resolving === conflict.id ? (

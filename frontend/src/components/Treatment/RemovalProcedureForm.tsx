@@ -59,15 +59,15 @@ const RemovalProcedureForm = ({
 
       {/* General Notes (Top) */}
       {onTopGeneralCommentChange && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <label className="block text-sm font-medium text-blue-800 mb-1">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+          <label className="block text-sm font-medium text-primary mb-1">
             General Notes
           </label>
           <textarea
             value={topGeneralComment}
             onChange={(e) => onTopGeneralCommentChange(e.target.value)}
             rows={2}
-            className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-primary/30 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             placeholder="Enter any general notes about the removal procedure..."
           />
         </div>

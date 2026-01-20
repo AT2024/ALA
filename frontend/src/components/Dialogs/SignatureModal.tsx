@@ -401,9 +401,9 @@ const SignatureModal = ({
 
       {/* Selected Email Display */}
       {getEffectiveEmail() && (
-        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md">
-          <EnvelopeIcon className="w-5 h-5 text-blue-600" />
-          <span className="text-sm text-blue-700">
+        <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-md">
+          <EnvelopeIcon className="w-5 h-5 text-primary" />
+          <span className="text-sm text-primary">
             Code will be sent to: <strong>{getEffectiveEmail()}</strong>
           </span>
         </div>
@@ -656,7 +656,7 @@ const SignatureModal = ({
       </div>
 
       {/* Confirmation Checkbox */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <div className="flex items-start gap-3 p-4 bg-primary/10 rounded-lg border border-primary/20">
         <input
           id="hospital-confirm"
           type="checkbox"
@@ -664,7 +664,7 @@ const SignatureModal = ({
           onChange={(e) => setConfirmed(e.target.checked)}
           className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
         />
-        <label htmlFor="hospital-confirm" className="text-sm text-blue-800 cursor-pointer">
+        <label htmlFor="hospital-confirm" className="text-sm text-primary cursor-pointer">
           <span className="font-medium">I confirm</span> that this treatment record is complete and accurate.
           By clicking "Sign & Finalize", I am digitally signing this record.
         </label>

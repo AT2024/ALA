@@ -90,8 +90,8 @@ export function OfflineBanner({ className }: OfflineBannerProps) {
   const bannerStyles: Record<BannerState, string> = {
     hidden: '',
     offline: 'bg-yellow-500 text-yellow-900',
-    pending: 'bg-blue-500 text-white',
-    syncing: 'bg-blue-500 text-white',
+    pending: 'bg-primary text-white',
+    syncing: 'bg-primary text-white',
     conflict: 'bg-red-500 text-white',
     success: 'bg-green-500 text-white',
   };

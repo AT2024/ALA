@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             </p>
             <button
               onClick={dismissIdleWarning}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors"
             >
               Stay Logged In
             </button>
