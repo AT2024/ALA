@@ -427,6 +427,7 @@ All 16 hazards have control measures implemented:
 
 | Version | Date | Author | Description |
 |---------|------|--------|-------------|
+| 1.1 | 2026-02-10 | Claude Code | Auto-update: 162 requirements affected by HEAD~1...cf0ac317fd694598105b7d8c8a8150fd1c5ed578 |
 | 1.0 | December 2025 | - | Initial traceability matrix |
 | 2.0 | January 2026 | Claude Code | Major update: +53 requirements (Offline Mode, Treatment Continuation, Removal Discrepancy), +6 hazards |
 <!-- AUTO-UPDATE:END revision_history -->
