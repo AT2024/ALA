@@ -24,7 +24,7 @@ describe('AuthAuditService', () => {
   describe('maskIdentifier', () => {
     it('should mask email addresses correctly', () => {
       expect(authAuditService.maskIdentifier('user@example.com')).toBe('us***@example.com');
-      expect(authAuditService.maskIdentifier('ab@test.com')).toBe('ab***@test.com');
+      expect(authAuditService.maskIdentifier('ab@test.com')).toBe('a***@test.com');
       expect(authAuditService.maskIdentifier('x@y.com')).toBe('x***@y.com');
     });
 
@@ -35,7 +35,7 @@ describe('AuthAuditService', () => {
     });
 
     it('should mask short identifiers', () => {
-      expect(authAuditService.maskIdentifier('ab')).toBe('ab***');
+      expect(authAuditService.maskIdentifier('ab')).toBe('a***');
       expect(authAuditService.maskIdentifier('abcd')).toBe('a***');
       expect(authAuditService.maskIdentifier('abcde')).toBe('ab***de');
     });

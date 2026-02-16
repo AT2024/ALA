@@ -8,8 +8,8 @@
 | Document Information | |
 |---------------------|---|
 | **Document ID** | ALA-SRS-001 |
-| **Version** | 4.0 |
-| **Date** | January 2026 |
+| **Version** | 4.1 |
+| **Date** | February 2026 |
 | **Status** | Draft |
 | **Classification** | Internal |
 | **Safety Classification** | IEC 62304 Class B |
@@ -37,6 +37,7 @@
 | 2.0 | December 2025 | - | Complete rewrite reflecting current implementation |
 | 3.0 | December 2025 | - | Full overhaul: Added risk integration (ISO 14971), HIPAA 2025 compliance, cybersecurity section, missing features (attachments, treatment types, radioactivity), populated traceability matrix |
 | 4.0 | January 2026 | - | Major update: Added Offline Mode/PWA (Section 3.14), Treatment Continuation (Section 3.15), Enhanced Removal Procedure with Discrepancy Tracking (Section 3.8), new hazards (HAZ-011 to HAZ-016), updated data dictionary |
+| 4.1 | February 2026 | - | Gap analysis updates: Added HIPAA Authentication Audit Logging (Section 3.9.2), SignatureVerification and ApplicatorCache models (Section 6.2), corrected Priority API endpoint names (Section 4.3), fixed session timeout to 15 minutes (Section 5.3), added admin test mode toggle (Section 3.10), clarified treatment type enum values (Section 3.12) |
 <!-- AUTO-UPDATE:END revision_history -->
 
 ---
@@ -177,7 +178,7 @@ The ALA provides the following high-level functions:
 | Progress Tracking | Real-time visualization of treatment completion |
 | Treatment Finalization | Digital signature capture and PDF generation |
 | Removal Tracking | Track seed removal procedures (30+ days post-insertion) |
-| Audit Logging | Comprehensive audit trail for regulatory compliance |
+| Audit Logging | Comprehensive audit trail for regulatory compliance (applicator and authentication events) |
 
 ### 2.3 User Classes and Characteristics
 
@@ -340,7 +341,7 @@ The system shall scan and validate applicator QR codes/barcodes against Priority
 **Scan Flow:**
 1. User initiates barcode scan (camera or manual entry)
 2. System decodes QR code to extract serial number
-3. System validates serial number against Priority SIBD_APPLICATUSELIST
+3. System validates serial number against Priority SIBD_APPUSELISTTEXT
 4. System checks for duplicate scanning
 5. System displays applicator details and validation result
 6. User confirms or rejects applicator
@@ -351,7 +352,7 @@ The system shall scan and validate applicator QR codes/barcodes against Priority
 |----|-------------|----------|
 | SRS-SCAN-001 | The system shall support QR code scanning using device camera | Critical |
 | SRS-SCAN-002 | The system shall support manual serial number entry as fallback | Critical |
-| SRS-SCAN-003 | The system shall validate applicator serial numbers against Priority SIBD_APPLICATUSELIST | Critical |
+| SRS-SCAN-003 | The system shall validate applicator serial numbers against Priority SIBD_APPUSELISTTEXT | Critical |
 | SRS-SCAN-004 | The system shall detect and notify if an applicator was already scanned for the current treatment | High |
 | SRS-SCAN-005 | The system shall detect applicators assigned to different treatments | High |
 | SRS-SCAN-006 | The system shall display applicator details: serial number, seed quantity, applicator type | High |
@@ -541,9 +542,9 @@ The system shall support tracking of seed removal procedures with comprehensive 
 #### 3.9.1 Description and Priority
 **Priority:** Critical
 
-The system shall maintain comprehensive audit logs for regulatory compliance.
+The system shall maintain comprehensive audit logs for regulatory compliance, covering both applicator status tracking and authentication events.
 
-#### 3.9.2 Functional Requirements
+#### 3.9.2 Applicator Audit Logging
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
@@ -554,6 +555,25 @@ The system shall maintain comprehensive audit logs for regulatory compliance.
 | SRS-AUDT-005 | Audit logs shall be immutable (no updates or deletes) | Critical |
 | SRS-AUDT-006 | The system shall index audit logs by applicator ID and timestamp for efficient retrieval | High |
 | SRS-AUDT-007 | The system shall support audit log queries by time range and applicator | High |
+
+#### 3.9.3 Authentication Audit Logging (HIPAA 2025)
+
+The system shall log all authentication-related events in an AuthAuditLog table for HIPAA 2025 compliance. This includes successful and failed logins, logouts, session timeouts, and OTP requests.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| SRS-AAUD-001 | The system shall log all authentication events in the AuthAuditLog table | Critical |
+| SRS-AAUD-002 | The system shall track 5 authentication event types: LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, SESSION_TIMEOUT, OTP_REQUEST | Critical |
+| SRS-AAUD-003 | LOGIN_FAILURE events shall record the failure reason (e.g., invalid code, expired code, user not found) | High |
+| SRS-AAUD-004 | The system shall mask email identifiers in audit logs for privacy (e.g., "us***@example.com") | High |
+| SRS-AAUD-005 | The system shall mask phone identifiers in audit logs for privacy (e.g., "555-***-4567") | High |
+| SRS-AAUD-006 | The system shall capture client IP address (supporting X-Forwarded-For for proxied requests) | High |
+| SRS-AAUD-007 | The system shall capture User-Agent header for device identification | Medium |
+| SRS-AAUD-008 | Auth audit logs shall be immutable (no updates or deletes) | Critical |
+| SRS-AAUD-009 | The system shall index auth audit logs by userId and eventTime for efficient querying | High |
+| SRS-AAUD-010 | Auth audit logging shall never throw exceptions that interrupt the authentication flow | Critical |
+| SRS-AAUD-011 | The system shall provide a POST `/api/auth/session-timeout` endpoint for frontend idle timeout reporting | High |
+| SRS-AAUD-012 | Auth audit logs shall include a requestId field for correlation with other system logs | Medium |
 
 ---
 
@@ -572,6 +592,8 @@ The system shall provide administrative dashboard for system monitoring.
 | SRS-ADMN-002 | Dashboard shall display treatment statistics | Medium |
 | SRS-ADMN-003 | Dashboard shall display system logs | Medium |
 | SRS-ADMN-004 | Dashboard shall support filtering by date range and site | Low |
+| SRS-ADMN-005 | The system shall provide a GET `/api/admin/test-mode` endpoint to retrieve the current user's test mode status | Low |
+| SRS-ADMN-006 | The system shall provide a PUT `/api/admin/test-mode` endpoint to toggle test mode for the authenticated user (stored in user metadata) | Low |
 
 ---
 
@@ -605,7 +627,7 @@ The system shall support multiple treatment types with type-specific workflow be
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| SRS-TYPE-001 | The system shall support treatment types: insertion, removal, pancreas_insertion, prostate_insertion, skin_insertion | Critical |
+| SRS-TYPE-001 | The system shall support two treatment type enum values: `insertion` and `removal`. Treatment workflow variants (pancreas, prostate, skin) are determined by applicator data from Priority ERP, not stored as separate type values | Critical |
 | SRS-TYPE-002 | Pancreas treatments shall combine related Priority orders via reference chain detection | High |
 | SRS-TYPE-003 | Treatment priorityId shall support JSON array format for combined/referenced orders | High |
 | SRS-TYPE-004 | Each treatment type shall have type-specific workflow transitions per SRS-WKFL-002 | Critical |
@@ -776,14 +798,17 @@ The system shall allow users to continue a completed insertion treatment within 
 |----------|---------|------|
 | PHONEBOOK | User authentication, site access | Email, position code, authorized sites |
 | ORDERS | Treatment/patient data | Subject ID, patient details, site, date |
-| SIBD_APPLICATUSELIST | Applicator inventory | Serial number, seed quantity, applicator type |
+| SIBD_APPUSELISTTEXT | Applicator inventory (read, text/display variant) | SERNUMTEXT, SIBD_SEEDQTY, PARTDESTEXT, PARTNAMETEXT |
+| ORDERS/{id}/SIBD_APPUSELISTTEXT_SUBFORM | Applicator data per order (read) | Applicator details linked to specific order |
+| ORDERS/{id}/SIBD_APPLICATUSELIST_SUBFORM | Applicator data per order (write) | Used for posting applicator usage data back to Priority |
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | SRS-API-001 | The system shall authenticate to Priority API using configured credentials | Critical |
 | SRS-API-002 | The system shall handle Priority API timeouts (30 second default) | High |
-| SRS-API-003 | The system shall cache Priority data to reduce API calls | Medium |
+| SRS-API-003 | The system shall cache Priority applicator data in ApplicatorCache table with 24-hour TTL to reduce API calls and provide fail-safe validation | Medium |
 | SRS-API-004 | The system shall provide fallback test data when Priority is unavailable (development only) | Medium |
+| SRS-API-005 | The system shall implement a fail-closed cache pattern: if Priority is down AND cache is stale (>24h), operations shall be blocked rather than proceeding with stale data | High |
 
 #### 4.3.2 Database Interface
 
@@ -850,7 +875,7 @@ The system shall allow users to continue a completed insertion treatment within 
 | SRS-SEC-013 | Network segmentation shall isolate ePHI systems | High | HIPAA 2025 |
 | SRS-SEC-014 | Audit logs shall be retained for minimum 6 years per HIPAA | Critical | Regulatory compliance |
 | SRS-SEC-015 | Audit log integrity shall be verified via immutability controls | High | Data integrity |
-| SRS-SEC-016 | Session timeout shall occur after 30 minutes of inactivity | High | Access control |
+| SRS-SEC-016 | Session timeout shall occur after 15 minutes of inactivity (HIPAA-compliant idle timeout) | High | Access control |
 
 **Rate Limiting Configuration:**
 
@@ -907,22 +932,36 @@ The system shall allow users to continue a completed insertion treatment within 
 │ phoneNumber │  │    │ patientName     │  │    │ usageType    │
 │ role        │  └───▶│ userId (FK)     │  └───▶│ treatmentId  │
 │ metadata    │       │ completedBy (FK)│       │ status       │
-└─────────────┘       │ site            │       │ addedBy (FK) │
-                      │ date            │       │ comments     │
-                      │ isComplete      │       └──────┬───────┘
-                      └─────────────────┘              │
-                                                       │
-┌────────────────────┐     ┌─────────────────────┐    │
-│  TreatmentPdfs     │     │ ApplicatorAuditLog  │    │
-├────────────────────┤     ├─────────────────────┤    │
-│ id (PK)            │     │ id (PK)             │◀───┘
-│ treatmentId (FK)   │     │ applicatorId (FK)   │
-│ pdfData (BYTEA)    │     │ oldStatus           │
-│ signatureType      │     │ newStatus           │
-│ signerName         │     │ changedBy           │
-│ signerEmail        │     │ changedAt           │
-└────────────────────┘     │ reason              │
-                           └─────────────────────┘
+└──────┬──────┘       │ site            │       │ addedBy (FK) │
+       │              │ date            │       │ comments     │
+       │              │ isComplete      │       └──────┬───────┘
+       │              └────────┬────────┘              │
+       │                       │                       │
+       │   ┌───────────────────┼───────────────────────┘
+       │   │                   │
+       ▼   │                   ▼
+┌──────────────────┐  ┌─────────────────────┐  ┌───────────────────────┐
+│  AuthAuditLog    │  │ ApplicatorAuditLog  │  │ SignatureVerification │
+├──────────────────┤  ├─────────────────────┤  ├───────────────────────┤
+│ id (PK)          │  │ id (PK)             │  │ id (PK)               │
+│ userId (FK)      │  │ applicatorId (FK)   │  │ treatmentId (FK)      │
+│ eventType        │  │ oldStatus           │  │ targetEmail           │
+│ eventTime        │  │ newStatus           │  │ verificationCode      │
+│ ipAddress        │  │ changedBy           │  │ status                │
+│ identifier       │  │ changedAt           │  │ signerName            │
+│ failureReason    │  │ reason              │  │ signerPosition        │
+└──────────────────┘  └─────────────────────┘  └───────────────────────┘
+
+┌────────────────────┐  ┌──────────────────┐
+│  TreatmentPdfs     │  │ ApplicatorCache  │
+├────────────────────┤  ├──────────────────┤
+│ id (PK)            │  │ serialNumber(PK) │
+│ treatmentId (FK)   │  │ SIBD_SEEDQTY     │
+│ pdfData (BYTEA)    │  │ PARTDES          │
+│ signatureType      │  │ PARTNAME         │
+│ signerName         │  │ SIBD_NOUSE       │
+│ signerEmail        │  │ cachedAt         │
+└────────────────────┘  └──────────────────┘
 ```
 
 ### 6.2 Data Dictionary
@@ -1014,7 +1053,50 @@ The system shall allow users to continue a completed insertion treatment within 
 | reason | TEXT | nullable | Reason for change |
 | requestId | VARCHAR(100) | nullable | Correlation ID |
 
-#### 6.2.5 SyncConflict Table (NEW - Offline Support)
+#### 6.2.5 AuthAuditLog Table (HIPAA Authentication Audit)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | UUID | PK, auto-generated | Unique audit entry identifier |
+| userId | UUID | FK→users, nullable | User who triggered the event (NULL for failed logins where user may not exist) |
+| eventType | VARCHAR(50) | NOT NULL, validated | Event type: LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, SESSION_TIMEOUT, OTP_REQUEST |
+| eventTime | TIMESTAMP | NOT NULL, default NOW() | When the event occurred |
+| ipAddress | VARCHAR(45) | nullable | Client IP address (supports IPv6) |
+| userAgent | TEXT | nullable | Client User-Agent header |
+| identifier | VARCHAR(255) | nullable | Privacy-masked email/phone (e.g., "us***@example.com") |
+| failureReason | TEXT | nullable | Reason for failure (LOGIN_FAILURE events only) |
+| requestId | VARCHAR(100) | nullable | Correlation ID for log tracing |
+
+**Indexes:** userId, eventTime, eventType, composite (userId + eventTime)
+
+**Notes:**
+- This table supports HIPAA 2025 requirements for authentication event tracking.
+- The `identifier` field stores privacy-masked values, never raw emails or phone numbers.
+- The service layer catches all errors internally to ensure audit logging never disrupts the authentication flow.
+- `userId` is nullable because failed login attempts may reference an email that does not correspond to an existing user.
+
+#### 6.2.6 SignatureVerification Table
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| id | UUID | PK, auto-generated | Unique verification identifier |
+| treatmentId | UUID | FK→treatments, NOT NULL | Treatment being finalized |
+| targetEmail | VARCHAR(255) | NOT NULL | Email of the person signing |
+| verificationCode | VARCHAR(255) | NOT NULL | Bcrypt-hashed verification code |
+| verificationExpires | TIMESTAMP | NOT NULL | Code expiration (1 hour from generation) |
+| failedAttempts | INTEGER | NOT NULL, default 0 | Count of failed verification attempts |
+| status | ENUM | NOT NULL, default 'pending' | Status: pending, verified, expired, failed |
+| signerName | VARCHAR(255) | nullable | Name of the signer |
+| signerPosition | VARCHAR(100) | nullable | Position/title of the signer |
+
+**Indexes:** treatmentId, targetEmail, status, verificationExpires
+
+**Notes:**
+- A treatment can have multiple SignatureVerification records (e.g., if a code expires and a new one is generated).
+- After 3 failed attempts, the status is automatically set to `failed`.
+- Methods: `generateCode()` creates a new 6-digit code with 1-hour expiry; `verifyCode()` validates and tracks attempts; `getRemainingAttempts()` returns attempts left; `isStillValid()` checks if verification is still usable.
+
+#### 6.2.7 SyncConflict Table (Offline Support)
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -1032,7 +1114,7 @@ The system shall allow users to continue a completed insertion treatment within 
 | overwrittenData | JSON | nullable | Data that was overwritten (HIPAA audit trail) |
 | createdAt | TIMESTAMP | NOT NULL, default NOW() | When conflict was detected |
 
-#### 6.2.6 OfflineAuditLog Table (NEW - Offline Support)
+#### 6.2.8 OfflineAuditLog Table (Offline Support)
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
@@ -1049,6 +1131,29 @@ The system shall allow users to continue a completed insertion treatment within 
 | changeHash | VARCHAR(64) | NOT NULL, indexed | SHA-256 hash for idempotency checking |
 | metadata | JSON | nullable | Additional operation metadata |
 | createdAt | TIMESTAMP | NOT NULL, default NOW() | When audit entry was created |
+
+#### 6.2.9 ApplicatorCache Table (ERP Fail-Safe Cache)
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| serialNumber | VARCHAR(100) | PK | Applicator serial number (natural key) |
+| SIBD_NOUSE | VARCHAR(10) | nullable | 'Y' if applicator marked "NO USE" in Priority |
+| SIBD_EXPIRY | VARCHAR(50) | nullable | Expiry date from Priority ERP |
+| SIBD_TREATTYPE | VARCHAR(50) | nullable | Treatment type compatibility |
+| SIBD_SEEDQTY | INTEGER | nullable | Seed quantity from Priority |
+| SIBD_SEEDLEN | DECIMAL(5,2) | nullable | Seed length from Priority |
+| PARTDES | VARCHAR(255) | nullable | Part description / applicator type |
+| PARTNAME | VARCHAR(100) | nullable | Catalog number |
+| cachedAt | TIMESTAMP | NOT NULL | When cache entry was last updated from ERP |
+
+**Indexes:** cachedAt (for stale cache queries)
+
+**Notes:**
+- **SAFETY-CRITICAL**: This cache implements a fail-closed (not fail-open) pattern for ERP offline resilience.
+- Cache is updated on every successful Priority ERP query for applicator data.
+- TTL: 24 hours. If Priority is down AND cache is stale (older than 24h), operations are BLOCKED.
+- The system never proceeds with expired/stale metadata for medical device validation.
+- Timestamps are managed manually (Sequelize timestamps disabled).
 
 ### 6.3 Data Integrity and Retention
 
@@ -1076,7 +1181,8 @@ The system shall allow users to continue a completed insertion treatment within 
 | Finalization (SRS-FINL-*) | E2E tests, manual QA verification |
 | Export (SRS-EXPRT-*) | Integration tests, manual PDF review |
 | Removal (SRS-RMVL-*) | Integration tests, E2E tests for discrepancy tracking |
-| Audit (SRS-AUDT-*) | Database queries, integration tests |
+| Applicator Audit (SRS-AUDT-*) | Database queries, integration tests |
+| Auth Audit (SRS-AAUD-*) | Unit tests, integration tests, HIPAA compliance review |
 | Security (SRS-SEC-*) | Security scanning, penetration testing |
 | Performance (SRS-PERF-*) | Load testing, performance monitoring |
 | Offline Mode (SRS-OFFL-*) | PWA testing, offline simulation, sync conflict tests, encryption validation |
@@ -1089,16 +1195,16 @@ The complete requirements traceability matrix is maintained in a separate docume
 **See:** [srs/traceability-matrix.md](srs/traceability-matrix.md)
 
 The traceability matrix includes:
-- All 215 requirements with unique IDs
+- All 230 requirements with unique IDs
 - Hazard linkage (from ISO 14971 analysis)
 - Test case references
 - Implementation status
 
 **Summary Statistics:**
-- Total Requirements: 215
-- Implemented: 183 (85.1%)
-- Needs Verification: 27 (12.6%)
-- Pending Implementation: 5 (2.3%)
+- Total Requirements: 230
+- Implemented: 198 (86.1%)
+- Needs Verification: 27 (11.7%)
+- Pending Implementation: 5 (2.2%)
 
 ---
 
@@ -1127,14 +1233,14 @@ The complete hazard analysis is maintained in a separate document:
 |-----------|-------------|--------------|---------------|---------------------|
 | HAZ-001 | Incorrect applicator tracking | Medium | ALARP | SRS-SCAN-003, SRS-AUDT-001 |
 | HAZ-002 | Incorrect seed count | Medium | ALARP | SRS-SCAN-007, SRS-SCAN-008 |
-| HAZ-003 | Unauthorized access to patient data | Medium | Low | SRS-AUTH-*, SRS-SEC-* |
+| HAZ-003 | Unauthorized access to patient data | Medium | Low | SRS-AUTH-*, SRS-SEC-*, SRS-AAUD-* |
 | HAZ-004 | Data loss during documentation | Medium | ALARP | SRS-DATA-002, SRS-RECV-* |
 | HAZ-005 | Audit trail tampering | Medium | ALARP | SRS-AUDT-005, SRS-SEC-015 |
 | HAZ-006 | Applicator used on wrong patient | Medium | ALARP | SRS-SCAN-004, SRS-SCAN-005 |
 | HAZ-007 | Treatment finalized without verification | Medium | Low | SRS-FINL-003, SRS-FINL-009 |
 | HAZ-008 | Removal on wrong treatment | Medium | ALARP | SRS-RMVL-001, SRS-TSEL-007 |
-| HAZ-009 | Session hijacking | Medium | Low | SRS-AUTH-007, SRS-SEC-016 |
-| HAZ-010 | Brute force attack | Low | Low | SRS-SEC-003, SRS-AUTH-004 |
+| HAZ-009 | Session hijacking | Medium | Low | SRS-AUTH-007, SRS-SEC-016, SRS-AAUD-001 |
+| HAZ-010 | Brute force attack | Low | Low | SRS-SEC-003, SRS-AUTH-004, SRS-AAUD-003 |
 | HAZ-011 | Data loss during offline sync | Medium | ALARP | SRS-OFFL-006, SRS-OFFL-011 |
 | HAZ-012 | Stale offline data used in treatment | Medium | Low | SRS-OFFL-010, SRS-OFFL-015 |
 | HAZ-013 | Unauthorized offline PHI access | Medium | ALARP | SRS-OFFL-003, SRS-OFFL-004, SRS-OFFL-023 |
@@ -1154,6 +1260,8 @@ The following requirements are classified as safety-critical based on their role
 | SRS-AUTH-007 | HttpOnly secure cookies | HAZ-003, HAZ-009 |
 | SRS-FINL-009 | Immutable finalized treatments | HAZ-007 |
 | SRS-SEC-003 | Rate limiting on authentication | HAZ-003, HAZ-010 |
+| SRS-AAUD-001 | Log all authentication events | HAZ-003, HAZ-009, HAZ-010 |
+| SRS-AAUD-008 | Auth audit logs immutable | HAZ-003, HAZ-005 |
 | SRS-OFFL-003 | Encrypt PHI at rest using AES-256-GCM | HAZ-013 |
 | SRS-OFFL-006 | Queue offline changes with integrity hashes | HAZ-011 |
 | SRS-OFFL-011 | Detect and store sync conflicts | HAZ-011 |
@@ -1288,10 +1396,15 @@ GET /ORDERS?$filter=SITE eq '{site}' and DATE ge {startDate}
 &$select=ORDNAME,DETAILS,SIESSION,SITE,DATE,SURGEON
 ```
 
-#### SIBD_APPLICATUSELIST Query
+#### SIBD_APPUSELISTTEXT Query (Read - Text/Display Variant)
 ```
-GET /SIBD_APPLICATUSELIST?$filter=SERIALNUMBER eq '{serialNumber}'
-&$select=SERIALNUMBER,SEEDQTY,PARTDES
+GET /SIBD_APPUSELISTTEXT?$filter=SERNUMTEXT eq '{serialNumber}'
+&$select=SERNUMTEXT,SIBD_SEEDQTY,PARTDESTEXT,PARTNAMETEXT,SIBD_NOUSE,SIBD_EXPIRY,SIBD_TREATTYPE,SIBD_SEEDLEN
+```
+
+#### SIBD_APPLICATUSELIST_SUBFORM (Write - Per Order)
+```
+POST /ORDERS('{orderName}')/SIBD_APPLICATUSELIST_SUBFORM
 ```
 
 ### Appendix D: Glossary
