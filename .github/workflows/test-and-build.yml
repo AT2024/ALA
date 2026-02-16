@@ -71,6 +71,62 @@ jobs:
           npm run type-check || npm run build
 
   # =================================================================
+  # Database Migration Validation
+  # =================================================================
+  migration-check:
+    name: Migration Validation
+    runs-on: ubuntu-latest
+    needs: lint-and-types
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Apply All Migrations to Test DB
+        env:
+          PGPASSWORD: test_password
+        run: |
+          cd backend
+          for f in src/migrations/*.sql; do
+            echo "Applying migration: $f"
+            psql -h localhost -U test_user -d test_db -f "$f" || true
+          done
+
+      - name: Check Model/Schema Parity
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+        run: |
+          cd backend
+          npm run db:check-diff
+
+  # =================================================================
   # Backend Unit and Integration Tests
   # =================================================================
   backend-tests:
@@ -447,13 +503,14 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [lint-and-types, backend-tests, frontend-tests, medical-compliance, docker-build, security-scan, srs-validation]
+    needs: [lint-and-types, migration-check, backend-tests, frontend-tests, medical-compliance, docker-build, security-scan, srs-validation]
     if: always()
 
     steps:
       - name: Check Test Results
         run: |
           if [[ "${{ needs.lint-and-types.result }}" == "success" && \
+                "${{ needs.migration-check.result }}" == "success" && \
                 "${{ needs.backend-tests.result }}" == "success" && \
                 "${{ needs.frontend-tests.result }}" == "success" && \
                 "${{ needs.medical-compliance.result }}" == "success" && \
@@ -465,6 +522,7 @@ jobs:
           else
             echo "❌ Some tests failed!"
             echo "Lint/Types: ${{ needs.lint-and-types.result }}"
+            echo "Migration Check: ${{ needs.migration-check.result }}"
             echo "Backend Tests: ${{ needs.backend-tests.result }}"
             echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
             echo "Medical Compliance: ${{ needs.medical-compliance.result }}"
