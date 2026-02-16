@@ -4,6 +4,7 @@ import { authService } from '@/services/authService';
 import { priorityService } from '@/services/priorityService';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import { encryptionKeyService } from '@/services/encryptionKeyService';
+import api from '@/services/api';
 
 interface User {
   id: string;
@@ -195,9 +196,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // HIPAA-compliant idle session timeout (15 minutes)
   // Only active when user is authenticated
-  const handleIdleTimeout = useCallback(() => {
+  const handleIdleTimeout = useCallback(async () => {
     if (user) {
       console.warn('Session expired due to inactivity (HIPAA compliance)');
+      // Log session timeout for HIPAA audit trail
+      try {
+        await api.post('/auth/session-timeout');
+      } catch (error) {
+        console.warn('Failed to log session timeout:', error);
+      }
       logout();
     }
   }, [user]);

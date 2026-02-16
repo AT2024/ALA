@@ -5,6 +5,8 @@ import { User } from '../models';
 import logger from '../utils/logger';
 import priorityService from '../services/priorityService';
 import { sendVerificationCode } from '../services/emailService';
+import { authAuditService } from '../services/authAuditService';
+import { getClientIp, getUserAgent } from '../utils/requestUtils';
 
 // Lazy getter for JWT secret with runtime validation
 function getJwtSecret(): string {
@@ -44,54 +46,6 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
 
   // Check if the identifier is an email or phone number
   const isEmail = identifier.includes('@');
-
-  // Test bypass ONLY in development - skip Priority validation for test emails
-  // This allows testing without requiring Priority system connectivity
-  if (process.env.NODE_ENV === 'development') {
-    const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
-    if (isEmail && bypassEmails.includes(identifier.toLowerCase())) {
-      logger.info(`[DEV] Bypassing Priority validation for test email: ${identifier}`);
-
-      // Find or create test user locally (no Priority validation)
-      let user = await User.findOne({ where: { email: identifier } });
-      if (!user) {
-        user = await User.create({
-          name: 'Test User',
-          email: identifier,
-          phoneNumber: '555-TEST',
-          role: 'admin',
-          metadata: {
-            positionCode: '99',
-            custName: 'ALL_SITES',
-            sites: [
-              { custName: '100078', custDes: 'Main Test Hospital' },
-              { custName: '100040', custDes: 'Test Hospital' },
-            ],
-            fullAccess: true,
-          },
-        });
-        logger.info(`[DEV] Created test user: ${user.id}`);
-      }
-
-      // Generate verification code
-      const verificationCode = await user.generateVerificationCode();
-      logger.info(`[DEV] Test verification code for ${identifier}: ${verificationCode}`);
-
-      res.status(200).json({
-        success: true,
-        message: 'Verification code sent (test mode)',
-        userData: {
-          name: user.name,
-          email: user.email,
-          phoneNumber: user.phoneNumber || '',
-          positionCode: user.metadata?.positionCode || '99',
-          custName: user.metadata?.custName || 'ALL_SITES',
-          sites: user.metadata?.sites || [],
-        },
-      });
-      return;
-    }
-  }
 
   try {
     // First, validate against Priority system
@@ -195,6 +149,9 @@ export const requestVerificationCode = asyncHandler(async (req: Request, res: Re
       }
     }
 
+    // HIPAA audit: Log OTP request
+    await authAuditService.logOtpRequest(identifier, getClientIp(req), getUserAgent(req));
+
     res.status(200).json({
       success: true,
       message: 'Verification code sent',
@@ -253,12 +210,23 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
       logger.warn(`User ${identifier} exceeded verification attempts limit`);
     }
 
+    // HIPAA audit: Log failed login attempt
+    await authAuditService.logLoginFailure(
+      identifier,
+      'Invalid verification code',
+      getClientIp(req),
+      getUserAgent(req)
+    );
+
     res.status(401);
     throw new Error('Invalid verification code');
   }
 
   // Generate JWT token
   const token = generateToken(user.id);
+
+  // HIPAA audit: Log successful login
+  await authAuditService.logLoginSuccess(user.id, getClientIp(req), getUserAgent(req));
 
   // Always set HttpOnly cookie for secure token storage (OWASP best practice)
   // This prevents XSS attacks from stealing the auth token
@@ -462,6 +430,20 @@ export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Respon
 // @route   POST /api/auth/logout
 // @access  Public (anyone can request logout)
 export const logout = asyncHandler(async (req: Request, res: Response) => {
+  // HIPAA audit: Try to log logout if we can identify the user
+  // Since this route is public, we need to decode the token from cookie
+  const token = req.cookies['auth-token'];
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, getJwtSecret()) as { id: string };
+      if (decoded?.id) {
+        await authAuditService.logLogout(decoded.id, getClientIp(req), getUserAgent(req));
+      }
+    } catch {
+      // Token invalid or expired, skip audit logging
+    }
+  }
+
   // Clear the HttpOnly auth cookie
   res.clearCookie('auth-token', {
     httpOnly: true,
@@ -475,5 +457,21 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Logged out successfully'
+  });
+});
+
+// @desc    Log session timeout (for HIPAA audit trail)
+// @route   POST /api/auth/session-timeout
+// @access  Private
+export const logSessionTimeout = asyncHandler(async (req: Request, res: Response) => {
+  // Log session timeout for HIPAA compliance
+  await authAuditService.logSessionTimeout(req.user.id);
+
+  // Clear the auth cookie
+  res.clearCookie('auth-token', getCookieOptions());
+
+  res.status(200).json({
+    success: true,
+    message: 'Session timeout logged'
   });
 });
