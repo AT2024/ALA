@@ -36,7 +36,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
   if (!token) {
     res.status(401);
-    throw new Error('Not authorized, no token');
+    return next(new Error('Not authorized, no token'));
   }
 
   try {
@@ -50,7 +50,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     if (!user) {
       res.status(401);
-      throw new Error('Not authorized, user not found');
+      return next(new Error('Not authorized, user not found'));
     }
 
     // Set user to req.user
@@ -58,7 +58,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     next();
   } catch (error) {
     res.status(401);
-    throw new Error('Not authorized, invalid token');
+    return next(new Error('Not authorized, invalid token'));
   }
 };
 
@@ -67,12 +67,12 @@ export const restrict = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       res.status(401);
-      throw new Error('Not authorized');
+      return next(new Error('Not authorized'));
     }
 
     if (!roles.includes(req.user.role)) {
       res.status(403);
-      throw new Error('Not authorized for this role');
+      return next(new Error('Not authorized for this role'));
     }
 
     next();
