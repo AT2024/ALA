@@ -10,14 +10,6 @@ const PDF_VERSION = 'V.01';
 // Colors
 const HEADER_BLUE = '#428bca';
 
-// Removal-specific colors matching frontend Tailwind classes
-const REMOVAL_GREEN = '#22c55e';    // green-600 - complete state
-const REMOVAL_GREEN_LIGHT = '#dcfce7'; // green-100 - complete row background
-const REMOVAL_PRIMARY = '#428bca';  // primary - in-progress
-const REMOVAL_RED = '#dc2626';      // red-600 - discrepancy/error
-const REMOVAL_AMBER_LIGHT = '#fffbeb'; // amber-50 - warning background
-const REMOVAL_AMBER_BORDER = '#fcd34d'; // amber-300 - warning border
-const GRAY_TEXT = '#6b7280';        // gray-500 - labels
 
 export interface Treatment {
   id: string;
@@ -254,11 +246,12 @@ function drawTable(
 }
 
 // ===== REMOVAL PDF DRAWING FUNCTIONS =====
+// Layout matches the official "DaRT Removal Procedure" Word form (QSR-40001-01_V6_TC.docx)
 
 /**
- * Draw removal PDF header with logo and title
+ * Draw removal PDF header with logo and doc number
  */
-function drawRemovalHeader(doc: PDFKit.PDFDocument, _startY: number): number {
+function drawRemovalHeader(doc: PDFKit.PDFDocument): number {
   // Add Alpha Tau logo (top-left corner)
   const localLogoPath = path.join(process.cwd(), '..', 'frontend', 'public', 'alphataulogo.png');
   const dockerLogoPath = path.join(process.cwd(), 'assets', 'alphataulogo.png');
@@ -272,444 +265,303 @@ function drawRemovalHeader(doc: PDFKit.PDFDocument, _startY: number): number {
   doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: 'center' });
   doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: 'center' });
 
-  // Title
-  doc.fontSize(20).font('Helvetica-Bold');
-  doc.text('Removal Procedure Report', 0, 55, { align: 'center' });
-
-  doc.fontSize(12).font('Helvetica');
-  doc.text(`Generated: ${formatDate(new Date())}`, 0, 80, { align: 'center' });
-
-  return _startY;
+  return 55;
 }
 
 /**
- * Draw treatment information section (4-column grid like frontend)
+ * Draw removal form Table 1: main numbered form fields
+ * Matches the Word document 2-column table layout
  */
-function drawRemovalTreatmentInfo(
+function drawRemovalFormTable(
   doc: PDFKit.PDFDocument,
-  treatment: RemovalTreatment,
+  data: RemovalPdfData,
   startY: number
 ): number {
+  const startX = 50;
+  const tableWidth = 495;
+  const col1Width = 295;
+  const col2Width = 200;
+  const rowHeight = 18;
+  const cellPadding = 5;
   let y = startY;
-
-  // Section title
-  doc.fontSize(14).font('Helvetica-Bold').fillColor('black');
-  doc.text('Treatment Information', 50, y);
-  y += 20;
-
-  // Draw border around section
-  doc.strokeColor('#e5e7eb').lineWidth(1);
-  doc.roundedRect(50, y, 742, 75, 4).stroke();
-  y += 10;
-
-  // Info grid (4 columns, 2 rows)
-  const fields = [
-    ['Patient ID', treatment.patientName || treatment.subjectId],
-    ['Date of Insertion', formatDate(treatment.date, false)],
-    ['Total Sources', treatment.seedQuantity?.toString() || 'N/A'],
-    ['Total Activity', treatment.activityPerSeed && treatment.seedQuantity
-      ? `${(treatment.activityPerSeed * treatment.seedQuantity).toFixed(1)} µCi` : 'N/A'],
-    ['Surgeon', treatment.surgeon || 'N/A'],
-    ['Site', formatSiteName(treatment.site)],
-    ['Days Since Insertion', `${treatment.daysSinceInsertion} days`],
-    ['Type', 'Removal']
-  ];
-
-  // Draw in 4-column grid
-  const colWidth = 180;
-  fields.forEach((field, index) => {
-    const col = index % 4;
-    const row = Math.floor(index / 4);
-    const fieldX = 60 + col * colWidth;
-    const rowY = y + row * 30;
-
-    doc.fontSize(9).font('Helvetica').fillColor(GRAY_TEXT);
-    doc.text(field[0], fieldX, rowY);
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('black');
-    doc.text(field[1], fieldX, rowY + 11);
-  });
-
-  return y + 70;
-}
-
-/**
- * Draw source removal tracking table with progress bars
- */
-function drawRemovalTrackingTable(
-  doc: PDFKit.PDFDocument,
-  data: RemovalPdfData,
-  startY: number
-): number {
-  let y = startY + 15;
-
-  // Section title
-  doc.fontSize(14).font('Helvetica-Bold').fillColor('black');
-  doc.text('Source Removal Tracking', 50, y);
-  y += 20;
-
-  // Table configuration (Progress column removed per user request)
-  const headers = ['Group', 'Total Sources', 'Removed', 'Comment'];
-  const colWidths = [200, 100, 80, 362];  // Redistributed Progress width to Comment
-  const rowHeight = 28;
-  const tableWidth = colWidths.reduce((a, b) => a + b, 0);
-
-  // Draw header row
-  doc.fillColor(HEADER_BLUE);
-  doc.rect(50, y, tableWidth, 22).fill();
-
-  doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
-  let headerX = 50;
-  headers.forEach((header, i) => {
-    doc.text(header, headerX + 5, y + 6, { width: colWidths[i] - 10 });
-    headerX += colWidths[i];
-  });
-  y += 22;
-
-  // Draw applicator groups
-  data.applicatorGroups.forEach((group, index) => {
-    const isComplete = group.removedApplicators >= group.totalApplicators;
-
-    // Row background
-    if (isComplete) {
-      doc.fillColor(REMOVAL_GREEN_LIGHT);
-      doc.rect(50, y, tableWidth, rowHeight).fill();
-    } else if (index % 2 === 1) {
-      doc.fillColor('#f9fafb');
-      doc.rect(50, y, tableWidth, rowHeight).fill();
-    }
-
-    // Row border
-    doc.strokeColor('#e5e7eb').lineWidth(0.5);
-    doc.rect(50, y, tableWidth, rowHeight).stroke();
-
-    // Cell content
-    doc.fillColor('black').fontSize(9).font('Helvetica');
-    let cellX = 50;
-
-    // Group description
-    const groupLabel = `${group.totalApplicators} applicator${group.totalApplicators !== 1 ? 's' : ''} x ${group.seedCount} source${group.seedCount !== 1 ? 's' : ''}`;
-    doc.text(groupLabel, cellX + 5, y + 9, { width: colWidths[0] - 10 });
-    cellX += colWidths[0];
-
-    // Total sources
-    doc.text(group.totalSources.toString(), cellX + 5, y + 9, { width: colWidths[1] - 10, align: 'center' });
-    cellX += colWidths[1];
-
-    // Removed
-    doc.text(group.removedSources.toString(), cellX + 5, y + 9, { width: colWidths[2] - 10, align: 'center' });
-    cellX += colWidths[2];
-
-    // Comment (Progress column removed)
-    doc.fontSize(8).fillColor('black');
-    doc.text(group.comment || '-', cellX + 5, y + 9, { width: colWidths[3] - 10 });
-
-    y += rowHeight;
-  });
-
-  // Individual seeds row (if applicable)
-  if (data.individualSeeds.total > 0) {
-    const isComplete = data.individualSeeds.removed >= data.individualSeeds.total;
-
-    // Row background
-    if (isComplete) {
-      doc.fillColor(REMOVAL_GREEN_LIGHT);
-      doc.rect(50, y, tableWidth, rowHeight).fill();
-    }
-
-    // Row border
-    doc.strokeColor('#e5e7eb').lineWidth(0.5);
-    doc.rect(50, y, tableWidth, rowHeight).stroke();
-
-    doc.fillColor('black').fontSize(9).font('Helvetica');
-    let cellX = 50;
-
-    doc.text('Individual sources', cellX + 5, y + 9);
-    cellX += colWidths[0];
-    doc.text(data.individualSeeds.total.toString(), cellX + 5, y + 9, { width: colWidths[1] - 10, align: 'center' });
-    cellX += colWidths[1];
-    doc.text(data.individualSeeds.removed.toString(), cellX + 5, y + 9, { width: colWidths[2] - 10, align: 'center' });
-    cellX += colWidths[2];
-
-    // Comment (Progress column removed)
-    doc.fontSize(8).text(data.individualSeeds.comment || '-', cellX + 5, y + 9, { width: colWidths[3] - 10 });
-    y += rowHeight;
-  }
-
-  // Summary footer
-  y += 8;
-  const totalRemoved = data.summary.totalSourcesRemoved;
-  const totalInserted = data.summary.totalSourcesInserted;
-  const isAllRemoved = totalRemoved === totalInserted;
-
-  doc.fontSize(11).font('Helvetica-Bold').fillColor(isAllRemoved ? REMOVAL_GREEN : 'black');
-  doc.text(`Total: ${totalRemoved} / ${totalInserted} sources removed`, 50, y);
-
-  return y + 20;
-}
-
-/**
- * Draw removal procedure form section
- */
-function drawRemovalProcedureForm(
-  doc: PDFKit.PDFDocument,
-  data: RemovalPdfData,
-  startY: number
-): number {
-  let y = startY + 10;
-
-  // Check for page break
-  if (y > doc.page.height - 280) {
-    doc.addPage();
-    y = 50;
-  }
-
-  // Section title
-  doc.fontSize(14).font('Helvetica-Bold').fillColor('black');
-  doc.text('Removal Procedure Form', 50, y);
-  y += 25;
 
   const form = data.procedureForm;
-
-  // General Notes (if present)
-  if (form.topGeneralComments) {
-    // Draw info box
-    doc.fillColor('#eff6ff');
-    const boxHeight = Math.min(50, 30 + Math.ceil(form.topGeneralComments.length / 100) * 12);
-    doc.roundedRect(50, y, 742, boxHeight, 4).fill();
-    doc.strokeColor(REMOVAL_PRIMARY).lineWidth(1).roundedRect(50, y, 742, boxHeight, 4).stroke();
-
-    doc.fontSize(10).font('Helvetica-Bold').fillColor(REMOVAL_PRIMARY);
-    doc.text('General Notes:', 60, y + 8);
-    doc.font('Helvetica').fillColor('black');
-    doc.text(form.topGeneralComments, 60, y + 20, { width: 720 });
-    y += boxHeight + 10;
-  }
-
-  // Form fields
-  doc.fontSize(10).font('Helvetica-Bold').fillColor('black');
-
-  // 1. Date of removal
-  doc.text('1. Date of removal procedure:', 50, y);
-  doc.font('Helvetica').text(formatDate(form.removalDate, false), 220, y);
-  y += 18;
-
-  // 2. Total sources removed
-  doc.font('Helvetica-Bold').text('2. Total number of sources removed:', 50, y);
-  doc.font('Helvetica').fillColor(GRAY_TEXT).text(`${data.summary.totalSourcesRemoved} (auto-calculated)`, 250, y);
-  y += 18;
-
-  // 3. All sources same date
-  doc.font('Helvetica-Bold').fillColor('black').text('3. Were all sources removed on the same date?', 50, y);
-  const sameDateColor = form.allSourcesSameDate ? REMOVAL_GREEN : REMOVAL_RED;
-  doc.font('Helvetica').fillColor(sameDateColor).text(form.allSourcesSameDate ? 'Yes' : 'No', 320, y);
-  y += 18;
-
-  // Conditional: additional date + reason
-  if (!form.allSourcesSameDate) {
-    doc.fillColor('black').font('Helvetica');
-    if (form.additionalRemovalDate) {
-      doc.text(`   Additional removal date: ${formatDate(form.additionalRemovalDate, false)}`, 60, y);
-      y += 16;
-    }
-    if (form.reasonNotSameDate) {
-      doc.text(`   Reason: ${form.reasonNotSameDate}`, 60, y, { width: 680 });
-      y += 18;
-    }
-  }
-
-  // 4. Removed = Inserted check
-  y += 5;
-  doc.font('Helvetica-Bold').fillColor('black');
-  doc.text('4. Is removed equal to inserted?', 50, y);
-
+  const summary = data.summary;
   const discrepancy = data.discrepancy;
-  const statusColor = discrepancy.isRemovedEqualInserted ? REMOVAL_GREEN : REMOVAL_RED;
-  const statusIcon = discrepancy.isRemovedEqualInserted ? '✓' : '✗';
-  const statusText = discrepancy.isRemovedEqualInserted
-    ? 'Yes'
-    : `No - ${discrepancy.sourcesNotRemoved} source${discrepancy.sourcesNotRemoved !== 1 ? 's' : ''} not removed`;
-  doc.font('Helvetica').fillColor(statusColor).text(`${statusIcon} ${statusText}`, 270, y);
-  y += 25;
 
-  // Discrepancy clarification section
-  if (!discrepancy.isRemovedEqualInserted && discrepancy.clarification) {
-    y = drawDiscrepancySection(doc, discrepancy.clarification, discrepancy.sourcesNotRemoved, y);
-  }
+  // Helper: draw a 2-column bordered row
+  const drawRow = (rowY: number, height: number) => {
+    doc.strokeColor('#000000').lineWidth(0.5);
+    doc.rect(startX, rowY, tableWidth, height).stroke();
+    doc.moveTo(startX + col1Width, rowY).lineTo(startX + col1Width, rowY + height).stroke();
+  };
 
-  // General comments
-  if (form.removalGeneralComments) {
-    y += 5;
-    doc.font('Helvetica-Bold').fillColor('black');
-    doc.text('General comments:', 50, y);
-    y += 14;
-    doc.font('Helvetica').text(form.removalGeneralComments, 50, y, { width: 700 });
-    y += 25;
-  }
+  // Helper: draw a full-width bordered row (no column divider)
+  const drawFullWidthRow = (rowY: number, height: number) => {
+    doc.strokeColor('#000000').lineWidth(0.5);
+    doc.rect(startX, rowY, tableWidth, height).stroke();
+  };
 
-  return y;
-}
+  // Row 0: Title row — bold, full-width
+  const titleRowHeight = 24;
+  drawFullWidthRow(y, titleRowHeight);
+  doc.fontSize(11).font('Helvetica-Bold').fillColor('black');
+  doc.text('DaRT Removal Procedure (complete if applicable)', startX + cellPadding, y + 6, {
+    width: tableWidth - cellPadding * 2
+  });
+  y += titleRowHeight;
 
-/**
- * Draw discrepancy clarification section
- */
-function drawDiscrepancySection(
-  doc: PDFKit.PDFDocument,
-  clarification: DiscrepancyClarification,
-  sourcesNotRemoved: number,
-  startY: number
-): number {
-  let y = startY;
-
-  // Warning box header
-  doc.fillColor(REMOVAL_AMBER_LIGHT);
-  doc.roundedRect(50, y, 742, 35, 4).fill();
-  doc.strokeColor(REMOVAL_AMBER_BORDER).lineWidth(1).roundedRect(50, y, 742, 35, 4).stroke();
-
-  doc.fontSize(11).font('Helvetica-Bold').fillColor('#92400e');
-  doc.text('! Discrepancy Details', 65, y + 8);
-  doc.fontSize(9).font('Helvetica').fillColor('#78350f');
-  doc.text(`${sourcesNotRemoved} source${sourcesNotRemoved !== 1 ? 's' : ''} not removed. Clarification below:`, 65, y + 22);
-  y += 45;
-
-  // Categories
-  const categories = [
-    { key: 'lost', label: 'Lost', catData: clarification.lost },
-    { key: 'retrievedToSite', label: 'Retrieved to site', catData: clarification.retrievedToSite },
-    { key: 'removalFailure', label: 'Removal failure (remained in tissue)', catData: clarification.removalFailure },
-    { key: 'other', label: 'Other', catData: clarification.other }
+  // Row 1: Numbered items 1-4, each in its own sub-row
+  const items = [
+    { label: '1. Date of removal procedure:', value: formatDate(form.removalDate, false) },
+    { label: '2. Total number of sources removed:', value: summary.totalSourcesRemoved.toString() },
+    { label: '3. Were all sources removed on the same date?', value: form.allSourcesSameDate ? 'Yes' : 'No' },
+    { label: '4. Is removed equal to inserted?', value: discrepancy.isRemovedEqualInserted ? 'Yes' : 'No' }
   ];
 
-  doc.fontSize(9).font('Helvetica');
-  categories.forEach(cat => {
-    if (cat.catData.checked) {
-      doc.fillColor('black');
-      doc.text(`[X] ${cat.label}:`, 60, y);
-      doc.text(`Amount: ${cat.catData.amount}`, 280, y);
-      if (cat.catData.comment) {
-        doc.text(`Comment: ${cat.catData.comment}`, 380, y, { width: 400 });
-      }
-      if (cat.key === 'other' && (cat.catData as DiscrepancyOther).description) {
-        y += 14;
-        doc.text(`   Description: ${(cat.catData as DiscrepancyOther).description}`, 60, y, { width: 680 });
-      }
-      y += 16;
-    }
+  items.forEach(item => {
+    drawRow(y, rowHeight);
+    doc.fontSize(9).font('Helvetica').fillColor('black');
+    doc.text(item.label, startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
+    doc.text(item.value, startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 });
+    y += rowHeight;
   });
 
-  // Validation footer
-  const totalClarified =
-    (clarification.lost.checked ? clarification.lost.amount : 0) +
-    (clarification.retrievedToSite.checked ? clarification.retrievedToSite.amount : 0) +
-    (clarification.removalFailure.checked ? clarification.removalFailure.amount : 0) +
-    (clarification.other.checked ? clarification.other.amount : 0);
+  // Row 2: Empty separator
+  const separatorHeight = 10;
+  drawFullWidthRow(y, separatorHeight);
+  y += separatorHeight;
 
-  const isValid = totalClarified === sourcesNotRemoved;
-  y += 5;
-  doc.fillColor(isValid ? REMOVAL_GREEN : REMOVAL_RED).font('Helvetica-Bold');
-  doc.text(`Total clarified: ${totalClarified} / ${sourcesNotRemoved}`, 60, y);
-  if (!isValid) {
-    doc.fillColor(REMOVAL_RED).font('Helvetica');
-    doc.text(` - Must equal ${sourcesNotRemoved}`, 200, y);
+  // Row 3: "If no, please answer questions a-d:" header
+  const ifNoRowHeight = 20;
+  drawFullWidthRow(y, ifNoRowHeight);
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
+  doc.text('If no, please answer questions a-d:', startX + cellPadding, y + 5, {
+    width: tableWidth - cellPadding * 2
+  });
+  y += ifNoRowHeight;
+
+  // Row 4: a. Total sources not removed
+  drawRow(y, rowHeight);
+  doc.fontSize(9).font('Helvetica').fillColor('black');
+  doc.text('a. Total sources not removed:', startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
+  doc.text(
+    discrepancy.isRemovedEqualInserted ? '' : discrepancy.sourcesNotRemoved.toString(),
+    startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 }
+  );
+  y += rowHeight;
+
+  // Row 5: b. Specify reason
+  drawRow(y, rowHeight);
+  doc.text('b. Specify reason:', startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
+  doc.text(
+    form.reasonNotSameDate || '',
+    startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 }
+  );
+  y += rowHeight;
+
+  // Row 6: c. Additional date
+  drawRow(y, rowHeight);
+  doc.text('c. Additional date:', startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
+  doc.text(
+    form.additionalRemovalDate ? formatDate(form.additionalRemovalDate, false) : '',
+    startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 }
+  );
+  y += rowHeight;
+
+  // Rows 7-10: Empty spacer rows
+  for (let i = 0; i < 4; i++) {
+    drawFullWidthRow(y, rowHeight);
+    y += rowHeight;
   }
-  y += 20;
 
   return y;
 }
 
 /**
- * Draw removal summary section
+ * Draw clarification Table 2 rows 0-4: "d. Please clarify" with checkboxes
+ * Matches the Word document 6-column layout with vertical merge
  */
-function drawRemovalSummary(
+function drawClarificationTable(
   doc: PDFKit.PDFDocument,
-  summary: RemovalPdfData['summary'],
   discrepancy: RemovalPdfData['discrepancy'],
   startY: number
 ): number {
-  let y = startY + 10;
+  const startX = 50;
+  const tableWidth = 495;
+  const clarifyWidth = 165;   // cols 0-1 (merged)
+  const checkWidth = 120;     // col 2
+  const amountWidth = 100;    // cols 3-4 (merged)
+  const commentWidth = 110;   // col 5
+  const rowHeight = 20;
+  const cellPadding = 5;
+  let y = startY;
 
-  // Check for page break
-  if (y > doc.page.height - 120) {
-    doc.addPage();
-    y = 50;
+  const clarification = discrepancy.clarification;
+
+  const categories = [
+    { label: 'Lost', data: clarification?.lost },
+    { label: 'Retrieved to site', data: clarification?.retrievedToSite },
+    { label: 'Removal failure', data: clarification?.removalFailure },
+    { label: 'Other', data: clarification?.other, isOther: true }
+  ];
+
+  const totalRows = 5; // 1 header + 4 category rows
+  const blockHeight = rowHeight * totalRows;
+
+  // Outer border
+  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.rect(startX, y, tableWidth, blockHeight).stroke();
+
+  // Column X positions
+  const col2X = startX + clarifyWidth;
+  const col3X = col2X + checkWidth;
+  const col4X = col3X + amountWidth;
+
+  // Vertical dividers (full height of block)
+  doc.moveTo(col2X, y).lineTo(col2X, y + blockHeight).stroke();
+  doc.moveTo(col3X, y).lineTo(col3X, y + blockHeight).stroke();
+  doc.moveTo(col4X, y).lineTo(col4X, y + blockHeight).stroke();
+
+  // Horizontal dividers for rows 1-4 (only across cols 2-5, not through merged cols 0-1)
+  for (let i = 1; i < totalRows; i++) {
+    doc.moveTo(col2X, y + i * rowHeight).lineTo(startX + tableWidth, y + i * rowHeight).stroke();
   }
 
-  // Section title
-  doc.fontSize(14).font('Helvetica-Bold').fillColor('black');
-  doc.text('Summary', 50, y);
-  y += 25;
+  // Cols 0-1: "d. Please clarify:" — vertically merged across all 5 rows
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
+  doc.text('d. Please clarify:', startX + cellPadding, y + cellPadding, {
+    width: clarifyWidth - cellPadding * 2
+  });
 
-  // Summary box
-  const isComplete = discrepancy.isRemovedEqualInserted;
-  const boxColor = isComplete ? '#dcfce7' : '#fef2f2';
-  const borderColor = isComplete ? REMOVAL_GREEN : REMOVAL_RED;
-  const textColor = isComplete ? '#166534' : '#991b1b';
+  // Row 0 column headers
+  doc.fontSize(8).font('Helvetica-Bold').fillColor('black');
+  doc.text('Check all that applies:', col2X + cellPadding, y + 5, { width: checkWidth - cellPadding * 2 });
+  doc.text('Amount of sources:', col3X + cellPadding, y + 5, { width: amountWidth - cellPadding * 2 });
+  doc.text('Comment:', col4X + cellPadding, y + 5, { width: commentWidth - cellPadding * 2 });
 
-  doc.fillColor(boxColor);
-  doc.roundedRect(50, y, 400, 50, 4).fill();
-  doc.strokeColor(borderColor).lineWidth(1).roundedRect(50, y, 400, 50, 4).stroke();
+  // Rows 1-4: category data
+  doc.fontSize(8).font('Helvetica').fillColor('black');
+  categories.forEach((cat, index) => {
+    const rowY = y + (index + 1) * rowHeight;
+    const isChecked = cat.data?.checked || false;
+    const checkbox = isChecked ? '[X]' : '[  ]';
 
-  doc.fontSize(12).font('Helvetica-Bold').fillColor(textColor);
-  doc.text(`Total Sources Removed: ${summary.totalSourcesRemoved} / ${summary.totalSourcesInserted}`, 65, y + 12);
+    // Checkbox + label
+    let label = cat.label;
+    if (cat.isOther && (cat.data as DiscrepancyOther)?.description) {
+      label = `Other: ${(cat.data as DiscrepancyOther).description}`;
+    }
+    doc.text(`${checkbox} ${label}`, col2X + cellPadding, rowY + 5, { width: checkWidth - cellPadding * 2 });
 
-  const sumStatusText = isComplete
-    ? '✓ All sources accounted for'
-    : '✗ Discrepancy - see clarification above';
-  doc.fontSize(10).font('Helvetica').text(sumStatusText, 65, y + 32);
+    // Amount
+    doc.text(
+      isChecked ? (cat.data?.amount?.toString() || '0') : '',
+      col3X + cellPadding, rowY + 5, { width: amountWidth - cellPadding * 2 }
+    );
 
-  return y + 65;
+    // Comment
+    doc.text(
+      isChecked ? (cat.data?.comment || '') : '',
+      col4X + cellPadding, rowY + 5, { width: commentWidth - cellPadding * 2 }
+    );
+  });
+
+  y += blockHeight;
+  return y;
 }
 
 /**
- * Draw signature block for removal PDF
+ * Draw Table 2 rows 5-7: surgeon, general comments, and signature
+ * Matches the Word document signature section layout
  */
-function drawRemovalSignatureBlock(
+function drawRemovalSignatureSection(
   doc: PDFKit.PDFDocument,
+  data: RemovalPdfData,
   signatureDetails: SignatureDetails,
   startY: number
 ): void {
-  let y = startY + 15;
+  const startX = 50;
+  const tableWidth = 495;
+  const rowHeight = 20;
+  const cellPadding = 5;
+  let y = startY;
 
   // Check for page break
-  if (y + 110 > doc.page.height - 50) {
+  if (y + 90 > doc.page.height - 50) {
     doc.addPage();
     y = 50;
   }
 
-  const signatureTypeText = signatureDetails.type === 'hospital_auto'
-    ? 'Hospital User (Auto-signed)'
-    : 'Alpha Tau Verified';
+  // Row 5: "Sources removed by (full name):" | surgeon name
+  const labelWidth = 200;
+  const valueWidth = tableWidth - labelWidth;
+  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.rect(startX, y, tableWidth, rowHeight).stroke();
+  doc.moveTo(startX + labelWidth, y).lineTo(startX + labelWidth, y + rowHeight).stroke();
 
-  // Signature box
-  const boxWidth = 400;
-  const boxHeight = 90;
-  const boxX = (doc.page.width - boxWidth) / 2;
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
+  doc.text('Sources removed by (full name):', startX + cellPadding, y + 5, { width: labelWidth - cellPadding * 2 });
+  doc.font('Helvetica');
+  doc.text(data.treatment.surgeon || '', startX + labelWidth + cellPadding, y + 5, { width: valueWidth - cellPadding * 2 });
+  y += rowHeight;
 
-  doc.strokeColor('#333333').lineWidth(2);
-  doc.rect(boxX, y, boxWidth, boxHeight).stroke();
+  // Row 6: "General comments:" + text (full-width)
+  const commentsText = data.procedureForm.removalGeneralComments || '';
+  const commentsRowHeight = commentsText.length > 60 ? 36 : rowHeight;
+  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.rect(startX, y, tableWidth, commentsRowHeight).stroke();
 
-  // Signature header
-  doc.fontSize(12).font('Helvetica-Bold').fillColor('#333333');
-  doc.text('DOCUMENT DIGITALLY SIGNED', boxX, y + 10, {
-    width: boxWidth,
-    align: 'center'
-  });
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
+  doc.text('General comments:', startX + cellPadding, y + 5);
+  if (commentsText) {
+    doc.font('Helvetica');
+    doc.text(commentsText, startX + 120, y + 5, { width: tableWidth - 120 - cellPadding });
+  }
+  y += commentsRowHeight;
 
-  // Signature details
-  doc.fontSize(10).font('Helvetica');
-  const signatureY = y + 30;
-  doc.text(`Signer: ${signatureDetails.signerName}`, boxX + 20, signatureY);
-  doc.text(`Position: ${signatureDetails.signerPosition}`, boxX + 20, signatureY + 14);
-  doc.text(`Email: ${signatureDetails.signerEmail}`, boxX + 20, signatureY + 28);
-  doc.text(`Date: ${formatSignatureDate(signatureDetails.signedAt)}`, boxX + 20, signatureY + 42);
+  // Row 7: Name / Signature / Date (3 sections)
+  const nameWidth = 165;
+  const sigWidth = 195;
+  const dateWidth = tableWidth - nameWidth - sigWidth; // 135
+  const sigRowHeight = 28;
 
-  // Signature type indicator
-  doc.fontSize(9).fillColor(signatureDetails.type === 'alphatau_verified' ? '#28a745' : '#6c757d');
-  doc.text(`[${signatureTypeText}]`, boxX + 250, signatureY + 14);
+  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.rect(startX, y, tableWidth, sigRowHeight).stroke();
+  doc.moveTo(startX + nameWidth, y).lineTo(startX + nameWidth, y + sigRowHeight).stroke();
+  doc.moveTo(startX + nameWidth + sigWidth, y).lineTo(startX + nameWidth + sigWidth, y + sigRowHeight).stroke();
 
-  y += boxHeight + 15;
+  // Name
+  doc.fontSize(8).font('Helvetica-Bold').fillColor('black');
+  doc.text('Name:', startX + cellPadding, y + 4);
+  doc.font('Helvetica').fontSize(8);
+  doc.text(signatureDetails.signerName, startX + cellPadding, y + 15, { width: nameWidth - cellPadding * 2 });
 
-  // Signature footnote
-  doc.fontSize(8).fillColor('#666666').font('Helvetica');
+  // Signature
+  doc.font('Helvetica-Bold').fontSize(8);
+  doc.text('Signature:', startX + nameWidth + cellPadding, y + 4);
+  doc.font('Helvetica').fontSize(7);
+  doc.text(
+    `Digitally signed by ${signatureDetails.signerName} (${signatureDetails.signerEmail})`,
+    startX + nameWidth + cellPadding, y + 15,
+    { width: sigWidth - cellPadding * 2 }
+  );
+
+  // Date
+  doc.font('Helvetica-Bold').fontSize(8);
+  doc.text('Date:', startX + nameWidth + sigWidth + cellPadding, y + 4);
+  doc.font('Helvetica').fontSize(8);
+  doc.text(
+    formatSignatureDate(signatureDetails.signedAt),
+    startX + nameWidth + sigWidth + cellPadding, y + 15,
+    { width: dateWidth - cellPadding * 2 }
+  );
+
+  y += sigRowHeight;
+
+  // Footnote
+  y += 10;
+  doc.fontSize(7).fillColor('#666666').font('Helvetica');
   doc.text(
     'This document was electronically signed through the ALA Medical Treatment Tracking System.',
     0, y, { align: 'center' }
@@ -1064,7 +916,7 @@ export async function generateRemovalPdf(
     try {
       const doc = new PDFDocument({
         size: 'A4',
-        layout: 'landscape',
+        layout: 'portrait',
         margins: { top: 50, bottom: 50, left: 50, right: 50 }
       });
 
@@ -1077,26 +929,17 @@ export async function generateRemovalPdf(
       });
       doc.on('error', reject);
 
-      // Draw all sections
-      let yPosition = 110;
+      // Header with logo and doc number
+      let yPosition = drawRemovalHeader(doc);
 
-      // Header with logo and title
-      drawRemovalHeader(doc, yPosition);
+      // Table 1: Main form with numbered fields
+      yPosition = drawRemovalFormTable(doc, data, yPosition);
 
-      // Treatment Information (4-column grid)
-      yPosition = drawRemovalTreatmentInfo(doc, data.treatment, yPosition);
+      // Table 2a: Clarification section (rows 0-4)
+      yPosition = drawClarificationTable(doc, data.discrepancy, yPosition);
 
-      // Source Removal Tracking Table with progress bars
-      yPosition = drawRemovalTrackingTable(doc, data, yPosition);
-
-      // Removal Procedure Form
-      yPosition = drawRemovalProcedureForm(doc, data, yPosition);
-
-      // Summary
-      yPosition = drawRemovalSummary(doc, data.summary, data.discrepancy, yPosition);
-
-      // Digital Signature Block
-      drawRemovalSignatureBlock(doc, signatureDetails, yPosition);
+      // Table 2b: Signature section (rows 5-7)
+      drawRemovalSignatureSection(doc, data, signatureDetails, yPosition);
 
       // Finalize the PDF
       doc.end();
