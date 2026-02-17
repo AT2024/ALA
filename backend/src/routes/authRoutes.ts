@@ -6,6 +6,7 @@ import {
   validateToken,
   debugUserSiteAccess,
   logout,
+  logSessionTimeout,
 } from '../controllers/authController';
 import { protect } from '../middleware/authMiddleware';
 import {
@@ -27,5 +28,8 @@ router.get('/debug-sites/:identifier', debugUserSiteAccess);
 
 // Protected routes with token validation rate limiting
 router.post('/validate-token', tokenValidateRateLimit, protect, validateToken);
+
+// HIPAA session timeout logging (protected - needs user context)
+router.post('/session-timeout', protect, logSessionTimeout);
 
 export default router;

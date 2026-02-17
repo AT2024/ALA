@@ -319,6 +319,14 @@ async function getSites() {
 **Problem:** Test and production data mixed
 **Solution:** Clear separation and logging of data sources
 
+### Pitfall 5: Subform Entities Have Different Fields Than Direct Tables
+**Problem:** Using fields from the direct table (e.g., `SIBD_APPUSELISTTEXT`) in a subform query (e.g., `ORDERS('...')/SIBD_APPUSELISTTEXT_SUBFORM`) causes HTTP 400 when axios URL-encodes `$select` as `%24select`
+**Solution:** Only use fields that exist on the subform entity. Test with curl using `%24select` to verify. When you already have the parent context (e.g., order name from the URL path), don't request redundant fields like `ORD`.
+
+### Pitfall 6: Axios URL-Encodes OData System Query Options
+**Problem:** Axios encodes `$` in parameter keys to `%24` (e.g., `$select` becomes `%24select`), which changes how Priority OData validates the query — strict validation kicks in and rejects invalid fields
+**Solution:** Be aware that curl with `$select` (unencoded) behaves differently from the application. Always test Priority queries with `%24select` to match what axios sends.
+
 ## Debugging Priority Integration
 
 ### Enable Detailed Logging

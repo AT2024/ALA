@@ -7,6 +7,7 @@ import TreatmentPdf from './TreatmentPdf';
 import SignatureVerification from './SignatureVerification';
 import SyncConflict from './SyncConflict';
 import OfflineAuditLog from './OfflineAuditLog';
+import AuthAuditLog from './AuthAuditLog';
 
 // Define model associations
 User.hasMany(Treatment, {
@@ -108,6 +109,16 @@ OfflineAuditLog.belongsTo(User, {
   as: 'changedByUser',
 });
 
+// AuthAuditLog associations (HIPAA authentication audit trail)
+User.hasMany(AuthAuditLog, {
+  foreignKey: 'userId',
+  as: 'authAuditLogs',
+});
+AuthAuditLog.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user',
+});
+
 export {
   User,
   Treatment,
@@ -118,4 +129,5 @@ export {
   SignatureVerification,
   SyncConflict,
   OfflineAuditLog,
+  AuthAuditLog,
 };

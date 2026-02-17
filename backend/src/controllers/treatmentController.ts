@@ -575,7 +575,10 @@ export const getRemovalCandidates = asyncHandler(async (req: Request, res: Respo
   };
 
   // Check for test user FIRST (existing pattern from priorityService)
-  if (req.user?.email === config.testUserEmail) {
+  const isTestMode = req.user?.email === config.testUserEmail ||
+    (req.user?.metadata?.testModeEnabled === true && Number(req.user?.metadata?.positionCode) === 99);
+
+  if (isTestMode) {
     try {
       // Reuse existing method that already handles test data properly
       const orders = await priorityService.getOrdersForSiteWithFilter(

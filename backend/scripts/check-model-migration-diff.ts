@@ -15,6 +15,7 @@
  */
 
 import sequelize from '../src/config/database';
+import { QueryTypes } from 'sequelize';
 
 // Columns auto-managed by Sequelize - don't require migrations
 const IGNORED_COLUMNS = ['createdAt', 'updatedAt', 'deletedAt', 'created_at', 'updated_at', 'deleted_at'];
@@ -51,12 +52,12 @@ async function checkModelSchemaDiff(): Promise<void> {
         .filter(col => !IGNORED_COLUMNS.includes(col));
 
       // Query actual database schema
-      const [schemaColumns] = await sequelize.query<ColumnInfo>(`
+      const schemaColumns = await sequelize.query<ColumnInfo>(`
         SELECT column_name
         FROM information_schema.columns
         WHERE table_name = '${tableName}'
         AND table_schema = 'public'
-      `);
+      `, { type: QueryTypes.SELECT });
 
       if (!schemaColumns || schemaColumns.length === 0) {
         // Table doesn't exist - this is expected for new tables in development
@@ -64,7 +65,7 @@ async function checkModelSchemaDiff(): Promise<void> {
         continue;
       }
 
-      const dbColumnNames = schemaColumns.map(c => c.column_name.toLowerCase());
+      const dbColumnNames = schemaColumns.map((c: ColumnInfo) => c.column_name.toLowerCase());
 
       // Find columns in model but not in database
       const missingInDb = modelColumns.filter(col => {

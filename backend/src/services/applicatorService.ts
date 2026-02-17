@@ -322,8 +322,8 @@ export const applicatorService = {
         }
       }
 
-      // Scenario 2: Check if applicator exists in Priority SIBD_APPLICATUSELIST
-      // Pass treatment.priorityId to also fetch seedLength from order
+      // Scenario 2: Check if applicator exists in Priority (via ORDERS subform when order context available)
+      // Pass treatment.priorityId to use subform endpoint and fetch seedLength from order
       const applicatorInPriority = await this.getApplicatorFromPriority(serialNumber, treatment.priorityId || undefined);
       
       if (!applicatorInPriority.found) {
@@ -439,7 +439,7 @@ export const applicatorService = {
   },
 
   /**
-   * Get applicator data from Priority SIBD_APPLICATUSELIST table
+   * Get applicator data from Priority via ORDERS subform (preferred) or direct table fallback
    */
   async getApplicatorFromPriority(serialNumber: string, treatmentPriorityId?: string): Promise<{
     found: boolean;
@@ -456,8 +456,8 @@ export const applicatorService = {
     error?: string;
   }> {
     try {
-      // Query Priority SIBD_APPLICATUSELIST table for the serial number
-      const applicatorData = await priorityService.getApplicatorFromPriority(serialNumber);
+      // Query Priority via ORDERS subform when order context is available, direct table otherwise
+      const applicatorData = await priorityService.getApplicatorFromPriority(serialNumber, treatmentPriorityId);
 
       if (!applicatorData.found || !applicatorData.data) {
         return {

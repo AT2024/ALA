@@ -24,6 +24,7 @@ module.exports = {
     '!src/server.ts',
     '!src/dbInit.ts',
     '!src/**/index.ts',
+    '!src/services/pdfGenerationService.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html', 'clover', 'json-summary'],

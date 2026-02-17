@@ -1,0 +1,13 @@
+# Local development override - self-signed SSL certs, no dumb-init
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+services:
+  api:
+    # dumb-init causes SIGKILL (exit 137) on Docker Desktop for Windows
+    entrypoint: []
+    command: ["node", "dist/app/src/server.js"]
+    environment:
+      CORS_ORIGIN: "https://localhost,https://localhost:443,http://localhost,http://localhost:3000"
+  frontend:
+    volumes:
+      - ./ssl-certs/certs/certificate.crt:/etc/ssl/certs/certificate.crt:ro
+      - ./ssl-certs/private/private.key:/etc/ssl/private/private.key:ro

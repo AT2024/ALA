@@ -132,6 +132,27 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
         "https://priority.api.endpoint/ORDERS?$filter=..."
    ```
 
+#### Priority Subform Returns HTTP 400 (Invalid Field in $select)
+**Symptoms:**
+- Applicators not loading for orders
+- Backend logs show HTTP 400 from `/ORDERS('...')/SIBD_APPUSELISTTEXT_SUBFORM`
+- Same endpoint works fine when called directly via curl without `$select`
+
+**Root Cause:**
+Axios encodes `$select` as `%24select` in query parameters. With `%24select`, the Priority OData server validates field names strictly and rejects invalid fields with HTTP 400. With raw `$select`, the server is more lenient and ignores invalid fields.
+
+The `ORD` field exists on the direct `SIBD_APPUSELISTTEXT` table but NOT on the `SIBD_APPUSELISTTEXT_SUBFORM` entity type. The error message from Priority is:
+`"Could not find a property named 'ORD' on type 'Priority.OData.SIBD_APPUSELISTTEXT'"`
+
+**Diagnosis Steps:**
+1. Test the subform endpoint directly with curl (no `$select`) — if it returns 200, the issue is in field selection
+2. Test with `%24select` (URL-encoded) and the exact fields from code — reproduces the 400
+3. Remove suspect fields one by one until 200 is returned
+
+**Fix:** Remove invalid fields from `$select` lists. When accessing data through a subform (e.g., `ORDERS('...')/SUBFORM`), the available fields differ from the direct table.
+
+**Prevention:** When adding fields to `$select` for Priority subforms, verify the field exists on the subform entity by testing with curl using `%24select` (not `$select`) to trigger strict validation.
+
 #### Reference Chain Issues
 **Symptoms:**
 - Duplicate patients in list
@@ -664,6 +685,11 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 - **Solution**: Strict environment-based data loading
 - **Prevention**: Test data ONLY for test@example.com
 - **Critical**: Never mix 🧪 and 🎯 data sources
+
+**Pitfall**: Subform `$select` fields differ from direct table fields
+- **Solution**: Verify field existence on subform entity with `%24select` curl test
+- **Prevention**: When accessing via `ORDERS('...')/SUBFORM`, don't assume same fields as direct table
+- **Critical**: `ORD` field exists on `SIBD_APPUSELISTTEXT` table but NOT on `SIBD_APPUSELISTTEXT_SUBFORM`
 
 ### Frontend State Management
 

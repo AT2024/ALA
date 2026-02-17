@@ -943,7 +943,7 @@ export const priorityService = {
     }
   },
 
-  // Get order details using SIBD_APPLICATUSELIST_SUBFORM endpoint
+  // Get order details using ORDERS('...')/SIBD_APPUSELISTTEXT_SUBFORM endpoint (text/display variant for reads)
   // userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
   async getOrderSubform(orderName: string, userContext?: string | TestModeContext, treatmentType?: string) {
     try {
@@ -1008,15 +1008,23 @@ export const priorityService = {
       // For real users, go directly to Priority API
       logger.info(`Real user - calling Priority API for order ${orderName}`);
 
-      // Use exact URL format: /ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM
-      // Include $select to ensure PARTNAME (catalog) is returned - Priority doesn't include it by default
-      const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`, {
+      // Use SIBD_APPUSELISTTEXT_SUBFORM (text/display variant) for reads
+      // This returns SERNUMTEXT, PARTNAMETEXT, PARTDESTEXT instead of coded fields
+      const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPUSELISTTEXT_SUBFORM`, {
         params: {
-          $select: 'SERNUM,PARTNAME,PARTDES,INTDATA2,ORDNAME,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,EXTFILENAME,INSERTEDREPORTEDBY,INSERTIONDATE,SIBD_REPPRODPAL'
+          $select: 'SERNUMTEXT,PARTNAMETEXT,PARTDESTEXT,KLINE,INTDATA2,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,EXTFILENAME,INSERTEDREPORTEDBY,INSERTIONDATE'
         }
       });
 
-      const applicators = response.data.value || [];
+      const rawApplicators = response.data.value || [];
+
+      // Normalize TEXT fields back to original names for downstream compatibility
+      const applicators = rawApplicators.map((app: any) => ({
+        ...app,
+        SERNUM: app.SERNUMTEXT,
+        PARTNAME: app.PARTNAMETEXT,
+        PARTDES: app.PARTDESTEXT,
+      }));
 
       // Enrich applicators with catalog and seedLength from Priority
       const enrichedApplicators = await this.enrichApplicatorsWithPriorityData(applicators, orderName);
@@ -1042,15 +1050,9 @@ export const priorityService = {
         }
       }
 
-      // For real users, try fallback to SIBD_APPLICATUSELIST table first
-      try {
-        const userIdForFallback = userContext ? (typeof userContext === 'string' ? userContext : userContext.identifier) : undefined;
-        return await this.getApplicatorsForTreatment(orderName, userIdForFallback);
-      } catch (fallbackError: any) {
-        const userIdForError = userContext ? (typeof userContext === 'string' ? userContext : userContext.identifier) : 'unknown';
-        logger.error(`Both subform and fallback failed for real user ${userIdForError} for order ${orderName}`);
-        throw error;
-      }
+      // Both getOrderSubform and getApplicatorsForTreatment use the same ORDERS subform endpoint now,
+      // so no fallback - let the error propagate
+      throw error;
     }
   },
 
@@ -1089,11 +1091,11 @@ export const priorityService = {
       const catalogMap = new Map<string, string>();
 
       if (missingCatalog.length > 0) {
-        logger.info(`Enrichment: ${missingCatalog.length}/${applicators.length} applicators missing PARTNAME, fetching from SIBD_APPLICATUSELIST`);
+        logger.info(`Enrichment: ${missingCatalog.length}/${applicators.length} applicators missing PARTNAME, fetching via ORDERS subform`);
 
         for (const app of missingCatalog) {
           try {
-            const lookup = await this.getApplicatorFromPriority(app.SERNUM);
+            const lookup = await this.getApplicatorFromPriority(app.SERNUM, orderName);
             if (lookup.found && lookup.data?.partName) {
               catalogMap.set(app.SERNUM, lookup.data.partName);
               logger.info(`Enrichment: Found catalog "${lookup.data.partName}" for ${app.SERNUM}`);
@@ -1493,35 +1495,67 @@ export const priorityService = {
   },
 
   /**
-   * Get applicator data from Priority SIBD_APPLICATUSELIST table
+   * Get applicator data from Priority via ORDERS subform or direct table fallback
+   * When orderName is provided, uses ORDERS('...')/SIBD_APPUSELISTTEXT_SUBFORM (preferred)
+   * When orderName is not provided, falls back to direct SIBD_APPUSELISTTEXT table (different field names)
    */
-  async getApplicatorFromPriority(serialNumber: string) {
+  async getApplicatorFromPriority(serialNumber: string, orderName?: string) {
     try {
-      logger.info(`Fetching applicator ${serialNumber} from Priority SIBD_APPLICATUSELIST`);
-      
-      // Query SIBD_APPLICATUSELIST table for the serial number
-      const response = await priorityApi.get('/SIBD_APPLICATUSELIST', {
+      if (orderName) {
+        // Preferred path: use ORDERS subform with correct field names
+        logger.info(`Fetching applicator ${serialNumber} from Priority ORDERS('${orderName}')/SIBD_APPUSELISTTEXT_SUBFORM`);
+
+        const response = await priorityApi.get(`/ORDERS('${orderName}')/SIBD_APPUSELISTTEXT_SUBFORM`, {
+          params: {
+            $filter: `SERNUMTEXT eq '${serialNumber}'`,
+            $select: 'SERNUMTEXT,PARTNAMETEXT,PARTDESTEXT,INTDATA2,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,INSERTIONDATE',
+            $top: 1
+          },
+        });
+
+        if (response.data.value.length === 0) {
+          return { found: false };
+        }
+
+        const app = response.data.value[0];
+        return {
+          found: true,
+          data: {
+            serialNumber: app.SERNUMTEXT,
+            partName: app.PARTNAMETEXT,
+            treatmentId: orderName,
+            intendedPatientId: null,
+            usageType: app.USINGTYPE,
+            usageTime: app.INSERTIONDATE,
+            insertedSeeds: app.INSERTEDSEEDSQTY || 0,
+            comments: app.INSERTIONCOMMENTS || ''
+          }
+        };
+      }
+
+      // Fallback: direct table (no order context available)
+      logger.warn(`Fetching applicator ${serialNumber} from Priority SIBD_APPUSELISTTEXT (direct table fallback - no orderName provided)`);
+
+      const response = await priorityApi.get('/SIBD_APPUSELISTTEXT', {
         params: {
-          $filter: `SERNUM eq '${serialNumber}'`,
-          $select: 'SERNUM,PARTNAME,ORDNAME,REFERENCE,ALPH_USETYPE,ALPH_USETIME,ALPH_INSERTED,FREE1',
+          $filter: `SERNUMTEXT eq '${serialNumber}'`,
+          $select: 'SERNUMTEXT,PARTNAMETEXT,ORD,REFERENCE,ALPH_USETYPE,ALPH_USETIME,ALPH_INSERTED,FREE1',
           $top: 1
         },
       });
-      
+
       if (response.data.value.length === 0) {
-        return {
-          found: false
-        };
+        return { found: false };
       }
-      
+
       const applicatorData = response.data.value[0];
-      
+
       return {
         found: true,
         data: {
-          serialNumber: applicatorData.SERNUM,
-          partName: applicatorData.PARTNAME,
-          treatmentId: applicatorData.ORDNAME,
+          serialNumber: applicatorData.SERNUMTEXT,
+          partName: applicatorData.PARTNAMETEXT,
+          treatmentId: applicatorData.ORD,
           intendedPatientId: applicatorData.REFERENCE,
           usageType: applicatorData.ALPH_USETYPE,
           usageTime: applicatorData.ALPH_USETIME,
@@ -1529,10 +1563,10 @@ export const priorityService = {
           comments: applicatorData.FREE1 || ''
         }
       };
-      
+
     } catch (error: any) {
       logger.error(`Error fetching applicator from Priority: ${error}`);
-      
+
       // For testing purposes, return mock data for specific serial numbers
       if (serialNumber.startsWith('APP') || serialNumber.startsWith('TEST')) {
         return {
@@ -1549,7 +1583,7 @@ export const priorityService = {
           }
         };
       }
-      
+
       return {
         found: false,
         error: error.message
@@ -1668,7 +1702,7 @@ export const priorityService = {
 
   /**
    * Get applicators for a specific treatment from Priority
-   * userContext can be a string (userId) for backward compatibility, or TestModeContext for test mode support
+   * Uses ORDERS('...')/SIBD_APPUSELISTTEXT_SUBFORM endpoint for reads
    */
   async getApplicatorsForTreatment(treatmentId: string, userContext?: string | TestModeContext) {
     try {
@@ -1680,7 +1714,7 @@ export const priorityService = {
         if (testData && testData.subform_data && testData.subform_data[treatmentId]) {
           logger.info(`Using test data for applicators in treatment ${treatmentId}`);
           const testApplicators = testData.subform_data[treatmentId].value;
-          
+
           return testApplicators.map((item: any) => ({
             serialNumber: item.SERNUM,
             applicatorType: item.PARTDES,
@@ -1694,36 +1728,28 @@ export const priorityService = {
           }));
         }
       }
-      
-      const response = await priorityApi.get('/SIBD_APPLICATUSELIST', {
+
+      const response = await priorityApi.get(`/ORDERS('${treatmentId}')/SIBD_APPUSELISTTEXT_SUBFORM`, {
         params: {
-          $filter: `ORDNAME eq '${treatmentId}'`,
-          $select: 'SERNUM,PARTNAME,ORDNAME,REFERENCE,ALPH_USETYPE,ALPH_USETIME,ALPH_INSERTED,FREE1',
+          $select: 'SERNUMTEXT,PARTNAMETEXT,PARTDESTEXT,KLINE,INTDATA2,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,EXTFILENAME,INSERTEDREPORTEDBY,INSERTIONDATE',
         },
       });
-      
-      const applicators = [];
-      
-      for (const item of response.data.value) {
-        // Get part details for each applicator
-        const partDetails = await this.getPartDetails(item.PARTNAME);
-        
-        applicators.push({
-          serialNumber: item.SERNUM,
-          applicatorType: partDetails.partDes,
-          seedQuantity: partDetails.seedQuantity,
-          treatmentId: item.ORDNAME,
-          patientId: item.ORDNAME,
-          usageType: item.ALPH_USETYPE,
-          usageTime: item.ALPH_USETIME,
-          insertedSeeds: item.ALPH_INSERTED || 0,
-          comments: item.FREE1 || '',
-          catalog: item.PARTNAME || null,
-        });
-      }
-      
+
+      const applicators = response.data.value.map((item: any) => ({
+        serialNumber: item.SERNUMTEXT,
+        applicatorType: item.PARTDESTEXT,
+        seedQuantity: item.INTDATA2,
+        treatmentId: treatmentId,
+        patientId: treatmentId,
+        usageType: item.USINGTYPE,
+        usageTime: item.INSERTIONDATE,
+        insertedSeeds: item.INSERTEDSEEDSQTY || 0,
+        comments: item.INSERTIONCOMMENTS || '',
+        catalog: item.PARTNAMETEXT || null,
+      }));
+
       return applicators;
-      
+
     } catch (error: any) {
       logger.error(`Error fetching applicators for treatment: ${error}`);
       return [];
