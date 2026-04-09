@@ -10,7 +10,7 @@
  * - User context building for Priority API calls
  */
 
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
 
 /**
  * Site information from user metadata
@@ -36,7 +36,7 @@ interface UserMetadata {
 interface RequestUser {
   id: string;
   email: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
   metadata?: UserMetadata;
 }
 
@@ -52,9 +52,9 @@ interface TreatmentWithOwner {
  * Custom error class for authorization failures
  */
 export class ForbiddenError extends Error {
-  constructor(message = 'Not authorized to access this resource') {
+  constructor(message = "Not authorized to access this resource") {
     super(message);
-    this.name = 'ForbiddenError';
+    this.name = "ForbiddenError";
   }
 }
 
@@ -73,10 +73,10 @@ export class ForbiddenError extends Error {
  */
 export function requireTreatmentAccess(
   treatment: TreatmentWithOwner,
-  user: RequestUser
+  user: RequestUser,
 ): void {
-  if (user.role !== 'admin' && treatment.userId !== user.id) {
-    throw new ForbiddenError('Not authorized to modify this treatment');
+  if (user.role !== "admin" && treatment.userId !== user.id) {
+    throw new ForbiddenError("Not authorized to modify this treatment");
   }
 }
 
@@ -90,9 +90,9 @@ export function requireTreatmentAccess(
  */
 export function hasTreatmentAccess(
   treatment: TreatmentWithOwner,
-  user: RequestUser
+  user: RequestUser,
 ): boolean {
-  return user.role === 'admin' || treatment.userId === user.id;
+  return user.role === "admin" || treatment.userId === user.id;
 }
 
 /**
@@ -107,11 +107,11 @@ export function hasTreatmentAccess(
 export function denyIfNoTreatmentAccess(
   res: Response,
   treatment: TreatmentWithOwner,
-  user: RequestUser
+  user: RequestUser,
 ): boolean {
   if (!hasTreatmentAccess(treatment, user)) {
     res.status(403);
-    throw new ForbiddenError('Not authorized to modify this treatment');
+    throw new ForbiddenError("Not authorized to modify this treatment");
   }
   return false;
 }
@@ -150,7 +150,10 @@ export const isAdmin = isAlphaTauAdmin;
  * @param site - The site code (custName) to check
  * @returns true if user has access to the site
  */
-export function hasSiteAccess(user: RequestUser | undefined, site: string): boolean {
+export function hasSiteAccess(
+  user: RequestUser | undefined,
+  site: string,
+): boolean {
   if (!user) return false;
 
   // Alpha Tau admins have access to all sites
@@ -172,7 +175,10 @@ export function hasSiteAccess(user: RequestUser | undefined, site: string): bool
  * @param site - The site code to check
  * @throws ForbiddenError if user doesn't have site access
  */
-export function requireSiteAccess(user: RequestUser | undefined, site: string): void {
+export function requireSiteAccess(
+  user: RequestUser | undefined,
+  site: string,
+): void {
   if (!hasSiteAccess(user, site)) {
     throw new ForbiddenError(`Not authorized to access site: ${site}`);
   }
@@ -217,9 +223,11 @@ export interface UserContext {
  * @param req - Express request with user attached
  * @returns UserContext object for Priority API calls
  */
-export function buildUserContext(req: Request & { user?: RequestUser }): UserContext {
+export function buildUserContext(
+  req: Request & { user?: RequestUser },
+): UserContext {
   return {
-    identifier: req.user?.email || req.user?.id || '',
+    identifier: req.user?.email || req.user?.id || "",
     userMetadata: req.user?.metadata,
   };
 }
@@ -231,9 +239,11 @@ export function buildUserContext(req: Request & { user?: RequestUser }): UserCon
  * @param user - The user object
  * @returns UserContext object for Priority API calls
  */
-export function buildUserContextFromUser(user: RequestUser | undefined): UserContext {
+export function buildUserContextFromUser(
+  user: RequestUser | undefined,
+): UserContext {
   return {
-    identifier: user?.email || user?.id || '',
+    identifier: user?.email || user?.id || "",
     userMetadata: user?.metadata,
   };
 }

@@ -1,19 +1,23 @@
-import PDFDocument from 'pdfkit';
-import * as fs from 'fs';
-import * as path from 'path';
-import logger from '../utils/logger';
+import PDFDocument from "pdfkit";
+import * as fs from "fs";
+import * as path from "path";
+import logger from "../utils/logger";
 
 // PDF Document Configuration - matches frontend
-const PDF_DOCUMENT_NUMBER = 'FR-4001-01E ';
-const PDF_VERSION = 'V.01';
+const PDF_DOCUMENT_NUMBER = "FR-4001-01E ";
+const PDF_VERSION = "V.01";
 
 // Colors
-const HEADER_BLUE = '#428bca';
-
+const HEADER_BLUE = "#428bca";
 
 export interface Treatment {
   id: string;
-  type: 'insertion' | 'removal' | 'pancreas_insertion' | 'prostate_insertion' | 'skin_insertion';
+  type:
+    | "insertion"
+    | "removal"
+    | "pancreas_insertion"
+    | "prostate_insertion"
+    | "skin_insertion";
   subjectId: string;
   site: string;
   date: string;
@@ -27,8 +31,17 @@ export interface Applicator {
   serialNumber: string;
   applicatorType?: string;
   seedQuantity: number;
-  usageType: 'full' | 'faulty' | 'none' | 'sealed';
-  status?: 'SEALED' | 'OPENED' | 'LOADED' | 'INSERTED' | 'FAULTY' | 'DISPOSED' | 'DISCHARGED' | 'DEPLOYMENT_FAILURE' | null;
+  usageType: "full" | "faulty" | "none" | "sealed";
+  status?:
+    | "SEALED"
+    | "OPENED"
+    | "LOADED"
+    | "INSERTED"
+    | "FAULTY"
+    | "DISPOSED"
+    | "DISCHARGED"
+    | "DEPLOYMENT_FAILURE"
+    | null;
   insertionTime: string;
   insertedSeedsQty?: number;
   comments?: string;
@@ -47,7 +60,7 @@ export interface TreatmentSummary {
 }
 
 export interface SignatureDetails {
-  type: 'hospital_auto' | 'alphatau_verified';
+  type: "hospital_auto" | "alphatau_verified";
   signerName: string;
   signerEmail: string;
   signerPosition: string;
@@ -124,13 +137,26 @@ export interface RemovalPdfData {
  * Format a date for display with 3-letter month abbreviation
  */
 function formatDate(date: Date | string, includeTime = true): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === "string" ? new Date(date) : date;
   if (isNaN(d.getTime())) {
-    return 'N/A';
+    return "N/A";
   }
 
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = String(d.getDate()).padStart(2, '0');
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const day = String(d.getDate()).padStart(2, "0");
   const month = months[d.getMonth()];
   const year = d.getFullYear();
 
@@ -138,8 +164,8 @@ function formatDate(date: Date | string, includeTime = true): string {
     return `${day}.${month}.${year}`;
   }
 
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
 
   return `${day}.${month}.${year} ${hours}:${minutes}`;
 }
@@ -148,13 +174,26 @@ function formatDate(date: Date | string, includeTime = true): string {
  * Format a date for signature block (more detailed)
  */
 function formatSignatureDate(date: Date): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = String(date.getDate()).padStart(2, '0');
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const day = String(date.getDate()).padStart(2, "0");
   const month = months[date.getMonth()];
   const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
 
   return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
 }
@@ -165,7 +204,7 @@ function formatSignatureDate(date: Date): string {
  * - Otherwise return as-is
  */
 function formatSiteName(site: string): string {
-  if (!site) return 'N/A';
+  if (!site) return "N/A";
   // Match pattern: "Hospital Name (123456)" -> extract "Hospital Name"
   const match = site.match(/^(.+?)\s*\(\d+\)$/);
   if (match) {
@@ -183,9 +222,17 @@ function drawTable(
   headers: string[],
   rows: string[][],
   columnWidths: number[],
-  options: { headerColor?: string; alternateRowColor?: string; onPageAdded?: () => void } = {}
+  options: {
+    headerColor?: string;
+    alternateRowColor?: string;
+    onPageAdded?: () => void;
+  } = {},
 ): number {
-  const { headerColor = HEADER_BLUE, alternateRowColor = '#f5f5f5', onPageAdded } = options;
+  const {
+    headerColor = HEADER_BLUE,
+    alternateRowColor = "#f5f5f5",
+    onPageAdded,
+  } = options;
   const startX = 50;
   const rowHeight = 20;
   const cellPadding = 5;
@@ -194,14 +241,21 @@ function drawTable(
 
   // Draw header row
   doc.fillColor(headerColor);
-  doc.rect(startX, currentY, columnWidths.reduce((a, b) => a + b, 0), rowHeight).fill();
+  doc
+    .rect(
+      startX,
+      currentY,
+      columnWidths.reduce((a, b) => a + b, 0),
+      rowHeight,
+    )
+    .fill();
 
-  doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
+  doc.fillColor("white").fontSize(9).font("Helvetica-Bold");
   let headerX = startX;
   headers.forEach((header, i) => {
     doc.text(header, headerX + cellPadding, currentY + cellPadding, {
       width: columnWidths[i] - cellPadding * 2,
-      height: rowHeight - cellPadding * 2
+      height: rowHeight - cellPadding * 2,
     });
     headerX += columnWidths[i];
   });
@@ -209,7 +263,7 @@ function drawTable(
   currentY += rowHeight;
 
   // Draw data rows
-  doc.font('Helvetica').fontSize(8);
+  doc.font("Helvetica").fontSize(8);
   rows.forEach((row, rowIndex) => {
     // Check if we need a new page
     if (currentY + rowHeight > doc.page.height - 80) {
@@ -221,20 +275,34 @@ function drawTable(
     // Alternate row color
     if (rowIndex % 2 === 1) {
       doc.fillColor(alternateRowColor);
-      doc.rect(startX, currentY, columnWidths.reduce((a, b) => a + b, 0), rowHeight).fill();
+      doc
+        .rect(
+          startX,
+          currentY,
+          columnWidths.reduce((a, b) => a + b, 0),
+          rowHeight,
+        )
+        .fill();
     }
 
     // Draw row border
-    doc.strokeColor('#dddddd').lineWidth(0.5);
-    doc.rect(startX, currentY, columnWidths.reduce((a, b) => a + b, 0), rowHeight).stroke();
+    doc.strokeColor("#dddddd").lineWidth(0.5);
+    doc
+      .rect(
+        startX,
+        currentY,
+        columnWidths.reduce((a, b) => a + b, 0),
+        rowHeight,
+      )
+      .stroke();
 
     // Draw cell text - no ellipsis with landscape layout providing adequate width
-    doc.fillColor('black');
+    doc.fillColor("black");
     let cellX = startX;
     row.forEach((cell, i) => {
       doc.text(cell, cellX + cellPadding, currentY + cellPadding, {
         width: columnWidths[i] - cellPadding * 2,
-        height: rowHeight - cellPadding * 2
+        height: rowHeight - cellPadding * 2,
       });
       cellX += columnWidths[i];
     });
@@ -253,17 +321,25 @@ function drawTable(
  */
 function drawRemovalHeader(doc: PDFKit.PDFDocument): number {
   // Add Alpha Tau logo (top-left corner)
-  const localLogoPath = path.join(process.cwd(), '..', 'frontend', 'public', 'alphataulogo.png');
-  const dockerLogoPath = path.join(process.cwd(), 'assets', 'alphataulogo.png');
-  const logoPath = fs.existsSync(localLogoPath) ? localLogoPath : dockerLogoPath;
+  const localLogoPath = path.join(
+    process.cwd(),
+    "..",
+    "frontend",
+    "public",
+    "alphataulogo.png",
+  );
+  const dockerLogoPath = path.join(process.cwd(), "assets", "alphataulogo.png");
+  const logoPath = fs.existsSync(localLogoPath)
+    ? localLogoPath
+    : dockerLogoPath;
   if (fs.existsSync(logoPath)) {
     doc.image(logoPath, 50, 15, { width: 100 });
   }
 
   // Document number and version
-  doc.fontSize(10).font('Helvetica').fillColor('black');
-  doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: 'center' });
-  doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: 'center' });
+  doc.fontSize(10).font("Helvetica").fillColor("black");
+  doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: "center" });
+  doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: "center" });
 
   return 55;
 }
@@ -275,13 +351,13 @@ function drawRemovalHeader(doc: PDFKit.PDFDocument): number {
 function drawRemovalFormTable(
   doc: PDFKit.PDFDocument,
   data: RemovalPdfData,
-  startY: number
+  startY: number,
 ): number {
   const startX = 50;
   const tableWidth = 495;
   const col1Width = 295;
   const col2Width = 200;
-  const rowHeight = 18;
+  const rowHeight = 26;
   const cellPadding = 5;
   let y = startY;
 
@@ -291,39 +367,64 @@ function drawRemovalFormTable(
 
   // Helper: draw a 2-column bordered row
   const drawRow = (rowY: number, height: number) => {
-    doc.strokeColor('#000000').lineWidth(0.5);
+    doc.strokeColor("#000000").lineWidth(0.5);
     doc.rect(startX, rowY, tableWidth, height).stroke();
-    doc.moveTo(startX + col1Width, rowY).lineTo(startX + col1Width, rowY + height).stroke();
+    doc
+      .moveTo(startX + col1Width, rowY)
+      .lineTo(startX + col1Width, rowY + height)
+      .stroke();
   };
 
   // Helper: draw a full-width bordered row (no column divider)
   const drawFullWidthRow = (rowY: number, height: number) => {
-    doc.strokeColor('#000000').lineWidth(0.5);
+    doc.strokeColor("#000000").lineWidth(0.5);
     doc.rect(startX, rowY, tableWidth, height).stroke();
   };
 
   // Row 0: Title row — bold, full-width
   const titleRowHeight = 24;
   drawFullWidthRow(y, titleRowHeight);
-  doc.fontSize(11).font('Helvetica-Bold').fillColor('black');
-  doc.text('DaRT Removal Procedure (complete if applicable)', startX + cellPadding, y + 6, {
-    width: tableWidth - cellPadding * 2
-  });
+  doc.fontSize(11).font("Helvetica-Bold").fillColor("black");
+  doc.text(
+    "DaRT Removal Procedure (complete if applicable)",
+    startX + cellPadding,
+    y + 6,
+    {
+      width: tableWidth - cellPadding * 2,
+    },
+  );
   y += titleRowHeight;
 
   // Row 1: Numbered items 1-4, each in its own sub-row
   const items = [
-    { label: '1. Date of removal procedure:', value: formatDate(form.removalDate, false) },
-    { label: '2. Total number of sources removed:', value: summary.totalSourcesRemoved.toString() },
-    { label: '3. Were all sources removed on the same date?', value: form.allSourcesSameDate ? 'Yes' : 'No' },
-    { label: '4. Is removed equal to inserted?', value: discrepancy.isRemovedEqualInserted ? 'Yes' : 'No' }
+    {
+      label: "1. Date of removal procedure:",
+      value: formatDate(form.removalDate, false),
+    },
+    {
+      label: "2. Total number of sources removed during the removal procedure:",
+      value: summary.totalSourcesRemoved.toString(),
+    },
+    {
+      label: "3. Were all sources removed on the same date?",
+      value: form.allSourcesSameDate ? "Yes" : "No",
+    },
+    {
+      label:
+        "4. Is the number of removed sources equal to the number of sources inserted?",
+      value: discrepancy.isRemovedEqualInserted ? "Yes" : "No",
+    },
   ];
 
-  items.forEach(item => {
+  items.forEach((item) => {
     drawRow(y, rowHeight);
-    doc.fontSize(9).font('Helvetica').fillColor('black');
-    doc.text(item.label, startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
-    doc.text(item.value, startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 });
+    doc.fontSize(9).font("Helvetica").fillColor("black");
+    doc.text(item.label, startX + cellPadding, y + 4, {
+      width: col1Width - cellPadding * 2,
+    });
+    doc.text(item.value, startX + col1Width + cellPadding, y + 4, {
+      width: col2Width - cellPadding * 2,
+    });
     y += rowHeight;
   });
 
@@ -335,37 +436,62 @@ function drawRemovalFormTable(
   // Row 3: "If no, please answer questions a-d:" header
   const ifNoRowHeight = 20;
   drawFullWidthRow(y, ifNoRowHeight);
-  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
-  doc.text('If no, please answer questions a-d:', startX + cellPadding, y + 5, {
-    width: tableWidth - cellPadding * 2
+  doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
+  doc.text("If no, please answer questions a-d:", startX + cellPadding, y + 5, {
+    width: tableWidth - cellPadding * 2,
   });
   y += ifNoRowHeight;
 
   // Row 4: a. Total sources not removed
   drawRow(y, rowHeight);
-  doc.fontSize(9).font('Helvetica').fillColor('black');
-  doc.text('a. Total sources not removed:', startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
+  doc.fontSize(9).font("Helvetica").fillColor("black");
   doc.text(
-    discrepancy.isRemovedEqualInserted ? '' : discrepancy.sourcesNotRemoved.toString(),
-    startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 }
+    "a. Total number of sources not removed during the removal procedure:",
+    startX + cellPadding,
+    y + 4,
+    { width: col1Width - cellPadding * 2 },
+  );
+  doc.text(
+    discrepancy.isRemovedEqualInserted
+      ? ""
+      : discrepancy.sourcesNotRemoved.toString(),
+    startX + col1Width + cellPadding,
+    y + 4,
+    { width: col2Width - cellPadding * 2 },
   );
   y += rowHeight;
 
   // Row 5: b. Specify reason
   drawRow(y, rowHeight);
-  doc.text('b. Specify reason:', startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
   doc.text(
-    form.reasonNotSameDate || '',
-    startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 }
+    "b. Specify reason why not all sources were removed on the same date:",
+    startX + cellPadding,
+    y + 4,
+    { width: col1Width - cellPadding * 2 },
+  );
+  doc.text(
+    form.reasonNotSameDate || "",
+    startX + col1Width + cellPadding,
+    y + 4,
+    { width: col2Width - cellPadding * 2 },
   );
   y += rowHeight;
 
   // Row 6: c. Additional date
   drawRow(y, rowHeight);
-  doc.text('c. Additional date:', startX + cellPadding, y + 4, { width: col1Width - cellPadding * 2 });
   doc.text(
-    form.additionalRemovalDate ? formatDate(form.additionalRemovalDate, false) : '',
-    startX + col1Width + cellPadding, y + 4, { width: col2Width - cellPadding * 2 }
+    "c. Indicate additional date on which they were removed (if applicable):",
+    startX + cellPadding,
+    y + 4,
+    { width: col1Width - cellPadding * 2 },
+  );
+  doc.text(
+    form.additionalRemovalDate
+      ? formatDate(form.additionalRemovalDate, false)
+      : "",
+    startX + col1Width + cellPadding,
+    y + 4,
+    { width: col2Width - cellPadding * 2 },
   );
   y += rowHeight;
 
@@ -384,15 +510,15 @@ function drawRemovalFormTable(
  */
 function drawClarificationTable(
   doc: PDFKit.PDFDocument,
-  discrepancy: RemovalPdfData['discrepancy'],
-  startY: number
+  discrepancy: RemovalPdfData["discrepancy"],
+  startY: number,
 ): number {
   const startX = 50;
   const tableWidth = 495;
-  const clarifyWidth = 165;   // cols 0-1 (merged)
-  const checkWidth = 120;     // col 2
-  const amountWidth = 100;    // cols 3-4 (merged)
-  const commentWidth = 110;   // col 5
+  const clarifyWidth = 165; // cols 0-1 (merged)
+  const checkWidth = 120; // col 2
+  const amountWidth = 100; // cols 3-4 (merged)
+  const commentWidth = 110; // col 5
   const rowHeight = 20;
   const cellPadding = 5;
   let y = startY;
@@ -400,17 +526,17 @@ function drawClarificationTable(
   const clarification = discrepancy.clarification;
 
   const categories = [
-    { label: 'Lost', data: clarification?.lost },
-    { label: 'Retrieved to site', data: clarification?.retrievedToSite },
-    { label: 'Removal failure', data: clarification?.removalFailure },
-    { label: 'Other', data: clarification?.other, isOther: true }
+    { label: "Lost", data: clarification?.lost },
+    { label: "Retrieved to site", data: clarification?.retrievedToSite },
+    { label: "Removal failure", data: clarification?.removalFailure },
+    { label: "Other", data: clarification?.other, isOther: true },
   ];
 
   const totalRows = 5; // 1 header + 4 category rows
   const blockHeight = rowHeight * totalRows;
 
   // Outer border
-  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.strokeColor("#000000").lineWidth(0.5);
   doc.rect(startX, y, tableWidth, blockHeight).stroke();
 
   // Column X positions
@@ -419,51 +545,75 @@ function drawClarificationTable(
   const col4X = col3X + amountWidth;
 
   // Vertical dividers (full height of block)
-  doc.moveTo(col2X, y).lineTo(col2X, y + blockHeight).stroke();
-  doc.moveTo(col3X, y).lineTo(col3X, y + blockHeight).stroke();
-  doc.moveTo(col4X, y).lineTo(col4X, y + blockHeight).stroke();
+  doc
+    .moveTo(col2X, y)
+    .lineTo(col2X, y + blockHeight)
+    .stroke();
+  doc
+    .moveTo(col3X, y)
+    .lineTo(col3X, y + blockHeight)
+    .stroke();
+  doc
+    .moveTo(col4X, y)
+    .lineTo(col4X, y + blockHeight)
+    .stroke();
 
   // Horizontal dividers for rows 1-4 (only across cols 2-5, not through merged cols 0-1)
   for (let i = 1; i < totalRows; i++) {
-    doc.moveTo(col2X, y + i * rowHeight).lineTo(startX + tableWidth, y + i * rowHeight).stroke();
+    doc
+      .moveTo(col2X, y + i * rowHeight)
+      .lineTo(startX + tableWidth, y + i * rowHeight)
+      .stroke();
   }
 
   // Cols 0-1: "d. Please clarify:" — vertically merged across all 5 rows
-  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
-  doc.text('d. Please clarify:', startX + cellPadding, y + cellPadding, {
-    width: clarifyWidth - cellPadding * 2
+  doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
+  doc.text("d. Please clarify:", startX + cellPadding, y + cellPadding, {
+    width: clarifyWidth - cellPadding * 2,
   });
 
   // Row 0 column headers
-  doc.fontSize(8).font('Helvetica-Bold').fillColor('black');
-  doc.text('Check all that applies:', col2X + cellPadding, y + 5, { width: checkWidth - cellPadding * 2 });
-  doc.text('Amount of sources:', col3X + cellPadding, y + 5, { width: amountWidth - cellPadding * 2 });
-  doc.text('Comment:', col4X + cellPadding, y + 5, { width: commentWidth - cellPadding * 2 });
+  doc.fontSize(8).font("Helvetica-Bold").fillColor("black");
+  doc.text("Check all that applies:", col2X + cellPadding, y + 5, {
+    width: checkWidth - cellPadding * 2,
+  });
+  doc.text("Amount of sources:", col3X + cellPadding, y + 5, {
+    width: amountWidth - cellPadding * 2,
+  });
+  doc.text("Comment:", col4X + cellPadding, y + 5, {
+    width: commentWidth - cellPadding * 2,
+  });
 
   // Rows 1-4: category data
-  doc.fontSize(8).font('Helvetica').fillColor('black');
+  doc.fontSize(8).font("Helvetica").fillColor("black");
   categories.forEach((cat, index) => {
     const rowY = y + (index + 1) * rowHeight;
     const isChecked = cat.data?.checked || false;
-    const checkbox = isChecked ? '[X]' : '[  ]';
+    const checkbox = isChecked ? "[X]" : "[  ]";
 
     // Checkbox + label
     let label = cat.label;
     if (cat.isOther && (cat.data as DiscrepancyOther)?.description) {
       label = `Other: ${(cat.data as DiscrepancyOther).description}`;
     }
-    doc.text(`${checkbox} ${label}`, col2X + cellPadding, rowY + 5, { width: checkWidth - cellPadding * 2 });
+    doc.text(`${checkbox} ${label}`, col2X + cellPadding, rowY + 5, {
+      width: checkWidth - cellPadding * 2,
+    });
 
     // Amount
     doc.text(
-      isChecked ? (cat.data?.amount?.toString() || '0') : '',
-      col3X + cellPadding, rowY + 5, { width: amountWidth - cellPadding * 2 }
+      isChecked ? cat.data?.amount?.toString() || "0" : "",
+      col3X + cellPadding,
+      rowY + 5,
+      { width: amountWidth - cellPadding * 2 },
     );
 
     // Comment
     doc.text(
-      isChecked ? (cat.data?.comment || '') : '',
-      col4X + cellPadding, rowY + 5, { width: commentWidth - cellPadding * 2 }
+      isChecked ? cat.data?.comment || "" : "",
+      col4X + cellPadding,
+      rowY + 5,
+      { width: commentWidth - cellPadding * 2 },
     );
   });
 
@@ -479,7 +629,7 @@ function drawRemovalSignatureSection(
   doc: PDFKit.PDFDocument,
   data: RemovalPdfData,
   signatureDetails: SignatureDetails,
-  startY: number
+  startY: number,
 ): void {
   const startX = 50;
   const tableWidth = 495;
@@ -496,27 +646,39 @@ function drawRemovalSignatureSection(
   // Row 5: "Sources removed by (full name):" | surgeon name
   const labelWidth = 200;
   const valueWidth = tableWidth - labelWidth;
-  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.strokeColor("#000000").lineWidth(0.5);
   doc.rect(startX, y, tableWidth, rowHeight).stroke();
-  doc.moveTo(startX + labelWidth, y).lineTo(startX + labelWidth, y + rowHeight).stroke();
+  doc
+    .moveTo(startX + labelWidth, y)
+    .lineTo(startX + labelWidth, y + rowHeight)
+    .stroke();
 
-  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
-  doc.text('Sources removed by (full name):', startX + cellPadding, y + 5, { width: labelWidth - cellPadding * 2 });
-  doc.font('Helvetica');
-  doc.text(data.treatment.surgeon || '', startX + labelWidth + cellPadding, y + 5, { width: valueWidth - cellPadding * 2 });
+  doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
+  doc.text("Sources removed by (full name):", startX + cellPadding, y + 5, {
+    width: labelWidth - cellPadding * 2,
+  });
+  doc.font("Helvetica");
+  doc.text(
+    data.treatment.surgeon || "",
+    startX + labelWidth + cellPadding,
+    y + 5,
+    { width: valueWidth - cellPadding * 2 },
+  );
   y += rowHeight;
 
   // Row 6: "General comments:" + text (full-width)
-  const commentsText = data.procedureForm.removalGeneralComments || '';
+  const commentsText = data.procedureForm.removalGeneralComments || "";
   const commentsRowHeight = commentsText.length > 60 ? 36 : rowHeight;
-  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.strokeColor("#000000").lineWidth(0.5);
   doc.rect(startX, y, tableWidth, commentsRowHeight).stroke();
 
-  doc.fontSize(9).font('Helvetica-Bold').fillColor('black');
-  doc.text('General comments:', startX + cellPadding, y + 5);
+  doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
+  doc.text("General comments:", startX + cellPadding, y + 5);
   if (commentsText) {
-    doc.font('Helvetica');
-    doc.text(commentsText, startX + 120, y + 5, { width: tableWidth - 120 - cellPadding });
+    doc.font("Helvetica");
+    doc.text(commentsText, startX + 120, y + 5, {
+      width: tableWidth - 120 - cellPadding,
+    });
   }
   y += commentsRowHeight;
 
@@ -526,45 +688,57 @@ function drawRemovalSignatureSection(
   const dateWidth = tableWidth - nameWidth - sigWidth; // 135
   const sigRowHeight = 28;
 
-  doc.strokeColor('#000000').lineWidth(0.5);
+  doc.strokeColor("#000000").lineWidth(0.5);
   doc.rect(startX, y, tableWidth, sigRowHeight).stroke();
-  doc.moveTo(startX + nameWidth, y).lineTo(startX + nameWidth, y + sigRowHeight).stroke();
-  doc.moveTo(startX + nameWidth + sigWidth, y).lineTo(startX + nameWidth + sigWidth, y + sigRowHeight).stroke();
+  doc
+    .moveTo(startX + nameWidth, y)
+    .lineTo(startX + nameWidth, y + sigRowHeight)
+    .stroke();
+  doc
+    .moveTo(startX + nameWidth + sigWidth, y)
+    .lineTo(startX + nameWidth + sigWidth, y + sigRowHeight)
+    .stroke();
 
   // Name
-  doc.fontSize(8).font('Helvetica-Bold').fillColor('black');
-  doc.text('Name:', startX + cellPadding, y + 4);
-  doc.font('Helvetica').fontSize(8);
-  doc.text(signatureDetails.signerName, startX + cellPadding, y + 15, { width: nameWidth - cellPadding * 2 });
+  doc.fontSize(8).font("Helvetica-Bold").fillColor("black");
+  doc.text("Name:", startX + cellPadding, y + 4);
+  doc.font("Helvetica").fontSize(8);
+  doc.text(signatureDetails.signerName, startX + cellPadding, y + 15, {
+    width: nameWidth - cellPadding * 2,
+  });
 
   // Signature
-  doc.font('Helvetica-Bold').fontSize(8);
-  doc.text('Signature:', startX + nameWidth + cellPadding, y + 4);
-  doc.font('Helvetica').fontSize(7);
+  doc.font("Helvetica-Bold").fontSize(8);
+  doc.text("Signature:", startX + nameWidth + cellPadding, y + 4);
+  doc.font("Helvetica").fontSize(7);
   doc.text(
     `Digitally signed by ${signatureDetails.signerName} (${signatureDetails.signerEmail})`,
-    startX + nameWidth + cellPadding, y + 15,
-    { width: sigWidth - cellPadding * 2 }
+    startX + nameWidth + cellPadding,
+    y + 15,
+    { width: sigWidth - cellPadding * 2 },
   );
 
   // Date
-  doc.font('Helvetica-Bold').fontSize(8);
-  doc.text('Date:', startX + nameWidth + sigWidth + cellPadding, y + 4);
-  doc.font('Helvetica').fontSize(8);
+  doc.font("Helvetica-Bold").fontSize(8);
+  doc.text("Date:", startX + nameWidth + sigWidth + cellPadding, y + 4);
+  doc.font("Helvetica").fontSize(8);
   doc.text(
     formatSignatureDate(signatureDetails.signedAt),
-    startX + nameWidth + sigWidth + cellPadding, y + 15,
-    { width: dateWidth - cellPadding * 2 }
+    startX + nameWidth + sigWidth + cellPadding,
+    y + 15,
+    { width: dateWidth - cellPadding * 2 },
   );
 
   y += sigRowHeight;
 
   // Footnote
   y += 10;
-  doc.fontSize(7).fillColor('#666666').font('Helvetica');
+  doc.fontSize(7).fillColor("#666666").font("Helvetica");
   doc.text(
-    'This document was electronically signed through the ALA Medical Treatment Tracking System.',
-    0, y, { align: 'center' }
+    "This document was electronically signed through the ALA Medical Treatment Tracking System.",
+    0,
+    y,
+    { align: "center" },
   );
 }
 
@@ -573,23 +747,28 @@ function drawRemovalSignatureSection(
  */
 export function calculateSummary(
   treatment: Treatment,
-  applicators: Applicator[]
+  applicators: Applicator[],
 ): TreatmentSummary {
-  const fullUseApplicators = applicators.filter(a => a.usageType === 'full');
-  const faultyApplicators = applicators.filter(a => a.usageType === 'faulty');
+  const fullUseApplicators = applicators.filter((a) => a.usageType === "full");
+  const faultyApplicators = applicators.filter((a) => a.usageType === "faulty");
   // Count both 'none' and 'sealed' as not used
-  const notUsedApplicators = applicators.filter(a => a.usageType === 'none' || a.usageType === 'sealed');
+  const notUsedApplicators = applicators.filter(
+    (a) => a.usageType === "none" || a.usageType === "sealed",
+  );
 
   // Find earliest insertion time
   const insertionTimes = applicators
-    .filter(a => a.insertionTime && !isNaN(new Date(a.insertionTime).getTime()))
-    .map(a => new Date(a.insertionTime).getTime());
-  const earliestTime = insertionTimes.length > 0
-    ? new Date(Math.min(...insertionTimes)).toISOString()
-    : '';
+    .filter(
+      (a) => a.insertionTime && !isNaN(new Date(a.insertionTime).getTime()),
+    )
+    .map((a) => new Date(a.insertionTime).getTime());
+  const earliestTime =
+    insertionTimes.length > 0
+      ? new Date(Math.min(...insertionTimes)).toISOString()
+      : "";
 
   const totalSeeds = applicators
-    .filter(a => a.status === 'INSERTED')
+    .filter((a) => a.status === "INSERTED")
     .reduce((sum, a) => sum + a.seedQuantity, 0);
 
   // Calculate total activity
@@ -602,8 +781,8 @@ export function calculateSummary(
     faultyApplicator: faultyApplicators.length,
     notUsedApplicators: notUsedApplicators.length,
     totalDartSeedsInserted: totalSeeds,
-    seedsInsertedBy: treatment.surgeon || 'N/A',
-    totalActivity
+    seedsInsertedBy: treatment.surgeon || "N/A",
+    totalActivity,
   };
 }
 
@@ -618,32 +797,34 @@ export async function generateTreatmentPdf(
   treatment: Treatment,
   applicators: Applicator[],
   signatureDetails: SignatureDetails,
-  continuationInfo?: ContinuationInfo
+  continuationInfo?: ContinuationInfo,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
-        size: 'A4',
-        layout: 'landscape',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 }
+        size: "A4",
+        layout: "landscape",
+        margins: { top: 50, bottom: 50, left: 50, right: 50 },
       });
 
       const chunks: Buffer[] = [];
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => {
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => {
         const pdfBuffer = Buffer.concat(chunks);
-        logger.info(`PDF generated successfully, size: ${pdfBuffer.length} bytes`);
+        logger.info(
+          `PDF generated successfully, size: ${pdfBuffer.length} bytes`,
+        );
         resolve(pdfBuffer);
       });
-      doc.on('error', reject);
+      doc.on("error", reject);
 
       // Helper function to draw page header on new pages
       // NOTE: Do NOT use doc.on('pageAdded') as it causes infinite recursion (stack overflow)
       const drawPageHeader = () => {
         // Draw document number in header
-        doc.fontSize(10).font('Helvetica').fillColor('black');
-        doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: 'center' });
-        doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: 'center' });
+        doc.fontSize(10).font("Helvetica").fillColor("black");
+        doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: "center" });
+        doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: "center" });
       };
 
       // Calculate summary
@@ -654,23 +835,37 @@ export async function generateTreatmentPdf(
       // Smart path: works in both local dev and Docker production
       // Local: process.cwd() is backend folder, logo is in ../frontend/public/
       // Docker: logo is copied to ./assets/ during build
-      const localLogoPath = path.join(process.cwd(), '..', 'frontend', 'public', 'alphataulogo.png');
-      const dockerLogoPath = path.join(process.cwd(), 'assets', 'alphataulogo.png');
-      const logoPath = fs.existsSync(localLogoPath) ? localLogoPath : dockerLogoPath;
+      const localLogoPath = path.join(
+        process.cwd(),
+        "..",
+        "frontend",
+        "public",
+        "alphataulogo.png",
+      );
+      const dockerLogoPath = path.join(
+        process.cwd(),
+        "assets",
+        "alphataulogo.png",
+      );
+      const logoPath = fs.existsSync(localLogoPath)
+        ? localLogoPath
+        : dockerLogoPath;
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, 50, 15, { width: 100 });
       }
 
       // Draw document number and version (also drawn on subsequent pages via pageAdded event)
-      doc.fontSize(10).font('Helvetica').fillColor('black');
-      doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: 'center' });
-      doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: 'center' });
+      doc.fontSize(10).font("Helvetica").fillColor("black");
+      doc.text(PDF_DOCUMENT_NUMBER, 0, 20, { align: "center" });
+      doc.fontSize(8).text(PDF_VERSION, 0, 32, { align: "center" });
 
-      doc.fontSize(20).font('Helvetica-Bold');
-      doc.text('Medical Treatment Report', 0, 55, { align: 'center' });
+      doc.fontSize(20).font("Helvetica-Bold");
+      doc.text("Medical Treatment Report", 0, 55, { align: "center" });
 
-      doc.fontSize(12).font('Helvetica');
-      doc.text(`Generated: ${formatDate(new Date())}`, 0, 80, { align: 'center' });
+      doc.fontSize(12).font("Helvetica");
+      doc.text(`Generated: ${formatDate(new Date())}`, 0, 80, {
+        align: "center",
+      });
 
       // ===== CONTINUATION NOTICE (if applicable) =====
       let yPosition = 110;
@@ -682,61 +877,83 @@ export async function generateTreatmentPdf(
         const noticeBoxX = (doc.page.width - noticeBoxWidth) / 2;
 
         // Box background and border
-        doc.strokeColor('#f97316').lineWidth(2);
-        doc.fillColor('#fff7ed');
-        doc.rect(noticeBoxX, yPosition, noticeBoxWidth, noticeBoxHeight).fillAndStroke();
+        doc.strokeColor("#f97316").lineWidth(2);
+        doc.fillColor("#fff7ed");
+        doc
+          .rect(noticeBoxX, yPosition, noticeBoxWidth, noticeBoxHeight)
+          .fillAndStroke();
 
         // Notice title
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#c2410c');
-        doc.text('CONTINUATION TREATMENT', noticeBoxX, yPosition + 8, {
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#c2410c");
+        doc.text("CONTINUATION TREATMENT", noticeBoxX, yPosition + 8, {
           width: noticeBoxWidth,
-          align: 'center'
+          align: "center",
         });
 
         // Notice details
-        doc.fontSize(9).font('Helvetica').fillColor('#7c2d12');
+        doc.fontSize(9).font("Helvetica").fillColor("#7c2d12");
         doc.text(
           `Original treatment PDF created at ${formatSignatureDate(continuationInfo.parentPdfCreatedAt)}`,
-          noticeBoxX + 10, yPosition + 25, {
+          noticeBoxX + 10,
+          yPosition + 25,
+          {
             width: noticeBoxWidth - 20,
-            align: 'center'
-          }
+            align: "center",
+          },
         );
 
         yPosition += noticeBoxHeight + 20;
       }
 
       // ===== TREATMENT INFORMATION =====
-      doc.fontSize(16).font('Helvetica-Bold').fillColor('black');
-      doc.text('Treatment Information', 50, yPosition);
+      doc.fontSize(16).font("Helvetica-Bold").fillColor("black");
+      doc.text("Treatment Information", 50, yPosition);
       yPosition += 25;
 
-      doc.fontSize(11).font('Helvetica');
+      doc.fontSize(11).font("Helvetica");
       const treatmentInfo: [string, string][] = [
-        ['Patient ID:', treatment.patientName || treatment.subjectId],
-        ['Site:', formatSiteName(treatment.site)],
-        ['Treatment Type:', treatment.type.charAt(0).toUpperCase() + treatment.type.slice(1).replace('_', ' ')],
-        ['Treatment Date:', formatDate(treatment.date, false)]
+        ["Patient ID:", treatment.patientName || treatment.subjectId],
+        ["Site:", formatSiteName(treatment.site)],
+        [
+          "Treatment Type:",
+          treatment.type.charAt(0).toUpperCase() +
+            treatment.type.slice(1).replace("_", " "),
+        ],
+        ["Treatment Date:", formatDate(treatment.date, false)],
         // Surgeon removed - already shown as "Inserted By" in Treatment Summary
       ];
 
       treatmentInfo.forEach(([label, value]) => {
-        doc.font('Helvetica-Bold').text(label, 50, yPosition, { continued: true });
-        doc.font('Helvetica').text(` ${value}`, { continued: false });
+        doc
+          .font("Helvetica-Bold")
+          .text(label, 50, yPosition, { continued: true });
+        doc.font("Helvetica").text(` ${value}`, { continued: false });
         yPosition += 18;
       });
 
       // ===== PROCESSED APPLICATORS TABLE =====
       yPosition += 15;
-      doc.fontSize(16).font('Helvetica-Bold');
-      doc.text('Processed Applicators', 50, yPosition);
+      doc.fontSize(16).font("Helvetica-Bold");
+      doc.text("Processed Applicators", 50, yPosition);
       yPosition += 20;
 
       // Sort applicators by seed quantity (descending)
-      const sortedApplicators = [...applicators].sort((a, b) => b.seedQuantity - a.seedQuantity);
+      const sortedApplicators = [...applicators].sort(
+        (a, b) => b.seedQuantity - a.seedQuantity,
+      );
 
       // Updated headers with Catalog and Length columns
-      const tableHeaders = ['Serial', 'Catalog', 'Type', 'Sources', 'Length', 'Time', 'Usage', 'Inserted', 'Comments'];
+      const tableHeaders = [
+        "Serial",
+        "Catalog",
+        "Type",
+        "Sources",
+        "Length",
+        "Time",
+        "Usage",
+        "Inserted",
+        "Comments",
+      ];
 
       // Dynamic column width calculation - proportional widths with minimums
       // Available width for content (A4 landscape = 842pt, margins 50pt each side = 742pt usable)
@@ -745,50 +962,64 @@ export async function generateTreatmentPdf(
       // Column configurations with minimum widths and flex weights
       // Landscape mode provides 742pt - widths increased to show full content
       const columnConfig = [
-        { minWidth: 70, flex: 1.0 },   // Serial - full serial numbers
-        { minWidth: 100, flex: 1.2 },  // Catalog - FLEX-00101-FG etc
-        { minWidth: 110, flex: 1.3 },  // Type - "Alpha Flex Applicator"
-        { minWidth: 45, flex: 0.6 },   // Sources
-        { minWidth: 45, flex: 0.6 },   // Length
-        { minWidth: 100, flex: 1.1 },  // Time - "06.Jan.2026 10:41"
-        { minWidth: 55, flex: 0.7 },   // Usage - "Full use"
-        { minWidth: 50, flex: 0.6 },   // Inserted
-        { minWidth: 100, flex: 1.2 }   // Comments - user notes
+        { minWidth: 70, flex: 1.0 }, // Serial - full serial numbers
+        { minWidth: 100, flex: 1.2 }, // Catalog - FLEX-00101-FG etc
+        { minWidth: 110, flex: 1.3 }, // Type - "Alpha Flex Applicator"
+        { minWidth: 45, flex: 0.6 }, // Sources
+        { minWidth: 45, flex: 0.6 }, // Length
+        { minWidth: 100, flex: 1.1 }, // Time - "06.Jan.2026 10:41"
+        { minWidth: 55, flex: 0.7 }, // Usage - "Full use"
+        { minWidth: 50, flex: 0.6 }, // Inserted
+        { minWidth: 100, flex: 1.2 }, // Comments - user notes
       ];
 
       // Calculate dynamic column widths
-      const totalMinWidth = columnConfig.reduce((sum, c) => sum + c.minWidth, 0);
+      const totalMinWidth = columnConfig.reduce(
+        (sum, c) => sum + c.minWidth,
+        0,
+      );
       const totalFlex = columnConfig.reduce((sum, c) => sum + c.flex, 0);
       const remainingWidth = Math.max(0, CONTENT_WIDTH - totalMinWidth);
 
-      const columnWidths = columnConfig.map(c =>
-        Math.floor(c.minWidth + (c.flex / totalFlex) * remainingWidth)
+      const columnWidths = columnConfig.map((c) =>
+        Math.floor(c.minWidth + (c.flex / totalFlex) * remainingWidth),
       );
 
-      const tableRows = sortedApplicators.map(applicator => [
+      const tableRows = sortedApplicators.map((applicator) => [
         applicator.serialNumber,
-        applicator.catalog || 'N/A',
-        applicator.applicatorType || 'N/A',
+        applicator.catalog || "N/A",
+        applicator.applicatorType || "N/A",
         applicator.seedQuantity.toString(),
-        applicator.seedLength ? `${applicator.seedLength}` : '-',
-        applicator.insertionTime && !isNaN(new Date(applicator.insertionTime).getTime())
+        applicator.seedLength ? `${applicator.seedLength}` : "-",
+        applicator.insertionTime &&
+        !isNaN(new Date(applicator.insertionTime).getTime())
           ? formatDate(applicator.insertionTime)
-          : 'N/A',
-        applicator.usageType === 'full' ? 'Full use'
-          : applicator.usageType === 'faulty' ? 'Faulty'
-          : applicator.usageType === 'sealed' ? 'Not Used'
-          : 'No Use',
-        applicator.usageType === 'full'
+          : "N/A",
+        applicator.usageType === "full"
+          ? "Full use"
+          : applicator.usageType === "faulty"
+            ? "Faulty"
+            : applicator.usageType === "sealed"
+              ? "Not Used"
+              : "No Use",
+        applicator.usageType === "full"
           ? applicator.seedQuantity.toString()
-          : applicator.usageType === 'faulty'
-          ? (applicator.insertedSeedsQty || 0).toString()
-          : '0',
-        applicator.comments || '-'
+          : applicator.usageType === "faulty"
+            ? (applicator.insertedSeedsQty || 0).toString()
+            : "0",
+        applicator.comments || "-",
       ]);
 
-      yPosition = drawTable(doc, yPosition, tableHeaders, tableRows, columnWidths, {
-        onPageAdded: drawPageHeader
-      });
+      yPosition = drawTable(
+        doc,
+        yPosition,
+        tableHeaders,
+        tableRows,
+        columnWidths,
+        {
+          onPageAdded: drawPageHeader,
+        },
+      );
 
       // ===== TREATMENT SUMMARY =====
       yPosition += 20;
@@ -800,19 +1031,19 @@ export async function generateTreatmentPdf(
         yPosition = 60; // Start below the header
       }
 
-      doc.fontSize(16).font('Helvetica-Bold').fillColor('black');
-      doc.text('Treatment Summary', 50, yPosition);
+      doc.fontSize(16).font("Helvetica-Bold").fillColor("black");
+      doc.text("Treatment Summary", 50, yPosition);
       yPosition += 25;
 
       doc.fontSize(11);
       const summaryItems: [string, string][] = [
-        ['Time Started:', formatDate(summary.timeInsertionStarted)],
-        ['Applicators Used:', summary.totalApplicatorUse.toString()],
-        ['Faulty:', summary.faultyApplicator.toString()],
-        ['Not Used:', summary.notUsedApplicators.toString()],
-        ['Sources Inserted:', summary.totalDartSeedsInserted.toString()],
-        ['Total Activity:', `${summary.totalActivity.toFixed(2)} µCi`],
-        ['Inserted By:', summary.seedsInsertedBy]
+        ["Time Started:", formatDate(summary.timeInsertionStarted)],
+        ["Applicators Used:", summary.totalApplicatorUse.toString()],
+        ["Faulty:", summary.faultyApplicator.toString()],
+        ["Not Used:", summary.notUsedApplicators.toString()],
+        ["Sources Inserted:", summary.totalDartSeedsInserted.toString()],
+        ["Total Activity:", `${summary.totalActivity.toFixed(2)} µCi`],
+        ["Inserted By:", summary.seedsInsertedBy],
       ];
 
       // Draw summary in two columns with proper positioning (no overlap)
@@ -828,14 +1059,22 @@ export async function generateTreatmentPdf(
       const lineHeight = 20; // Increased line height to prevent overlap
 
       leftColumn.forEach(([label, value]) => {
-        doc.font('Helvetica-Bold').text(label, leftX, leftY, { width: 125, lineBreak: false });
-        doc.font('Helvetica').text(value, leftValueX, leftY, { width: 110, lineBreak: false });
+        doc
+          .font("Helvetica-Bold")
+          .text(label, leftX, leftY, { width: 125, lineBreak: false });
+        doc
+          .font("Helvetica")
+          .text(value, leftValueX, leftY, { width: 110, lineBreak: false });
         leftY += lineHeight;
       });
 
       rightColumn.forEach(([label, value]) => {
-        doc.font('Helvetica-Bold').text(label, rightX, rightY, { width: 125, lineBreak: false });
-        doc.font('Helvetica').text(value, rightValueX, rightY, { width: 110, lineBreak: false });
+        doc
+          .font("Helvetica-Bold")
+          .text(label, rightX, rightY, { width: 125, lineBreak: false });
+        doc
+          .font("Helvetica")
+          .text(value, rightValueX, rightY, { width: 110, lineBreak: false });
         rightY += lineHeight;
       });
 
@@ -851,51 +1090,69 @@ export async function generateTreatmentPdf(
         yPosition = 60; // Start below the header
       }
 
-      const signatureTypeText = signatureDetails.type === 'hospital_auto'
-        ? 'Hospital User (Auto-signed)'
-        : 'Alpha Tau Verified';
+      const signatureTypeText =
+        signatureDetails.type === "hospital_auto"
+          ? "Hospital User (Auto-signed)"
+          : "Alpha Tau Verified";
 
       // Signature box
       const boxWidth = 400;
       const boxHeight = 90;
       const boxX = (doc.page.width - boxWidth) / 2;
 
-      doc.strokeColor('#333333').lineWidth(2);
+      doc.strokeColor("#333333").lineWidth(2);
       doc.rect(boxX, yPosition, boxWidth, boxHeight).stroke();
 
       // Signature header
-      doc.fontSize(12).font('Helvetica-Bold').fillColor('#333333');
-      doc.text('DOCUMENT DIGITALLY SIGNED', boxX, yPosition + 10, {
+      doc.fontSize(12).font("Helvetica-Bold").fillColor("#333333");
+      doc.text("DOCUMENT DIGITALLY SIGNED", boxX, yPosition + 10, {
         width: boxWidth,
-        align: 'center'
+        align: "center",
       });
 
       // Signature details
-      doc.fontSize(10).font('Helvetica');
+      doc.fontSize(10).font("Helvetica");
       const signatureY = yPosition + 30;
       doc.text(`Signer: ${signatureDetails.signerName}`, boxX + 20, signatureY);
-      doc.text(`Position: ${signatureDetails.signerPosition}`, boxX + 20, signatureY + 14);
-      doc.text(`Email: ${signatureDetails.signerEmail}`, boxX + 20, signatureY + 28);
-      doc.text(`Date: ${formatSignatureDate(signatureDetails.signedAt)}`, boxX + 20, signatureY + 42);
+      doc.text(
+        `Position: ${signatureDetails.signerPosition}`,
+        boxX + 20,
+        signatureY + 14,
+      );
+      doc.text(
+        `Email: ${signatureDetails.signerEmail}`,
+        boxX + 20,
+        signatureY + 28,
+      );
+      doc.text(
+        `Date: ${formatSignatureDate(signatureDetails.signedAt)}`,
+        boxX + 20,
+        signatureY + 42,
+      );
 
       // Signature type indicator
-      doc.fontSize(9).fillColor(signatureDetails.type === 'alphatau_verified' ? '#28a745' : '#6c757d');
+      doc
+        .fontSize(9)
+        .fillColor(
+          signatureDetails.type === "alphatau_verified" ? "#28a745" : "#6c757d",
+        );
       doc.text(`[${signatureTypeText}]`, boxX + 250, signatureY + 14);
 
       yPosition += boxHeight + 15;
 
       // Signature footnote
-      doc.fontSize(8).fillColor('#666666').font('Helvetica');
+      doc.fontSize(8).fillColor("#666666").font("Helvetica");
       doc.text(
-        'This document was electronically signed through the ALA Medical Treatment Tracking System.',
-        0, yPosition, { align: 'center' }
+        "This document was electronically signed through the ALA Medical Treatment Tracking System.",
+        0,
+        yPosition,
+        { align: "center" },
       );
 
       // Finalize the PDF
       doc.end();
-
     } catch (error) {
-      logger.error('Error generating PDF:', error);
+      logger.error("Error generating PDF:", error);
       reject(error);
     }
   });
@@ -910,24 +1167,26 @@ export async function generateTreatmentPdf(
  */
 export async function generateRemovalPdf(
   data: RemovalPdfData,
-  signatureDetails: SignatureDetails
+  signatureDetails: SignatureDetails,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
-        size: 'A4',
-        layout: 'portrait',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 }
+        size: "A4",
+        layout: "portrait",
+        margins: { top: 50, bottom: 50, left: 50, right: 50 },
       });
 
       const chunks: Buffer[] = [];
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => {
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => {
         const pdfBuffer = Buffer.concat(chunks);
-        logger.info(`Removal PDF generated successfully, size: ${pdfBuffer.length} bytes`);
+        logger.info(
+          `Removal PDF generated successfully, size: ${pdfBuffer.length} bytes`,
+        );
         resolve(pdfBuffer);
       });
-      doc.on('error', reject);
+      doc.on("error", reject);
 
       // Header with logo and doc number
       let yPosition = drawRemovalHeader(doc);
@@ -943,9 +1202,8 @@ export async function generateRemovalPdf(
 
       // Finalize the PDF
       doc.end();
-
     } catch (error) {
-      logger.error('Error generating removal PDF:', error);
+      logger.error("Error generating removal PDF:", error);
       reject(error);
     }
   });
@@ -954,5 +1212,5 @@ export async function generateRemovalPdf(
 export default {
   generateTreatmentPdf,
   generateRemovalPdf,
-  calculateSummary
+  calculateSummary,
 };

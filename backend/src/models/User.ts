@@ -1,6 +1,6 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
-import bcrypt from 'bcryptjs';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/database";
+import bcrypt from "bcryptjs";
 
 // User attributes interface
 interface UserAttributes {
@@ -8,7 +8,7 @@ interface UserAttributes {
   name: string;
   email: string | null;
   phoneNumber: string | null;
-  role: 'hospital' | 'alphatau' | 'admin';
+  role: "hospital" | "alphatau" | "admin";
   verificationCode: string | null;
   verificationExpires: Date | null;
   failedAttempts: number;
@@ -17,14 +17,25 @@ interface UserAttributes {
 }
 
 // For creating a new user
-type UserCreationAttributes = Optional<UserAttributes, 'id' | 'verificationCode' | 'verificationExpires' | 'failedAttempts' | 'lastLogin' | 'metadata'>
+type UserCreationAttributes = Optional<
+  UserAttributes,
+  | "id"
+  | "verificationCode"
+  | "verificationExpires"
+  | "failedAttempts"
+  | "lastLogin"
+  | "metadata"
+>;
 
-class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+class User
+  extends Model<UserAttributes, UserCreationAttributes>
+  implements UserAttributes
+{
   public id!: string;
   public name!: string;
   public email!: string | null;
   public phoneNumber!: string | null;
-  public role!: 'hospital' | 'alphatau' | 'admin';
+  public role!: "hospital" | "alphatau" | "admin";
   public verificationCode!: string | null;
   public verificationExpires!: Date | null;
   public failedAttempts!: number;
@@ -40,31 +51,38 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     // Generate random 6-digit verification code
     // In production, this will be sent via email
     // In development, the code is logged to console
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+
     // Hash the verification code
     const hashedCode = await bcrypt.hash(verificationCode, 10);
-    
+
     // Set expiration (10 minutes from now)
     const expiration = new Date();
     expiration.setMinutes(expiration.getMinutes() + 10);
-    
+
     // Update user record
     this.verificationCode = hashedCode;
     this.verificationExpires = expiration;
     await this.save();
-    
+
     return verificationCode;
   }
 
   public async verifyCode(code: string): Promise<boolean> {
     // Test bypass ONLY works in development mode - NEVER in production
     // This is a security measure to prevent unauthorized access
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       const bypassEmails = process.env.BYPASS_PRIORITY_EMAILS;
       if (bypassEmails && this.email) {
-        const bypassList = bypassEmails.split(',').map(e => e.trim().toLowerCase());
-        if (bypassList.includes(this.email.toLowerCase()) && code === '123456') {
+        const bypassList = bypassEmails
+          .split(",")
+          .map((e) => e.trim().toLowerCase());
+        if (
+          bypassList.includes(this.email.toLowerCase()) &&
+          code === "123456"
+        ) {
           // Clear any pending verification and update login time
           this.verificationCode = null;
           this.verificationExpires = null;
@@ -80,7 +98,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     if (!this.verificationCode || !this.verificationExpires) {
       return false;
     }
-    
+
     if (new Date() > this.verificationExpires) {
       // Clear expired code
       this.verificationCode = null;
@@ -88,10 +106,10 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
       await this.save();
       return false;
     }
-    
+
     // Verify the code
     const isValid = await bcrypt.compare(code, this.verificationCode);
-    
+
     if (isValid) {
       // Clear the code on successful verification
       this.verificationCode = null;
@@ -104,7 +122,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
       this.failedAttempts += 1;
       await this.save();
     }
-    
+
     return isValid;
   }
 }
@@ -134,9 +152,9 @@ User.init(
       unique: true,
     },
     role: {
-      type: DataTypes.ENUM('hospital', 'alphatau', 'admin'),
+      type: DataTypes.ENUM("hospital", "alphatau", "admin"),
       allowNull: false,
-      defaultValue: 'hospital',
+      defaultValue: "hospital",
     },
     verificationCode: {
       type: DataTypes.STRING,
@@ -163,10 +181,10 @@ User.init(
   },
   {
     sequelize,
-    modelName: 'User',
-    tableName: 'users',
+    modelName: "User",
+    tableName: "users",
     timestamps: true,
-  }
+  },
 );
 
 export default User;

@@ -5,9 +5,9 @@
  * Used to ensure accurate timestamps when device clocks may be skewed.
  */
 
-import express from 'express';
-import { getServerTime } from '../controllers/offlineController';
-import { clockSyncLimiter } from '../middleware/offlineRateLimit';
+import express from "express";
+import { getServerTime } from "../controllers/offlineController";
+import { clockSyncLimiter } from "../middleware/offlineRateLimit";
 
 const router = express.Router();
 
@@ -21,6 +21,6 @@ const router = express.Router();
  *   serverTime: number  // Unix timestamp in milliseconds
  * }
  */
-router.get('/', clockSyncLimiter, getServerTime);
+router.get("/", clockSyncLimiter, getServerTime);
 
 export default router;

@@ -1543,10 +1543,8 @@ export const applicatorService = {
       }
 
       // Validation 5: All applicators must be in ready status
-      // LOADED is part of the 8-state workflow (not yet fully implemented)
-      // For now, we accept OPENED or null (backward compatibility)
-      // When 8-state workflow is fully implemented, this should check for 'LOADED' specifically
-      const acceptableStatuses = ["OPENED", null]; // null = status not set (backward compatibility)
+      // Accept OPENED or null (backward compatibility for applicators without status set)
+      const acceptableStatuses = ["OPENED", null];
       const notReadyApplicator = applicators.find(
         (app) => !acceptableStatuses.includes(app.status),
       );

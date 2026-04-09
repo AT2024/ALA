@@ -1,6 +1,6 @@
-import { AuthAuditLog } from '../models';
-import logger from '../utils/logger';
-import { AuthEventType } from '../models/AuthAuditLog';
+import { AuthAuditLog } from "../models";
+import logger from "../utils/logger";
+import { AuthEventType } from "../models/AuthAuditLog";
 
 /**
  * HIPAA 2025 Compliant Authentication Audit Service
@@ -24,9 +24,9 @@ export const authAuditService = {
   maskIdentifier(identifier: string | null | undefined): string | null {
     if (!identifier) return null;
 
-    if (identifier.includes('@')) {
+    if (identifier.includes("@")) {
       // Email: mask middle of local part
-      const [local, domain] = identifier.split('@');
+      const [local, domain] = identifier.split("@");
       if (local.length <= 2) {
         return `${local[0]}***@${domain}`;
       }
@@ -34,7 +34,7 @@ export const authAuditService = {
     }
 
     // Phone: mask middle digits
-    const digits = identifier.replace(/\D/g, '');
+    const digits = identifier.replace(/\D/g, "");
     if (digits.length >= 7) {
       const first3 = digits.slice(0, 3);
       const last4 = digits.slice(-4);
@@ -55,12 +55,12 @@ export const authAuditService = {
     userId: string,
     ipAddress?: string,
     userAgent?: string,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       await AuthAuditLog.create({
         userId,
-        eventType: 'LOGIN_SUCCESS' as AuthEventType,
+        eventType: "LOGIN_SUCCESS" as AuthEventType,
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
         requestId: requestId || null,
@@ -68,7 +68,7 @@ export const authAuditService = {
       logger.info(`[AuthAudit] LOGIN_SUCCESS for user ${userId}`);
     } catch (error) {
       // Never throw - audit must not break auth flow
-      logger.error('[AuthAudit] Failed to log LOGIN_SUCCESS:', error);
+      logger.error("[AuthAudit] Failed to log LOGIN_SUCCESS:", error);
     }
   },
 
@@ -80,20 +80,22 @@ export const authAuditService = {
     reason: string,
     ipAddress?: string,
     userAgent?: string,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       await AuthAuditLog.create({
-        eventType: 'LOGIN_FAILURE' as AuthEventType,
+        eventType: "LOGIN_FAILURE" as AuthEventType,
         identifier: this.maskIdentifier(identifier),
         failureReason: reason,
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
         requestId: requestId || null,
       });
-      logger.warn(`[AuthAudit] LOGIN_FAILURE for ${this.maskIdentifier(identifier)}: ${reason}`);
+      logger.warn(
+        `[AuthAudit] LOGIN_FAILURE for ${this.maskIdentifier(identifier)}: ${reason}`,
+      );
     } catch (error) {
-      logger.error('[AuthAudit] Failed to log LOGIN_FAILURE:', error);
+      logger.error("[AuthAudit] Failed to log LOGIN_FAILURE:", error);
     }
   },
 
@@ -104,38 +106,35 @@ export const authAuditService = {
     userId: string,
     ipAddress?: string,
     userAgent?: string,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       await AuthAuditLog.create({
         userId,
-        eventType: 'LOGOUT' as AuthEventType,
+        eventType: "LOGOUT" as AuthEventType,
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
         requestId: requestId || null,
       });
       logger.info(`[AuthAudit] LOGOUT for user ${userId}`);
     } catch (error) {
-      logger.error('[AuthAudit] Failed to log LOGOUT:', error);
+      logger.error("[AuthAudit] Failed to log LOGOUT:", error);
     }
   },
 
   /**
    * Log session timeout (automatic logout due to inactivity)
    */
-  async logSessionTimeout(
-    userId: string,
-    requestId?: string
-  ): Promise<void> {
+  async logSessionTimeout(userId: string, requestId?: string): Promise<void> {
     try {
       await AuthAuditLog.create({
         userId,
-        eventType: 'SESSION_TIMEOUT' as AuthEventType,
+        eventType: "SESSION_TIMEOUT" as AuthEventType,
         requestId: requestId || null,
       });
       logger.info(`[AuthAudit] SESSION_TIMEOUT for user ${userId}`);
     } catch (error) {
-      logger.error('[AuthAudit] Failed to log SESSION_TIMEOUT:', error);
+      logger.error("[AuthAudit] Failed to log SESSION_TIMEOUT:", error);
     }
   },
 
@@ -146,19 +145,21 @@ export const authAuditService = {
     identifier: string,
     ipAddress?: string,
     userAgent?: string,
-    requestId?: string
+    requestId?: string,
   ): Promise<void> {
     try {
       await AuthAuditLog.create({
-        eventType: 'OTP_REQUEST' as AuthEventType,
+        eventType: "OTP_REQUEST" as AuthEventType,
         identifier: this.maskIdentifier(identifier),
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
         requestId: requestId || null,
       });
-      logger.info(`[AuthAudit] OTP_REQUEST for ${this.maskIdentifier(identifier)}`);
+      logger.info(
+        `[AuthAudit] OTP_REQUEST for ${this.maskIdentifier(identifier)}`,
+      );
     } catch (error) {
-      logger.error('[AuthAudit] Failed to log OTP_REQUEST:', error);
+      logger.error("[AuthAudit] Failed to log OTP_REQUEST:", error);
     }
   },
 };

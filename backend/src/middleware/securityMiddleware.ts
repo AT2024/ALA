@@ -1,16 +1,24 @@
-import rateLimit from 'express-rate-limit';
-import { Request, Response, NextFunction } from 'express';
-import helmet from 'helmet';
-import { getHttpsConfig, getCorsOrigins, shouldEnforceHttps } from '../config/https';
+import rateLimit from "express-rate-limit";
+import { Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import {
+  getHttpsConfig,
+  getCorsOrigins,
+  shouldEnforceHttps,
+} from "../config/https";
+import logger from "../utils/logger";
 
 // Rate limiting middleware
-export const createRateLimiter = (windowMs: number = 15 * 60 * 1000, max = 100) => {
+export const createRateLimiter = (
+  windowMs: number = 15 * 60 * 1000,
+  max = 100,
+) => {
   return rateLimit({
     windowMs, // 15 minutes default
     max, // limit each IP to max requests per windowMs
     message: {
-      error: 'Too many requests from this IP, please try again later.',
-      retryAfter: Math.ceil(windowMs / 1000)
+      error: "Too many requests from this IP, please try again later.",
+      retryAfter: Math.ceil(windowMs / 1000),
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -26,20 +34,28 @@ export const apiRateLimit = createRateLimiter(15 * 60 * 1000, 100); // 100 reque
 export const strictRateLimit = createRateLimiter(60 * 1000, 10); // 10 requests per minute
 
 // HTTPS redirect middleware
-export const httpsRedirect = (req: Request, res: Response, next: NextFunction) => {
+export const httpsRedirect = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   // Skip redirect for OPTIONS requests (CORS preflight)
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return next();
   }
 
   // Skip redirect for health check endpoints
-  if (req.path === '/api/health') {
+  if (req.path === "/api/health") {
     return next();
   }
 
   // Only redirect when HTTPS enforcement is enabled
-  if (shouldEnforceHttps() && !req.secure && req.get('x-forwarded-proto') !== 'https') {
-    return res.redirect(301, `https://${req.get('host')}${req.url}`);
+  if (
+    shouldEnforceHttps() &&
+    !req.secure &&
+    req.get("x-forwarded-proto") !== "https"
+  ) {
+    return res.redirect(301, `https://${req.get("host")}${req.url}`);
   }
   next();
 };
@@ -53,43 +69,59 @@ export const securityHeaders = helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", process.env.VITE_API_URL || "'self'", "https://*.priority-connect.online"],
+      connectSrc: [
+        "'self'",
+        process.env.VITE_API_URL || "'self'",
+        "https://*.priority-connect.online",
+      ],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: shouldEnforceHttps() ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for QR code scanner compatibility
-  hsts: shouldEnforceHttps() ? {
-    maxAge: getHttpsConfig().hstsMaxAge,
-    includeSubDomains: true,
-    preload: true
-  } : false
+  hsts: shouldEnforceHttps()
+    ? {
+        maxAge: getHttpsConfig().hstsMaxAge,
+        includeSubDomains: true,
+        preload: true,
+      }
+    : false,
 });
 
 // CORS configuration
 export const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
     const allowedOrigins = getCorsOrigins();
 
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      process.env.NODE_ENV === "development"
+    ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'), false);
+      callback(new Error("Not allowed by CORS"), false);
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 // Request logging middleware
-export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
+export const requestLogger = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const start = Date.now();
-  
-  res.on('finish', () => {
+
+  res.on("finish", () => {
     const duration = Date.now() - start;
     const logData = {
       method: req.method,
@@ -97,17 +129,17 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
       status: res.statusCode,
       duration: `${duration}ms`,
       ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      timestamp: new Date().toISOString()
+      userAgent: req.get("User-Agent"),
+      timestamp: new Date().toISOString(),
     };
-    
+
     // Don't log sensitive routes in production
-    if (req.url.includes('/auth/') && process.env.NODE_ENV === 'production') {
-      logData.url = req.url.replace(/\/auth\/.*/, '/auth/[REDACTED]');
+    if (req.url.includes("/auth/") && process.env.NODE_ENV === "production") {
+      logData.url = req.url.replace(/\/auth\/.*/, "/auth/[REDACTED]");
     }
-    
-    console.log(JSON.stringify(logData));
+
+    logger.info("Request log", logData);
   });
-  
+
   next();
 };

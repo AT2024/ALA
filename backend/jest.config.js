@@ -1,33 +1,33 @@
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  preset: "ts-jest",
+  testEnvironment: "node",
   // Centralized test location - IEC 62304 compliant structure
-  roots: ['<rootDir>/tests'],
+  roots: ["<rootDir>/tests"],
   testMatch: [
-    '**/unit/**/*.test.ts',
-    '**/integration/**/*.test.ts',
-    '**/medical/**/*.test.ts',
+    "**/unit/**/*.test.ts",
+    "**/integration/**/*.test.ts",
+    "**/medical/**/*.test.ts",
   ],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-  ],
+  testPathIgnorePatterns: ["/node_modules/", "/dist/"],
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
-      isolatedModules: true,
-    }],
+    "^.+\\.ts$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.json",
+        isolatedModules: true,
+      },
+    ],
   },
   collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/server.ts',
-    '!src/dbInit.ts',
-    '!src/**/index.ts',
-    '!src/services/pdfGenerationService.ts',
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/server.ts",
+    "!src/dbInit.ts",
+    "!src/**/index.ts",
+    "!src/services/pdfGenerationService.ts",
   ],
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html', 'clover', 'json-summary'],
+  coverageDirectory: "coverage",
+  coverageReporters: ["text", "lcov", "html", "clover", "json-summary"],
   // IEC 62304 Class B minimum thresholds
   // TODO: Raise thresholds to 50%+ once coverage is improved
   // Current coverage: ~34% (2026-01-11)
@@ -39,13 +39,13 @@ module.exports = {
       statements: 30,
     },
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ["<rootDir>/tests/setup.ts"],
   testTimeout: 30000,
   verbose: true,
   clearMocks: true,
   restoreMocks: true,
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@tests/(.*)$': '<rootDir>/tests/$1'
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@tests/(.*)$": "<rootDir>/tests/$1",
   },
 };

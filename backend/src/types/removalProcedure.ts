@@ -40,12 +40,16 @@ export interface RemovalProcedureData {
 // Validation helper
 export function validateDiscrepancySum(
   clarification: DiscrepancyClarification,
-  expectedTotal: number
+  expectedTotal: number,
 ): { valid: boolean; actual: number } {
   const actual =
     (clarification.lost.checked ? clarification.lost.amount : 0) +
-    (clarification.retrievedToSite.checked ? clarification.retrievedToSite.amount : 0) +
-    (clarification.removalFailure.checked ? clarification.removalFailure.amount : 0) +
+    (clarification.retrievedToSite.checked
+      ? clarification.retrievedToSite.amount
+      : 0) +
+    (clarification.removalFailure.checked
+      ? clarification.removalFailure.amount
+      : 0) +
     (clarification.other.checked ? clarification.other.amount : 0);
 
   return { valid: actual === expectedTotal, actual };

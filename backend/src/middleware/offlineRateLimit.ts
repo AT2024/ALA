@@ -5,8 +5,8 @@
  * These are more restrictive than general API limits to prevent abuse.
  */
 
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-import { Request } from 'express';
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { Request } from "express";
 
 // Type for request with user info
 interface AuthenticatedRequest extends Request {
@@ -26,10 +26,11 @@ export const downloadBundleLimiter = rateLimit({
   max: 10, // 10 bundles per hour
   keyGenerator: (req: AuthenticatedRequest) => {
     // Use user ID if authenticated, otherwise fall back to IP
-    return req.user?.id || ipKeyGenerator(req.ip || 'unknown');
+    return req.user?.id || ipKeyGenerator(req.ip || "unknown");
   },
   message: {
-    error: 'Too many download requests. You can download up to 10 treatment bundles per hour.',
+    error:
+      "Too many download requests. You can download up to 10 treatment bundles per hour.",
     retryAfter: 3600,
   },
   standardHeaders: true,
@@ -48,10 +49,10 @@ export const syncLimiter = rateLimit({
     // Use device ID from body if available, then user ID, then IP
     const deviceId = req.body?.deviceId;
     const userId = req.user?.id;
-    return deviceId || userId || ipKeyGenerator(req.ip || 'unknown');
+    return deviceId || userId || ipKeyGenerator(req.ip || "unknown");
   },
   message: {
-    error: 'Too many sync requests. Please wait before syncing again.',
+    error: "Too many sync requests. Please wait before syncing again.",
     retryAfter: 60,
   },
   standardHeaders: true,
@@ -67,10 +68,10 @@ export const conflictResolutionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 30,
   keyGenerator: (req: AuthenticatedRequest) => {
-    return req.user?.id || ipKeyGenerator(req.ip || 'unknown');
+    return req.user?.id || ipKeyGenerator(req.ip || "unknown");
   },
   message: {
-    error: 'Too many conflict resolution requests. Please try again later.',
+    error: "Too many conflict resolution requests. Please try again later.",
     retryAfter: 900,
   },
   standardHeaders: true,
@@ -86,7 +87,7 @@ export const clockSyncLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 60, // 1 per second average
   message: {
-    error: 'Too many time sync requests.',
+    error: "Too many time sync requests.",
     retryAfter: 60,
   },
   standardHeaders: true,

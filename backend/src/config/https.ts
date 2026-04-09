@@ -22,16 +22,16 @@ export interface HttpsConfig {
  */
 export const getHttpsConfig = (): HttpsConfig => {
   return {
-    useHttps: process.env.USE_HTTPS === 'true',
-    domain: process.env.DOMAIN || 'localhost',
-    protocol: process.env.USE_HTTPS === 'true' ? 'https' : 'http',
-    apiPort: parseInt(process.env.API_PORT || '5000', 10),
-    frontendPort: parseInt(process.env.FRONTEND_PORT || '3000', 10),
+    useHttps: process.env.USE_HTTPS === "true",
+    domain: process.env.DOMAIN || "localhost",
+    protocol: process.env.USE_HTTPS === "true" ? "https" : "http",
+    apiPort: parseInt(process.env.API_PORT || "5000", 10),
+    frontendPort: parseInt(process.env.FRONTEND_PORT || "3000", 10),
     sslCertPath: process.env.SSL_CERT_PATH,
     sslKeyPath: process.env.SSL_KEY_PATH,
-    hstsEnabled: process.env.HSTS_ENABLED === 'true',
-    hstsMaxAge: parseInt(process.env.HSTS_MAX_AGE || '31536000', 10),
-    devFrontendUrl: process.env.DEV_FRONTEND_URL || 'http://localhost:3000'
+    hstsEnabled: process.env.HSTS_ENABLED === "true",
+    hstsMaxAge: parseInt(process.env.HSTS_MAX_AGE || "31536000", 10),
+    devFrontendUrl: process.env.DEV_FRONTEND_URL || "http://localhost:3000",
   };
 };
 
@@ -63,10 +63,12 @@ export const getCorsOrigins = (): string[] => {
 
   // Add CORS_ORIGIN from environment if specified
   if (process.env.CORS_ORIGIN) {
-    baseOrigins.push(...process.env.CORS_ORIGIN.split(','));
+    baseOrigins.push(...process.env.CORS_ORIGIN.split(","));
   }
 
-  return baseOrigins.filter((origin, index, arr) => arr.indexOf(origin) === index); // Remove duplicates
+  return baseOrigins.filter(
+    (origin, index, arr) => arr.indexOf(origin) === index,
+  ); // Remove duplicates
 };
 
 /**
@@ -74,7 +76,7 @@ export const getCorsOrigins = (): string[] => {
  */
 export const shouldEnforceHttps = (): boolean => {
   const config = getHttpsConfig();
-  return process.env.NODE_ENV === 'production' && config.useHttps;
+  return process.env.NODE_ENV === "production" && config.useHttps;
 };
 
 export default {
@@ -82,5 +84,5 @@ export default {
   getApiUrl,
   getFrontendUrl,
   getCorsOrigins,
-  shouldEnforceHttps
+  shouldEnforceHttps,
 };

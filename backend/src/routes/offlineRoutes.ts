@@ -8,21 +8,24 @@
  * - /api/offline/conflicts/:id/resolve - Resolve a conflict
  */
 
-import express from 'express';
+import express from "express";
 import {
   downloadBundle,
   syncChanges,
   getConflicts,
   resolveConflict,
-} from '../controllers/offlineController';
-import { protect } from '../middleware/authMiddleware';
+} from "../controllers/offlineController";
+import { protect } from "../middleware/authMiddleware";
 import {
   downloadBundleLimiter,
   syncLimiter,
   conflictResolutionLimiter,
-} from '../middleware/offlineRateLimit';
-import { validateUUID } from '../middleware/uuidValidationMiddleware';
-import { criticalOperationHealthCheck, databaseHealthCheck } from '../middleware/databaseHealthMiddleware';
+} from "../middleware/offlineRateLimit";
+import { validateUUID } from "../middleware/uuidValidationMiddleware";
+import {
+  criticalOperationHealthCheck,
+  databaseHealthCheck,
+} from "../middleware/databaseHealthMiddleware";
 
 const router = express.Router();
 
@@ -34,43 +37,34 @@ router.use(protect);
  * Download a treatment bundle for offline use
  */
 router.post(
-  '/download-bundle',
+  "/download-bundle",
   downloadBundleLimiter,
   criticalOperationHealthCheck,
-  downloadBundle
+  downloadBundle,
 );
 
 /**
  * POST /api/offline/sync
  * Sync offline changes back to server
  */
-router.post(
-  '/sync',
-  syncLimiter,
-  criticalOperationHealthCheck,
-  syncChanges
-);
+router.post("/sync", syncLimiter, criticalOperationHealthCheck, syncChanges);
 
 /**
  * GET /api/offline/conflicts
  * Get all unresolved conflicts for current user
  */
-router.get(
-  '/conflicts',
-  databaseHealthCheck,
-  getConflicts
-);
+router.get("/conflicts", databaseHealthCheck, getConflicts);
 
 /**
  * POST /api/offline/conflicts/:id/resolve
  * Resolve a sync conflict
  */
 router.post(
-  '/conflicts/:id/resolve',
-  validateUUID('id'),
+  "/conflicts/:id/resolve",
+  validateUUID("id"),
   conflictResolutionLimiter,
   criticalOperationHealthCheck,
-  resolveConflict
+  resolveConflict,
 );
 
 export default router;

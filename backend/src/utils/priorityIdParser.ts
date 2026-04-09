@@ -26,10 +26,12 @@ export function parseOrderIds(priorityId: string | null | undefined): string[] {
   try {
     const parsed = JSON.parse(priorityId);
     if (Array.isArray(parsed)) {
-      return parsed.filter((id): id is string => typeof id === 'string' && id.length > 0);
+      return parsed.filter(
+        (id): id is string => typeof id === "string" && id.length > 0,
+      );
     }
     // Handle case where JSON.parse returns a non-array (e.g., a number)
-    if (typeof parsed === 'string') {
+    if (typeof parsed === "string") {
       return [parsed];
     }
     return [priorityId];
@@ -51,7 +53,9 @@ export function parseOrderIds(priorityId: string | null | undefined): string[] {
  * getFirstOrderId('["SO25000001", "SO25000002"]') // "SO25000001"
  * getFirstOrderId(null) // null
  */
-export function getFirstOrderId(priorityId: string | null | undefined): string | null {
+export function getFirstOrderId(
+  priorityId: string | null | undefined,
+): string | null {
   const ids = parseOrderIds(priorityId);
   return ids[0] || null;
 }
@@ -62,6 +66,8 @@ export function getFirstOrderId(priorityId: string | null | undefined): string |
  * @param priorityId - The priority ID string
  * @returns true if the ID represents multiple orders
  */
-export function isCombinedTreatment(priorityId: string | null | undefined): boolean {
+export function isCombinedTreatment(
+  priorityId: string | null | undefined,
+): boolean {
   return parseOrderIds(priorityId).length > 1;
 }

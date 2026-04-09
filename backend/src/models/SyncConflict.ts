@@ -1,10 +1,18 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/database";
 
 // Resolution types for sync conflicts
-export type ConflictResolution = 'local_wins' | 'server_wins' | 'merged' | 'admin_override';
-export type ConflictType = 'version_mismatch' | 'status_conflict' | 'data_conflict' | 'concurrent_edit';
-export type ConflictEntityType = 'treatment' | 'applicator';
+export type ConflictResolution =
+  | "local_wins"
+  | "server_wins"
+  | "merged"
+  | "admin_override";
+export type ConflictType =
+  | "version_mismatch"
+  | "status_conflict"
+  | "data_conflict"
+  | "concurrent_edit";
+export type ConflictEntityType = "treatment" | "applicator";
 
 // SyncConflict attributes interface
 interface SyncConflictAttributes {
@@ -24,9 +32,20 @@ interface SyncConflictAttributes {
 }
 
 // For creating a new sync conflict
-type SyncConflictCreationAttributes = Optional<SyncConflictAttributes, 'id' | 'createdAt' | 'resolvedAt' | 'resolvedBy' | 'resolution' | 'overwrittenData'>;
+type SyncConflictCreationAttributes = Optional<
+  SyncConflictAttributes,
+  | "id"
+  | "createdAt"
+  | "resolvedAt"
+  | "resolvedBy"
+  | "resolution"
+  | "overwrittenData"
+>;
 
-class SyncConflict extends Model<SyncConflictAttributes, SyncConflictCreationAttributes> implements SyncConflictAttributes {
+class SyncConflict
+  extends Model<SyncConflictAttributes, SyncConflictCreationAttributes>
+  implements SyncConflictAttributes
+{
   public id!: string;
   public entityType!: ConflictEntityType;
   public entityId!: string;
@@ -48,17 +67,24 @@ class SyncConflict extends Model<SyncConflictAttributes, SyncConflictCreationAtt
    * Medical status conflicts ALWAYS require admin
    */
   public requiresAdminResolution(): boolean {
-    const ADMIN_REQUIRED_STATUSES = ['INSERTED', 'FAULTY', 'DISPOSED', 'DEPLOYMENT_FAILURE'];
+    const ADMIN_REQUIRED_STATUSES = [
+      "INSERTED",
+      "FAULTY",
+      "DISPOSED",
+      "DEPLOYMENT_FAILURE",
+    ];
 
-    if (this.entityType === 'applicator') {
+    if (this.entityType === "applicator") {
       const localStatus = this.localData?.status as string;
       const serverStatus = this.serverData?.status as string;
-      return ADMIN_REQUIRED_STATUSES.includes(localStatus) ||
-             ADMIN_REQUIRED_STATUSES.includes(serverStatus);
+      return (
+        ADMIN_REQUIRED_STATUSES.includes(localStatus) ||
+        ADMIN_REQUIRED_STATUSES.includes(serverStatus)
+      );
     }
 
     // Treatment conflicts always require admin
-    if (this.entityType === 'treatment') {
+    if (this.entityType === "treatment") {
       return true;
     }
 
@@ -83,59 +109,59 @@ SyncConflict.init(
     entityType: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      field: 'entity_type',
+      field: "entity_type",
     },
     entityId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'entity_id',
+      field: "entity_id",
     },
     localData: {
       type: DataTypes.JSONB,
       allowNull: false,
-      field: 'local_data',
+      field: "local_data",
     },
     serverData: {
       type: DataTypes.JSONB,
       allowNull: false,
-      field: 'server_data',
+      field: "server_data",
     },
     conflictType: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      field: 'conflict_type',
+      field: "conflict_type",
     },
     deviceId: {
       type: DataTypes.STRING(64),
       allowNull: false,
-      field: 'device_id',
+      field: "device_id",
     },
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'user_id',
+      field: "user_id",
       references: {
-        model: 'users',
-        key: 'id',
+        model: "users",
+        key: "id",
       },
     },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
-      field: 'created_at',
+      field: "created_at",
     },
     resolvedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      field: 'resolved_at',
+      field: "resolved_at",
     },
     resolvedBy: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'resolved_by',
+      field: "resolved_by",
       references: {
-        model: 'users',
-        key: 'id',
+        model: "users",
+        key: "id",
       },
     },
     resolution: {
@@ -145,32 +171,32 @@ SyncConflict.init(
     overwrittenData: {
       type: DataTypes.JSONB,
       allowNull: true,
-      field: 'overwritten_data',
+      field: "overwritten_data",
     },
   },
   {
     sequelize,
-    modelName: 'SyncConflict',
-    tableName: 'sync_conflicts',
+    modelName: "SyncConflict",
+    tableName: "sync_conflicts",
     timestamps: false, // We manage createdAt manually
     indexes: [
       {
-        fields: ['entity_type', 'entity_id'],
+        fields: ["entity_type", "entity_id"],
       },
       {
-        fields: ['user_id'],
+        fields: ["user_id"],
       },
       {
-        fields: ['created_at'],
+        fields: ["created_at"],
       },
       {
-        fields: ['resolved_at'],
+        fields: ["resolved_at"],
         where: {
           resolved_at: null,
         },
       },
     ],
-  }
+  },
 );
 
 export default SyncConflict;

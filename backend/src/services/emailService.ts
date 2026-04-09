@@ -1,16 +1,20 @@
-import { EmailClient, EmailMessage, KnownEmailSendStatus } from '@azure/communication-email';
-import logger from '../utils/logger';
-import { config } from '../config/appConfig';
+import {
+  EmailClient,
+  EmailMessage,
+  KnownEmailSendStatus,
+} from "@azure/communication-email";
+import logger from "../utils/logger";
+import { config } from "../config/appConfig";
 
 // Configuration (from centralized appConfig - single source of truth)
 const AZURE_CONNECTION_STRING = config.emailConnectionString;
 const SENDER_ADDRESS = config.emailSenderAddress;
 const PDF_RECIPIENT_EMAIL = config.pdfRecipientEmail;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = process.env.NODE_ENV || "development";
 
 // In development, skip actual email sending unless explicitly configured
-const IS_PRODUCTION = NODE_ENV === 'production';
-const FORCE_EMAIL_IN_DEV = process.env.FORCE_EMAIL_IN_DEV === 'true';
+const IS_PRODUCTION = NODE_ENV === "production";
+const FORCE_EMAIL_IN_DEV = process.env.FORCE_EMAIL_IN_DEV === "true";
 const SHOULD_SEND_EMAILS = IS_PRODUCTION || FORCE_EMAIL_IN_DEV;
 
 // Retry configuration (from centralized appConfig)
@@ -26,7 +30,9 @@ let emailClient: EmailClient | null = null;
 function getEmailClient(): EmailClient {
   if (!emailClient) {
     if (!AZURE_CONNECTION_STRING) {
-      throw new Error('AZURE_COMMUNICATION_CONNECTION_STRING is not configured');
+      throw new Error(
+        "AZURE_COMMUNICATION_CONNECTION_STRING is not configured",
+      );
     }
     emailClient = new EmailClient(AZURE_CONNECTION_STRING);
   }
@@ -37,40 +43,47 @@ function getEmailClient(): EmailClient {
  * Sleep helper for retry delays
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Send email with retry logic
  */
-async function sendEmailWithRetry(message: EmailMessage, maxRetries: number = MAX_RETRIES): Promise<boolean> {
+async function sendEmailWithRetry(
+  message: EmailMessage,
+  maxRetries: number = MAX_RETRIES,
+): Promise<boolean> {
   const client = getEmailClient();
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      logger.info(`Email send attempt ${attempt}/${maxRetries} to ${message.recipients.to?.[0]?.address}`);
+      logger.info(
+        `Email send attempt ${attempt}/${maxRetries} to ${message.recipients.to?.[0]?.address}`,
+      );
 
       const poller = await client.beginSend(message);
       const result = await poller.pollUntilDone();
 
       if (result.status === KnownEmailSendStatus.Succeeded) {
-        logger.info(`Email sent successfully to ${message.recipients.to?.[0]?.address}`, {
-          messageId: result.id,
-          attempt
-        });
+        logger.info(
+          `Email sent successfully to ${message.recipients.to?.[0]?.address}`,
+          {
+            messageId: result.id,
+            attempt,
+          },
+        );
         return true;
       }
 
       logger.warn(`Email send returned status: ${result.status}`, {
         attempt,
-        error: result.error
+        error: result.error,
       });
-
     } catch (error: any) {
       logger.warn(`Email send attempt ${attempt} failed`, {
         error: error.message,
         attempt,
-        maxRetries
+        maxRetries,
       });
 
       if (attempt < maxRetries) {
@@ -88,26 +101,31 @@ async function sendEmailWithRetry(message: EmailMessage, maxRetries: number = MA
  * @param email - Recipient email address
  * @param code - 6-digit verification code
  */
-export async function sendVerificationCode(email: string, code: string): Promise<boolean> {
+export async function sendVerificationCode(
+  email: string,
+  code: string,
+): Promise<boolean> {
   // In development mode, just log the code instead of sending email
   if (!SHOULD_SEND_EMAILS) {
     logger.info(`[DEV MODE] Verification code for ${email}: ${code}`);
-    logger.info(`[DEV MODE] To enable actual email sending, set FORCE_EMAIL_IN_DEV=true`);
+    logger.info(
+      `[DEV MODE] To enable actual email sending, set FORCE_EMAIL_IN_DEV=true`,
+    );
     return true;
   }
 
   if (!SENDER_ADDRESS) {
-    logger.error('AZURE_EMAIL_SENDER_ADDRESS is not configured');
-    throw new Error('Email sender address is not configured');
+    logger.error("AZURE_EMAIL_SENDER_ADDRESS is not configured");
+    throw new Error("Email sender address is not configured");
   }
 
   const message: EmailMessage = {
     senderAddress: SENDER_ADDRESS,
     recipients: {
-      to: [{ address: email }]
+      to: [{ address: email }],
     },
     content: {
-      subject: 'ALA Medical - Verification Code',
+      subject: "ALA Medical - Verification Code",
       plainText: `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this code, please ignore this email.`,
       html: `
         <html>
@@ -121,8 +139,8 @@ export async function sendVerificationCode(email: string, code: string): Promise
             <p style="color: #999; font-size: 12px;">If you did not request this code, please ignore this email.</p>
           </body>
         </html>
-      `
-    }
+      `,
+    },
   };
 
   logger.info(`Sending verification code to ${email}`);
@@ -133,7 +151,7 @@ export async function sendVerificationCode(email: string, code: string): Promise
  * Signature details for PDF email
  */
 export interface SignatureDetails {
-  type: 'hospital_auto' | 'alphatau_verified';
+  type: "hospital_auto" | "alphatau_verified";
   signerName: string;
   signerEmail: string;
   signerPosition: string;
@@ -151,40 +169,47 @@ export async function sendSignedPdf(
   toEmail: string | null,
   pdfBuffer: Buffer,
   treatmentId: string,
-  signatureDetails: SignatureDetails
+  signatureDetails: SignatureDetails,
 ): Promise<boolean> {
   const recipientEmail = toEmail || PDF_RECIPIENT_EMAIL;
 
   // In development mode, log the PDF info instead of sending email
   if (!SHOULD_SEND_EMAILS) {
-    logger.info(`[DEV MODE] Would send PDF for treatment ${treatmentId} to ${recipientEmail}`);
+    logger.info(
+      `[DEV MODE] Would send PDF for treatment ${treatmentId} to ${recipientEmail}`,
+    );
     logger.info(`[DEV MODE] PDF size: ${pdfBuffer.length} bytes`);
-    logger.info(`[DEV MODE] Signature: ${signatureDetails.signerName} (${signatureDetails.signerPosition})`);
-    logger.info(`[DEV MODE] To enable actual email sending, set FORCE_EMAIL_IN_DEV=true`);
+    logger.info(
+      `[DEV MODE] Signature: ${signatureDetails.signerName} (${signatureDetails.signerPosition})`,
+    );
+    logger.info(
+      `[DEV MODE] To enable actual email sending, set FORCE_EMAIL_IN_DEV=true`,
+    );
     return true;
   }
 
   if (!SENDER_ADDRESS) {
-    logger.error('AZURE_EMAIL_SENDER_ADDRESS is not configured');
-    throw new Error('Email sender address is not configured');
+    logger.error("AZURE_EMAIL_SENDER_ADDRESS is not configured");
+    throw new Error("Email sender address is not configured");
   }
-  const signatureTypeText = signatureDetails.type === 'hospital_auto'
-    ? 'Hospital User (Auto-signed)'
-    : 'Alpha Tau Verified';
+  const signatureTypeText =
+    signatureDetails.type === "hospital_auto"
+      ? "Hospital User (Auto-signed)"
+      : "Alpha Tau Verified";
 
-  const formattedDate = signatureDetails.signedAt.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+  const formattedDate = signatureDetails.signedAt.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 
   const message: EmailMessage = {
     senderAddress: SENDER_ADDRESS,
     recipients: {
-      to: [{ address: recipientEmail }]
+      to: [{ address: recipientEmail }],
     },
     content: {
       subject: `ALA Medical - Treatment Report ${treatmentId}`,
@@ -243,23 +268,26 @@ This is an automated message from the ALA Medical Treatment Tracking System.
             </p>
           </body>
         </html>
-      `
+      `,
     },
     attachments: [
       {
         name: `Treatment_Report_${treatmentId}.pdf`,
-        contentType: 'application/pdf',
-        contentInBase64: pdfBuffer.toString('base64')
-      }
-    ]
+        contentType: "application/pdf",
+        contentInBase64: pdfBuffer.toString("base64"),
+      },
+    ],
   };
 
-  logger.info(`Sending signed PDF for treatment ${treatmentId} to ${recipientEmail}`, {
-    treatmentId,
-    signatureType: signatureDetails.type,
-    signerName: signatureDetails.signerName,
-    signerPosition: signatureDetails.signerPosition
-  });
+  logger.info(
+    `Sending signed PDF for treatment ${treatmentId} to ${recipientEmail}`,
+    {
+      treatmentId,
+      signatureType: signatureDetails.type,
+      signerName: signatureDetails.signerName,
+      signerPosition: signatureDetails.signerPosition,
+    },
+  );
 
   return sendEmailWithRetry(message);
 }
@@ -282,5 +310,5 @@ export default {
   sendVerificationCode,
   sendSignedPdf,
   isEmailConfigured,
-  getPdfRecipientEmail
+  getPdfRecipientEmail,
 };

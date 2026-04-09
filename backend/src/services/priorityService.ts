@@ -1917,7 +1917,9 @@ export const priorityService = {
       });
 
       if (response.data.value.length === 0) {
-        // Return default values for testing
+        logger.warn(
+          `No part details found for ${partName}, using default seedQuantity=25`,
+        );
         return {
           partDes: partName,
           seedQuantity: 25,
@@ -1933,7 +1935,9 @@ export const priorityService = {
     } catch (error: any) {
       logger.error(`Error fetching part details: ${error}`);
 
-      // Return default values for testing
+      logger.warn(
+        `Part details fetch failed for ${partName}, using default seedQuantity=25`,
+      );
       return {
         partDes: partName,
         seedQuantity: 25,

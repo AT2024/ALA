@@ -1,7 +1,7 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import logger from '../utils/logger';
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import logger from "../utils/logger";
 
 /**
  * Multer configuration for file uploads
@@ -9,7 +9,7 @@ import logger from '../utils/logger';
  */
 
 // Ensure temp directory exists
-const tempDir = path.resolve(process.cwd(), 'uploads', 'temp');
+const tempDir = path.resolve(process.cwd(), "uploads", "temp");
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
   logger.info(`Created temp directory: ${tempDir}`);
@@ -22,39 +22,47 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     const basename = path.basename(file.originalname, ext);
     const filename = `${basename}-${uniqueSuffix}${ext}`;
     cb(null, filename);
-  }
+  },
 });
 
 // File filter for allowed types
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (
+  req: any,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
   // Allowed MIME types for images and videos
   const allowedMimes = [
     // Images
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
     // Videos
-    'video/mp4',
-    'video/mpeg',
-    'video/quicktime',
-    'video/x-msvideo', // AVI
-    'video/x-ms-wmv',  // WMV
+    "video/mp4",
+    "video/mpeg",
+    "video/quicktime",
+    "video/x-msvideo", // AVI
+    "video/x-ms-wmv", // WMV
     // Documents
-    'application/pdf'
+    "application/pdf",
   ];
 
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     logger.warn(`Rejected file upload: invalid MIME type ${file.mimetype}`);
-    cb(new Error(`Invalid file type: ${file.mimetype}. Only images, videos, and PDFs are allowed.`));
+    cb(
+      new Error(
+        `Invalid file type: ${file.mimetype}. Only images, videos, and PDFs are allowed.`,
+      ),
+    );
   }
 };
 
@@ -76,8 +84,8 @@ export const uploadMiddleware = multer({
   fileFilter,
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB max per file
-    files: 10 // Max 10 files per request
-  }
+    files: 10, // Max 10 files per request
+  },
 });
 
 /**
@@ -87,7 +95,7 @@ export const uploadMiddleware = multer({
  * @param files - Array of uploaded files from req.files
  */
 export function cleanupTempFiles(files: Express.Multer.File[]): void {
-  files.forEach(file => {
+  files.forEach((file) => {
     try {
       if (fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
@@ -106,10 +114,12 @@ export function cleanupTempFiles(files: Express.Multer.File[]): void {
  * @param olderThanHours - Delete files older than this many hours (default: 24)
  * @returns Number of files deleted
  */
-export async function cleanupOldTempFiles(olderThanHours = 24): Promise<number> {
+export async function cleanupOldTempFiles(
+  olderThanHours = 24,
+): Promise<number> {
   try {
     const files = fs.readdirSync(tempDir);
-    const cutoffTime = Date.now() - (olderThanHours * 60 * 60 * 1000);
+    const cutoffTime = Date.now() - olderThanHours * 60 * 60 * 1000;
     let deletedCount = 0;
 
     for (const file of files) {

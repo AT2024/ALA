@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { User } from '../models';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { User } from "../models";
 
 // Extend Express Request type
 declare global {
@@ -15,28 +15,35 @@ declare global {
 function getJwtSecret(): string {
   const JWT_SECRET = process.env.JWT_SECRET;
   if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required but not set');
+    throw new Error("JWT_SECRET environment variable is required but not set");
   }
   return JWT_SECRET;
 }
 
 // Middleware to protect routes
 // Checks for auth token in HttpOnly cookie first (more secure), then Authorization header (for API clients)
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+export const protect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   let token: string | undefined;
 
   // Priority 1: Check for HttpOnly cookie (most secure - OWASP recommended)
-  if (req.cookies?.['auth-token']) {
-    token = req.cookies['auth-token'];
+  if (req.cookies?.["auth-token"]) {
+    token = req.cookies["auth-token"];
   }
   // Priority 2: Fallback to Authorization header for API clients and backwards compatibility
-  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+  else if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
   }
 
   if (!token) {
     res.status(401);
-    return next(new Error('Not authorized, no token'));
+    return next(new Error("Not authorized, no token"));
   }
 
   try {
@@ -45,12 +52,12 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     // Get user from the token
     const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['verificationCode', 'verificationExpires'] },
+      attributes: { exclude: ["verificationCode", "verificationExpires"] },
     });
 
     if (!user) {
       res.status(401);
-      return next(new Error('Not authorized, user not found'));
+      return next(new Error("Not authorized, user not found"));
     }
 
     // Set user to req.user
@@ -58,7 +65,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     next();
   } catch (error) {
     res.status(401);
-    return next(new Error('Not authorized, invalid token'));
+    return next(new Error("Not authorized, invalid token"));
   }
 };
 
@@ -67,12 +74,12 @@ export const restrict = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       res.status(401);
-      return next(new Error('Not authorized'));
+      return next(new Error("Not authorized"));
     }
 
     if (!roles.includes(req.user.role)) {
       res.status(403);
-      return next(new Error('Not authorized for this role'));
+      return next(new Error("Not authorized for this role"));
     }
 
     next();

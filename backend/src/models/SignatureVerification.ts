@@ -1,6 +1,6 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
-import bcrypt from 'bcryptjs';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/database";
+import bcrypt from "bcryptjs";
 
 // SignatureVerification attributes interface
 interface SignatureVerificationAttributes {
@@ -10,22 +10,31 @@ interface SignatureVerificationAttributes {
   verificationCode: string;
   verificationExpires: Date;
   failedAttempts: number;
-  status: 'pending' | 'verified' | 'expired' | 'failed';
+  status: "pending" | "verified" | "expired" | "failed";
   signerName: string | null;
   signerPosition: string | null;
 }
 
 // For creating a new SignatureVerification
-type SignatureVerificationCreationAttributes = Optional<SignatureVerificationAttributes, 'id' | 'failedAttempts' | 'status' | 'signerName' | 'signerPosition'>
+type SignatureVerificationCreationAttributes = Optional<
+  SignatureVerificationAttributes,
+  "id" | "failedAttempts" | "status" | "signerName" | "signerPosition"
+>;
 
-class SignatureVerification extends Model<SignatureVerificationAttributes, SignatureVerificationCreationAttributes> implements SignatureVerificationAttributes {
+class SignatureVerification
+  extends Model<
+    SignatureVerificationAttributes,
+    SignatureVerificationCreationAttributes
+  >
+  implements SignatureVerificationAttributes
+{
   public id!: string;
   public treatmentId!: string;
   public targetEmail!: string;
   public verificationCode!: string;
   public verificationExpires!: Date;
   public failedAttempts!: number;
-  public status!: 'pending' | 'verified' | 'expired' | 'failed';
+  public status!: "pending" | "verified" | "expired" | "failed";
   public signerName!: string | null;
   public signerPosition!: string | null;
 
@@ -51,7 +60,7 @@ class SignatureVerification extends Model<SignatureVerificationAttributes, Signa
     this.verificationCode = hashedCode;
     this.verificationExpires = expiration;
     this.failedAttempts = 0;
-    this.status = 'pending';
+    this.status = "pending";
     await this.save();
 
     return code;
@@ -64,16 +73,16 @@ class SignatureVerification extends Model<SignatureVerificationAttributes, Signa
    */
   public async verifyCode(code: string): Promise<boolean> {
     // Check if already verified or failed
-    if (this.status === 'verified') {
+    if (this.status === "verified") {
       return false; // Already used
     }
-    if (this.status === 'failed') {
+    if (this.status === "failed") {
       return false; // Too many attempts
     }
 
     // Check expiration
     if (new Date() > this.verificationExpires) {
-      this.status = 'expired';
+      this.status = "expired";
       await this.save();
       return false;
     }
@@ -82,13 +91,13 @@ class SignatureVerification extends Model<SignatureVerificationAttributes, Signa
     const isValid = await bcrypt.compare(code, this.verificationCode);
 
     if (isValid) {
-      this.status = 'verified';
+      this.status = "verified";
       await this.save();
       return true;
     } else {
       this.failedAttempts += 1;
       if (this.failedAttempts >= 3) {
-        this.status = 'failed';
+        this.status = "failed";
       }
       await this.save();
       return false;
@@ -106,7 +115,7 @@ class SignatureVerification extends Model<SignatureVerificationAttributes, Signa
    * Check if verification is still valid (not expired, not failed, not verified)
    */
   public isStillValid(): boolean {
-    if (this.status !== 'pending') {
+    if (this.status !== "pending") {
       return false;
     }
     if (new Date() > this.verificationExpires) {
@@ -126,69 +135,69 @@ SignatureVerification.init(
     treatmentId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'treatment_id',
+      field: "treatment_id",
       references: {
-        model: 'treatments',
-        key: 'id',
+        model: "treatments",
+        key: "id",
       },
     },
     targetEmail: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      field: 'target_email',
+      field: "target_email",
     },
     verificationCode: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      field: 'verification_code',
+      field: "verification_code",
     },
     verificationExpires: {
       type: DataTypes.DATE,
       allowNull: false,
-      field: 'verification_expires',
+      field: "verification_expires",
     },
     failedAttempts: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
-      field: 'failed_attempts',
+      field: "failed_attempts",
     },
     status: {
-      type: DataTypes.ENUM('pending', 'verified', 'expired', 'failed'),
+      type: DataTypes.ENUM("pending", "verified", "expired", "failed"),
       allowNull: false,
-      defaultValue: 'pending',
+      defaultValue: "pending",
     },
     signerName: {
       type: DataTypes.STRING(255),
       allowNull: true,
-      field: 'signer_name',
+      field: "signer_name",
     },
     signerPosition: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'signer_position',
+      field: "signer_position",
     },
   },
   {
     sequelize,
-    modelName: 'SignatureVerification',
-    tableName: 'signature_verifications',
+    modelName: "SignatureVerification",
+    tableName: "signature_verifications",
     timestamps: true,
     indexes: [
       {
-        fields: ['treatment_id'],
+        fields: ["treatment_id"],
       },
       {
-        fields: ['target_email'],
+        fields: ["target_email"],
       },
       {
-        fields: ['status'],
+        fields: ["status"],
       },
       {
-        fields: ['verification_expires'],
+        fields: ["verification_expires"],
       },
     ],
-  }
+  },
 );
 
 export default SignatureVerification;

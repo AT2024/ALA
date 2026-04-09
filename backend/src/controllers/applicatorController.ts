@@ -1,35 +1,42 @@
-import { Request, Response } from 'express';
-import asyncHandler from 'express-async-handler';
-import fs from 'fs';
-import applicatorService from '../services/applicatorService';
-import treatmentService from '../services/treatmentService';
-import priorityService from '../services/priorityService';
-import { zipService } from '../services/zipService';
-import { cleanupTempFiles } from '../middleware/upload';
-import Applicator from '../models/Applicator';
-import logger from '../utils/logger';
-import { config } from '../config/appConfig';
+import { Request, Response } from "express";
+import asyncHandler from "express-async-handler";
+import fs from "fs";
+import applicatorService from "../services/applicatorService";
+import treatmentService from "../services/treatmentService";
+import priorityService from "../services/priorityService";
+import { zipService } from "../services/zipService";
+import { cleanupTempFiles } from "../middleware/upload";
+import Applicator from "../models/Applicator";
+import logger from "../utils/logger";
+import { config } from "../config/appConfig";
 
 // @desc    Validate an applicator barcode
 // @route   POST /api/applicators/validate
 // @access  Private
-export const validateApplicator = asyncHandler(async (req: Request, res: Response) => {
-  const { serialNumber, treatmentId, patientId, scannedApplicators = [] } = req.body;
-  
-  if (!serialNumber || !treatmentId || !patientId) {
-    res.status(400);
-    throw new Error('Serial number, treatmentId, and patientId are required');
-  }
-  
-  const validation = await applicatorService.validateApplicator(
-    serialNumber, 
-    treatmentId, 
-    patientId, 
-    scannedApplicators
-  );
-  
-  res.status(200).json(validation);
-});
+export const validateApplicator = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      serialNumber,
+      treatmentId,
+      patientId,
+      scannedApplicators = [],
+    } = req.body;
+
+    if (!serialNumber || !treatmentId || !patientId) {
+      res.status(400);
+      throw new Error("Serial number, treatmentId, and patientId are required");
+    }
+
+    const validation = await applicatorService.validateApplicator(
+      serialNumber,
+      treatmentId,
+      patientId,
+      scannedApplicators,
+    );
+
+    res.status(200).json(validation);
+  },
+);
 
 // NOTE: addApplicator was removed - use treatmentController.addApplicator instead
 // which uses addApplicatorWithTransaction() for better reliability
@@ -37,18 +44,21 @@ export const validateApplicator = asyncHandler(async (req: Request, res: Respons
 // @desc    Get applicator data by serial number
 // @route   GET /api/applicators/:serialNumber
 // @access  Private
-export const getApplicatorBySerialNumber = asyncHandler(async (req: Request, res: Response) => {
-  const { serialNumber } = req.params;
-  
-  const applicatorData = await applicatorService.getApplicatorFromPriority(serialNumber);
-  
-  if (!applicatorData.found) {
-    res.status(404);
-    throw new Error('Applicator not found in Priority system');
-  }
-  
-  res.status(200).json(applicatorData.data);
-});
+export const getApplicatorBySerialNumber = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { serialNumber } = req.params;
+
+    const applicatorData =
+      await applicatorService.getApplicatorFromPriority(serialNumber);
+
+    if (!applicatorData.found) {
+      res.status(404);
+      throw new Error("Applicator not found in Priority system");
+    }
+
+    res.status(200).json(applicatorData.data);
+  },
+);
 
 // NOTE: updateTreatmentStatus was removed - use treatmentController.updateTreatmentStatus instead
 // to avoid duplicate route handlers
@@ -56,158 +66,181 @@ export const getApplicatorBySerialNumber = asyncHandler(async (req: Request, res
 // @desc    Get an applicator by ID
 // @route   GET /api/applicators/:id
 // @access  Private
-export const getApplicatorById = asyncHandler(async (req: Request, res: Response) => {
-  const applicator = await applicatorService.getApplicatorById(req.params.id);
-  
-  // Get associated treatment to check permissions
-  const treatment = await treatmentService.getTreatmentById(applicator.treatmentId);
-  
-  // Check if user has access to this treatment's applicators
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to access this applicator');
-  }
-  
-  res.status(200).json(applicator);
-});
+export const getApplicatorById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const applicator = await applicatorService.getApplicatorById(req.params.id);
+
+    // Get associated treatment to check permissions
+    const treatment = await treatmentService.getTreatmentById(
+      applicator.treatmentId,
+    );
+
+    // Check if user has access to this treatment's applicators
+    if (req.user.role !== "admin" && treatment.userId !== req.user.id) {
+      res.status(403);
+      throw new Error("Not authorized to access this applicator");
+    }
+
+    res.status(200).json(applicator);
+  },
+);
 
 // @desc    Update an applicator
 // @route   PATCH /api/treatments/:treatmentId/applicators/:id
 // @access  Private
-export const updateApplicator = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { treatmentId, id } = req.params;
+export const updateApplicator = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { treatmentId, id } = req.params;
 
-  // Special handling for test user with numeric applicator IDs
-  if (req.user.email === config.testUserEmail && /^\d+$/.test(id)) {
-    // Verify the treatment exists and user has access
-    await treatmentService.getTreatmentById(treatmentId);
+    // Special handling for test user with numeric applicator IDs
+    if (req.user.email === config.testUserEmail && /^\d+$/.test(id)) {
+      // Verify the treatment exists and user has access
+      await treatmentService.getTreatmentById(treatmentId);
 
-    // For test data, return a mock updated response
-    const mockUpdatedApplicator = {
-      id: id,
-      treatmentId: treatmentId,
-      serialNumber: req.body.serialNumber || `TEST-${id}`,
-      seedQuantity: req.body.seedQuantity || 1,
-      usageType: req.body.usageType || 'full',
-      insertionTime: req.body.insertionTime || new Date().toISOString(),
-      comments: req.body.comments || '',
-      ...req.body, // Apply all updates from request
-      isRemoved: req.body.isRemoved !== undefined ? req.body.isRemoved : false,
-      removalTime: req.body.isRemoved ? new Date().toISOString() : null,
-      removalComments: req.body.removalComments || null,
-      updatedAt: new Date().toISOString()
-    };
+      // For test data, return a mock updated response
+      const mockUpdatedApplicator = {
+        id: id,
+        treatmentId: treatmentId,
+        serialNumber: req.body.serialNumber || `TEST-${id}`,
+        seedQuantity: req.body.seedQuantity || 1,
+        usageType: req.body.usageType || "full",
+        insertionTime: req.body.insertionTime || new Date().toISOString(),
+        comments: req.body.comments || "",
+        ...req.body, // Apply all updates from request
+        isRemoved:
+          req.body.isRemoved !== undefined ? req.body.isRemoved : false,
+        removalTime: req.body.isRemoved ? new Date().toISOString() : null,
+        removalComments: req.body.removalComments || null,
+        updatedAt: new Date().toISOString(),
+      };
 
-    logger.info(`Test user updating test applicator ${id}`, {
-      treatmentId,
-      updates: req.body
-    });
+      logger.info(`Test user updating test applicator ${id}`, {
+        treatmentId,
+        updates: req.body,
+      });
 
-    res.status(200).json(mockUpdatedApplicator);
-    return;
-  }
-
-  // Verify the treatment exists and user has access
-  const treatment = await treatmentService.getTreatmentById(treatmentId);
-  
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to modify this treatment');
-  }
-  
-  // Get the applicator to verify it belongs to the specified treatment
-  const applicator = await applicatorService.getApplicatorById(id);
-
-  if (applicator.treatmentId !== treatmentId) {
-    res.status(400);
-    throw new Error('Applicator does not belong to the specified treatment');
-  }
-
-  // CRITICAL: Validate status transition if status is being changed
-  if (req.body.status && req.body.status !== applicator.status) {
-    const validation = applicatorService.validateStatusTransition(
-      applicator.status,
-      req.body.status
-    );
-
-    if (!validation.valid) {
-      res.status(400);
-      throw new Error(validation.error || 'Invalid status transition');
+      res.status(200).json(mockUpdatedApplicator);
+      return;
     }
 
-    logger.info('Status transition validated', {
-      applicatorId: id,
-      oldStatus: applicator.status,
-      newStatus: req.body.status,
-      userId: req.user.id
-    });
-  }
+    // Verify the treatment exists and user has access
+    const treatment = await treatmentService.getTreatmentById(treatmentId);
 
-  // Use different update method based on treatment type
-  let updatedApplicator;
+    if (req.user.role !== "admin" && treatment.userId !== req.user.id) {
+      res.status(403);
+      throw new Error("Not authorized to modify this treatment");
+    }
 
-  if (treatment.type === 'removal') {
-    updatedApplicator = await applicatorService.updateApplicatorForRemoval(id, req.body, req.user.id);
-  } else {
-    updatedApplicator = await applicatorService.updateApplicator(id, req.body, req.user.id);
-  }
-  
-  res.status(200).json(updatedApplicator);
-});
+    // Get the applicator to verify it belongs to the specified treatment
+    const applicator = await applicatorService.getApplicatorById(id);
+
+    if (applicator.treatmentId !== treatmentId) {
+      res.status(400);
+      throw new Error("Applicator does not belong to the specified treatment");
+    }
+
+    // CRITICAL: Validate status transition if status is being changed
+    if (req.body.status && req.body.status !== applicator.status) {
+      const validation = applicatorService.validateStatusTransition(
+        applicator.status,
+        req.body.status,
+      );
+
+      if (!validation.valid) {
+        res.status(400);
+        throw new Error(validation.error || "Invalid status transition");
+      }
+
+      logger.info("Status transition validated", {
+        applicatorId: id,
+        oldStatus: applicator.status,
+        newStatus: req.body.status,
+        userId: req.user.id,
+      });
+    }
+
+    // Use different update method based on treatment type
+    let updatedApplicator;
+
+    if (treatment.type === "removal") {
+      updatedApplicator = await applicatorService.updateApplicatorForRemoval(
+        id,
+        req.body,
+        req.user.id,
+      );
+    } else {
+      updatedApplicator = await applicatorService.updateApplicator(
+        id,
+        req.body,
+        req.user.id,
+      );
+    }
+
+    res.status(200).json(updatedApplicator);
+  },
+);
 
 // @desc    Calculate seed status for a removal treatment
 // @route   GET /api/treatments/:treatmentId/seed-status
 // @access  Private
-export const getSeedStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { treatmentId } = req.params;
+export const getSeedStatus = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { treatmentId } = req.params;
 
-  // Verify the treatment exists and user has access
-  const treatment = await treatmentService.getTreatmentById(treatmentId);
+    // Verify the treatment exists and user has access
+    const treatment = await treatmentService.getTreatmentById(treatmentId);
 
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to access this treatment');
-  }
+    if (req.user.role !== "admin" && treatment.userId !== req.user.id) {
+      res.status(403);
+      throw new Error("Not authorized to access this treatment");
+    }
 
-  if (treatment.type !== 'removal') {
-    res.status(400);
-    throw new Error('Seed status is only relevant for removal treatments');
-  }
+    if (treatment.type !== "removal") {
+      res.status(400);
+      throw new Error("Seed status is only relevant for removal treatments");
+    }
 
-  const seedStatus = await applicatorService.calculateSeedCountStatus(treatmentId);
+    const seedStatus =
+      await applicatorService.calculateSeedCountStatus(treatmentId);
 
-  res.status(200).json(seedStatus);
-});
+    res.status(200).json(seedStatus);
+  },
+);
 
 // @desc    Create a package of 4 applicators with P# label
 // @route   POST /api/treatments/:treatmentId/package
 // @access  Private
-export const createPackage = asyncHandler(async (req: Request, res: Response) => {
-  const { treatmentId } = req.params;
-  const { applicatorIds } = req.body;
+export const createPackage = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { treatmentId } = req.params;
+    const { applicatorIds } = req.body;
 
-  // Validation: applicatorIds must be an array
-  if (!applicatorIds || !Array.isArray(applicatorIds)) {
-    res.status(400);
-    throw new Error('applicatorIds must be an array');
-  }
+    // Validation: applicatorIds must be an array
+    if (!applicatorIds || !Array.isArray(applicatorIds)) {
+      res.status(400);
+      throw new Error("applicatorIds must be an array");
+    }
 
-  // Verify the treatment exists and user has access
-  const treatment = await treatmentService.getTreatmentById(treatmentId);
+    // Verify the treatment exists and user has access
+    const treatment = await treatmentService.getTreatmentById(treatmentId);
 
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-    res.status(403);
-    throw new Error('Not authorized to modify this treatment');
-  }
+    if (req.user.role !== "admin" && treatment.userId !== req.user.id) {
+      res.status(403);
+      throw new Error("Not authorized to modify this treatment");
+    }
 
-  const updatedApplicators = await applicatorService.createPackage(treatmentId, applicatorIds);
+    const updatedApplicators = await applicatorService.createPackage(
+      treatmentId,
+      applicatorIds,
+    );
 
-  res.status(200).json({
-    success: true,
-    packageLabel: updatedApplicators[0].packageLabel,
-    applicators: updatedApplicators
-  });
-});
+    res.status(200).json({
+      success: true,
+      packageLabel: updatedApplicators[0].packageLabel,
+      applicators: updatedApplicators,
+    });
+  },
+);
 
 // @desc    Get all packages for a treatment
 // @route   GET /api/treatments/:treatmentId/packages
@@ -218,9 +251,9 @@ export const getPackages = asyncHandler(async (req: Request, res: Response) => {
   // Verify the treatment exists and user has access
   const treatment = await treatmentService.getTreatmentById(treatmentId);
 
-  if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
+  if (req.user.role !== "admin" && treatment.userId !== req.user.id) {
     res.status(403);
-    throw new Error('Not authorized to access this treatment');
+    throw new Error("Not authorized to access this treatment");
   }
 
   const packages = await applicatorService.getPackages(treatmentId);
@@ -232,104 +265,123 @@ export const getPackages = asyncHandler(async (req: Request, res: Response) => {
 // @route   POST /api/treatments/:treatmentId/applicators/:applicatorId/upload
 // @access  Private
 // Files are stored in Priority ERP (via EXTFILENAME field), not locally
-export const uploadApplicatorFiles = asyncHandler(async (req: Request, res: Response) => {
-  const { treatmentId, applicatorId } = req.params;
-  const files = req.files as Express.Multer.File[];
+export const uploadApplicatorFiles = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { treatmentId, applicatorId } = req.params;
+    const files = req.files as Express.Multer.File[];
 
-  if (!files || files.length === 0) {
-    res.status(400);
-    throw new Error('No files uploaded');
-  }
-
-  logger.info(`Uploading ${files.length} files for applicator ${applicatorId} (files stored in Priority ERP)`);
-
-  try {
-    // Verify the treatment exists and user has access
-    const treatment = await treatmentService.getTreatmentById(treatmentId);
-
-    if (req.user.role !== 'admin' && treatment.userId !== req.user.id) {
-      // Cleanup temp files before throwing
-      cleanupTempFiles(files);
-      res.status(403);
-      throw new Error('Not authorized to modify this treatment');
+    if (!files || files.length === 0) {
+      res.status(400);
+      throw new Error("No files uploaded");
     }
 
-    // Get the applicator record
-    const applicator = await Applicator.findByPk(applicatorId);
-    if (!applicator) {
+    logger.info(
+      `Uploading ${files.length} files for applicator ${applicatorId} (files stored in Priority ERP)`,
+    );
+
+    try {
+      // Verify the treatment exists and user has access
+      const treatment = await treatmentService.getTreatmentById(treatmentId);
+
+      if (req.user.role !== "admin" && treatment.userId !== req.user.id) {
+        // Cleanup temp files before throwing
+        cleanupTempFiles(files);
+        res.status(403);
+        throw new Error("Not authorized to modify this treatment");
+      }
+
+      // Get the applicator record
+      const applicator = await Applicator.findByPk(applicatorId);
+      if (!applicator) {
+        cleanupTempFiles(files);
+        res.status(404);
+        throw new Error("Applicator not found");
+      }
+
+      // Convert multer disk files to buffer format for zipService
+      // (multer diskStorage saves to disk, so file.buffer is undefined)
+      const filesWithBuffer = files.map((file) => ({
+        filename: file.originalname,
+        buffer: fs.readFileSync(file.path),
+      }));
+
+      // Create ZIP in memory (no disk storage - goes directly to Priority)
+      const zipResult = await zipService.createApplicatorZipBuffer(
+        applicatorId,
+        filesWithBuffer,
+      );
+
+      logger.info(
+        `Created ZIP buffer: ${zipResult.filename} (${zipResult.fileCount} files, ${(zipResult.sizeBytes / 1024).toFixed(2)} KB)`,
+      );
+
+      // Cleanup temp files immediately (ZIP is in memory now)
       cleanupTempFiles(files);
-      res.status(404);
-      throw new Error('Applicator not found');
-    }
 
-    // Convert multer disk files to buffer format for zipService
-    // (multer diskStorage saves to disk, so file.buffer is undefined)
-    const filesWithBuffer = files.map((file) => ({
-      filename: file.originalname,
-      buffer: fs.readFileSync(file.path)
-    }));
+      // Upload to Priority ERP (files are stored there, not locally)
+      // IMPORTANT: Priority API expects Priority order ID (e.g., "SO25000001"), NOT PostgreSQL UUID
+      // For old treatments, priorityId may be NULL - fall back to subjectId (which is ORDNAME from Priority)
+      let prioritySyncResult = { success: false, message: "Not attempted" };
+      const effectivePriorityId = treatment.priorityId || treatment.subjectId;
 
-    // Create ZIP in memory (no disk storage - goes directly to Priority)
-    const zipResult = await zipService.createApplicatorZipBuffer(applicatorId, filesWithBuffer);
-
-    logger.info(`Created ZIP buffer: ${zipResult.filename} (${zipResult.fileCount} files, ${(zipResult.sizeBytes / 1024).toFixed(2)} KB)`);
-
-    // Cleanup temp files immediately (ZIP is in memory now)
-    cleanupTempFiles(files);
-
-    // Upload to Priority ERP (files are stored there, not locally)
-    // IMPORTANT: Priority API expects Priority order ID (e.g., "SO25000001"), NOT PostgreSQL UUID
-    // For old treatments, priorityId may be NULL - fall back to subjectId (which is ORDNAME from Priority)
-    let prioritySyncResult = { success: false, message: 'Not attempted' };
-    const effectivePriorityId = treatment.priorityId || treatment.subjectId;
-
-    if (!effectivePriorityId) {
-      logger.warn(`Treatment ${treatmentId} has no Priority ID or Subject ID - cannot upload to Priority ERP`);
-      prioritySyncResult = { success: false, message: 'Treatment has no Priority ID - cannot upload to Priority' };
-    } else {
-      try {
-        prioritySyncResult = await priorityService.uploadApplicatorAttachmentFromBuffer(
-          applicator.serialNumber,
-          effectivePriorityId,  // Use Priority order ID (priorityId or subjectId), not PostgreSQL UUID
-          zipResult.buffer
+      if (!effectivePriorityId) {
+        logger.warn(
+          `Treatment ${treatmentId} has no Priority ID or Subject ID - cannot upload to Priority ERP`,
         );
-        logger.info(`Priority sync result: ${prioritySyncResult.message}`);
-      } catch (priorityError: any) {
-        logger.error(`Priority sync error: ${priorityError.message}`);
-        prioritySyncResult = { success: false, message: priorityError.message };
+        prioritySyncResult = {
+          success: false,
+          message: "Treatment has no Priority ID - cannot upload to Priority",
+        };
+      } else {
+        try {
+          prioritySyncResult =
+            await priorityService.uploadApplicatorAttachmentFromBuffer(
+              applicator.serialNumber,
+              effectivePriorityId, // Use Priority order ID (priorityId or subjectId), not PostgreSQL UUID
+              zipResult.buffer,
+            );
+          logger.info(`Priority sync result: ${prioritySyncResult.message}`);
+        } catch (priorityError: any) {
+          logger.error(`Priority sync error: ${priorityError.message}`);
+          prioritySyncResult = {
+            success: false,
+            message: priorityError.message,
+          };
+        }
       }
+
+      // Determine sync status based on Priority result
+      const syncStatus = prioritySyncResult.success ? "synced" : "failed";
+
+      // Update applicator with attachment tracking metadata (not the file itself)
+      await applicator.update({
+        attachmentFilename: zipResult.filename,
+        attachmentFileCount: zipResult.fileCount,
+        attachmentSizeBytes: zipResult.sizeBytes,
+        attachmentSyncStatus: syncStatus,
+      });
+
+      logger.info(
+        `Applicator ${applicatorId} attachment metadata saved. Sync status: ${syncStatus}`,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: prioritySyncResult.success
+          ? "Files uploaded to Priority ERP successfully"
+          : "Files processed but Priority sync failed",
+        data: {
+          filename: zipResult.filename,
+          fileCount: zipResult.fileCount,
+          sizeBytes: zipResult.sizeBytes,
+          syncStatus: syncStatus,
+          prioritySync: prioritySyncResult,
+        },
+      });
+    } catch (error: any) {
+      // Cleanup temp files on any error
+      cleanupTempFiles(files);
+      throw error;
     }
-
-    // Determine sync status based on Priority result
-    const syncStatus = prioritySyncResult.success ? 'synced' : 'failed';
-
-    // Update applicator with attachment tracking metadata (not the file itself)
-    await applicator.update({
-      attachmentFilename: zipResult.filename,
-      attachmentFileCount: zipResult.fileCount,
-      attachmentSizeBytes: zipResult.sizeBytes,
-      attachmentSyncStatus: syncStatus,
-    });
-
-    logger.info(`Applicator ${applicatorId} attachment metadata saved. Sync status: ${syncStatus}`);
-
-    res.status(200).json({
-      success: true,
-      message: prioritySyncResult.success
-        ? 'Files uploaded to Priority ERP successfully'
-        : 'Files processed but Priority sync failed',
-      data: {
-        filename: zipResult.filename,
-        fileCount: zipResult.fileCount,
-        sizeBytes: zipResult.sizeBytes,
-        syncStatus: syncStatus,
-        prioritySync: prioritySyncResult
-      }
-    });
-
-  } catch (error: any) {
-    // Cleanup temp files on any error
-    cleanupTempFiles(files);
-    throw error;
-  }
-});
+  },
+);

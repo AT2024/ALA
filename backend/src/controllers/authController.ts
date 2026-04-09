@@ -1,18 +1,18 @@
-import { Request, Response } from 'express';
-import asyncHandler from 'express-async-handler';
-import jwt from 'jsonwebtoken';
-import { User } from '../models';
-import logger from '../utils/logger';
-import priorityService from '../services/priorityService';
-import { sendVerificationCode } from '../services/emailService';
-import { authAuditService } from '../services/authAuditService';
-import { getClientIp, getUserAgent } from '../utils/requestUtils';
+import { Request, Response } from "express";
+import asyncHandler from "express-async-handler";
+import jwt from "jsonwebtoken";
+import { User } from "../models";
+import logger from "../utils/logger";
+import priorityService from "../services/priorityService";
+import { sendVerificationCode } from "../services/emailService";
+import { authAuditService } from "../services/authAuditService";
+import { getClientIp, getUserAgent } from "../utils/requestUtils";
 
 // Lazy getter for JWT secret with runtime validation
 function getJwtSecret(): string {
   const JWT_SECRET = process.env.JWT_SECRET;
   if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required but not set');
+    throw new Error("JWT_SECRET environment variable is required but not set");
   }
   return JWT_SECRET;
 }
@@ -20,158 +20,180 @@ function getJwtSecret(): string {
 // Generate JWT token (7 days expiration - security best practice for medical apps)
 const generateToken = (id: string) => {
   return jwt.sign({ id }, getJwtSecret(), {
-    expiresIn: '7d',
+    expiresIn: "7d",
   });
 };
 
 // Cookie configuration for HttpOnly secure auth token
 const getCookieOptions = () => ({
-  httpOnly: true,                                      // Prevents XSS token theft (OWASP mandatory)
-  secure: process.env.NODE_ENV === 'production',       // HTTPS only in production
-  sameSite: 'strict' as const,                         // Prevents CSRF attacks
-  maxAge: 7 * 24 * 60 * 60 * 1000,                    // 7 days in milliseconds
-  path: '/'
+  httpOnly: true, // Prevents XSS token theft (OWASP mandatory)
+  secure: process.env.NODE_ENV === "production", // HTTPS only in production
+  sameSite: "strict" as const, // Prevents CSRF attacks
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+  path: "/",
 });
 
 // @desc    Request verification code
 // @route   POST /api/auth/request-code
 // @access  Public
-export const requestVerificationCode = asyncHandler(async (req: Request, res: Response) => {
-  const { identifier } = req.body;
+export const requestVerificationCode = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { identifier } = req.body;
 
-  if (!identifier) {
-    res.status(400);
-    throw new Error('Email or phone number is required');
-  }
+    if (!identifier) {
+      res.status(400);
+      throw new Error("Email or phone number is required");
+    }
 
-  // Check if the identifier is an email or phone number
-  const isEmail = identifier.includes('@');
+    // Check if the identifier is an email or phone number
+    const isEmail = identifier.includes("@");
 
-  try {
-    // First, validate against Priority system
-    logger.info(`Validating ${isEmail ? 'email' : 'phone'}: ${identifier} with Priority`);
-    
-    let priorityUserAccess;
     try {
-      priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
-    } catch (priorityError: any) {
-      // Log the actual error for debugging but return generic message to prevent information leakage
-      logger.error(`Priority system error for ${identifier}:`, priorityError);
-      // Use generic error message to prevent user enumeration attacks
-      res.status(400).json({
-        success: false,
-        message: 'Unable to send verification code. Please try again later.',
-      });
-      return;
-    }
+      // First, validate against Priority system
+      logger.info(
+        `Validating ${isEmail ? "email" : "phone"}: ${identifier} with Priority`,
+      );
 
-    if (!priorityUserAccess.found) {
-      // Log the actual reason for debugging but return generic message to prevent user enumeration
-      logger.info(`${isEmail ? 'Email' : 'Phone'} ${identifier} not found in Priority system`);
-      // SECURITY: Use same status code (400) and similar generic message as other failures
-      // This prevents attackers from determining which emails/phones exist in the system
-      res.status(400).json({
-        success: false,
-        message: 'Unable to send verification code. Please verify your credentials.',
-      });
-      return;
-    }
+      let priorityUserAccess;
+      try {
+        priorityUserAccess =
+          await priorityService.getUserSiteAccess(identifier);
+      } catch (priorityError: any) {
+        // Log the actual error for debugging but return generic message to prevent information leakage
+        logger.error(`Priority system error for ${identifier}:`, priorityError);
+        // Use generic error message to prevent user enumeration attacks
+        res.status(400).json({
+          success: false,
+          message: "Unable to send verification code. Please try again later.",
+        });
+        return;
+      }
 
-    // Priority validation successful, find or create local user
-    logger.info(`${isEmail ? 'Email' : 'Phone'} ${identifier} found in Priority system`);
+      if (!priorityUserAccess.found) {
+        // Log the actual reason for debugging but return generic message to prevent user enumeration
+        logger.info(
+          `${isEmail ? "Email" : "Phone"} ${identifier} not found in Priority system`,
+        );
+        // SECURITY: Use same status code (400) and similar generic message as other failures
+        // This prevents attackers from determining which emails/phones exist in the system
+        res.status(400).json({
+          success: false,
+          message:
+            "Unable to send verification code. Please verify your credentials.",
+        });
+        return;
+      }
 
-    // Find local user
-    let user;
-    if (isEmail) {
-      user = await User.findOne({ where: { email: identifier } });
-    } else {
-      user = await User.findOne({ where: { phoneNumber: identifier } });
-    }
+      // Priority validation successful, find or create local user
+      logger.info(
+        `${isEmail ? "Email" : "Phone"} ${identifier} found in Priority system`,
+      );
 
-    // If not found locally, create user from Priority data
-    if (!user) {
-      // Use Number() for positionCode comparisons to handle both string and number types
-      const positionCode = Number(priorityUserAccess.user?.positionCode);
-      const userData = {
-        name: priorityUserAccess.user?.email || 'User',
-        email: isEmail ? identifier : null,
-        phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
-        role:
-          positionCode === 99
-            ? 'admin'
-            : ('hospital' as 'admin' | 'hospital'),
-        metadata: {
+      // Find local user
+      let user;
+      if (isEmail) {
+        user = await User.findOne({ where: { email: identifier } });
+      } else {
+        user = await User.findOne({ where: { phoneNumber: identifier } });
+      }
+
+      // If not found locally, create user from Priority data
+      if (!user) {
+        // Use Number() for positionCode comparisons to handle both string and number types
+        const positionCode = Number(priorityUserAccess.user?.positionCode);
+        const userData = {
+          name: priorityUserAccess.user?.email || "User",
+          email: isEmail ? identifier : null,
+          phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
+          role:
+            positionCode === 99
+              ? "admin"
+              : ("hospital" as "admin" | "hospital"),
+          metadata: {
+            positionCode: priorityUserAccess.user?.positionCode,
+            custName:
+              positionCode === 99
+                ? "ALL_SITES"
+                : priorityUserAccess.sites[0]?.custName ||
+                  priorityUserAccess.sites[0] ||
+                  "",
+            sites: priorityUserAccess.sites || [],
+            fullAccess: priorityUserAccess.fullAccess || false,
+          },
+        } as const; // Fix: ensure type is compatible
+
+        user = await User.create(userData);
+        logger.info(`Created new user from Priority data: ${user.id}`);
+      } else {
+        // Update user metadata with latest from Priority
+        // Use Number() for positionCode comparisons to handle both string and number types
+        const positionCode = Number(priorityUserAccess.user?.positionCode);
+        user.metadata = {
+          ...user.metadata,
           positionCode: priorityUserAccess.user?.positionCode,
-          custName: positionCode === 99
-            ? 'ALL_SITES'
-            : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
+          custName:
+            positionCode === 99
+              ? "ALL_SITES"
+              : priorityUserAccess.sites[0]?.custName ||
+                priorityUserAccess.sites[0] ||
+                "",
           sites: priorityUserAccess.sites || [],
           fullAccess: priorityUserAccess.fullAccess || false,
-        },
-      } as const; // Fix: ensure type is compatible
-
-      user = await User.create(userData);
-      logger.info(`Created new user from Priority data: ${user.id}`);
-    } else {
-      // Update user metadata with latest from Priority
-      // Use Number() for positionCode comparisons to handle both string and number types
-      const positionCode = Number(priorityUserAccess.user?.positionCode);
-      user.metadata = {
-        ...user.metadata,
-        positionCode: priorityUserAccess.user?.positionCode,
-        custName: positionCode === 99
-          ? 'ALL_SITES'
-          : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
-        sites: priorityUserAccess.sites || [],
-        fullAccess: priorityUserAccess.fullAccess || false,
-      };
-      await user.save();
-      logger.info(`Updated existing user with Priority data: ${user.id}`);
-    }
-
-    // Generate verification code
-    const verificationCode = await user.generateVerificationCode();
-
-    // Log the code (for development debugging)
-    logger.info(`Verification code for ${identifier}: ${verificationCode}`);
-
-    // Send verification code via email if it's an email identifier
-    // For phone numbers, SMS would be needed (not implemented)
-    if (isEmail) {
-      try {
-        await sendVerificationCode(identifier, verificationCode);
-        logger.info(`Verification email sent to ${identifier}`);
-      } catch (emailError: any) {
-        // Log error but don't fail the request - user can still use the logged code
-        // In production, the email service will send actual emails
-        // In development, the code is just logged
-        logger.warn(`Failed to send verification email: ${emailError.message}`);
+        };
+        await user.save();
+        logger.info(`Updated existing user with Priority data: ${user.id}`);
       }
+
+      // Generate verification code
+      const verificationCode = await user.generateVerificationCode();
+
+      // Log the code (for development debugging)
+      logger.info(`Verification code for ${identifier}: ${verificationCode}`);
+
+      // Send verification code via email if it's an email identifier
+      // For phone numbers, SMS would be needed (not implemented)
+      if (isEmail) {
+        try {
+          await sendVerificationCode(identifier, verificationCode);
+          logger.info(`Verification email sent to ${identifier}`);
+        } catch (emailError: any) {
+          // Log error but don't fail the request - user can still use the logged code
+          // In production, the email service will send actual emails
+          // In development, the code is just logged
+          logger.warn(
+            `Failed to send verification email: ${emailError.message}`,
+          );
+        }
+      }
+
+      // HIPAA audit: Log OTP request
+      await authAuditService.logOtpRequest(
+        identifier,
+        getClientIp(req),
+        getUserAgent(req),
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Verification code sent",
+        userData: {
+          name: user.name,
+          email: user.email,
+          phoneNumber: user.phoneNumber || "",
+          positionCode: user.metadata?.positionCode || "",
+          custName: user.metadata?.custName || "",
+          sites: user.metadata?.sites || [],
+        },
+      });
+    } catch (error: any) {
+      logger.error(`Error requesting verification code: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        message: `Error: ${error.message}`,
+      });
     }
-
-    // HIPAA audit: Log OTP request
-    await authAuditService.logOtpRequest(identifier, getClientIp(req), getUserAgent(req));
-
-    res.status(200).json({
-      success: true,
-      message: 'Verification code sent',
-      userData: {
-        name: user.name,
-        email: user.email,
-        phoneNumber: user.phoneNumber || '',
-        positionCode: user.metadata?.positionCode || '',
-        custName: user.metadata?.custName || '',
-        sites: user.metadata?.sites || [],
-      },
-    });
-  } catch (error: any) {
-    logger.error(`Error requesting verification code: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: `Error: ${error.message}`,
-    });
-  }
-});
+  },
+);
 
 // @desc    Verify code and login
 // @route   POST /api/auth/verify
@@ -181,11 +203,11 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
 
   if (!identifier || !code) {
     res.status(400);
-    throw new Error('Email/phone and verification code are required');
+    throw new Error("Email/phone and verification code are required");
   }
 
   // Check if the identifier is an email or phone number
-  const isEmail = identifier.includes('@');
+  const isEmail = identifier.includes("@");
 
   // Find the user by email or phone number
   let user;
@@ -197,7 +219,7 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
 
   if (!user) {
     res.status(404);
-    throw new Error('User not found');
+    throw new Error("User not found");
   }
 
   // Verify the code
@@ -213,38 +235,42 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
     // HIPAA audit: Log failed login attempt
     await authAuditService.logLoginFailure(
       identifier,
-      'Invalid verification code',
+      "Invalid verification code",
       getClientIp(req),
-      getUserAgent(req)
+      getUserAgent(req),
     );
 
     res.status(401);
-    throw new Error('Invalid verification code');
+    throw new Error("Invalid verification code");
   }
 
   // Generate JWT token
   const token = generateToken(user.id);
 
   // HIPAA audit: Log successful login
-  await authAuditService.logLoginSuccess(user.id, getClientIp(req), getUserAgent(req));
+  await authAuditService.logLoginSuccess(
+    user.id,
+    getClientIp(req),
+    getUserAgent(req),
+  );
 
   // Always set HttpOnly cookie for secure token storage (OWASP best practice)
   // This prevents XSS attacks from stealing the auth token
-  res.cookie('auth-token', token, getCookieOptions());
+  res.cookie("auth-token", token, getCookieOptions());
 
   res.status(200).json({
     success: true,
     user: {
       id: user.id,
       name: user.name,
-      email: user.email || '',
-      phoneNumber: user.phoneNumber || '',
+      email: user.email || "",
+      phoneNumber: user.phoneNumber || "",
       role: user.role,
-      positionCode: user.metadata?.positionCode?.toString() || '',
-      custName: user.metadata?.custName || '',
+      positionCode: user.metadata?.positionCode?.toString() || "",
+      custName: user.metadata?.custName || "",
       sites: user.metadata?.sites || [],
       fullAccess: Number(user.metadata?.positionCode) === 99,
-      testModeEnabled: user.metadata?.testModeEnabled || false
+      testModeEnabled: user.metadata?.testModeEnabled || false,
     },
     // NOTE: Token is NOT included in response body - it's set as HttpOnly cookie only
     // This is an OWASP security best practice to prevent XSS token theft
@@ -254,177 +280,197 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
 // @desc    Resend verification code
 // @route   POST /api/auth/resend-code
 // @access  Public
-export const resendVerificationCode = asyncHandler(async (req: Request, res: Response) => {
-  const { identifier } = req.body;
+export const resendVerificationCode = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { identifier } = req.body;
 
-  if (!identifier) {
-    res.status(400);
-    throw new Error('Email or phone number is required');
-  }
-
-  try {
-    // Check if the identifier is an email or phone number
-    const isEmail = identifier.includes('@');
-
-    // Find the user by email or phone number
-    let user;
-    if (isEmail) {
-      user = await User.findOne({ where: { email: identifier } });
-    } else {
-      user = await User.findOne({ where: { phoneNumber: identifier } });
+    if (!identifier) {
+      res.status(400);
+      throw new Error("Email or phone number is required");
     }
 
-    if (!user) {
-      // If user not found in local DB, check against Priority first
-      const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+    try {
+      // Check if the identifier is an email or phone number
+      const isEmail = identifier.includes("@");
 
-      if (!priorityUserAccess.found) {
-        // SECURITY: Use generic error message to prevent user enumeration
-        res.status(400).json({
-          success: false,
-          message: 'Unable to resend verification code. Please verify your credentials.',
-        });
-        return;
+      // Find the user by email or phone number
+      let user;
+      if (isEmail) {
+        user = await User.findOne({ where: { email: identifier } });
+      } else {
+        user = await User.findOne({ where: { phoneNumber: identifier } });
       }
 
-      // If found in Priority but not locally, create a new user
-      // Use Number() for positionCode comparisons to handle both string and number types
-      const positionCode = Number(priorityUserAccess.user?.positionCode);
-      const userData = {
-        name: priorityUserAccess.user?.email || 'User',
-        email: isEmail ? identifier : null,
-        phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
-        role:
-          positionCode === 99
-            ? 'admin'
-            : ('hospital' as 'admin' | 'hospital'),
-        metadata: {
-          positionCode: priorityUserAccess.user?.positionCode,
-          custName: positionCode === 99
-            ? 'ALL_SITES'
-            : (priorityUserAccess.sites[0]?.custName || priorityUserAccess.sites[0] || ''),
-          sites: priorityUserAccess.sites || [],
-          fullAccess: priorityUserAccess.fullAccess || false,
-        },
-      } as const; // Fix: ensure type is compatible
+      if (!user) {
+        // If user not found in local DB, check against Priority first
+        const priorityUserAccess =
+          await priorityService.getUserSiteAccess(identifier);
 
-      user = await User.create(userData);
-      logger.info(`Created new user from Priority data on resend: ${user.id}`);
-    }
+        if (!priorityUserAccess.found) {
+          // SECURITY: Use generic error message to prevent user enumeration
+          res.status(400).json({
+            success: false,
+            message:
+              "Unable to resend verification code. Please verify your credentials.",
+          });
+          return;
+        }
 
-    // Generate verification code
-    const verificationCode = await user.generateVerificationCode();
+        // If found in Priority but not locally, create a new user
+        // Use Number() for positionCode comparisons to handle both string and number types
+        const positionCode = Number(priorityUserAccess.user?.positionCode);
+        const userData = {
+          name: priorityUserAccess.user?.email || "User",
+          email: isEmail ? identifier : null,
+          phoneNumber: isEmail ? priorityUserAccess.user?.phone : identifier,
+          role:
+            positionCode === 99
+              ? "admin"
+              : ("hospital" as "admin" | "hospital"),
+          metadata: {
+            positionCode: priorityUserAccess.user?.positionCode,
+            custName:
+              positionCode === 99
+                ? "ALL_SITES"
+                : priorityUserAccess.sites[0]?.custName ||
+                  priorityUserAccess.sites[0] ||
+                  "",
+            sites: priorityUserAccess.sites || [],
+            fullAccess: priorityUserAccess.fullAccess || false,
+          },
+        } as const; // Fix: ensure type is compatible
 
-    // Log the code (for development debugging)
-    logger.info(`Resent verification code for ${identifier}: ${verificationCode}`);
-
-    // Send verification code via email if it's an email identifier
-    if (isEmail) {
-      try {
-        await sendVerificationCode(identifier, verificationCode);
-        logger.info(`Resent verification email to ${identifier}`);
-      } catch (emailError: any) {
-        logger.warn(`Failed to resend verification email: ${emailError.message}`);
+        user = await User.create(userData);
+        logger.info(
+          `Created new user from Priority data on resend: ${user.id}`,
+        );
       }
-    }
 
-    res.status(200).json({
-      success: true,
-      message: 'Verification code resent',
-    });
-  } catch (error: any) {
-    logger.error(`Error resending verification code: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: `Error: ${error.message}`,
-    });
-  }
-});
+      // Generate verification code
+      const verificationCode = await user.generateVerificationCode();
+
+      // Log the code (for development debugging)
+      logger.info(
+        `Resent verification code for ${identifier}: ${verificationCode}`,
+      );
+
+      // Send verification code via email if it's an email identifier
+      if (isEmail) {
+        try {
+          await sendVerificationCode(identifier, verificationCode);
+          logger.info(`Resent verification email to ${identifier}`);
+        } catch (emailError: any) {
+          logger.warn(
+            `Failed to resend verification email: ${emailError.message}`,
+          );
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Verification code resent",
+      });
+    } catch (error: any) {
+      logger.error(`Error resending verification code: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        message: `Error: ${error.message}`,
+      });
+    }
+  },
+);
 
 // @desc    Validate token
 // @route   POST /api/auth/validate-token
 // @access  Private
-export const validateToken = asyncHandler(async (req: Request, res: Response) => {
-  // If the request made it past the protect middleware, the token is valid
-  res.status(200).json({
-    success: true,
-    message: 'Token is valid',
-    user: {
-      id: req.user.id,
-      name: req.user.name,
-      email: req.user.email,
-      phoneNumber: req.user.phoneNumber,
-      role: req.user.role,
-      metadata: req.user.metadata,
-    },
-  });
-});
+export const validateToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    // If the request made it past the protect middleware, the token is valid
+    res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        phoneNumber: req.user.phoneNumber,
+        role: req.user.role,
+        metadata: req.user.metadata,
+      },
+    });
+  },
+);
 
 // @desc    Debug user site access
 // @route   GET /api/auth/debug-sites/:identifier
 // @access  Development ONLY - returns 404 in production
-export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Response) => {
-  // Security: This endpoint exposes sensitive user information and MUST be disabled in production
-  // It can be used for user enumeration and data leakage attacks
-  if (process.env.NODE_ENV !== 'development') {
-    res.status(404).json({ error: 'Not found' });
-    return;
-  }
+export const debugUserSiteAccess = asyncHandler(
+  async (req: Request, res: Response) => {
+    // Security: This endpoint exposes sensitive user information and MUST be disabled in production
+    // It can be used for user enumeration and data leakage attacks
+    if (process.env.NODE_ENV !== "development") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
-  const { identifier } = req.params;
+    const { identifier } = req.params;
 
-  if (!identifier) {
-    res.status(400).json({
-      success: false,
-      message: 'User identifier is required',
-    });
-    return;
-  }
-
-  try {
-    logger.info(`[DEBUG] Testing site access for identifier: ${identifier}`);
-
-    // First test basic Priority connection
-    const connectionTest = await priorityService.debugPriorityConnection();
-
-    if (!connectionTest.success) {
-      res.status(500).json({
+    if (!identifier) {
+      res.status(400).json({
         success: false,
-        message: 'Priority connection failed',
-        connectionError: connectionTest.error,
-        details: connectionTest.details,
+        message: "User identifier is required",
       });
       return;
     }
 
-    const priorityUserAccess = await priorityService.getUserSiteAccess(identifier);
+    try {
+      logger.info(`[DEBUG] Testing site access for identifier: ${identifier}`);
 
-    res.status(200).json({
-      success: true,
-      message: 'Debug site access check completed',
-      connectionTest: {
-        success: connectionTest.success,
-        phonebookCount: connectionTest.phonebookCount,
-      },
-      data: {
-        identifier: identifier,
-        found: priorityUserAccess.found,
-        fullAccess: priorityUserAccess.fullAccess,
-        sites: priorityUserAccess.sites || [],
-        siteCount: priorityUserAccess.sites ? priorityUserAccess.sites.length : 0,
-        user: priorityUserAccess.user || null,
-      },
-    });
-  } catch (error: any) {
-    logger.error(`[DEBUG] Error testing site access: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: 'Debug test failed',
-      error: error.message,
-      stack: error.stack, // OK in development (already protected by NODE_ENV check above)
-    });
-  }
-});
+      // First test basic Priority connection
+      const connectionTest = await priorityService.debugPriorityConnection();
+
+      if (!connectionTest.success) {
+        res.status(500).json({
+          success: false,
+          message: "Priority connection failed",
+          connectionError: connectionTest.error,
+          details: connectionTest.details,
+        });
+        return;
+      }
+
+      const priorityUserAccess =
+        await priorityService.getUserSiteAccess(identifier);
+
+      res.status(200).json({
+        success: true,
+        message: "Debug site access check completed",
+        connectionTest: {
+          success: connectionTest.success,
+          phonebookCount: connectionTest.phonebookCount,
+        },
+        data: {
+          identifier: identifier,
+          found: priorityUserAccess.found,
+          fullAccess: priorityUserAccess.fullAccess,
+          sites: priorityUserAccess.sites || [],
+          siteCount: priorityUserAccess.sites
+            ? priorityUserAccess.sites.length
+            : 0,
+          user: priorityUserAccess.user || null,
+        },
+      });
+    } catch (error: any) {
+      logger.error(`[DEBUG] Error testing site access: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        message: "Debug test failed",
+        error: error.message,
+        stack: error.stack, // OK in development (already protected by NODE_ENV check above)
+      });
+    }
+  },
+);
 
 // @desc    Logout user (clear auth cookie)
 // @route   POST /api/auth/logout
@@ -432,12 +478,16 @@ export const debugUserSiteAccess = asyncHandler(async (req: Request, res: Respon
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   // HIPAA audit: Try to log logout if we can identify the user
   // Since this route is public, we need to decode the token from cookie
-  const token = req.cookies['auth-token'];
+  const token = req.cookies["auth-token"];
   if (token) {
     try {
       const decoded = jwt.verify(token, getJwtSecret()) as { id: string };
       if (decoded?.id) {
-        await authAuditService.logLogout(decoded.id, getClientIp(req), getUserAgent(req));
+        await authAuditService.logLogout(
+          decoded.id,
+          getClientIp(req),
+          getUserAgent(req),
+        );
       }
     } catch {
       // Token invalid or expired, skip audit logging
@@ -445,33 +495,35 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Clear the HttpOnly auth cookie
-  res.clearCookie('auth-token', {
+  res.clearCookie("auth-token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/'
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
   });
 
-  logger.info('User logged out, auth cookie cleared');
+  logger.info("User logged out, auth cookie cleared");
 
   res.status(200).json({
     success: true,
-    message: 'Logged out successfully'
+    message: "Logged out successfully",
   });
 });
 
 // @desc    Log session timeout (for HIPAA audit trail)
 // @route   POST /api/auth/session-timeout
 // @access  Private
-export const logSessionTimeout = asyncHandler(async (req: Request, res: Response) => {
-  // Log session timeout for HIPAA compliance
-  await authAuditService.logSessionTimeout(req.user.id);
+export const logSessionTimeout = asyncHandler(
+  async (req: Request, res: Response) => {
+    // Log session timeout for HIPAA compliance
+    await authAuditService.logSessionTimeout(req.user.id);
 
-  // Clear the auth cookie
-  res.clearCookie('auth-token', getCookieOptions());
+    // Clear the auth cookie
+    res.clearCookie("auth-token", getCookieOptions());
 
-  res.status(200).json({
-    success: true,
-    message: 'Session timeout logged'
-  });
-});
+    res.status(200).json({
+      success: true,
+      message: "Session timeout logged",
+    });
+  },
+);

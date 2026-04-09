@@ -14,15 +14,22 @@
  * See: .claude/rules/database.md
  */
 
-import sequelize from '../src/config/database';
-import { QueryTypes } from 'sequelize';
+import sequelize from "../src/config/database";
+import { QueryTypes } from "sequelize";
 
 // Columns auto-managed by Sequelize - don't require migrations
-const IGNORED_COLUMNS = ['createdAt', 'updatedAt', 'deletedAt', 'created_at', 'updated_at', 'deleted_at'];
+const IGNORED_COLUMNS = [
+  "createdAt",
+  "updatedAt",
+  "deletedAt",
+  "created_at",
+  "updated_at",
+  "deleted_at",
+];
 
 // Convert camelCase to snake_case
 function toSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 interface ColumnInfo {
@@ -33,7 +40,7 @@ async function checkModelSchemaDiff(): Promise<void> {
   try {
     // Wait for models to be loaded
     await sequelize.authenticate();
-    console.log('Database connection established.');
+    console.log("Database connection established.");
 
     const models = Object.values(sequelize.models);
     const errors: string[] = [];
@@ -48,16 +55,20 @@ async function checkModelSchemaDiff(): Promise<void> {
       }
 
       // Get model column names, excluding ignored columns
-      const modelColumns = Object.keys(rawAttributes)
-        .filter(col => !IGNORED_COLUMNS.includes(col));
+      const modelColumns = Object.keys(rawAttributes).filter(
+        (col) => !IGNORED_COLUMNS.includes(col),
+      );
 
       // Query actual database schema
-      const schemaColumns = await sequelize.query<ColumnInfo>(`
+      const schemaColumns = await sequelize.query<ColumnInfo>(
+        `
         SELECT column_name
         FROM information_schema.columns
         WHERE table_name = '${tableName}'
         AND table_schema = 'public'
-      `, { type: QueryTypes.SELECT });
+      `,
+        { type: QueryTypes.SELECT },
+      );
 
       if (!schemaColumns || schemaColumns.length === 0) {
         // Table doesn't exist - this is expected for new tables in development
@@ -65,33 +76,42 @@ async function checkModelSchemaDiff(): Promise<void> {
         continue;
       }
 
-      const dbColumnNames = schemaColumns.map((c: ColumnInfo) => c.column_name.toLowerCase());
+      const dbColumnNames = schemaColumns.map((c: ColumnInfo) =>
+        c.column_name.toLowerCase(),
+      );
 
       // Find columns in model but not in database
-      const missingInDb = modelColumns.filter(col => {
+      const missingInDb = modelColumns.filter((col) => {
         // Check both camelCase and snake_case versions
         const snakeCase = toSnakeCase(col).toLowerCase();
         const fieldName = rawAttributes[col]?.field?.toLowerCase() || snakeCase;
-        return !dbColumnNames.includes(fieldName) && !dbColumnNames.includes(col.toLowerCase());
+        return (
+          !dbColumnNames.includes(fieldName) &&
+          !dbColumnNames.includes(col.toLowerCase())
+        );
       });
 
       if (missingInDb.length > 0) {
-        errors.push(`${tableName}: Missing columns in DB: ${missingInDb.join(', ')}`);
+        errors.push(
+          `${tableName}: Missing columns in DB: ${missingInDb.join(", ")}`,
+        );
       }
     }
 
     if (errors.length > 0) {
-      console.error('\n❌ Model/Schema mismatch detected:\n');
-      errors.forEach(e => console.error(`  - ${e}`));
-      console.error('\n👉 Create a migration file in backend/src/migrations/');
-      console.error('   See: .claude/rules/database.md for migration template\n');
+      console.error("\n❌ Model/Schema mismatch detected:\n");
+      errors.forEach((e) => console.error(`  - ${e}`));
+      console.error("\n👉 Create a migration file in backend/src/migrations/");
+      console.error(
+        "   See: .claude/rules/database.md for migration template\n",
+      );
       process.exit(1);
     }
 
-    console.log('\n✅ Model/Schema parity check passed\n');
+    console.log("\n✅ Model/Schema parity check passed\n");
     process.exit(0);
   } catch (error) {
-    console.error('Error checking model/schema diff:', error);
+    console.error("Error checking model/schema diff:", error);
     process.exit(1);
   } finally {
     await sequelize.close();

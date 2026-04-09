@@ -9,7 +9,7 @@
  * - Generating and storing treatment PDFs with email sending
  */
 
-import { Treatment, TreatmentPdf } from '../models';
+import { Treatment, TreatmentPdf } from "../models";
 import {
   generateTreatmentPdf,
   generateRemovalPdf,
@@ -17,15 +17,15 @@ import {
   RemovalPdfData,
   RemovalApplicatorGroup,
   DiscrepancyClarification,
-  SignatureDetails as PdfSignatureDetails
-} from '../services/pdfGenerationService';
-import { sendSignedPdf, getPdfRecipientEmail } from '../services/emailService';
-import logger from './logger';
+  SignatureDetails as PdfSignatureDetails,
+} from "../services/pdfGenerationService";
+import { sendSignedPdf, getPdfRecipientEmail } from "../services/emailService";
+import logger from "./logger";
 
 /**
  * Usage type for applicators (matches pdfGenerationService expectations)
  */
-export type ApplicatorUsageType = 'full' | 'faulty' | 'none' | 'sealed';
+export type ApplicatorUsageType = "full" | "faulty" | "none" | "sealed";
 
 /**
  * Applicator structure for PDF generation
@@ -45,7 +45,7 @@ export interface ApplicatorForPdf {
  * Signature details for PDF signing
  */
 export interface SignatureDetails {
-  type: 'alphatau_verified' | 'hospital_auto';
+  type: "alphatau_verified" | "hospital_auto";
   signerName: string;
   signerEmail: string;
   signerPosition: string;
@@ -75,10 +75,12 @@ export interface FinalizationResult {
  */
 export function mergeApplicatorsForPdf(
   processedApplicators: any[],
-  availableApplicators: any[] | undefined
+  availableApplicators: any[] | undefined,
 ): ApplicatorForPdf[] {
   // Get serial numbers of processed applicators to identify unused ones
-  const processedSerials = new Set(processedApplicators.map((a) => a.serialNumber));
+  const processedSerials = new Set(
+    processedApplicators.map((a) => a.serialNumber),
+  );
 
   // Map unused applicators (those in available but not processed)
   // Preserve usageType from frontend (e.g., 'full' for removed applicators in removal workflow)
@@ -89,24 +91,26 @@ export function mergeApplicatorsForPdf(
       serialNumber: a.serialNumber,
       applicatorType: a.applicatorType,
       seedQuantity: a.seedQuantity,
-      usageType: (a.usageType as ApplicatorUsageType) || 'sealed',
-      insertionTime: a.insertionTime || '',
+      usageType: (a.usageType as ApplicatorUsageType) || "sealed",
+      insertionTime: a.insertionTime || "",
       insertedSeedsQty: a.insertedSeedsQty || 0,
-      comments: a.comments || 'Not used',
+      comments: a.comments || "Not used",
     }));
 
   // Combine processed applicators (formatted) with unused ones
   const allApplicators: ApplicatorForPdf[] = [
-    ...processedApplicators.map((app): ApplicatorForPdf => ({
-      id: app.id,
-      serialNumber: app.serialNumber,
-      applicatorType: app.applicatorType,
-      seedQuantity: app.seedQuantity,
-      usageType: app.usageType as ApplicatorUsageType,
-      insertionTime: app.insertionTime,
-      insertedSeedsQty: app.insertedSeedsQty,
-      comments: app.comments,
-    })),
+    ...processedApplicators.map(
+      (app): ApplicatorForPdf => ({
+        id: app.id,
+        serialNumber: app.serialNumber,
+        applicatorType: app.applicatorType,
+        seedQuantity: app.seedQuantity,
+        usageType: app.usageType as ApplicatorUsageType,
+        insertionTime: app.insertionTime,
+        insertedSeedsQty: app.insertedSeedsQty,
+        comments: app.comments,
+      }),
+    ),
     ...unusedApplicators,
   ];
 
@@ -117,7 +121,8 @@ export function mergeApplicatorsForPdf(
  * Calculate days since insertion for removal treatments
  */
 function calculateDaysSinceInsertion(insertionDate: Date | string): number {
-  const insertion = typeof insertionDate === 'string' ? new Date(insertionDate) : insertionDate;
+  const insertion =
+    typeof insertionDate === "string" ? new Date(insertionDate) : insertionDate;
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - insertion.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -136,12 +141,15 @@ function calculateDaysSinceInsertion(insertionDate: Date | string): number {
  */
 export function buildRemovalPdfData(
   treatment: Treatment,
-  applicators: ApplicatorForPdf[]
+  applicators: ApplicatorForPdf[],
 ): RemovalPdfData {
   // Group applicators by seed quantity for the tracking table
-  const groupsMap: Record<number, { apps: ApplicatorForPdf[], removed: number }> = {};
+  const groupsMap: Record<
+    number,
+    { apps: ApplicatorForPdf[]; removed: number }
+  > = {};
 
-  applicators.forEach(app => {
+  applicators.forEach((app) => {
     const seedCount = app.seedQuantity;
     if (!groupsMap[seedCount]) {
       groupsMap[seedCount] = { apps: [], removed: 0 };
@@ -150,7 +158,7 @@ export function buildRemovalPdfData(
 
     // Count removed applicators based on usageType
     // For removal treatments, 'full' means fully removed
-    if (app.usageType === 'full') {
+    if (app.usageType === "full") {
       groupsMap[seedCount].removed++;
     }
   });
@@ -159,9 +167,9 @@ export function buildRemovalPdfData(
   // Parse group comments from treatment if available
   const treatmentData = treatment as any;
   const groupComments: Record<number, string> = treatmentData.groupComments
-    ? (typeof treatmentData.groupComments === 'string'
-        ? JSON.parse(treatmentData.groupComments)
-        : treatmentData.groupComments)
+    ? typeof treatmentData.groupComments === "string"
+      ? JSON.parse(treatmentData.groupComments)
+      : treatmentData.groupComments
     : {};
 
   const applicatorGroups: RemovalApplicatorGroup[] = Object.entries(groupsMap)
@@ -171,9 +179,10 @@ export function buildRemovalPdfData(
       const removedApplicators = data.removed;
       const totalSources = totalApplicators * seedCount;
       const removedSources = removedApplicators * seedCount;
-      const progressPercent = totalApplicators > 0
-        ? Math.round((removedApplicators / totalApplicators) * 100)
-        : 0;
+      const progressPercent =
+        totalApplicators > 0
+          ? Math.round((removedApplicators / totalApplicators) * 100)
+          : 0;
 
       return {
         seedCount,
@@ -182,21 +191,29 @@ export function buildRemovalPdfData(
         totalSources,
         removedSources,
         progressPercent,
-        comment: groupComments[seedCount] || undefined
+        comment: groupComments[seedCount] || undefined,
       };
     })
     .sort((a, b) => b.seedCount - a.seedCount); // Sort by seed count descending
 
   // Calculate totals
-  const totalSourcesFromGroups = applicatorGroups.reduce((sum, g) => sum + g.totalSources, 0);
-  const removedSourcesFromGroups = applicatorGroups.reduce((sum, g) => sum + g.removedSources, 0);
+  const totalSourcesFromGroups = applicatorGroups.reduce(
+    (sum, g) => sum + g.totalSources,
+    0,
+  );
+  const removedSourcesFromGroups = applicatorGroups.reduce(
+    (sum, g) => sum + g.removedSources,
+    0,
+  );
 
   // Individual seeds data
   const individualSeedsRemoved = treatmentData.individualSeedsRemoved || 0;
-  const individualSeedComment = treatmentData.individualSeedComment || undefined;
+  const individualSeedComment =
+    treatmentData.individualSeedComment || undefined;
 
   // Total sources may be stored in treatment or calculated from applicators
-  const totalSourcesInserted = treatmentData.seedQuantity || totalSourcesFromGroups;
+  const totalSourcesInserted =
+    treatmentData.seedQuantity || totalSourcesFromGroups;
   const totalSourcesRemoved = removedSourcesFromGroups + individualSeedsRemoved;
   const sourcesNotRemoved = totalSourcesInserted - totalSourcesRemoved;
   const isRemovedEqualInserted = sourcesNotRemoved === 0;
@@ -204,9 +221,10 @@ export function buildRemovalPdfData(
   // Parse discrepancy clarification if present
   let discrepancyClarification: DiscrepancyClarification | undefined;
   if (treatmentData.discrepancyClarification) {
-    discrepancyClarification = typeof treatmentData.discrepancyClarification === 'string'
-      ? JSON.parse(treatmentData.discrepancyClarification)
-      : treatmentData.discrepancyClarification;
+    discrepancyClarification =
+      typeof treatmentData.discrepancyClarification === "string"
+        ? JSON.parse(treatmentData.discrepancyClarification)
+        : treatmentData.discrepancyClarification;
   }
 
   // Build the RemovalPdfData structure
@@ -216,44 +234,47 @@ export function buildRemovalPdfData(
       type: treatment.type,
       subjectId: treatment.subjectId,
       site: treatment.site,
-      date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
+      date:
+        treatment.date instanceof Date
+          ? treatment.date.toISOString()
+          : String(treatment.date),
       surgeon: treatment.surgeon,
       activityPerSeed: treatment.activityPerSeed,
       patientName: treatment.patientName,
       daysSinceInsertion: calculateDaysSinceInsertion(treatment.date),
-      seedQuantity: totalSourcesInserted
+      seedQuantity: totalSourcesInserted,
     },
     applicatorGroups,
     individualSeeds: {
       total: individualSeedsRemoved > 0 ? individualSeedsRemoved : 0,
       removed: individualSeedsRemoved,
-      comment: individualSeedComment
+      comment: individualSeedComment,
     },
     procedureForm: {
       removalDate: treatmentData.removalDate
-        ? (treatmentData.removalDate instanceof Date
-            ? treatmentData.removalDate.toISOString()
-            : treatmentData.removalDate)
+        ? treatmentData.removalDate instanceof Date
+          ? treatmentData.removalDate.toISOString()
+          : treatmentData.removalDate
         : new Date().toISOString(),
       allSourcesSameDate: treatmentData.allSourcesSameDate !== false,
       additionalRemovalDate: treatmentData.additionalRemovalDate
-        ? (treatmentData.additionalRemovalDate instanceof Date
-            ? treatmentData.additionalRemovalDate.toISOString()
-            : treatmentData.additionalRemovalDate)
+        ? treatmentData.additionalRemovalDate instanceof Date
+          ? treatmentData.additionalRemovalDate.toISOString()
+          : treatmentData.additionalRemovalDate
         : undefined,
       reasonNotSameDate: treatmentData.reasonNotSameDate,
       topGeneralComments: treatmentData.topGeneralComments,
-      removalGeneralComments: treatmentData.removalGeneralComments
+      removalGeneralComments: treatmentData.removalGeneralComments,
     },
     discrepancy: {
       sourcesNotRemoved,
       isRemovedEqualInserted,
-      clarification: discrepancyClarification
+      clarification: discrepancyClarification,
     },
     summary: {
       totalSourcesInserted,
-      totalSourcesRemoved
-    }
+      totalSourcesRemoved,
+    },
   };
 }
 
@@ -278,16 +299,21 @@ export async function finalizeAndSendPdf(
   treatment: Treatment,
   allApplicators: ApplicatorForPdf[],
   signatureDetails: SignatureDetails,
-  continuationInfo?: ContinuationInfo
+  continuationInfo?: ContinuationInfo,
 ): Promise<FinalizationResult> {
   let pdfBuffer: Buffer;
 
   // Generate PDF based on treatment type
-  if (treatment.type === 'removal') {
+  if (treatment.type === "removal") {
     // Build removal PDF data and generate removal-specific PDF
     const removalData = buildRemovalPdfData(treatment, allApplicators);
-    pdfBuffer = await generateRemovalPdf(removalData, signatureDetails as PdfSignatureDetails);
-    logger.info(`Removal PDF generated for treatment ${treatment.id}, size: ${pdfBuffer.length} bytes`);
+    pdfBuffer = await generateRemovalPdf(
+      removalData,
+      signatureDetails as PdfSignatureDetails,
+    );
+    logger.info(
+      `Removal PDF generated for treatment ${treatment.id}, size: ${pdfBuffer.length} bytes`,
+    );
   } else {
     // Generate standard insertion treatment PDF
     pdfBuffer = await generateTreatmentPdf(
@@ -296,14 +322,17 @@ export async function finalizeAndSendPdf(
         type: treatment.type,
         subjectId: treatment.subjectId,
         site: treatment.site,
-        date: treatment.date instanceof Date ? treatment.date.toISOString() : String(treatment.date),
+        date:
+          treatment.date instanceof Date
+            ? treatment.date.toISOString()
+            : String(treatment.date),
         surgeon: treatment.surgeon,
         activityPerSeed: treatment.activityPerSeed,
         patientName: treatment.patientName,
       },
       allApplicators,
       signatureDetails,
-      continuationInfo
+      continuationInfo,
     );
   }
 
@@ -317,21 +346,26 @@ export async function finalizeAndSendPdf(
     signerEmail: signatureDetails.signerEmail,
     signerPosition: signatureDetails.signerPosition,
     signedAt: signatureDetails.signedAt,
-    emailStatus: 'pending',
+    emailStatus: "pending",
   });
 
   // Send PDF to clinic email
   const recipientEmail = getPdfRecipientEmail();
   try {
-    await sendSignedPdf(recipientEmail, pdfBuffer, treatment.id, signatureDetails);
+    await sendSignedPdf(
+      recipientEmail,
+      pdfBuffer,
+      treatment.id,
+      signatureDetails,
+    );
     treatmentPdf.emailSentAt = new Date();
     treatmentPdf.emailSentTo = recipientEmail;
-    treatmentPdf.emailStatus = 'sent';
+    treatmentPdf.emailStatus = "sent";
     await treatmentPdf.save();
     logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
   } catch (emailError: any) {
     logger.error(`Failed to send PDF email: ${emailError.message}`);
-    treatmentPdf.emailStatus = 'failed';
+    treatmentPdf.emailStatus = "failed";
     await treatmentPdf.save();
     // Don't fail the whole operation - PDF is stored
   }

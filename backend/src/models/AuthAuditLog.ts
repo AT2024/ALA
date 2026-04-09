@@ -1,13 +1,13 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/database";
 
 // AuthAuditLog event types for HIPAA compliance tracking
 export const AUTH_EVENT_TYPES = [
-  'LOGIN_SUCCESS',
-  'LOGIN_FAILURE',
-  'LOGOUT',
-  'SESSION_TIMEOUT',
-  'OTP_REQUEST',
+  "LOGIN_SUCCESS",
+  "LOGIN_FAILURE",
+  "LOGOUT",
+  "SESSION_TIMEOUT",
+  "OTP_REQUEST",
 ] as const;
 
 export type AuthEventType = (typeof AUTH_EVENT_TYPES)[number];
@@ -28,7 +28,14 @@ interface AuthAuditLogAttributes {
 // For creating a new audit log entry
 type AuthAuditLogCreationAttributes = Optional<
   AuthAuditLogAttributes,
-  'id' | 'eventTime' | 'userId' | 'ipAddress' | 'userAgent' | 'identifier' | 'failureReason' | 'requestId'
+  | "id"
+  | "eventTime"
+  | "userId"
+  | "ipAddress"
+  | "userAgent"
+  | "identifier"
+  | "failureReason"
+  | "requestId"
 >;
 
 class AuthAuditLog
@@ -60,17 +67,17 @@ AuthAuditLog.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'user_id',
+      field: "user_id",
       references: {
-        model: 'users',
-        key: 'id',
+        model: "users",
+        key: "id",
       },
-      onDelete: 'SET NULL',
+      onDelete: "SET NULL",
     },
     eventType: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      field: 'event_type',
+      field: "event_type",
       validate: {
         isIn: [AUTH_EVENT_TYPES as unknown as string[]],
       },
@@ -79,17 +86,17 @@ AuthAuditLog.init(
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
-      field: 'event_time',
+      field: "event_time",
     },
     ipAddress: {
       type: DataTypes.STRING(45), // IPv6 max length
       allowNull: true,
-      field: 'ip_address',
+      field: "ip_address",
     },
     userAgent: {
       type: DataTypes.TEXT,
       allowNull: true,
-      field: 'user_agent',
+      field: "user_agent",
     },
     identifier: {
       type: DataTypes.STRING(255),
@@ -98,35 +105,35 @@ AuthAuditLog.init(
     failureReason: {
       type: DataTypes.TEXT,
       allowNull: true,
-      field: 'failure_reason',
+      field: "failure_reason",
     },
     requestId: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'request_id',
+      field: "request_id",
     },
   },
   {
     sequelize,
-    modelName: 'AuthAuditLog',
-    tableName: 'auth_audit_log',
+    modelName: "AuthAuditLog",
+    tableName: "auth_audit_log",
     timestamps: true,
     indexes: [
       {
-        fields: ['user_id'],
+        fields: ["user_id"],
       },
       {
-        fields: ['event_time'],
+        fields: ["event_time"],
       },
       {
-        fields: ['event_type'],
+        fields: ["event_type"],
       },
       {
-        fields: ['user_id', 'event_time'],
-        name: 'idx_auth_audit_user_timeline',
+        fields: ["user_id", "event_time"],
+        name: "idx_auth_audit_user_timeline",
       },
     ],
-  }
+  },
 );
 
 export default AuthAuditLog;

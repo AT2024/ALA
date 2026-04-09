@@ -10,11 +10,16 @@
  * CRITICAL: All medical status conflicts require admin resolution
  */
 
-import { Request, Response } from 'express';
-import crypto from 'crypto';
-import { Op } from 'sequelize';
-import { Treatment, Applicator, SyncConflict, OfflineAuditLog } from '../models';
-import logger from '../utils/logger';
+import { Request, Response } from "express";
+import crypto from "crypto";
+import { Op } from "sequelize";
+import {
+  Treatment,
+  Applicator,
+  SyncConflict,
+  OfflineAuditLog,
+} from "../models";
+import logger from "../utils/logger";
 
 // ============================================================================
 // Types
@@ -50,10 +55,10 @@ interface SyncRequest extends AuthenticatedRequest {
 }
 
 interface SyncChange {
-  id: string;                    // Idempotency key
-  entityType: 'treatment' | 'applicator';
+  id: string; // Idempotency key
+  entityType: "treatment" | "applicator";
   entityId: string;
-  operation: 'create' | 'update' | 'status_change';
+  operation: "create" | "update" | "status_change";
   data: Record<string, unknown>;
   localVersion: number;
   changedAt: string;
@@ -65,13 +70,18 @@ interface ConflictResolutionRequest extends AuthenticatedRequest {
     id: string;
   };
   body: {
-    resolution: 'local_wins' | 'server_wins';
+    resolution: "local_wins" | "server_wins";
     adminOverride?: boolean;
   };
 }
 
 // Medical statuses that require admin resolution
-const ADMIN_REQUIRED_STATUSES = ['INSERTED', 'FAULTY', 'DISPOSED', 'DEPLOYMENT_FAILURE'];
+const ADMIN_REQUIRED_STATUSES = [
+  "INSERTED",
+  "FAULTY",
+  "DISPOSED",
+  "DEPLOYMENT_FAILURE",
+];
 
 // Bundle expiry time (24 hours)
 const BUNDLE_EXPIRY_HOURS = 24;
@@ -84,7 +94,7 @@ const BUNDLE_EXPIRY_HOURS = 24;
  * Check if user is admin (position 99)
  * Note: Position is stored in user.metadata.positionCode from Priority
  */
-function isAdmin(user: AuthenticatedRequest['user']): boolean {
+function isAdmin(user: AuthenticatedRequest["user"]): boolean {
   return Number(user?.metadata?.positionCode) === 99;
 }
 
@@ -92,21 +102,23 @@ function isAdmin(user: AuthenticatedRequest['user']): boolean {
  * Check if a conflict requires admin resolution
  */
 function requiresAdminResolution(
-  entityType: 'treatment' | 'applicator',
+  entityType: "treatment" | "applicator",
   localData: Record<string, unknown>,
-  serverData: Record<string, unknown>
+  serverData: Record<string, unknown>,
 ): boolean {
   // Treatment conflicts always require admin
-  if (entityType === 'treatment') {
+  if (entityType === "treatment") {
     return true;
   }
 
   // Applicator medical status conflicts require admin
-  if (entityType === 'applicator') {
+  if (entityType === "applicator") {
     const localStatus = localData?.status as string;
     const serverStatus = serverData?.status as string;
-    return ADMIN_REQUIRED_STATUSES.includes(localStatus) ||
-           ADMIN_REQUIRED_STATUSES.includes(serverStatus);
+    return (
+      ADMIN_REQUIRED_STATUSES.includes(localStatus) ||
+      ADMIN_REQUIRED_STATUSES.includes(serverStatus)
+    );
   }
 
   return false;
@@ -117,7 +129,7 @@ function requiresAdminResolution(
  */
 function computeHash(data: Record<string, unknown>): string {
   const normalized = JSON.stringify(data, Object.keys(data).sort());
-  return crypto.createHash('sha256').update(normalized).digest('hex');
+  return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
 // ============================================================================
@@ -130,7 +142,10 @@ function computeHash(data: Record<string, unknown>): string {
  * Download a treatment bundle for offline use.
  * Includes treatment, all applicators, and validation data.
  */
-export const downloadBundle = async (req: DownloadBundleRequest, res: Response) => {
+export const downloadBundle = async (
+  req: DownloadBundleRequest,
+  res: Response,
+) => {
   try {
     const { treatmentId, deviceId } = req.body;
     const userId = req.user?.id;
@@ -138,38 +153,42 @@ export const downloadBundle = async (req: DownloadBundleRequest, res: Response) 
     if (!treatmentId || !deviceId) {
       return res.status(400).json({
         success: false,
-        error: 'treatmentId and deviceId are required',
+        error: "treatmentId and deviceId are required",
       });
     }
 
     // Fetch treatment with applicators
     const treatment = await Treatment.findByPk(treatmentId, {
-      include: [{ model: Applicator, as: 'applicators' }],
+      include: [{ model: Applicator, as: "applicators" }],
     });
 
     if (!treatment) {
       return res.status(404).json({
         success: false,
-        error: 'Treatment not found',
+        error: "Treatment not found",
       });
     }
 
     // Check user has access to this treatment's site
     // Note: Sites are stored as objects with custName and custDes in user.metadata.sites
     const userSites = req.user?.metadata?.sites || [];
-    const userSiteCodes = userSites.map((s: { custName: string }) => s.custName);
+    const userSiteCodes = userSites.map(
+      (s: { custName: string }) => s.custName,
+    );
     const isAdminUser = isAdmin(req.user);
 
     if (!isAdminUser && !userSiteCodes.includes(treatment.site)) {
       return res.status(403).json({
         success: false,
-        error: 'You do not have access to this treatment',
+        error: "You do not have access to this treatment",
       });
     }
 
     // Calculate expiry
     const downloadedAt = new Date();
-    const expiresAt = new Date(downloadedAt.getTime() + BUNDLE_EXPIRY_HOURS * 60 * 60 * 1000);
+    const expiresAt = new Date(
+      downloadedAt.getTime() + BUNDLE_EXPIRY_HOURS * 60 * 60 * 1000,
+    );
 
     // Update treatment sync status
     await treatment.update({
@@ -179,20 +198,22 @@ export const downloadBundle = async (req: DownloadBundleRequest, res: Response) 
 
     // Create audit log entry
     await OfflineAuditLog.create({
-      entityType: 'treatment',
+      entityType: "treatment",
       entityId: treatmentId,
-      operation: 'update',
+      operation: "update",
       changedBy: userId!,
       deviceId,
       offlineSince: downloadedAt,
       offlineChangedAt: downloadedAt,
       syncedAt: downloadedAt,
-      changeHash: computeHash({ action: 'download_bundle', treatmentId }),
+      changeHash: computeHash({ action: "download_bundle", treatmentId }),
       afterState: { downloaded: true, deviceId },
-      metadata: { action: 'download_bundle' },
+      metadata: { action: "download_bundle" },
     });
 
-    logger.info(`[Offline] Bundle downloaded: treatment=${treatmentId} user=${userId} device=${deviceId}`);
+    logger.info(
+      `[Offline] Bundle downloaded: treatment=${treatmentId} user=${userId} device=${deviceId}`,
+    );
 
     // Build response
     return res.status(200).json({
@@ -202,27 +223,28 @@ export const downloadBundle = async (req: DownloadBundleRequest, res: Response) 
           ...treatment.toJSON(),
           version: treatment.version,
         },
-        applicators: (treatment as any).applicators?.map((app: Applicator) => ({
-          ...app.toJSON(),
-          version: app.version,
-        })) || [],
+        applicators:
+          (treatment as any).applicators?.map((app: Applicator) => ({
+            ...app.toJSON(),
+            version: app.version,
+          })) || [],
         serverVersion: treatment.version,
         downloadedAt: downloadedAt.toISOString(),
         expiresAt: expiresAt.toISOString(),
         offlineLimitations: {
-          maxStatusTransition: 'INSERTED', // Full workflow allowed
-          canFinalize: false,              // Finalization requires online
-          requiresConfirmationFor: ['INSERTED', 'FAULTY'],
+          maxStatusTransition: "INSERTED", // Full workflow allowed
+          canFinalize: false, // Finalization requires online
+          requiresConfirmationFor: ["INSERTED", "FAULTY"],
         },
       },
       // Note: encryptionKey is now derived client-side from user credentials
       // This is more secure as the server never sees the key
     });
   } catch (error) {
-    logger.error('[Offline] Download bundle error:', error);
+    logger.error("[Offline] Download bundle error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to download bundle',
+      error: "Failed to download bundle",
     });
   }
 };
@@ -241,13 +263,13 @@ export const syncChanges = async (req: SyncRequest, res: Response) => {
     if (!deviceId || !changes || !Array.isArray(changes)) {
       return res.status(400).json({
         success: false,
-        error: 'deviceId and changes array are required',
+        error: "deviceId and changes array are required",
       });
     }
 
     const results: Array<{
       changeId: string;
-      status: 'synced' | 'conflict' | 'error';
+      status: "synced" | "conflict" | "error";
       message?: string;
       conflictId?: string;
     }> = [];
@@ -265,42 +287,54 @@ export const syncChanges = async (req: SyncRequest, res: Response) => {
         if (existingAudit) {
           results.push({
             changeId: change.id,
-            status: 'synced',
-            message: 'Already processed',
+            status: "synced",
+            message: "Already processed",
           });
           continue;
         }
 
         // Process based on entity type
-        if (change.entityType === 'treatment') {
-          const result = await syncTreatmentChange(change, userId!, deviceId, offlineSince);
+        if (change.entityType === "treatment") {
+          const result = await syncTreatmentChange(
+            change,
+            userId!,
+            deviceId,
+            offlineSince,
+          );
           results.push({ changeId: change.id, ...result });
-        } else if (change.entityType === 'applicator') {
-          const result = await syncApplicatorChange(change, userId!, deviceId, offlineSince);
+        } else if (change.entityType === "applicator") {
+          const result = await syncApplicatorChange(
+            change,
+            userId!,
+            deviceId,
+            offlineSince,
+          );
           results.push({ changeId: change.id, ...result });
         } else {
           results.push({
             changeId: change.id,
-            status: 'error',
-            message: 'Unknown entity type',
+            status: "error",
+            message: "Unknown entity type",
           });
         }
       } catch (changeError) {
         logger.error(`[Offline] Sync change error: ${change.id}`, changeError);
         results.push({
           changeId: change.id,
-          status: 'error',
-          message: 'Failed to process change',
+          status: "error",
+          message: "Failed to process change",
         });
       }
     }
 
     // Summary
-    const synced = results.filter(r => r.status === 'synced').length;
-    const conflicts = results.filter(r => r.status === 'conflict').length;
-    const errors = results.filter(r => r.status === 'error').length;
+    const synced = results.filter((r) => r.status === "synced").length;
+    const conflicts = results.filter((r) => r.status === "conflict").length;
+    const errors = results.filter((r) => r.status === "error").length;
 
-    logger.info(`[Offline] Sync completed: user=${userId} device=${deviceId} synced=${synced} conflicts=${conflicts} errors=${errors}`);
+    logger.info(
+      `[Offline] Sync completed: user=${userId} device=${deviceId} synced=${synced} conflicts=${conflicts} errors=${errors}`,
+    );
 
     return res.status(200).json({
       success: true,
@@ -313,10 +347,10 @@ export const syncChanges = async (req: SyncRequest, res: Response) => {
       },
     });
   } catch (error) {
-    logger.error('[Offline] Sync error:', error);
+    logger.error("[Offline] Sync error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to sync changes',
+      error: "Failed to sync changes",
     });
   }
 };
@@ -328,30 +362,34 @@ async function syncTreatmentChange(
   change: SyncChange,
   userId: string,
   deviceId: string,
-  offlineSince: string
-): Promise<{ status: 'synced' | 'conflict' | 'error'; message?: string; conflictId?: string }> {
+  offlineSince: string,
+): Promise<{
+  status: "synced" | "conflict" | "error";
+  message?: string;
+  conflictId?: string;
+}> {
   const treatment = await Treatment.findByPk(change.entityId);
 
   if (!treatment) {
-    return { status: 'error', message: 'Treatment not found' };
+    return { status: "error", message: "Treatment not found" };
   }
 
   // Version conflict check
   if (treatment.version !== change.localVersion) {
     // Create conflict record
     const conflict = await SyncConflict.create({
-      entityType: 'treatment',
+      entityType: "treatment",
       entityId: change.entityId,
       localData: change.data,
       serverData: treatment.toJSON() as unknown as Record<string, unknown>,
-      conflictType: 'version_mismatch',
+      conflictType: "version_mismatch",
       deviceId,
       userId,
     });
 
     return {
-      status: 'conflict',
-      message: 'Version mismatch - treatment was modified on server',
+      status: "conflict",
+      message: "Version mismatch - treatment was modified on server",
       conflictId: conflict.id,
     };
   }
@@ -365,7 +403,7 @@ async function syncTreatmentChange(
 
   // Create audit log
   await OfflineAuditLog.create({
-    entityType: 'treatment',
+    entityType: "treatment",
     entityId: change.entityId,
     operation: change.operation,
     changedBy: userId,
@@ -379,7 +417,7 @@ async function syncTreatmentChange(
     metadata: {},
   });
 
-  return { status: 'synced' };
+  return { status: "synced" };
 }
 
 /**
@@ -389,35 +427,46 @@ async function syncApplicatorChange(
   change: SyncChange,
   userId: string,
   deviceId: string,
-  offlineSince: string
-): Promise<{ status: 'synced' | 'conflict' | 'error'; message?: string; conflictId?: string }> {
+  offlineSince: string,
+): Promise<{
+  status: "synced" | "conflict" | "error";
+  message?: string;
+  conflictId?: string;
+}> {
   const applicator = await Applicator.findByPk(change.entityId);
 
   if (!applicator) {
-    return { status: 'error', message: 'Applicator not found' };
+    return { status: "error", message: "Applicator not found" };
   }
 
   // Version conflict check
   if (applicator.version !== change.localVersion) {
-    const serverData = applicator.toJSON() as unknown as Record<string, unknown>;
-    const needsAdmin = requiresAdminResolution('applicator', change.data, serverData);
+    const serverData = applicator.toJSON() as unknown as Record<
+      string,
+      unknown
+    >;
+    const needsAdmin = requiresAdminResolution(
+      "applicator",
+      change.data,
+      serverData,
+    );
 
     // Create conflict record
     const conflict = await SyncConflict.create({
-      entityType: 'applicator',
+      entityType: "applicator",
       entityId: change.entityId,
       localData: change.data,
       serverData,
-      conflictType: needsAdmin ? 'status_conflict' : 'version_mismatch',
+      conflictType: needsAdmin ? "status_conflict" : "version_mismatch",
       deviceId,
       userId,
     });
 
     return {
-      status: 'conflict',
+      status: "conflict",
       message: needsAdmin
-        ? 'Medical status conflict - requires admin resolution'
-        : 'Version mismatch - applicator was modified on server',
+        ? "Medical status conflict - requires admin resolution"
+        : "Version mismatch - applicator was modified on server",
       conflictId: conflict.id,
     };
   }
@@ -431,7 +480,7 @@ async function syncApplicatorChange(
 
   // Create audit log
   await OfflineAuditLog.create({
-    entityType: 'applicator',
+    entityType: "applicator",
     entityId: change.entityId,
     operation: change.operation,
     changedBy: userId,
@@ -445,7 +494,7 @@ async function syncApplicatorChange(
     metadata: {},
   });
 
-  return { status: 'synced' };
+  return { status: "synced" };
 }
 
 /**
@@ -453,7 +502,10 @@ async function syncApplicatorChange(
  *
  * Get all unresolved conflicts for the current user
  */
-export const getConflicts = async (req: AuthenticatedRequest, res: Response) => {
+export const getConflicts = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   try {
     const userId = req.user?.id;
     const isAdminUser = isAdmin(req.user);
@@ -466,21 +518,21 @@ export const getConflicts = async (req: AuthenticatedRequest, res: Response) => 
         ...whereClause,
         resolvedAt: { [Op.is]: null },
       } as Record<string, unknown>,
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
     });
 
     return res.status(200).json({
       success: true,
-      conflicts: conflicts.map(c => ({
+      conflicts: conflicts.map((c) => ({
         ...c.toJSON(),
         requiresAdmin: c.requiresAdminResolution(),
       })),
     });
   } catch (error) {
-    logger.error('[Offline] Get conflicts error:', error);
+    logger.error("[Offline] Get conflicts error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get conflicts',
+      error: "Failed to get conflicts",
     });
   }
 };
@@ -490,7 +542,10 @@ export const getConflicts = async (req: AuthenticatedRequest, res: Response) => 
  *
  * Resolve a sync conflict
  */
-export const resolveConflict = async (req: ConflictResolutionRequest, res: Response) => {
+export const resolveConflict = async (
+  req: ConflictResolutionRequest,
+  res: Response,
+) => {
   try {
     const { id } = req.params;
     const { resolution, adminOverride } = req.body;
@@ -502,14 +557,14 @@ export const resolveConflict = async (req: ConflictResolutionRequest, res: Respo
     if (!conflict) {
       return res.status(404).json({
         success: false,
-        error: 'Conflict not found',
+        error: "Conflict not found",
       });
     }
 
     if (conflict.resolvedAt) {
       return res.status(400).json({
         success: false,
-        error: 'Conflict already resolved',
+        error: "Conflict already resolved",
       });
     }
 
@@ -517,19 +572,21 @@ export const resolveConflict = async (req: ConflictResolutionRequest, res: Respo
     if (conflict.requiresAdminResolution() && !isAdminUser) {
       return res.status(403).json({
         success: false,
-        error: 'This conflict requires admin resolution',
+        error: "This conflict requires admin resolution",
       });
     }
 
     // Apply resolution
-    const winningData = resolution === 'local_wins' ? conflict.localData : conflict.serverData;
-    const overwrittenData = resolution === 'local_wins' ? conflict.serverData : conflict.localData;
+    const winningData =
+      resolution === "local_wins" ? conflict.localData : conflict.serverData;
+    const overwrittenData =
+      resolution === "local_wins" ? conflict.serverData : conflict.localData;
 
-    if (conflict.entityType === 'treatment') {
+    if (conflict.entityType === "treatment") {
       await Treatment.update(winningData, {
         where: { id: conflict.entityId },
       });
-    } else if (conflict.entityType === 'applicator') {
+    } else if (conflict.entityType === "applicator") {
       await Applicator.update(winningData, {
         where: { id: conflict.entityId },
       });
@@ -539,21 +596,23 @@ export const resolveConflict = async (req: ConflictResolutionRequest, res: Respo
     await conflict.update({
       resolvedAt: new Date(),
       resolvedBy: userId,
-      resolution: adminOverride ? 'admin_override' : resolution,
+      resolution: adminOverride ? "admin_override" : resolution,
       overwrittenData,
     });
 
-    logger.info(`[Offline] Conflict resolved: conflict=${id} resolution=${resolution} user=${userId}`);
+    logger.info(
+      `[Offline] Conflict resolved: conflict=${id} resolution=${resolution} user=${userId}`,
+    );
 
     return res.status(200).json({
       success: true,
-      message: 'Conflict resolved successfully',
+      message: "Conflict resolved successfully",
     });
   } catch (error) {
-    logger.error('[Offline] Resolve conflict error:', error);
+    logger.error("[Offline] Resolve conflict error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to resolve conflict',
+      error: "Failed to resolve conflict",
     });
   }
 };
@@ -571,10 +630,10 @@ export const getServerTime = async (req: Request, res: Response) => {
       serverTime: now.getTime(),
     });
   } catch (error) {
-    logger.error('[Offline] Time sync error:', error);
+    logger.error("[Offline] Time sync error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to get server time',
+      error: "Failed to get server time",
     });
   }
 };
