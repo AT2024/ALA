@@ -1,6 +1,6 @@
 // Mock helpers for testing medical application
-import { jest } from '@jest/globals';
-import { mockPriorityResponses } from '../fixtures/testData';
+import { jest } from "@jest/globals";
+import { mockPriorityResponses } from "../fixtures/testData";
 
 // Mock Priority API service
 export const mockPriorityService = {
@@ -14,6 +14,7 @@ export const mockPriorityService = {
   getApplicatorFromPriority: jest.fn(),
   getPartDetails: jest.fn(),
   updateApplicatorInPriority: jest.fn(),
+  syncApplicatorUsageToPriority: jest.fn(),
   updateTreatmentStatus: jest.fn(),
   checkRemovalStatus: jest.fn(),
   validateApplicatorForManualEntry: jest.fn(),
@@ -22,7 +23,7 @@ export const mockPriorityService = {
   getApplicatorsForTreatment: jest.fn(),
   getAvailableApplicatorsForTreatment: jest.fn(),
   searchApplicatorsByName: jest.fn(),
-  calculateLevenshteinDistance: jest.fn()
+  calculateLevenshteinDistance: jest.fn(),
 };
 
 // Mock Sequelize models
@@ -34,68 +35,68 @@ export const mockSequelizeModel = {
   update: jest.fn(),
   destroy: jest.fn(),
   count: jest.fn(),
-  findOrCreate: jest.fn()
+  findOrCreate: jest.fn(),
 };
 
 // Mock User model
 export const mockUser = {
-  id: 'test-user-uuid-001',
-  name: 'Test User',
-  email: 'test@example.com',
+  id: "test-user-uuid-001",
+  name: "Test User",
+  email: "test@example.com",
   phoneNumber: null,
-  role: 'hospital',
+  role: "hospital",
   metadata: {
     positionCode: 1,
-    custName: '100078',
-    sites: [{ custName: '100078', custDes: 'Main Test Hospital' }],
-    fullAccess: false
+    custName: "100078",
+    sites: [{ custName: "100078", custDes: "Main Test Hospital" }],
+    fullAccess: false,
   },
-  generateVerificationCode: jest.fn().mockResolvedValue('123456'),
+  generateVerificationCode: jest.fn().mockResolvedValue("123456"),
   verifyCode: jest.fn(),
-  save: jest.fn().mockResolvedValue(true)
+  save: jest.fn().mockResolvedValue(true),
 };
 
 // Mock Treatment model
 export const mockTreatment = {
-  id: 'test-treatment-uuid-001',
-  type: 'insertion',
-  subjectId: 'PAT-2025-015',
-  patientName: 'Patient Test-015',
-  site: '100078',
-  date: '2025-07-10',
+  id: "test-treatment-uuid-001",
+  type: "insertion",
+  subjectId: "PAT-2025-015",
+  patientName: "Patient Test-015",
+  site: "100078",
+  date: "2025-07-10",
   isComplete: false,
-  priorityId: 'SO25000015',
-  userId: 'test-user-uuid-001',
-  save: jest.fn().mockResolvedValue(true)
+  priorityId: "SO25000015",
+  userId: "test-user-uuid-001",
+  save: jest.fn().mockResolvedValue(true),
 };
 
 // Mock Applicator model
 export const mockApplicator: any = {
-  id: 'test-applicator-uuid-001',
-  serialNumber: 'APP001-2025-001',
-  applicatorType: 'Standard Applicator Type A',
+  id: "test-applicator-uuid-001",
+  serialNumber: "APP001-2025-001",
+  applicatorType: "Standard Applicator Type A",
   seedQuantity: 25,
-  usageType: 'full',
+  usageType: "full",
   insertedSeedsQty: 25,
-  insertionTime: new Date('2025-07-10T10:30:00Z'),
-  comments: 'Test applicator insertion',
-  treatmentId: 'test-treatment-uuid-001',
-  addedBy: 'test-user-uuid-001',
+  insertionTime: new Date("2025-07-10T10:30:00Z"),
+  comments: "Test applicator insertion",
+  treatmentId: "test-treatment-uuid-001",
+  addedBy: "test-user-uuid-001",
   isRemoved: false,
   save: jest.fn().mockResolvedValue(true),
-  update: jest.fn().mockResolvedValue(true)
+  update: jest.fn().mockResolvedValue(true),
 };
 
 // Mock JWT
 export const mockJWT = {
-  sign: jest.fn().mockReturnValue('mock-jwt-token'),
-  verify: jest.fn().mockReturnValue({ id: 'test-user-uuid-001' })
+  sign: jest.fn().mockReturnValue("mock-jwt-token"),
+  verify: jest.fn().mockReturnValue({ id: "test-user-uuid-001" }),
 };
 
 // Mock bcrypt
 export const mockBcrypt = {
-  hash: jest.fn().mockResolvedValue('hashed-password'),
-  compare: jest.fn().mockResolvedValue(true)
+  hash: jest.fn().mockResolvedValue("hashed-password"),
+  compare: jest.fn().mockResolvedValue(true),
 };
 
 // Mock logger
@@ -103,7 +104,7 @@ export const mockLogger = {
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
-  debug: jest.fn()
+  debug: jest.fn(),
 };
 
 // Mock axios for Priority API calls
@@ -112,12 +113,12 @@ export const mockAxios = {
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
   }),
   get: jest.fn(),
   post: jest.fn(),
   patch: jest.fn(),
-  delete: jest.fn()
+  delete: jest.fn(),
 };
 
 // Helper to setup Priority API mocks
@@ -128,52 +129,52 @@ export const setupPriorityApiMocks = () => {
     phonebookCount: 10,
     phonebookSample: mockPriorityResponses.phonebook.data.value[0],
     ordersCount: 5,
-    ordersSample: mockPriorityResponses.orders.data.value[0]
+    ordersSample: mockPriorityResponses.orders.data.value[0],
   });
 
   mockPriorityService.getUserFromPhonebook.mockResolvedValue({
     found: true,
     user: {
-      email: 'test@example.com',
-      phone: '555-TEST',
-      name: 'Test User',
+      email: "test@example.com",
+      phone: "555-TEST",
+      name: "Test User",
       positionCode: 1,
-      custName: '100078'
-    }
+      custName: "100078",
+    },
   });
 
   mockPriorityService.getAllSites.mockResolvedValue([
-    { custName: '100078', custDes: 'Main Test Hospital' },
-    { custName: '100040', custDes: 'Test Hospital' }
+    { custName: "100078", custDes: "Main Test Hospital" },
+    { custName: "100040", custDes: "Test Hospital" },
   ]);
 
   mockPriorityService.getOrdersForSiteWithFilter.mockResolvedValue(
-    mockPriorityResponses.orders.data.value
+    mockPriorityResponses.orders.data.value,
   );
 
   mockPriorityService.getApplicatorFromPriority.mockResolvedValue({
     found: true,
     data: {
-      serialNumber: 'APP001-2025-001',
-      partName: 'Standard Applicator Type A',
-      treatmentId: 'SO25000015',
-      intendedPatientId: 'PAT-2025-015',
+      serialNumber: "APP001-2025-001",
+      partName: "Standard Applicator Type A",
+      treatmentId: "SO25000015",
+      intendedPatientId: "PAT-2025-015",
       usageType: null,
       usageTime: null,
       insertedSeeds: 0,
-      comments: ''
-    }
+      comments: "",
+    },
   });
 
   mockPriorityService.updateApplicatorInPriority.mockResolvedValue({
     success: true,
-    message: 'Applicator data saved to Priority successfully'
+    message: "Applicator data saved to Priority successfully",
   });
 
   mockPriorityService.checkRemovalStatus.mockResolvedValue({
     readyForRemoval: true,
-    status: 'Waiting for removal',
-    orderFound: true
+    status: "Waiting for removal",
+    orderFound: true,
   });
 };
 
@@ -181,7 +182,10 @@ export const setupPriorityApiMocks = () => {
 export const setupDatabaseMocks = () => {
   // User model mocks
   mockSequelizeModel.findOne.mockImplementation(({ where }) => {
-    if (where.email === 'test@example.com' || where.phoneNumber === '555-TEST') {
+    if (
+      where.email === "test@example.com" ||
+      where.phoneNumber === "555-TEST"
+    ) {
       return Promise.resolve(mockUser);
     }
     return Promise.resolve(null);
@@ -191,10 +195,10 @@ export const setupDatabaseMocks = () => {
 
   // Treatment model mocks
   mockSequelizeModel.findByPk.mockImplementation((id) => {
-    if (id === 'test-treatment-uuid-001') {
+    if (id === "test-treatment-uuid-001") {
       return Promise.resolve(mockTreatment);
     }
-    if (id === 'test-applicator-uuid-001') {
+    if (id === "test-applicator-uuid-001") {
       return Promise.resolve(mockApplicator);
     }
     return Promise.resolve(null);
@@ -209,15 +213,15 @@ export const resetAllMocks = () => {
   jest.clearAllMocks();
 
   // Reset Priority service mocks
-  Object.values(mockPriorityService).forEach(mock => {
-    if (typeof mock === 'function') {
+  Object.values(mockPriorityService).forEach((mock) => {
+    if (typeof mock === "function") {
       mock.mockReset();
     }
   });
 
   // Reset model mocks
-  Object.values(mockSequelizeModel).forEach(mock => {
-    if (typeof mock === 'function') {
+  Object.values(mockSequelizeModel).forEach((mock) => {
+    if (typeof mock === "function") {
       mock.mockReset();
     }
   });
@@ -235,7 +239,7 @@ export const mockApiError = (status: number, message: string) => {
   error.response = {
     status,
     statusText: message,
-    data: { error: message }
+    data: { error: message },
   };
   return error;
 };
@@ -244,7 +248,7 @@ export const mockApiError = (status: number, message: string) => {
 export const mockTransaction = {
   commit: jest.fn(),
   rollback: jest.fn(),
-  finished: 'commit'
+  finished: "commit",
 };
 
 export default {
@@ -261,5 +265,5 @@ export default {
   setupPriorityApiMocks,
   setupDatabaseMocks,
   resetAllMocks,
-  mockApiError
+  mockApiError,
 };
