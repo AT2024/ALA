@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { authService } from '@/services/authService';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { authService } from "@/services/authService";
 
 function VerificationPage() {
   const { verify, error, clearError, isLoading } = useAuth();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState("");
   const [remainingTime, setRemainingTime] = useState(10); // 10 seconds timeout
   const [resendDisabled, setResendDisabled] = useState(true);
   const navigate = useNavigate();
@@ -47,17 +47,17 @@ function VerificationPage() {
   const handleResendCode = async () => {
     try {
       // Get the identifier from local storage or session
-      const identifier = sessionStorage.getItem('loginIdentifier');
+      const identifier = sessionStorage.getItem("loginIdentifier");
       if (!identifier) {
         // If not found, go back to login
-        navigate('/login');
+        navigate("/login");
         return;
       }
 
       await authService.resendVerificationCode(identifier);
       startCountdown();
     } catch (err) {
-      console.error('Failed to resend code:', err);
+      console.error("Failed to resend code:", err);
     }
   };
 
@@ -67,7 +67,7 @@ function VerificationPage() {
         <div className="mb-8 text-center">
           <img
             src="/alphataulogo.png"
-            alt="AlphaTau Medical" 
+            alt="AlphaTau Medical"
             className="mx-auto mb-4 h-16 w-auto"
           />
           <h1 className="text-2xl font-bold text-gray-900">
@@ -82,7 +82,11 @@ function VerificationPage() {
           <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-700">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
                   <path
                     fillRule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -100,7 +104,11 @@ function VerificationPage() {
                     className="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none"
                   >
                     <span className="sr-only">Dismiss</span>
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -144,7 +152,10 @@ function VerificationPage() {
             >
               {isLoading ? (
                 <>
-                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                  <svg
+                    className="mr-2 h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                  >
                     <circle
                       className="opacity-25"
                       cx="12"
@@ -162,10 +173,10 @@ function VerificationPage() {
                   Verifying...
                 </>
               ) : (
-                'Verify Code'
+                "Verify Code"
               )}
             </button>
-            
+
             <button
               type="button"
               disabled={resendDisabled}
@@ -174,12 +185,12 @@ function VerificationPage() {
             >
               {resendDisabled
                 ? `Resend code in ${remainingTime}s`
-                : 'Resend verification code'}
+                : "Resend verification code"}
             </button>
-            
+
             <button
               type="button"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate("/login")}
               className="text-sm font-medium text-gray-600 hover:text-gray-900"
             >
               Back to login

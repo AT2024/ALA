@@ -1,8 +1,8 @@
-import { format } from 'date-fns';
+import { format } from "date-fns";
 
 interface Treatment {
   id: string;
-  type: 'insertion' | 'removal';
+  type: "insertion" | "removal";
   subjectId: string;
   site: string;
   date: string;
@@ -16,7 +16,7 @@ interface Applicator {
   serialNumber: string;
   applicatorType?: string;
   seedQuantity: number;
-  usageType: 'full' | 'faulty' | 'none';
+  usageType: "full" | "faulty" | "none";
   insertionTime: string;
   insertedSeedsQty?: number;
   comments?: string;
@@ -63,57 +63,57 @@ export class JSONExportService {
   static exportTreatmentData(
     treatment: Treatment,
     processedApplicators: Applicator[],
-    summary: TreatmentSummary
+    summary: TreatmentSummary,
   ): void {
     try {
-      const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
-      
+      const timestamp = format(new Date(), "yyyyMMdd_HHmmss");
+
       // Create comprehensive export data structure
       const exportData: TreatmentDataExport = {
         exportInfo: {
           exportDate: new Date().toISOString(),
           exportTimestamp: timestamp,
-          version: '1.0',
-          generatedBy: 'Accountability Log Application'
+          version: "1.0",
+          generatedBy: "Accountability Log Application",
         },
         treatment: {
-          ...treatment
+          ...treatment,
         },
-        applicators: processedApplicators.map(applicator => ({
-          ...applicator
+        applicators: processedApplicators.map((applicator) => ({
+          ...applicator,
         })),
         summary: {
-          ...summary
+          ...summary,
         },
         metadata: {
           applicatorCount: processedApplicators.length,
           totalSeeds: summary.totalDartSeedsInserted,
-          exportFormat: 'JSON'
-        }
+          exportFormat: "JSON",
+        },
       };
 
       // Convert to JSON with proper formatting
       const jsonString = JSON.stringify(exportData, null, 2);
-      
+
       // Create blob and download
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      
+
       // Create download link
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = `Treatment_Data_${treatment.patientName || treatment.subjectId}_${timestamp}.json`;
-      
+
       // Trigger download
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export treatment data:', error);
-      throw new Error('Failed to export treatment data as JSON');
+      console.error("Failed to export treatment data:", error);
+      throw new Error("Failed to export treatment data as JSON");
     }
   }
 
@@ -124,7 +124,7 @@ export class JSONExportService {
    */
   static saveToLocalStorage(
     treatment: Treatment,
-    processedApplicators: Applicator[]
+    processedApplicators: Applicator[],
   ): void {
     try {
       const storageKey = `treatment_backup_${treatment.id}`;
@@ -132,12 +132,12 @@ export class JSONExportService {
         timestamp: new Date().toISOString(),
         treatment,
         applicators: processedApplicators,
-        version: '1.0'
+        version: "1.0",
       };
-      
+
       localStorage.setItem(storageKey, JSON.stringify(backupData));
     } catch (error) {
-      console.error('Failed to save to localStorage:', error);
+      console.error("Failed to save to localStorage:", error);
     }
   }
 
@@ -149,14 +149,14 @@ export class JSONExportService {
     try {
       const storageKey = `treatment_backup_${treatmentId}`;
       const data = localStorage.getItem(storageKey);
-      
+
       if (data) {
         return JSON.parse(data);
       }
-      
+
       return null;
     } catch (error) {
-      console.error('Failed to load from localStorage:', error);
+      console.error("Failed to load from localStorage:", error);
       return null;
     }
   }
@@ -170,7 +170,7 @@ export class JSONExportService {
       const storageKey = `treatment_backup_${treatmentId}`;
       localStorage.removeItem(storageKey);
     } catch (error) {
-      console.error('Failed to clear backup:', error);
+      console.error("Failed to clear backup:", error);
     }
   }
 }

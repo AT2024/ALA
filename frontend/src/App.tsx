@@ -1,32 +1,45 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
-import { AuthProvider } from '@/context/AuthContext';
-import { TreatmentProvider } from '@/context/TreatmentContext';
-import { OfflineProvider } from '@/context/OfflineContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { EnvironmentBanner, useIsStaging } from '@/components/EnvironmentBanner';
-import { TestModeBanner, useIsTestMode } from '@/components/TestModeBanner';
-import { OfflineBanner } from '@/components/offline/OfflineBanner';
-import { UpdatePrompt } from '@/components/offline/UpdatePrompt';
+import { AuthProvider } from "@/context/AuthContext";
+import { TreatmentProvider } from "@/context/TreatmentContext";
+import { OfflineProvider } from "@/context/OfflineContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import {
+  EnvironmentBanner,
+  useIsStaging,
+} from "@/components/EnvironmentBanner";
+import { TestModeBanner, useIsTestMode } from "@/components/TestModeBanner";
+import { OfflineBanner } from "@/components/offline/OfflineBanner";
+import { UpdatePrompt } from "@/components/offline/UpdatePrompt";
 
 // Eager load authentication pages (needed immediately)
-import LoginPage from '@/pages/Auth/LoginPage';
-import VerificationPage from '@/pages/Auth/VerificationPage';
+import LoginPage from "@/pages/Auth/LoginPage";
+import VerificationPage from "@/pages/Auth/VerificationPage";
 
 // Lazy load feature pages (loaded on demand)
-const TreatmentSelection = lazy(() => import('@/pages/Treatment/TreatmentSelection'));
-const TreatmentDocumentation = lazy(() => import('@/pages/Treatment/TreatmentDocumentation'));
-const UseList = lazy(() => import('@/pages/Treatment/UseList'));
-const SeedRemoval = lazy(() => import('@/pages/Treatment/SeedRemoval'));
-const Dashboard = lazy(() => import('@/pages/Admin/Dashboard'));
-const ProjectDocPage = lazy(() => import('@/pages/ProjectDocPage'));
-const ProcedureTypePage = lazy(() => import('@/pages/Procedure/ProcedureTypePage'));
-const ModeSelectionPage = lazy(() => import('@/pages/ModeSelection/ModeSelectionPage'));
+const TreatmentSelection = lazy(
+  () => import("@/pages/Treatment/TreatmentSelection"),
+);
+const TreatmentDocumentation = lazy(
+  () => import("@/pages/Treatment/TreatmentDocumentation"),
+);
+const UseList = lazy(() => import("@/pages/Treatment/UseList"));
+const SeedRemoval = lazy(() => import("@/pages/Treatment/SeedRemoval"));
+const Dashboard = lazy(() => import("@/pages/Admin/Dashboard"));
+const ProjectDocPage = lazy(() => import("@/pages/ProjectDocPage"));
+const ProcedureTypePage = lazy(
+  () => import("@/pages/Procedure/ProcedureTypePage"),
+);
+const ModeSelectionPage = lazy(
+  () => import("@/pages/ModeSelection/ModeSelectionPage"),
+);
 
 // Lazy load offline pages
-const ConflictResolution = lazy(() => import('@/pages/Offline/ConflictResolution'));
-const DownloadManager = lazy(() => import('@/pages/Offline/DownloadManager'));
+const ConflictResolution = lazy(
+  () => import("@/pages/Offline/ConflictResolution"),
+);
+const DownloadManager = lazy(() => import("@/pages/Offline/DownloadManager"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -44,7 +57,7 @@ function AppContent() {
   const isTestMode = useIsTestMode();
 
   // Add padding when banners are visible
-  const topPadding = isStaging || isTestMode ? 'pt-12' : '';
+  const topPadding = isStaging || isTestMode ? "pt-12" : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,18 +76,26 @@ function AppContent() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/verify" element={<VerificationPage />} />
-            <Route path="/docs" element={<ProjectDocPage />} />
-
             <Route element={<ProtectedRoute />}>
+              <Route path="/docs" element={<ProjectDocPage />} />
               <Route path="/mode-select" element={<ModeSelectionPage />} />
               <Route path="/procedure-type" element={<ProcedureTypePage />} />
-              <Route path="/treatment/select" element={<TreatmentSelection />} />
-              <Route path="/treatment/scan" element={<TreatmentDocumentation />} />
+              <Route
+                path="/treatment/select"
+                element={<TreatmentSelection />}
+              />
+              <Route
+                path="/treatment/scan"
+                element={<TreatmentDocumentation />}
+              />
               <Route path="/treatment/list" element={<UseList />} />
               <Route path="/treatment/removal" element={<SeedRemoval />} />
               <Route path="/admin/dashboard" element={<Dashboard />} />
               {/* Offline management pages */}
-              <Route path="/offline/conflicts" element={<ConflictResolution />} />
+              <Route
+                path="/offline/conflicts"
+                element={<ConflictResolution />}
+              />
               <Route path="/offline/downloads" element={<DownloadManager />} />
             </Route>
 

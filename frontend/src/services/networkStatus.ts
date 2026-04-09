@@ -15,15 +15,16 @@ export interface NetworkStatusListener {
 }
 
 class NetworkStatusService {
-  private _isOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  private _isOnline: boolean =
+    typeof navigator !== "undefined" ? navigator.onLine : true;
   private listeners: Set<NetworkStatusListener> = new Set();
   private lastOnlineTime: Date | null = null;
   private offlineSince: Date | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => this.setOnline(true));
-      window.addEventListener('offline', () => this.setOnline(false));
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => this.setOnline(true));
+      window.addEventListener("offline", () => this.setOnline(false));
 
       // Track initial online time
       if (this._isOnline) {
@@ -91,11 +92,11 @@ class NetworkStatusService {
     }
 
     // Notify all listeners
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(online);
       } catch (error) {
-        console.error('[NetworkStatus] Listener error:', error);
+        console.error("[NetworkStatus] Listener error:", error);
       }
     });
   }
@@ -104,7 +105,7 @@ class NetworkStatusService {
    * Force a network check (useful for testing or manual refresh)
    */
   checkNetwork(): boolean {
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator !== "undefined") {
       const actualStatus = navigator.onLine;
       if (actualStatus !== this._isOnline) {
         this.setOnline(actualStatus);

@@ -1,6 +1,6 @@
-import { Fragment, useState } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { Fragment, useState } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface IndividualSeedReasonModalProps {
   isOpen: boolean;
@@ -9,9 +9,9 @@ interface IndividualSeedReasonModalProps {
 }
 
 const PREDEFINED_REASONS = [
-  { value: 'applicator_rupture', label: 'Applicator rupture' },
-  { value: 'patient_arrived_from_home', label: 'Patient arrived from home' },
-  { value: 'other', label: 'Other' },
+  { value: "applicator_rupture", label: "Applicator rupture" },
+  { value: "patient_arrived_from_home", label: "Patient arrived from home" },
+  { value: "other", label: "Other" },
 ];
 
 const IndividualSeedReasonModal = ({
@@ -19,35 +19,40 @@ const IndividualSeedReasonModal = ({
   onClose,
   onConfirm,
 }: IndividualSeedReasonModalProps) => {
-  const [selectedReason, setSelectedReason] = useState<string>('');
-  const [customText, setCustomText] = useState<string>('');
+  const [selectedReason, setSelectedReason] = useState<string>("");
+  const [customText, setCustomText] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   const handleConfirm = () => {
     if (!selectedReason) {
-      setError('Please select a reason');
+      setError("Please select a reason");
       return;
     }
-    if (selectedReason === 'other' && !customText.trim()) {
-      setError('Please enter a reason');
+    if (selectedReason === "other" && !customText.trim()) {
+      setError("Please enter a reason");
       return;
     }
 
-    const reason = selectedReason === 'other'
-      ? customText.trim()
-      : PREDEFINED_REASONS.find(r => r.value === selectedReason)?.label || selectedReason;
+    const reason =
+      selectedReason === "other"
+        ? customText.trim()
+        : PREDEFINED_REASONS.find((r) => r.value === selectedReason)?.label ||
+          selectedReason;
 
-    onConfirm(reason, selectedReason === 'other' ? customText.trim() : undefined);
+    onConfirm(
+      reason,
+      selectedReason === "other" ? customText.trim() : undefined,
+    );
 
     // Reset state
-    setSelectedReason('');
-    setCustomText('');
+    setSelectedReason("");
+    setCustomText("");
     setError(null);
   };
 
   const handleClose = () => {
-    setSelectedReason('');
-    setCustomText('');
+    setSelectedReason("");
+    setCustomText("");
     setError(null);
     onClose();
   };
@@ -107,8 +112,8 @@ const IndividualSeedReasonModal = ({
                       key={reason.value}
                       className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedReason === reason.value
-                          ? 'border-primary bg-primary/5'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? "border-primary bg-primary/5"
+                          : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
                       <input
@@ -126,7 +131,7 @@ const IndividualSeedReasonModal = ({
                   ))}
                 </div>
 
-                {selectedReason === 'other' && (
+                {selectedReason === "other" && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Please specify <span className="text-red-500">*</span>
@@ -150,7 +155,10 @@ const IndividualSeedReasonModal = ({
                   </button>
                   <button
                     onClick={handleConfirm}
-                    disabled={!selectedReason || (selectedReason === 'other' && !customText.trim())}
+                    disabled={
+                      !selectedReason ||
+                      (selectedReason === "other" && !customText.trim())
+                    }
                     className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
                   >
                     Confirm Removal

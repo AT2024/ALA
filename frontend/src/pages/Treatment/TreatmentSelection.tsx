@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { format, addDays, subDays } from 'date-fns';
-import { Combobox } from '@headlessui/react';
-import { WifiOff } from 'lucide-react';
-import Layout from '@/components/Layout';
-import ConfirmationDialog from '@/components/Dialogs/ConfirmationDialog';
-import { useTreatment } from '@/context/TreatmentContext';
-import { useAuth } from '@/context/AuthContext';
-import { useOffline } from '@/context/OfflineContext';
-import { priorityService } from '@/services/priorityService';
-import { treatmentService, type Treatment, type ContinuationEligibility } from '@/services/treatmentService';
-import api from '@/services/api';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { format, addDays, subDays } from "date-fns";
+import { Combobox } from "@headlessui/react";
+import { WifiOff } from "lucide-react";
+import Layout from "@/components/Layout";
+import ConfirmationDialog from "@/components/Dialogs/ConfirmationDialog";
+import { useTreatment } from "@/context/TreatmentContext";
+import { useAuth } from "@/context/AuthContext";
+import { useOffline } from "@/context/OfflineContext";
+import { priorityService } from "@/services/priorityService";
+import {
+  treatmentService,
+  type Treatment,
+  type ContinuationEligibility,
+} from "@/services/treatmentService";
+import api from "@/services/api";
 
 // Priority system integration - no more mock data needed
 // Sites, patients, and surgeons will be fetched from Priority system
@@ -54,40 +58,46 @@ const TreatmentSelection = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: user?.email || '',
-    site: '',
-    date: format(new Date(), 'dd.MMM.yyyy'),
-    patientId: '',
-    seedQty: '',
-    activityPerSeed: '',
-    surgeon: '',
-    treatmentNumber: '' // For removal workflow
+    email: user?.email || "",
+    site: "",
+    date: format(new Date(), "dd.MMM.yyyy"),
+    patientId: "",
+    seedQty: "",
+    activityPerSeed: "",
+    surgeon: "",
+    treatmentNumber: "", // For removal workflow
   });
 
-  const [availablePatients, setAvailablePatients] = useState<PriorityPatient[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<PriorityPatient[]>(
+    [],
+  );
   const [availableSites, setAvailableSites] = useState<PrioritySite[]>([]);
-  const [siteQuery, setSiteQuery] = useState('');
+  const [siteQuery, setSiteQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Removal workflow state
-  const [removalCandidate, setRemovalCandidate] = useState<RemovalCandidate | null>(null);
+  const [removalCandidate, setRemovalCandidate] =
+    useState<RemovalCandidate | null>(null);
   const [searchingTreatment, setSearchingTreatment] = useState(false);
   const [treatmentSearched, setTreatmentSearched] = useState(false);
 
   // Treatment continuation state
   const [showContinuationModal, setShowContinuationModal] = useState(false);
-  const [existingTreatment, setExistingTreatment] = useState<Treatment | null>(null);
-  const [continuationEligibility, setContinuationEligibility] = useState<ContinuationEligibility | null>(null);
+  const [existingTreatment, setExistingTreatment] = useState<Treatment | null>(
+    null,
+  );
+  const [continuationEligibility, setContinuationEligibility] =
+    useState<ContinuationEligibility | null>(null);
   const [continuationLoading, setContinuationLoading] = useState(false);
 
   // Load available sites and set default site based on user
   useEffect(() => {
     const loadUserSites = async () => {
       if (!user) return;
-      
+
       setSitesLoading(true);
       try {
         // For ATM users (fullAccess), fetch all sites
@@ -96,23 +106,23 @@ const TreatmentSelection = () => {
           // If test mode is enabled, only show test sites
           if (user.testModeEnabled) {
             const testSites: PrioritySite[] = [
-              { custName: '100078', custDes: 'Main Test Hospital' },
-              { custName: '100040', custDes: 'Test Hospital' }
+              { custName: "100078", custDes: "Main Test Hospital" },
+              { custName: "100040", custDes: "Test Hospital" },
             ];
             setAvailableSites(testSites);
           } else {
             // Normal mode - convert user.sites to PrioritySite format
-            const userSites: PrioritySite[] = user.sites.map(site => {
+            const userSites: PrioritySite[] = user.sites.map((site) => {
               // Handle both old format (string) and new format (site object)
-              if (typeof site === 'string') {
+              if (typeof site === "string") {
                 return {
                   custName: site,
-                  custDes: site // Fallback for old format
+                  custDes: site, // Fallback for old format
                 };
               } else {
                 return {
                   custName: site.custName,
-                  custDes: site.custDes
+                  custDes: site.custDes,
                 };
               }
             });
@@ -120,28 +130,29 @@ const TreatmentSelection = () => {
           }
         } else if (user.custName) {
           // Site users have access to their own site only
-          setAvailableSites([{
-            custName: user.custName,
-            custDes: user.custName
-          }]);
-          setFormData(prev => ({ ...prev, site: user.custName || '' }));
+          setAvailableSites([
+            {
+              custName: user.custName,
+              custDes: user.custName,
+            },
+          ]);
+          setFormData((prev) => ({ ...prev, site: user.custName || "" }));
         }
-        
       } catch (err) {
-        console.error('Error loading user sites:', err);
-        setError('Failed to load available sites');
+        console.error("Error loading user sites:", err);
+        setError("Failed to load available sites");
       } finally {
         setSitesLoading(false);
       }
     };
-    
+
     loadUserSites();
   }, [user]);
 
   // Fetch patients when site and date change (insertion only)
   useEffect(() => {
     // Only fetch patients for insertion workflow
-    if (procedureType !== 'insertion') return;
+    if (procedureType !== "insertion") return;
 
     // Create AbortController for this request
     const abortController = new AbortController();
@@ -158,7 +169,11 @@ const TreatmentSelection = () => {
 
   // Auto-select patient when only one exists (insertion only)
   useEffect(() => {
-    if (procedureType === 'insertion' && availablePatients.length === 1 && !formData.patientId) {
+    if (
+      procedureType === "insertion" &&
+      availablePatients.length === 1 &&
+      !formData.patientId
+    ) {
       handlePatientSelection(availablePatients[0].id);
     }
   }, [availablePatients, formData.patientId, procedureType]);
@@ -178,13 +193,13 @@ const TreatmentSelection = () => {
     setAvailablePatients([]);
     setRemovalCandidate(null);
     setTreatmentSearched(false);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      patientId: '',
-      seedQty: '',
-      activityPerSeed: '',
-      surgeon: '',
-      treatmentNumber: ''
+      patientId: "",
+      seedQty: "",
+      activityPerSeed: "",
+      surgeon: "",
+      treatmentNumber: "",
     }));
   }, [procedureType]);
 
@@ -193,44 +208,44 @@ const TreatmentSelection = () => {
     if (signal?.aborted) {
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     // Clear previous patient data and form selections to prevent accumulation
     setAvailablePatients([]);
-    setFormData(prev => ({ 
-      ...prev, 
-      patientId: '',
-      seedQty: '',
-      activityPerSeed: ''
+    setFormData((prev) => ({
+      ...prev,
+      patientId: "",
+      seedQty: "",
+      activityPerSeed: "",
     }));
-    
+
     try {
       // Convert date format from DD.MMM.YYYY to YYYY-MM-DD for Priority API
       const dateForApi = convertDateForPriority(formData.date);
-      
+
       // Early return if request was cancelled before API call
       if (signal?.aborted) {
         return;
       }
-      
+
       // Call Priority service to get orders for the site and date
       const data = await priorityService.getOrdersForSiteAndDate(
-        formData.site, 
-        dateForApi, 
-        procedureType || undefined
+        formData.site,
+        dateForApi,
+        procedureType || undefined,
       );
-      
+
       // Check if request was cancelled after API call
       if (signal?.aborted) {
         return;
       }
-      
+
       // Backend now handles all date filtering for consistency
       // No frontend filtering needed to prevent duplicate filtering issues
       const filteredOrders = data.orders || [];
-      
+
       // Transform Priority data to our patient format with validation
       const patients: PriorityPatient[] = filteredOrders
         .filter((order: any) => {
@@ -250,9 +265,12 @@ const TreatmentSelection = () => {
           details: order.DETAILS || null,
           indication: order.indication || order.SIBD_INDICATION || null, // Treatment indication from Priority
         }));
-      
+
       // Helper function to follow reference chain and find root order
-      const findRootOrder = (orderName: string, visited = new Set<string>()): PriorityPatient | null => {
+      const findRootOrder = (
+        orderName: string,
+        visited = new Set<string>(),
+      ): PriorityPatient | null => {
         // Prevent infinite loops with circular references
         if (visited.has(orderName)) {
           return null;
@@ -260,7 +278,7 @@ const TreatmentSelection = () => {
         visited.add(orderName);
 
         // Find the current order
-        const currentOrder = patients.find(p => p.ordName === orderName);
+        const currentOrder = patients.find((p) => p.ordName === orderName);
         if (!currentOrder) {
           return null;
         }
@@ -273,12 +291,12 @@ const TreatmentSelection = () => {
         // Follow the reference chain
         return findRootOrder(currentOrder.reference, visited);
       };
-      
+
       // Reference chain validation: only include orders with valid root orders
       const validPatients: PriorityPatient[] = [];
       const seenOrderNames = new Set<string>();
 
-      patients.forEach(patient => {
+      patients.forEach((patient) => {
         const orderName = patient.ordName || patient.id;
 
         // Skip if we've already processed this exact ORDNAME
@@ -288,7 +306,7 @@ const TreatmentSelection = () => {
         seenOrderNames.add(orderName);
 
         // Skip patient reference records (PAT-*) - these are just reference data, not selectable patients
-        if (orderName.startsWith('PAT-')) {
+        if (orderName.startsWith("PAT-")) {
           return;
         }
 
@@ -304,7 +322,7 @@ const TreatmentSelection = () => {
         // The current order should be evaluated, not what it references
 
         // EXCEPTION: Combined pancreas treatments (detected by '+' in ORDNAME) should never be filtered
-        const isCombinedOrder = orderName.includes('+');
+        const isCombinedOrder = orderName.includes("+");
 
         if (patient.reference && patient.seedQty <= 0 && !isCombinedOrder) {
           // Filter out only orders that BOTH have a reference AND have 0 seeds AND are not combined
@@ -315,7 +333,9 @@ const TreatmentSelection = () => {
       });
 
       // Sort patients by ORDNAME for consistent ordering
-      const uniquePatients = validPatients.sort((a, b) => (a.ordName || '').localeCompare(b.ordName || ''));
+      const uniquePatients = validPatients.sort((a, b) =>
+        (a.ordName || "").localeCompare(b.ordName || ""),
+      );
 
       // Final check for cancelled request before setting state
       if (signal?.aborted) {
@@ -326,7 +346,9 @@ const TreatmentSelection = () => {
 
       // If no patients found, show helpful message
       if (uniquePatients.length === 0) {
-        setError(`No scheduled procedures found for ${formData.site} on ${formData.date}`);
+        setError(
+          `No scheduled procedures found for ${formData.site} on ${formData.date}`,
+        );
       }
     } catch (err: any) {
       // Don't show error if request was cancelled
@@ -334,16 +356,18 @@ const TreatmentSelection = () => {
         return;
       }
 
-      console.error('Error fetching patients:', err);
-      setError(err.message || 'Failed to fetch patients for selected site and date');
+      console.error("Error fetching patients:", err);
+      setError(
+        err.message || "Failed to fetch patients for selected site and date",
+      );
       setAvailablePatients([]);
-      
+
       // Clear form data on error
-      setFormData(prev => ({ 
-        ...prev, 
-        patientId: '',
-        seedQty: '',
-        activityPerSeed: ''
+      setFormData((prev) => ({
+        ...prev,
+        patientId: "",
+        seedQty: "",
+        activityPerSeed: "",
       }));
     } finally {
       // Only update loading state if request wasn't cancelled
@@ -353,82 +377,98 @@ const TreatmentSelection = () => {
     }
   };
 
-  const handleDateChange = (direction: 'yesterday' | 'today' | 'tomorrow') => {
+  const handleDateChange = (direction: "yesterday" | "today" | "tomorrow") => {
     const currentDate = new Date();
     let newDate: Date;
-    
+
     switch (direction) {
-      case 'yesterday':
+      case "yesterday":
         newDate = subDays(currentDate, 1);
         break;
-      case 'tomorrow':
+      case "tomorrow":
         newDate = addDays(currentDate, 1);
         break;
       default:
         newDate = currentDate;
     }
-    
+
     // Clear all patient-related state when date changes to prevent stale data
     setAvailablePatients([]);
     setError(null);
-    setFormData(prev => ({ 
-      ...prev, 
-      date: format(newDate, 'dd.MMM.yyyy'),
-      patientId: '',
-      seedQty: '',
-      activityPerSeed: ''
+    setFormData((prev) => ({
+      ...prev,
+      date: format(newDate, "dd.MMM.yyyy"),
+      patientId: "",
+      seedQty: "",
+      activityPerSeed: "",
     }));
   };
 
   // Helper function to check if selected date matches a specific day
-  const isDateActive = (direction: 'yesterday' | 'today' | 'tomorrow') => {
+  const isDateActive = (direction: "yesterday" | "today" | "tomorrow") => {
     const today = new Date();
-    const compareDate = direction === 'yesterday' ? subDays(today, 1) : 
-                       direction === 'tomorrow' ? addDays(today, 1) : today;
-    return formData.date === format(compareDate, 'dd.MMM.yyyy');
+    const compareDate =
+      direction === "yesterday"
+        ? subDays(today, 1)
+        : direction === "tomorrow"
+          ? addDays(today, 1)
+          : today;
+    return formData.date === format(compareDate, "dd.MMM.yyyy");
   };
 
   const handlePatientSelection = async (patientId: string) => {
-    const selectedPatient = availablePatients.find(p => p.id === patientId);
+    const selectedPatient = availablePatients.find((p) => p.id === patientId);
 
     if (selectedPatient) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         patientId: selectedPatient.id,
         seedQty: selectedPatient.seedQty.toString(),
-        activityPerSeed: selectedPatient.activityPerSeed.toString()
+        activityPerSeed: selectedPatient.activityPerSeed.toString(),
       }));
 
       // Check for existing continuable treatments (insertion only, when online)
-      if (procedureType === 'insertion' && isOnline && formData.site) {
+      if (procedureType === "insertion" && isOnline && formData.site) {
         await checkForContinuableTreatments(selectedPatient.id, formData.site);
       }
     }
   };
-  
+
   // Helper function to convert date format for Priority API
   const convertDateForPriority = (dateStr: string): string => {
     try {
       // Convert from DD.MMM.YYYY to YYYY-MM-DD
-      const [day, month, year] = dateStr.split('.');
+      const [day, month, year] = dateStr.split(".");
       const monthMap: { [key: string]: string } = {
-        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+        Jan: "01",
+        Feb: "02",
+        Mar: "03",
+        Apr: "04",
+        May: "05",
+        Jun: "06",
+        Jul: "07",
+        Aug: "08",
+        Sep: "09",
+        Oct: "10",
+        Nov: "11",
+        Dec: "12",
       };
 
-      const monthNum = monthMap[month] || '01';
-      return `${year}-${monthNum}-${day.padStart(2, '0')}`;
+      const monthNum = monthMap[month] || "01";
+      return `${year}-${monthNum}-${day.padStart(2, "0")}`;
     } catch (error) {
-      console.error('Error converting date:', error);
-      return new Date().toISOString().split('T')[0]; // fallback to today
+      console.error("Error converting date:", error);
+      return new Date().toISOString().split("T")[0]; // fallback to today
     }
   };
 
   // Check for existing continuable treatments for a patient
-  const checkForContinuableTreatments = async (patientId: string, site: string) => {
+  const checkForContinuableTreatments = async (
+    patientId: string,
+    site: string,
+  ) => {
     // Only check for insertion procedures when online
-    if (procedureType !== 'insertion' || !isOnline) {
+    if (procedureType !== "insertion" || !isOnline) {
       return;
     }
 
@@ -437,15 +477,19 @@ const TreatmentSelection = () => {
       const treatments = await treatmentService.getTreatments({
         subjectId: patientId,
         site: site,
-        type: 'insertion'
+        type: "insertion",
       });
 
       // Filter for completed treatments and check continuability
-      const completedTreatments = treatments.filter((t: Treatment) => t.isComplete);
+      const completedTreatments = treatments.filter(
+        (t: Treatment) => t.isComplete,
+      );
 
       for (const treatment of completedTreatments) {
         try {
-          const eligibility = await treatmentService.checkContinuable(treatment.id);
+          const eligibility = await treatmentService.checkContinuable(
+            treatment.id,
+          );
           if (eligibility.canContinue) {
             // Found a continuable treatment - show modal
             setExistingTreatment(treatment);
@@ -454,12 +498,12 @@ const TreatmentSelection = () => {
             return; // Only show one (most recent will be first)
           }
         } catch (err) {
-          console.error('Error checking continuation eligibility:', err);
+          console.error("Error checking continuation eligibility:", err);
         }
       }
     } catch (err) {
       // Network error - silently allow new treatment (can't verify)
-      console.error('Error checking for continuable treatments:', err);
+      console.error("Error checking for continuable treatments:", err);
     }
   };
 
@@ -469,13 +513,18 @@ const TreatmentSelection = () => {
 
     setContinuationLoading(true);
     try {
-      const continuation = await treatmentService.createContinuation(existingTreatment.id);
+      const continuation = await treatmentService.createContinuation(
+        existingTreatment.id,
+      );
       setTreatment(continuation);
       setShowContinuationModal(false);
-      navigate('/treatment/scan');
+      navigate("/treatment/scan");
     } catch (err: any) {
-      console.error('Failed to create continuation:', err);
-      setError(err.response?.data?.message || 'Failed to create continuation treatment');
+      console.error("Failed to create continuation:", err);
+      setError(
+        err.response?.data?.message ||
+          "Failed to create continuation treatment",
+      );
     } finally {
       setContinuationLoading(false);
     }
@@ -487,13 +536,18 @@ const TreatmentSelection = () => {
     setExistingTreatment(null);
     setContinuationEligibility(null);
     // Clear patient selection so user can choose a different patient
-    setFormData(prev => ({ ...prev, patientId: '', seedQty: '', activityPerSeed: '' }));
+    setFormData((prev) => ({
+      ...prev,
+      patientId: "",
+      seedQty: "",
+      activityPerSeed: "",
+    }));
   };
 
   // Removal workflow: Search for treatment by number
   const searchTreatmentForRemoval = async () => {
     if (!formData.site || !formData.treatmentNumber.trim()) {
-      setError('Please select a site and enter a treatment number');
+      setError("Please select a site and enter a treatment number");
       return;
     }
 
@@ -503,11 +557,11 @@ const TreatmentSelection = () => {
 
     try {
       // Call new API endpoint for removal candidates
-      const response = await api.get('/treatments/removal-candidates', {
+      const response = await api.get("/treatments/removal-candidates", {
         params: {
           site: formData.site,
-          treatmentNumber: formData.treatmentNumber.trim()
-        }
+          treatmentNumber: formData.treatmentNumber.trim(),
+        },
       });
 
       const candidate = response.data;
@@ -516,24 +570,29 @@ const TreatmentSelection = () => {
 
       if (candidate.isEligible) {
         // Auto-populate form fields with treatment data
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           patientId: candidate.subjectId,
           seedQty: candidate.seedQuantity.toString(),
           activityPerSeed: candidate.activityPerSeed.toString(),
-          surgeon: candidate.surgeon
+          surgeon: candidate.surgeon,
         }));
       } else {
         setError(`Treatment not eligible for removal: ${candidate.reason}`);
       }
     } catch (err: any) {
-      console.error('Error searching treatment:', err);
+      console.error("Error searching treatment:", err);
       setTreatmentSearched(true);
 
       if (err.response?.status === 404) {
-        setError(`Treatment ${formData.treatmentNumber} not found at site ${formData.site}`);
+        setError(
+          `Treatment ${formData.treatmentNumber} not found at site ${formData.site}`,
+        );
       } else {
-        setError(err.response?.data?.message || 'Failed to search for treatment. Please try again.');
+        setError(
+          err.response?.data?.message ||
+            "Failed to search for treatment. Please try again.",
+        );
       }
     } finally {
       setSearchingTreatment(false);
@@ -542,36 +601,52 @@ const TreatmentSelection = () => {
 
   const handleSubmit = async () => {
     // Validation for insertion
-    if (procedureType === 'insertion') {
-      if (!formData.email || !formData.site || !formData.patientId || !formData.surgeon) {
-        setError('Please fill in all required fields (Email, Site, Patient ID, Surgeon)');
+    if (procedureType === "insertion") {
+      if (
+        !formData.email ||
+        !formData.site ||
+        !formData.patientId ||
+        !formData.surgeon
+      ) {
+        setError(
+          "Please fill in all required fields (Email, Site, Patient ID, Surgeon)",
+        );
         return;
       }
     }
 
     // Validation for removal
-    if (procedureType === 'removal') {
-      if (!formData.email || !formData.site || !formData.treatmentNumber || !removalCandidate?.isEligible) {
-        setError('Please fill in all required fields and ensure treatment is eligible for removal');
+    if (procedureType === "removal") {
+      if (
+        !formData.email ||
+        !formData.site ||
+        !formData.treatmentNumber ||
+        !removalCandidate?.isEligible
+      ) {
+        setError(
+          "Please fill in all required fields and ensure treatment is eligible for removal",
+        );
         return;
       }
     }
 
-    setIsLoading(true);
-    setError('');
+    setIsSubmitting(true);
+    setError("");
 
     try {
       let treatmentData;
 
-      if (procedureType === 'insertion') {
+      if (procedureType === "insertion") {
         // Get patientName from selected patient
-        const selectedPatient = availablePatients.find(p => p.id === formData.patientId);
+        const selectedPatient = availablePatients.find(
+          (p) => p.id === formData.patientId,
+        );
 
         // Create new insertion treatment
         treatmentData = {
-          type: 'insertion' as const,
+          type: "insertion" as const,
           subjectId: formData.patientId,
-          priorityId: selectedPatient?.ordName || formData.patientId,  // Priority order ID for file upload sync
+          priorityId: selectedPatient?.ordName || formData.patientId, // Priority order ID for file upload sync
           site: formData.site,
           date: formData.date,
           email: formData.email,
@@ -584,13 +659,13 @@ const TreatmentSelection = () => {
       } else {
         // Create removal treatment linked to original insertion
         if (!removalCandidate) {
-          setError('Removal candidate not found');
-          setIsLoading(false);
+          setError("Removal candidate not found");
+          setIsSubmitting(false);
           return;
         }
 
         treatmentData = {
-          type: 'removal' as const,
+          type: "removal" as const,
           subjectId: removalCandidate.subjectId,
           site: formData.site,
           date: formData.date,
@@ -599,7 +674,7 @@ const TreatmentSelection = () => {
           activityPerSeed: removalCandidate.activityPerSeed,
           surgeon: removalCandidate.surgeon,
           originalTreatmentId: removalCandidate.id,
-          patientName: removalCandidate.patientName
+          patientName: removalCandidate.patientName,
         };
       }
 
@@ -610,26 +685,31 @@ const TreatmentSelection = () => {
       setTreatment(treatment);
 
       // Navigate based on procedure type
-      if (procedureType === 'insertion') {
-        navigate('/treatment/scan');
+      if (procedureType === "insertion") {
+        navigate("/treatment/scan");
       } else {
-        navigate('/treatment/removal');
+        navigate("/treatment/removal");
       }
     } catch (error: any) {
-      console.error('Error creating treatment:', error);
-      setError(error.response?.data?.message || 'Failed to create treatment. Please try again.');
+      console.error("Error creating treatment:", error);
+      setError(
+        error.response?.data?.message ||
+          "Failed to create treatment. Please try again.",
+      );
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   // Filter sites based on search query (search by name or code)
-  const filteredSites = siteQuery === ''
-    ? availableSites
-    : availableSites.filter((site) =>
-        site.custDes.toLowerCase().includes(siteQuery.toLowerCase()) ||
-        site.custName.toLowerCase().includes(siteQuery.toLowerCase())
-      );
+  const filteredSites =
+    siteQuery === ""
+      ? availableSites
+      : availableSites.filter(
+          (site) =>
+            site.custDes.toLowerCase().includes(siteQuery.toLowerCase()) ||
+            site.custName.toLowerCase().includes(siteQuery.toLowerCase()),
+        );
 
   return (
     <Layout title="Treatment Selection" showBackButton={true}>
@@ -642,14 +722,19 @@ const TreatmentSelection = () => {
               <div>
                 <h3 className="font-medium text-yellow-900">Offline Mode</h3>
                 <p className="text-sm text-yellow-700">
-                  Only pre-downloaded treatments are available. New treatments cannot be created until you're back online.
+                  Only pre-downloaded treatments are available. New treatments
+                  cannot be created until you're back online.
                 </p>
               </div>
             </div>
             {downloadedTreatments.length > 0 && (
               <div className="mt-3 pt-3 border-t border-yellow-200">
                 <p className="text-sm text-yellow-800">
-                  <span className="font-medium">{downloadedTreatments.length}</span> treatment{downloadedTreatments.length !== 1 ? 's' : ''} available offline
+                  <span className="font-medium">
+                    {downloadedTreatments.length}
+                  </span>{" "}
+                  treatment{downloadedTreatments.length !== 1 ? "s" : ""}{" "}
+                  available offline
                 </p>
               </div>
             )}
@@ -659,7 +744,10 @@ const TreatmentSelection = () => {
         {/* Header showing procedure type */}
         <div className="rounded-lg border bg-primary/10 p-4">
           <h2 className="text-lg font-medium text-primary">
-            {procedureType === 'insertion' ? 'Treatment Insertion' : 'Treatment Removal'} Setup
+            {procedureType === "insertion"
+              ? "Treatment Insertion"
+              : "Treatment Removal"}{" "}
+            Setup
           </h2>
           <p className="text-sm text-primary">
             Please fill in the treatment details below
@@ -675,7 +763,10 @@ const TreatmentSelection = () => {
           <form className="space-y-6">
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 E-mail *
               </label>
               <input
@@ -683,7 +774,9 @@ const TreatmentSelection = () => {
                 id="email"
                 maxLength={32}
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
+                }
                 className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                 required
               />
@@ -691,21 +784,26 @@ const TreatmentSelection = () => {
 
             {/* Site Field */}
             <div>
-              <label htmlFor="site" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="site"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Site *
               </label>
               {sitesLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                  <span className="text-sm text-gray-500">Loading sites...</span>
+                  <span className="text-sm text-gray-500">
+                    Loading sites...
+                  </span>
                 </div>
               ) : user?.fullAccess ? (
                 // ATM users: searchable combobox for all sites
                 <Combobox
                   value={formData.site}
                   onChange={(value) => {
-                    setFormData(prev => ({ ...prev, site: value || '' }));
-                    setSiteQuery('');
+                    setFormData((prev) => ({ ...prev, site: value || "" }));
+                    setSiteQuery("");
                   }}
                 >
                   <div className="relative">
@@ -713,13 +811,15 @@ const TreatmentSelection = () => {
                       className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                       onChange={(event) => setSiteQuery(event.target.value)}
                       displayValue={(custName: string) => {
-                        const site = availableSites.find(s => s.custName === custName);
-                        return site ? `${site.custDes} (${site.custName})` : '';
+                        const site = availableSites.find(
+                          (s) => s.custName === custName,
+                        );
+                        return site ? `${site.custDes} (${site.custName})` : "";
                       }}
                       placeholder="Search sites..."
                     />
                     <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 shadow-lg border border-gray-300 focus:outline-none text-base md:text-sm">
-                      {filteredSites.length === 0 && siteQuery !== '' ? (
+                      {filteredSites.length === 0 && siteQuery !== "" ? (
                         <div className="relative cursor-default select-none px-4 py-2 text-gray-700">
                           No sites found.
                         </div>
@@ -730,12 +830,18 @@ const TreatmentSelection = () => {
                             value={site.custName}
                             className={({ active }) =>
                               `relative cursor-pointer select-none py-2 px-3 ${
-                                active ? 'bg-primary text-white' : 'text-gray-900'
+                                active
+                                  ? "bg-primary text-white"
+                                  : "text-gray-900"
                               }`
                             }
                           >
                             {({ selected }) => (
-                              <span className={selected ? 'font-semibold' : 'font-normal'}>
+                              <span
+                                className={
+                                  selected ? "font-semibold" : "font-normal"
+                                }
+                              >
                                 {site.custDes} ({site.custName})
                               </span>
                             )}
@@ -758,7 +864,7 @@ const TreatmentSelection = () => {
             </div>
 
             {/* Date Field - Only show for insertion */}
-            {procedureType === 'insertion' && (
+            {procedureType === "insertion" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date
@@ -768,22 +874,22 @@ const TreatmentSelection = () => {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => handleDateChange('yesterday')}
-                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive('yesterday') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      onClick={() => handleDateChange("yesterday")}
+                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive("yesterday") ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-100 hover:bg-gray-200"}`}
                     >
                       Yesterday
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDateChange('today')}
-                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive('today') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      onClick={() => handleDateChange("today")}
+                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive("today") ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-100 hover:bg-gray-200"}`}
                     >
                       Today
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDateChange('tomorrow')}
-                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive('tomorrow') ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      onClick={() => handleDateChange("tomorrow")}
+                      className={`min-h-[44px] flex-1 rounded-md px-4 py-2 text-sm sm:flex-initial sm:px-3 ${isDateActive("tomorrow") ? "bg-primary text-white hover:bg-primary/90" : "bg-gray-100 hover:bg-gray-200"}`}
                     >
                       Tomorrow
                     </button>
@@ -798,9 +904,12 @@ const TreatmentSelection = () => {
               </div>
             )}
             {/* Treatment Number Field - Only for removal */}
-            {procedureType === 'removal' && (
+            {procedureType === "removal" && (
               <div>
-                <label htmlFor="treatmentNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="treatmentNumber"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Treatment Number *
                 </label>
                 <div className="flex flex-col gap-4 sm:flex-row sm:gap-2">
@@ -808,7 +917,12 @@ const TreatmentSelection = () => {
                     type="text"
                     id="treatmentNumber"
                     value={formData.treatmentNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, treatmentNumber: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        treatmentNumber: e.target.value,
+                      }))
+                    }
                     className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                     placeholder="Enter treatment number"
                     required
@@ -816,7 +930,11 @@ const TreatmentSelection = () => {
                   <button
                     type="button"
                     onClick={searchTreatmentForRemoval}
-                    disabled={searchingTreatment || !formData.site || !formData.treatmentNumber.trim()}
+                    disabled={
+                      searchingTreatment ||
+                      !formData.site ||
+                      !formData.treatmentNumber.trim()
+                    }
                     className="min-h-[44px] whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
                   >
                     {searchingTreatment ? (
@@ -825,7 +943,7 @@ const TreatmentSelection = () => {
                         Searching...
                       </div>
                     ) : (
-                      'Search'
+                      "Search"
                     )}
                   </button>
                 </div>
@@ -833,65 +951,92 @@ const TreatmentSelection = () => {
             )}
 
             {/* Treatment Search Results - Only for removal */}
-            {procedureType === 'removal' && treatmentSearched && removalCandidate && (
-              <div className={`rounded-lg border p-4 ${
-                removalCandidate.isEligible
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
-              }`}>
-                <h4 className={`text-sm font-medium mb-2 ${
-                  removalCandidate.isEligible ? 'text-green-900' : 'text-red-900'
-                }`}>
-                  {removalCandidate.isEligible ? '✓ Treatment Found' : '❌ Treatment Not Eligible'}
-                </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Patient ID:</span> {removalCandidate.patientName ? (
-                      <span>{removalCandidate.patientName}</span>
-                    ) : (
-                      <span className="text-amber-600" title="Patient name not available from Priority">
-                        {removalCandidate.subjectId}
-                      </span>
-                    )}
+            {procedureType === "removal" &&
+              treatmentSearched &&
+              removalCandidate && (
+                <div
+                  className={`rounded-lg border p-4 ${
+                    removalCandidate.isEligible
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
+                  }`}
+                >
+                  <h4
+                    className={`text-sm font-medium mb-2 ${
+                      removalCandidate.isEligible
+                        ? "text-green-900"
+                        : "text-red-900"
+                    }`}
+                  >
+                    {removalCandidate.isEligible
+                      ? "✓ Treatment Found"
+                      : "❌ Treatment Not Eligible"}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Patient ID:</span>{" "}
+                      {removalCandidate.patientName ? (
+                        <span>{removalCandidate.patientName}</span>
+                      ) : (
+                        <span
+                          className="text-amber-600"
+                          title="Patient name not available from Priority"
+                        >
+                          {removalCandidate.subjectId}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium">Insertion Date:</span>{" "}
+                      {new Date(removalCandidate.date).toLocaleDateString()}
+                    </div>
+                    <div>
+                      <span className="font-medium">Surgeon:</span>{" "}
+                      {removalCandidate.surgeon}
+                    </div>
+                    <div>
+                      <span className="font-medium">Sources:</span>{" "}
+                      {removalCandidate.seedQuantity}
+                    </div>
+                    <div>
+                      <span className="font-medium">Activity:</span>{" "}
+                      {removalCandidate.activity} µCi
+                    </div>
+                    <div
+                      className={`font-medium ${
+                        removalCandidate.daysSinceInsertion >= 13 &&
+                        removalCandidate.daysSinceInsertion <= 21
+                          ? "text-green-600"
+                          : "text-orange-600"
+                      }`}
+                    >
+                      Days since insertion:{" "}
+                      {removalCandidate.daysSinceInsertion} days
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-medium">Insertion Date:</span> {new Date(removalCandidate.date).toLocaleDateString()}
-                  </div>
-                  <div>
-                    <span className="font-medium">Surgeon:</span> {removalCandidate.surgeon}
-                  </div>
-                  <div>
-                    <span className="font-medium">Sources:</span> {removalCandidate.seedQuantity}
-                  </div>
-                  <div>
-                    <span className="font-medium">Activity:</span> {removalCandidate.activity} µCi
-                  </div>
-                  <div className={`font-medium ${
-                    removalCandidate.daysSinceInsertion >= 13 && removalCandidate.daysSinceInsertion <= 21
-                      ? 'text-green-600'
-                      : 'text-orange-600'
-                  }`}>
-                    Days since insertion: {removalCandidate.daysSinceInsertion} days
-                  </div>
+                  {!removalCandidate.isEligible && removalCandidate.reason && (
+                    <p className="text-sm text-red-700 mt-2 font-medium">
+                      Reason: {removalCandidate.reason}
+                    </p>
+                  )}
                 </div>
-                {!removalCandidate.isEligible && removalCandidate.reason && (
-                  <p className="text-sm text-red-700 mt-2 font-medium">
-                    Reason: {removalCandidate.reason}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
 
             {/* Patient ID Field - Only for insertion */}
-            {procedureType === 'insertion' && (
+            {procedureType === "insertion" && (
               <div>
-                <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="patientId"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Patient ID *
                 </label>
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                    <span className="text-sm text-gray-500">Loading patients...</span>
+                    <span className="text-sm text-gray-500">
+                      Loading patients...
+                    </span>
                   </div>
                 ) : availablePatients.length > 1 ? (
                   <select
@@ -903,7 +1048,10 @@ const TreatmentSelection = () => {
                   >
                     <option value="">Select Patient ID</option>
                     {availablePatients.map((patient, index) => (
-                      <option key={patient.id || `patient-${index}`} value={patient.id}>
+                      <option
+                        key={patient.id || `patient-${index}`}
+                        value={patient.id}
+                      >
                         {patient.patientName ? patient.patientName : patient.id}
                       </option>
                     ))}
@@ -912,18 +1060,24 @@ const TreatmentSelection = () => {
                   <div className="space-y-2">
                     <input
                       type="text"
-                      value={availablePatients[0].patientName ? availablePatients[0].patientName : availablePatients[0].id}
+                      value={
+                        availablePatients[0].patientName
+                          ? availablePatients[0].patientName
+                          : availablePatients[0].id
+                      }
                       readOnly
                       className={`block w-full rounded-md border px-3 py-2 shadow-sm text-base md:max-w-md md:text-sm min-h-[44px] ${
                         availablePatients[0].patientName
-                          ? 'border-green-300 bg-green-50'
-                          : 'border-amber-300 bg-amber-50'
+                          ? "border-green-300 bg-green-50"
+                          : "border-amber-300 bg-amber-50"
                       }`}
                     />
-                    <p className={`text-sm ${availablePatients[0].patientName ? 'text-green-600' : 'text-amber-600'}`}>
+                    <p
+                      className={`text-sm ${availablePatients[0].patientName ? "text-green-600" : "text-amber-600"}`}
+                    >
                       {availablePatients[0].patientName
-                        ? '✓ Patient automatically selected (only one available)'
-                        : '⚠ Patient name not available from Priority'}
+                        ? "✓ Patient automatically selected (only one available)"
+                        : "⚠ Patient name not available from Priority"}
                     </p>
                   </div>
                 ) : (
@@ -935,9 +1089,12 @@ const TreatmentSelection = () => {
             )}
 
             {/* Patient ID Field - Read-only for removal */}
-            {procedureType === 'removal' && removalCandidate?.isEligible && (
+            {procedureType === "removal" && removalCandidate?.isEligible && (
               <div>
-                <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="patientId"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Patient ID
                 </label>
                 <input
@@ -951,7 +1108,10 @@ const TreatmentSelection = () => {
             )}
             {/* Source Quantity Field (Read-only) */}
             <div>
-              <label htmlFor="seedQty" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="seedQty"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Source Qty.
               </label>
               <input
@@ -966,7 +1126,10 @@ const TreatmentSelection = () => {
 
             {/* Activity Per Source Field (Read-only) */}
             <div>
-              <label htmlFor="activityPerSeed" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="activityPerSeed"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Activity Per Source (µCi)
               </label>
               <input
@@ -980,9 +1143,12 @@ const TreatmentSelection = () => {
             </div>
 
             {/* Surgeon Field */}
-            {procedureType === 'insertion' && (
+            {procedureType === "insertion" && (
               <div>
-                <label htmlFor="surgeon" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="surgeon"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Surgeon *
                 </label>
                 <input
@@ -990,7 +1156,12 @@ const TreatmentSelection = () => {
                   id="surgeon"
                   maxLength={100}
                   value={formData.surgeon}
-                  onChange={(e) => setFormData(prev => ({ ...prev, surgeon: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      surgeon: e.target.value,
+                    }))
+                  }
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:max-w-md md:text-sm min-h-[44px]"
                   placeholder="Enter surgeon name"
                   required
@@ -999,9 +1170,12 @@ const TreatmentSelection = () => {
             )}
 
             {/* Surgeon Field - Read-only for removal */}
-            {procedureType === 'removal' && removalCandidate?.isEligible && (
+            {procedureType === "removal" && removalCandidate?.isEligible && (
               <div>
-                <label htmlFor="surgeon" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="surgeon"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Surgeon
                 </label>
                 <input
@@ -1020,20 +1194,23 @@ const TreatmentSelection = () => {
                 onClick={handleSubmit}
                 className="w-full rounded-md bg-primary py-3 px-4 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] md:max-w-md"
                 disabled={
-                  isLoading ||
+                  isSubmitting ||
                   !formData.email ||
                   !formData.site ||
-                  (procedureType === 'insertion' && (!formData.patientId || !formData.surgeon)) ||
-                  (procedureType === 'removal' && (!formData.treatmentNumber || !removalCandidate?.isEligible))
+                  (procedureType === "insertion" &&
+                    (!formData.patientId || !formData.surgeon)) ||
+                  (procedureType === "removal" &&
+                    (!formData.treatmentNumber ||
+                      !removalCandidate?.isEligible))
                 }
               >
-                {isLoading ? (
+                {isSubmitting ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                     Creating Treatment...
                   </div>
                 ) : (
-                  'Continue'
+                  "Continue"
                 )}
               </button>
             </div>
@@ -1042,25 +1219,38 @@ const TreatmentSelection = () => {
 
         {/* Information Panel */}
         <div className="rounded-lg border bg-gray-50 p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Information</h3>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            Information
+          </h3>
           <ul className="text-xs text-gray-600 space-y-1">
             <li>• Fields marked with * are required</li>
-            {procedureType === 'insertion' && (
+            {procedureType === "insertion" && (
               <>
                 <li>• Patient data is loaded from Priority ORDERS table</li>
-                <li>• Source quantity (SBD_SEEDQTY) and activity (SBD_PREFACTIV) auto-filled</li>
+                <li>
+                  • Source quantity (SBD_SEEDQTY) and activity (SBD_PREFACTIV)
+                  auto-filled
+                </li>
                 <li>• Date format: DD.MMM.YYYY (e.g., 04.Jun.2025)</li>
               </>
             )}
-            {procedureType === 'removal' && (
+            {procedureType === "removal" && (
               <>
                 <li>• Enter treatment number from original insertion</li>
-                <li>• Treatment must be 13-21 days post-insertion for removal eligibility</li>
+                <li>
+                  • Treatment must be 13-21 days post-insertion for removal
+                  eligibility
+                </li>
                 <li>• System validates treatment status with Priority API</li>
-                <li>• Only completed insertion treatments can be selected for removal</li>
+                <li>
+                  • Only completed insertion treatments can be selected for
+                  removal
+                </li>
               </>
             )}
-            <li>• Sites shown based on your Priority access level (POSITIONCODE)</li>
+            <li>
+              • Sites shown based on your Priority access level (POSITIONCODE)
+            </li>
           </ul>
         </div>
 
@@ -1070,12 +1260,12 @@ const TreatmentSelection = () => {
           onClose={handleGoBack}
           onConfirm={handleContinueTreatment}
           title="Existing Treatment Found"
-          message={`A treatment for patient ${existingTreatment?.subjectId || ''} was completed and can be continued.
+          message={`A treatment for patient ${existingTreatment?.subjectId || ""} was completed and can be continued.
 
 Time Remaining: ${Math.floor(continuationEligibility?.hoursRemaining || 0)} hours
 Reusable Applicators: ${continuationEligibility?.reusableApplicatorCount || 0}
-Treatment Date: ${existingTreatment?.date || ''}
-Surgeon: ${existingTreatment?.surgeon || ''}`}
+Treatment Date: ${existingTreatment?.date || ""}
+Surgeon: ${existingTreatment?.surgeon || ""}`}
           type="info"
           confirmText="Continue Treatment"
           cancelText="Go Back"

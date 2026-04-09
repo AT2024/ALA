@@ -18,13 +18,22 @@ import {
   useCallback,
   ReactNode,
   useMemo,
-} from 'react';
-import { networkStatus, NetworkStatusListener } from '@/services/networkStatus';
-import { offlineDb, OfflineTreatment } from '@/services/indexedDbService';
-import { syncService, SyncProgress, SyncStatus, SyncResult } from '@/services/syncService';
-import { storageService, StorageStats, DataIntegrityResult } from '@/services/storageService';
-import { clockService } from '@/services/clockService';
-import { encryptionKeyService } from '@/services/encryptionKeyService';
+} from "react";
+import { networkStatus, NetworkStatusListener } from "@/services/networkStatus";
+import { offlineDb, OfflineTreatment } from "@/services/indexedDbService";
+import {
+  syncService,
+  SyncProgress,
+  SyncStatus,
+  SyncResult,
+} from "@/services/syncService";
+import {
+  storageService,
+  StorageStats,
+  DataIntegrityResult,
+} from "@/services/storageService";
+import { clockService } from "@/services/clockService";
+import { encryptionKeyService } from "@/services/encryptionKeyService";
 
 // ============================================================================
 // Types
@@ -95,10 +104,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   void _setIsSessionExpired;
 
   // Downloaded treatments
-  const [downloadedTreatments, setDownloadedTreatments] = useState<OfflineTreatment[]>([]);
+  const [downloadedTreatments, setDownloadedTreatments] = useState<
+    OfflineTreatment[]
+  >([]);
 
   // Sync status
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
   const [conflictsCount, setConflictsCount] = useState(0);
@@ -107,7 +118,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   // Storage
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
   const [isStorageLow, setIsStorageLow] = useState(false);
-  const [dataIntegrity, setDataIntegrity] = useState<DataIntegrityResult | null>(null);
+  const [dataIntegrity, setDataIntegrity] =
+    useState<DataIntegrityResult | null>(null);
 
   // Initialization
   const [isInitialized, setIsInitialized] = useState(false);
@@ -116,65 +128,77 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   // Initialization
   // ==========================================================================
 
-  const initializeOffline = useCallback(async (encryptionKey?: string) => {
-    if (isInitialized) return;
+  const initializeOffline = useCallback(
+    async (encryptionKey?: string) => {
+      if (isInitialized) return;
 
-    try {
-      // Initialize IndexedDB (database only)
-      await offlineDb.initializeDb();
+      try {
+        // Initialize IndexedDB (database only)
+        await offlineDb.initializeDb();
 
-      // Try to derive encryption key from stored credentials
-      // This allows offline data to be decrypted after page refresh
-      const derivedKey = await encryptionKeyService.getDerivedKey();
-      if (derivedKey) {
-        offlineDb.initializeEncryption(derivedKey);
-        console.log('[OfflineContext] Encryption initialized from derived key');
-      } else if (encryptionKey) {
-        // Fallback to server-provided key (legacy support)
-        await offlineDb.initialize(encryptionKey);
-        console.log('[OfflineContext] Encryption initialized from server key');
-      } else {
-        console.log('[OfflineContext] No encryption key available - offline PHI will not be decryptable');
+        // Try to derive encryption key from stored credentials
+        // This allows offline data to be decrypted after page refresh
+        const derivedKey = await encryptionKeyService.getDerivedKey();
+        if (derivedKey) {
+          offlineDb.initializeEncryption(derivedKey);
+          console.log(
+            "[OfflineContext] Encryption initialized from derived key",
+          );
+        } else if (encryptionKey) {
+          // Fallback to server-provided key (legacy support)
+          await offlineDb.initialize(encryptionKey);
+          console.log(
+            "[OfflineContext] Encryption initialized from server key",
+          );
+        } else {
+          console.log(
+            "[OfflineContext] No encryption key available - offline PHI will not be decryptable",
+          );
+        }
+
+        // Check data integrity
+        const integrity = await storageService.checkDataIntegrity();
+        setDataIntegrity(integrity);
+
+        if (integrity.status !== "ok") {
+          console.warn(
+            "[OfflineContext] Data integrity issue:",
+            integrity.message,
+          );
+        }
+
+        // Sync clock
+        if (networkStatus.isOnline) {
+          await clockService.sync();
+        }
+
+        // Load downloaded treatments
+        const treatments = await offlineDb.getDownloadedTreatments();
+        setDownloadedTreatments(treatments);
+
+        // Get storage stats
+        const stats = await storageService.getStorageStats();
+        setStorageStats(stats);
+        setIsStorageLow(await storageService.isStorageLow());
+
+        // Get pending counts
+        const pending = await offlineDb.getPendingChangesCount();
+        setPendingChangesCount(pending);
+
+        const conflicts = await offlineDb.getConflicts();
+        setConflictsCount(conflicts.length);
+
+        // Request persistent storage
+        await storageService.requestPersistentStorage();
+
+        setIsInitialized(true);
+        console.log("[OfflineContext] Initialized successfully");
+      } catch (error) {
+        console.error("[OfflineContext] Initialization failed:", error);
       }
-
-      // Check data integrity
-      const integrity = await storageService.checkDataIntegrity();
-      setDataIntegrity(integrity);
-
-      if (integrity.status !== 'ok') {
-        console.warn('[OfflineContext] Data integrity issue:', integrity.message);
-      }
-
-      // Sync clock
-      if (networkStatus.isOnline) {
-        await clockService.sync();
-      }
-
-      // Load downloaded treatments
-      const treatments = await offlineDb.getDownloadedTreatments();
-      setDownloadedTreatments(treatments);
-
-      // Get storage stats
-      const stats = await storageService.getStorageStats();
-      setStorageStats(stats);
-      setIsStorageLow(await storageService.isStorageLow());
-
-      // Get pending counts
-      const pending = await offlineDb.getPendingChangesCount();
-      setPendingChangesCount(pending);
-
-      const conflicts = await offlineDb.getConflicts();
-      setConflictsCount(conflicts.length);
-
-      // Request persistent storage
-      await storageService.requestPersistentStorage();
-
-      setIsInitialized(true);
-      console.log('[OfflineContext] Initialized successfully');
-    } catch (error) {
-      console.error('[OfflineContext] Initialization failed:', error);
-    }
-  }, [isInitialized]);
+    },
+    [isInitialized],
+  );
 
   // ==========================================================================
   // Network Status Monitoring
@@ -209,7 +233,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const verifyNetworkStatus = () => {
       const actualOnline = navigator.onLine;
       if (actualOnline !== isOnline) {
-        console.log('[OfflineContext] Correcting stale isOnline:', isOnline, '->', actualOnline);
+        console.log(
+          "[OfflineContext] Correcting stale isOnline:",
+          isOnline,
+          "->",
+          actualOnline,
+        );
         setIsOnline(actualOnline);
       }
     };
@@ -237,7 +266,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       },
       onConflict: () => {
         // Refresh conflict count
-        offlineDb.getConflicts().then(conflicts => {
+        offlineDb.getConflicts().then((conflicts) => {
           setConflictsCount(conflicts.length);
         });
       },
@@ -247,7 +276,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         offlineDb.getPendingChangesCount().then(setPendingChangesCount);
       },
       onError: (error) => {
-        console.error('[OfflineContext] Sync error:', error);
+        console.error("[OfflineContext] Sync error:", error);
       },
     });
 
@@ -258,33 +287,45 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   // Treatment Management
   // ==========================================================================
 
-  const isDownloaded = useCallback((treatmentId: string): boolean => {
-    return downloadedTreatments.some(t => t.id === treatmentId);
-  }, [downloadedTreatments]);
+  const isDownloaded = useCallback(
+    (treatmentId: string): boolean => {
+      return downloadedTreatments.some((t) => t.id === treatmentId);
+    },
+    [downloadedTreatments],
+  );
 
   const refreshDownloadedTreatments = useCallback(async () => {
     const treatments = await offlineDb.getDownloadedTreatments();
     setDownloadedTreatments(treatments);
   }, []);
 
-  const downloadTreatment = useCallback(async (treatmentId: string): Promise<boolean> => {
-    // This will be implemented to call the download bundle API
-    // For now, just return false
-    console.log('[OfflineContext] Download treatment not yet implemented:', treatmentId);
-    return false;
-  }, []);
-
-  const removeTreatment = useCallback(async (treatmentId: string): Promise<boolean> => {
-    try {
-      await offlineDb.deleteTreatment(treatmentId);
-      await refreshDownloadedTreatments();
-      await refreshStorageStats();
-      return true;
-    } catch (error) {
-      console.error('[OfflineContext] Remove treatment failed:', error);
+  const downloadTreatment = useCallback(
+    async (treatmentId: string): Promise<boolean> => {
+      // This will be implemented to call the download bundle API
+      // For now, just return false
+      console.log(
+        "[OfflineContext] Download treatment not yet implemented:",
+        treatmentId,
+      );
       return false;
-    }
-  }, [refreshDownloadedTreatments]);
+    },
+    [],
+  );
+
+  const removeTreatment = useCallback(
+    async (treatmentId: string): Promise<boolean> => {
+      try {
+        await offlineDb.deleteTreatment(treatmentId);
+        await refreshDownloadedTreatments();
+        await refreshStorageStats();
+        return true;
+      } catch (error) {
+        console.error("[OfflineContext] Remove treatment failed:", error);
+        return false;
+      }
+    },
+    [refreshDownloadedTreatments],
+  );
 
   // ==========================================================================
   // Sync Actions
@@ -294,18 +335,24 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return syncService.sync();
   }, []);
 
-  const retryChange = useCallback(async (changeId: number): Promise<boolean> => {
-    return syncService.retryChange(changeId);
-  }, []);
+  const retryChange = useCallback(
+    async (changeId: number): Promise<boolean> => {
+      return syncService.retryChange(changeId);
+    },
+    [],
+  );
 
-  const cancelChange = useCallback(async (changeId: number): Promise<boolean> => {
-    const result = await syncService.cancelChange(changeId);
-    if (result) {
-      const pending = await offlineDb.getPendingChangesCount();
-      setPendingChangesCount(pending);
-    }
-    return result;
-  }, []);
+  const cancelChange = useCallback(
+    async (changeId: number): Promise<boolean> => {
+      const result = await syncService.cancelChange(changeId);
+      if (result) {
+        const pending = await offlineDb.getPendingChangesCount();
+        setPendingChangesCount(pending);
+      }
+      return result;
+    },
+    [],
+  );
 
   // ==========================================================================
   // Storage Management
@@ -321,73 +368,74 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   // Context Value
   // ==========================================================================
 
-  const value = useMemo<OfflineContextType>(() => ({
-    // Network status
-    isOnline,
-    offlineDurationMs,
+  const value = useMemo<OfflineContextType>(
+    () => ({
+      // Network status
+      isOnline,
+      offlineDurationMs,
 
-    // Session management
-    sessionTimeoutAt,
-    isSessionExpired,
+      // Session management
+      sessionTimeoutAt,
+      isSessionExpired,
 
-    // Downloaded treatments
-    downloadedTreatments,
-    isDownloaded,
-    downloadTreatment,
-    removeTreatment,
-    refreshDownloadedTreatments,
+      // Downloaded treatments
+      downloadedTreatments,
+      isDownloaded,
+      downloadTreatment,
+      removeTreatment,
+      refreshDownloadedTreatments,
 
-    // Sync status
-    syncStatus,
-    syncProgress,
-    pendingChangesCount,
-    conflictsCount,
-    lastSyncResult,
+      // Sync status
+      syncStatus,
+      syncProgress,
+      pendingChangesCount,
+      conflictsCount,
+      lastSyncResult,
 
-    // Actions
-    syncNow,
-    retryChange,
-    cancelChange,
+      // Actions
+      syncNow,
+      retryChange,
+      cancelChange,
 
-    // Storage
-    storageStats,
-    isStorageLow,
-    dataIntegrity,
-    refreshStorageStats,
+      // Storage
+      storageStats,
+      isStorageLow,
+      dataIntegrity,
+      refreshStorageStats,
 
-    // Initialization
-    isInitialized,
-    initializeOffline,
-  }), [
-    isOnline,
-    offlineDurationMs,
-    sessionTimeoutAt,
-    isSessionExpired,
-    downloadedTreatments,
-    isDownloaded,
-    downloadTreatment,
-    removeTreatment,
-    refreshDownloadedTreatments,
-    syncStatus,
-    syncProgress,
-    pendingChangesCount,
-    conflictsCount,
-    lastSyncResult,
-    syncNow,
-    retryChange,
-    cancelChange,
-    storageStats,
-    isStorageLow,
-    dataIntegrity,
-    refreshStorageStats,
-    isInitialized,
-    initializeOffline,
-  ]);
+      // Initialization
+      isInitialized,
+      initializeOffline,
+    }),
+    [
+      isOnline,
+      offlineDurationMs,
+      sessionTimeoutAt,
+      isSessionExpired,
+      downloadedTreatments,
+      isDownloaded,
+      downloadTreatment,
+      removeTreatment,
+      refreshDownloadedTreatments,
+      syncStatus,
+      syncProgress,
+      pendingChangesCount,
+      conflictsCount,
+      lastSyncResult,
+      syncNow,
+      retryChange,
+      cancelChange,
+      storageStats,
+      isStorageLow,
+      dataIntegrity,
+      refreshStorageStats,
+      isInitialized,
+      initializeOffline,
+    ],
+  );
 
   return (
-    <OfflineContext.Provider value={value}>
-      {children}
-    </OfflineContext.Provider>
+    <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>
   );
 }
 
@@ -398,7 +446,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 export function useOffline(): OfflineContextType {
   const context = useContext(OfflineContext);
   if (context === undefined) {
-    throw new Error('useOffline must be used within an OfflineProvider');
+    throw new Error("useOffline must be used within an OfflineProvider");
   }
   return context;
 }
@@ -412,7 +460,7 @@ export function useOffline(): OfflineContextType {
  */
 export function useOfflineAvailable(): boolean {
   const { isInitialized } = useOffline();
-  return isInitialized && 'indexedDB' in window;
+  return isInitialized && "indexedDB" in window;
 }
 
 /**
@@ -421,7 +469,7 @@ export function useOfflineAvailable(): boolean {
 export function useOfflineDuration(): string {
   const { offlineDurationMs, isOnline } = useOffline();
 
-  if (isOnline) return '';
+  if (isOnline) return "";
 
   const minutes = Math.floor(offlineDurationMs / 60000);
   const seconds = Math.floor((offlineDurationMs % 60000) / 1000);

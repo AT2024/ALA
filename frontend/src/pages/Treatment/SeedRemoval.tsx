@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
-import { useTreatment, ApplicatorGroup } from '@/context/TreatmentContext';
-import { treatmentService, Applicator } from '@/services/treatmentService';
-import IndividualSeedReasonModal from '@/components/Dialogs/IndividualSeedReasonModal';
-import RemovalProcedureForm, { RemovalProcedureFormData } from '@/components/Treatment/RemovalProcedureForm';
-import RemovalTable from '@/components/Treatment/RemovalTable';
-import SignatureModal from '@/components/Dialogs/SignatureModal';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "@/components/Layout";
+import { useTreatment, ApplicatorGroup } from "@/context/TreatmentContext";
+import { treatmentService, Applicator } from "@/services/treatmentService";
+import IndividualSeedReasonModal from "@/components/Dialogs/IndividualSeedReasonModal";
+import RemovalProcedureForm, {
+  RemovalProcedureFormData,
+} from "@/components/Treatment/RemovalProcedureForm";
+import RemovalTable from "@/components/Treatment/RemovalTable";
+import SignatureModal from "@/components/Dialogs/SignatureModal";
 
 // Type for individual source removal notes
 interface IndividualSeedNote {
@@ -26,7 +28,7 @@ const SeedRemoval = () => {
     getApplicatorGroups,
     getRemovalProgress,
     setIndividualSeedsRemoved,
-    getIndividualSeedsRemoved
+    getIndividualSeedsRemoved,
   } = useTreatment();
 
   const [loading, setLoading] = useState(false);
@@ -34,11 +36,16 @@ const SeedRemoval = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [individualSeedNotes, setIndividualSeedNotes] = useState<IndividualSeedNote[]>([]);
-  const [removalProcedureData, setRemovalProcedureData] = useState<RemovalProcedureFormData | null>(null);
-  const [topGeneralComment, setTopGeneralComment] = useState('');
-  const [groupComments, setGroupComments] = useState<Record<number, string>>({});
-  const [individualSeedComment, setIndividualSeedComment] = useState('');
+  const [individualSeedNotes, setIndividualSeedNotes] = useState<
+    IndividualSeedNote[]
+  >([]);
+  const [removalProcedureData, setRemovalProcedureData] =
+    useState<RemovalProcedureFormData | null>(null);
+  const [topGeneralComment, setTopGeneralComment] = useState("");
+  const [groupComments, setGroupComments] = useState<Record<number, string>>(
+    {},
+  );
+  const [individualSeedComment, setIndividualSeedComment] = useState("");
 
   // Get data from context methods
   const applicatorGroups = getApplicatorGroups();
@@ -50,17 +57,17 @@ const SeedRemoval = () => {
   const {
     totalSeeds: progressTotalSeeds,
     effectiveTotalSeeds,
-    effectiveRemovedSeeds
+    effectiveRemovedSeeds,
   } = removalProgress;
 
   useEffect(() => {
     if (!currentTreatment) {
-      navigate('/treatment/select');
+      navigate("/treatment/select");
       return;
     }
 
-    if (currentTreatment.type !== 'removal') {
-      navigate('/treatment/select');
+    if (currentTreatment.type !== "removal") {
+      navigate("/treatment/select");
       return;
     }
 
@@ -84,7 +91,7 @@ const SeedRemoval = () => {
         setApplicators(data);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch applicators');
+      setError(err.message || "Failed to fetch applicators");
     } finally {
       setLoading(false);
     }
@@ -104,13 +111,13 @@ const SeedRemoval = () => {
       await treatmentService.updateApplicator(
         currentTreatment.id,
         applicator.id,
-        updatedApplicator
+        updatedApplicator,
       );
 
       // Update in state
       updateApplicator(applicator.id, updatedApplicator);
     } catch (err: any) {
-      setError(err.message || 'Failed to update applicator');
+      setError(err.message || "Failed to update applicator");
     }
   };
 
@@ -119,12 +126,14 @@ const SeedRemoval = () => {
 
     try {
       // Find the first non-removed applicator in the group and mark it as removed
-      const nextApplicatorToRemove = group.applicators.find(app => !app.isRemoved);
+      const nextApplicatorToRemove = group.applicators.find(
+        (app) => !app.isRemoved,
+      );
       if (nextApplicatorToRemove) {
         await handleToggleRemoval(nextApplicatorToRemove);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to remove applicator from group');
+      setError(err.message || "Failed to remove applicator from group");
     }
   };
 
@@ -138,7 +147,7 @@ const SeedRemoval = () => {
       timestamp: new Date().toISOString(),
       count: 1,
     };
-    setIndividualSeedNotes(prev => [...prev, note]);
+    setIndividualSeedNotes((prev) => [...prev, note]);
     setIndividualSeedsRemoved(individualSeedsRemoved + 1);
     setShowReasonModal(false);
   };
@@ -149,22 +158,22 @@ const SeedRemoval = () => {
   };
 
   const handleGroupCommentChange = (seedCount: number, comment: string) => {
-    setGroupComments(prev => ({ ...prev, [seedCount]: comment }));
+    setGroupComments((prev) => ({ ...prev, [seedCount]: comment }));
   };
 
   const handleCompleteTreatment = async () => {
     if (!currentTreatment || !removalProcedureData) {
-      setError('Please fill in the removal procedure form');
+      setError("Please fill in the removal procedure form");
       return;
     }
 
     // Validate required fields
     if (!removalProcedureData.removalDate) {
-      setError('Please select a removal date');
+      setError("Please select a removal date");
       return;
     }
     if (removalProcedureData.allSourcesSameDate === null) {
-      setError('Please indicate if all sources were removed on the same date');
+      setError("Please indicate if all sources were removed on the same date");
       return;
     }
 
@@ -172,7 +181,9 @@ const SeedRemoval = () => {
     const insertedSources = currentTreatment.seedQuantity || totalSeeds;
     if (effectiveRemovedSeeds !== insertedSources) {
       if (!removalProcedureData.discrepancyClarification) {
-        setError('Please clarify the discrepancy between removed and inserted sources');
+        setError(
+          "Please clarify the discrepancy between removed and inserted sources",
+        );
         return;
       }
 
@@ -180,13 +191,19 @@ const SeedRemoval = () => {
       const clarification = removalProcedureData.discrepancyClarification;
       const totalClarified =
         (clarification.lost.checked ? clarification.lost.amount : 0) +
-        (clarification.retrievedToSite.checked ? clarification.retrievedToSite.amount : 0) +
-        (clarification.removalFailure.checked ? clarification.removalFailure.amount : 0) +
+        (clarification.retrievedToSite.checked
+          ? clarification.retrievedToSite.amount
+          : 0) +
+        (clarification.removalFailure.checked
+          ? clarification.removalFailure.amount
+          : 0) +
         (clarification.other.checked ? clarification.other.amount : 0);
 
       const sourcesNotRemoved = insertedSources - effectiveRemovedSeeds;
       if (totalClarified !== sourcesNotRemoved) {
-        setError(`Discrepancy clarification total (${totalClarified}) must equal sources not removed (${sourcesNotRemoved})`);
+        setError(
+          `Discrepancy clarification total (${totalClarified}) must equal sources not removed (${sourcesNotRemoved})`,
+        );
         return;
       }
     }
@@ -213,7 +230,7 @@ const SeedRemoval = () => {
       // Show signature modal for finalization
       setShowSignatureModal(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to save removal procedure data');
+      setError(err.message || "Failed to save removal procedure data");
     } finally {
       setIsCompleting(false);
     }
@@ -221,13 +238,13 @@ const SeedRemoval = () => {
 
   const handleSignatureSuccess = () => {
     setShowSignatureModal(false);
-    navigate('/treatment/select');
+    navigate("/treatment/select");
   };
 
   if (!currentTreatment) {
     return (
-      <Layout title='Source Removal' showBackButton>
-        <div className='flex items-center justify-center py-10'>
+      <Layout title="Source Removal" showBackButton>
+        <div className="flex items-center justify-center py-10">
           <p>No treatment selected. Please select a treatment first.</p>
         </div>
       </Layout>
@@ -235,72 +252,92 @@ const SeedRemoval = () => {
   }
 
   return (
-    <Layout title='Source Removal' showBackButton backPath='/treatment/select'>
-      <div className='space-y-6'>
-        <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <h2 className='mb-4 text-lg font-medium'>Treatment Information</h2>
-          <div className='grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4'>
+    <Layout title="Source Removal" showBackButton backPath="/treatment/select">
+      <div className="space-y-6">
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             <div>
-              <p className='text-sm text-gray-500'>Patient ID</p>
+              <p className="text-sm text-gray-500">Patient ID</p>
               {currentTreatment.patientName ? (
-                <p className='font-medium'>{currentTreatment.patientName}</p>
+                <p className="font-medium">{currentTreatment.patientName}</p>
               ) : (
-                <p className='font-medium text-amber-600' title="Patient name not available from Priority">
+                <p
+                  className="font-medium text-amber-600"
+                  title="Patient name not available from Priority"
+                >
                   {currentTreatment.subjectId}
                 </p>
               )}
             </div>
             <div>
-              <p className='text-sm text-gray-500'>Date of Insertion</p>
-              <p className='font-medium'>{new Date(currentTreatment.date).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className='text-sm text-gray-500'>Total Sources</p>
-              <p className='font-medium'>{currentTreatment.seedQuantity || totalSeeds}</p>
-            </div>
-            <div>
-              <p className='text-sm text-gray-500'>Total Activity</p>
-              <p className='font-medium'>
-                {currentTreatment.activityPerSeed && currentTreatment.seedQuantity
-                  ? (currentTreatment.activityPerSeed * currentTreatment.seedQuantity).toFixed(1)
-                  : 'N/A'} mCi
+              <p className="text-sm text-gray-500">Date of Insertion</p>
+              <p className="font-medium">
+                {new Date(currentTreatment.date).toLocaleDateString()}
               </p>
             </div>
             <div>
-              <p className='text-sm text-gray-500'>Surgeon</p>
-              <p className='font-medium'>{currentTreatment.surgeon || 'N/A'}</p>
+              <p className="text-sm text-gray-500">Total Sources</p>
+              <p className="font-medium">
+                {currentTreatment.seedQuantity || totalSeeds}
+              </p>
             </div>
             <div>
-              <p className='text-sm text-gray-500'>Site</p>
-              <p className='font-medium'>{currentTreatment.site}</p>
+              <p className="text-sm text-gray-500">Total Activity</p>
+              <p className="font-medium">
+                {currentTreatment.activityPerSeed &&
+                currentTreatment.seedQuantity
+                  ? (
+                      currentTreatment.activityPerSeed *
+                      currentTreatment.seedQuantity
+                    ).toFixed(1)
+                  : "N/A"}{" "}
+                mCi
+              </p>
             </div>
             <div>
-              <p className='text-sm text-gray-500'>Days Since Insertion</p>
-              <p className='font-medium text-primary'>{daysSinceInsertion} days</p>
+              <p className="text-sm text-gray-500">Surgeon</p>
+              <p className="font-medium">{currentTreatment.surgeon || "N/A"}</p>
             </div>
             <div>
-              <p className='text-sm text-gray-500'>Type</p>
-              <p className='font-medium capitalize'>{currentTreatment.type}</p>
+              <p className="text-sm text-gray-500">Site</p>
+              <p className="font-medium">{currentTreatment.site}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Days Since Insertion</p>
+              <p className="font-medium text-primary">
+                {daysSinceInsertion} days
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Type</p>
+              <p className="font-medium capitalize">{currentTreatment.type}</p>
             </div>
           </div>
 
           {daysSinceInsertion > 0 && (
-            <div className='mt-4 rounded-md bg-primary/10 p-3'>
-              <p className='text-sm text-primary'>
-                <span className='font-medium'>Note:</span> Sources have been in place for {daysSinceInsertion} day{daysSinceInsertion !== 1 ? 's' : ''}.
+            <div className="mt-4 rounded-md bg-primary/10 p-3">
+              <p className="text-sm text-primary">
+                <span className="font-medium">Note:</span> Sources have been in
+                place for {daysSinceInsertion} day
+                {daysSinceInsertion !== 1 ? "s" : ""}.
               </p>
             </div>
           )}
         </div>
 
-        {error && <div className='rounded-md bg-red-50 p-4 text-sm text-red-700'>{error}</div>}
+        {error && (
+          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
-        <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <h2 className='text-lg font-medium mb-4'>Source Removal Tracking</h2>
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-medium mb-4">Source Removal Tracking</h2>
 
           {loading && (
-            <div className='flex justify-center py-8'>
-              <div className='h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent'></div>
+            <div className="flex justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             </div>
           )}
 
@@ -308,7 +345,9 @@ const SeedRemoval = () => {
             <RemovalTable
               applicatorGroups={applicatorGroups}
               individualSeedsRemoved={individualSeedsRemoved}
-              maxIndividualSeeds={currentTreatment.seedQuantity || progressTotalSeeds}
+              maxIndividualSeeds={
+                currentTreatment.seedQuantity || progressTotalSeeds
+              }
               totalSources={effectiveTotalSeeds}
               totalRemoved={effectiveRemovedSeeds}
               onRemoveFromGroup={handleRemoveApplicatorGroup}
@@ -332,23 +371,28 @@ const SeedRemoval = () => {
         />
 
         {/* Complete Treatment Button */}
-        <div className='rounded-lg border bg-white p-4 shadow-sm'>
-          <div className='flex items-center justify-between'>
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
             <div
               className={`text-lg font-medium ${
-                effectiveRemovedSeeds === effectiveTotalSeeds ? 'text-green-600' : 'text-red-600'
-              }`}>
-              Total: {effectiveRemovedSeeds} / {effectiveTotalSeeds} Sources Removed
+                effectiveRemovedSeeds === effectiveTotalSeeds
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              Total: {effectiveRemovedSeeds} / {effectiveTotalSeeds} Sources
+              Removed
             </div>
             <button
               onClick={handleCompleteTreatment}
               disabled={isCompleting || loading}
-              className='rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50'>
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+            >
               {isCompleting
-                ? 'Completing...'
+                ? "Completing..."
                 : effectiveRemovedSeeds === effectiveTotalSeeds
-                  ? 'Complete Treatment'
-                  : 'Complete with Missing Sources'}
+                  ? "Complete Treatment"
+                  : "Complete with Missing Sources"}
             </button>
           </div>
         </div>
@@ -365,8 +409,8 @@ const SeedRemoval = () => {
       <SignatureModal
         isOpen={showSignatureModal}
         onClose={() => setShowSignatureModal(false)}
-        treatmentId={currentTreatment?.id || ''}
-        treatmentSite={currentTreatment?.site || ''}
+        treatmentId={currentTreatment?.id || ""}
+        treatmentSite={currentTreatment?.site || ""}
         onSuccess={handleSignatureSuccess}
       />
     </Layout>

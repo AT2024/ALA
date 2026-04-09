@@ -1,7 +1,7 @@
-import { ReactNode, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { useWorkflowNavigation } from '@/hooks/useWorkflowNavigation';
+import { ReactNode, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useWorkflowNavigation } from "@/hooks/useWorkflowNavigation";
 
 interface LayoutProps {
   children: ReactNode;
@@ -15,12 +15,13 @@ export default function Layout({
   children,
   title,
   showBackButton = false,
-  backPath = '',
-  showLogout = true
+  backPath = "",
+  showLogout = true,
 }: LayoutProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { navigateBack, navigateNext, getCurrentStepInfo } = useWorkflowNavigation();
+  const { navigateBack, navigateNext, getCurrentStepInfo } =
+    useWorkflowNavigation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const stepInfo = getCurrentStepInfo();
 
@@ -32,8 +33,8 @@ export default function Layout({
     }
   };
 
-  const navigateSequential = (direction: 'next' | 'prev') => {
-    if (direction === 'prev') {
+  const navigateSequential = (direction: "next" | "prev") => {
+    if (direction === "prev") {
       navigateBack(); // Uses workflow-aware navigation
     } else {
       navigateNext(); // Uses workflow-aware navigation
@@ -77,7 +78,9 @@ export default function Layout({
                     </svg>
                   </button>
                 )}
-                <h1 className="truncate text-sm font-bold md:text-xl md:text-clip max-w-[140px] sm:max-w-[200px] md:max-w-none">{title}</h1>
+                <h1 className="truncate text-sm font-bold md:text-xl md:text-clip max-w-[140px] sm:max-w-[200px] md:max-w-none">
+                  {title}
+                </h1>
               </div>
 
               {/* Hamburger menu button - visible only on mobile */}
@@ -108,18 +111,21 @@ export default function Layout({
             </div>
 
             {/* Middle section - workflow navigation: hidden on mobile when menu closed, visible on md+ */}
-            <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} flex-col items-start gap-3 md:flex md:flex-col md:items-center`}>
+            <div
+              className={`${mobileMenuOpen ? "flex" : "hidden"} flex-col items-start gap-3 md:flex md:flex-col md:items-center`}
+            >
               {/* Flow position indicator */}
               <div className="text-xs text-white/70 md:mb-1 truncate max-w-full">
                 {stepInfo.isInWorkflow && (
                   <span className="truncate">
-                    Step {stepInfo.currentStep}/{stepInfo.totalSteps} - {stepInfo.procedureType?.toUpperCase()} Flow
+                    Step {stepInfo.currentStep}/{stepInfo.totalSteps} -{" "}
+                    {stepInfo.procedureType?.toUpperCase()} Flow
                   </span>
                 )}
               </div>
               <div className="flex w-full items-center gap-2 md:w-auto md:gap-1">
                 <button
-                  onClick={() => navigateSequential('prev')}
+                  onClick={() => navigateSequential("prev")}
                   className="flex min-h-[44px] flex-1 items-center justify-center rounded-md bg-primary-foreground/10 px-4 py-2 text-sm font-medium hover:bg-primary-foreground/20 md:flex-initial md:px-3"
                   title="Previous screen - workflow aware"
                 >
@@ -140,7 +146,7 @@ export default function Layout({
                   Prev
                 </button>
                 <button
-                  onClick={() => navigateSequential('next')}
+                  onClick={() => navigateSequential("next")}
                   className="flex min-h-[44px] flex-1 items-center justify-center rounded-md bg-primary-foreground/10 px-4 py-2 text-sm font-medium hover:bg-primary-foreground/20 md:flex-initial md:px-3"
                   title="Next screen - workflow aware"
                 >
@@ -164,7 +170,9 @@ export default function Layout({
             </div>
 
             {/* Right section - User info and logout: hidden on mobile when menu closed, visible on md+ */}
-            <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} w-full flex-col gap-3 md:flex md:w-auto md:flex-row md:items-center md:gap-4`}>
+            <div
+              className={`${mobileMenuOpen ? "flex" : "hidden"} w-full flex-col gap-3 md:flex md:w-auto md:flex-row md:items-center md:gap-4`}
+            >
               {user && (
                 <div className="text-sm">
                   <span className="text-white/80">User: </span>
@@ -184,12 +192,13 @@ export default function Layout({
         </div>
       </header>
 
-      <main className="container mx-auto flex-1 p-4">
-        {children}
-      </main>
+      <main className="container mx-auto flex-1 p-4">{children}</main>
 
       <footer className="border-t bg-secondary p-4 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} AlphaTau Medical Ltd. All rights reserved.</p>
+        <p>
+          &copy; {new Date().getFullYear()} AlphaTau Medical Ltd. All rights
+          reserved.
+        </p>
         <p className="mt-1 text-xs text-muted-foreground/70">v{APP_VERSION}</p>
       </footer>
     </div>

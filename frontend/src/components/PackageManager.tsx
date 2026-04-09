@@ -1,10 +1,10 @@
-import { useState, Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import api from '@/services/api';
+import { useState, Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import api from "@/services/api";
 
 // Import shared types - single source of truth
-import type { Applicator, ApplicatorSummary } from '@shared/types';
+import type { Applicator, ApplicatorSummary } from "@shared/types";
 
 interface PackageManagerProps {
   treatmentId: string;
@@ -15,7 +15,11 @@ interface PackageManagerProps {
 // Use shared type for package summary (same as ApplicatorSummary)
 type PackageSummary = ApplicatorSummary;
 
-const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }: PackageManagerProps) => {
+const PackageManager = ({
+  treatmentId,
+  processedApplicators,
+  onPackageCreated,
+}: PackageManagerProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedApplicators, setSelectedApplicators] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,17 +41,23 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
         };
       }
 
-      const status = app.status || (app.usageType === 'full' ? 'INSERTED' : app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+      const status =
+        app.status ||
+        (app.usageType === "full"
+          ? "INSERTED"
+          : app.usageType === "faulty"
+            ? "FAULTY"
+            : "SEALED");
 
-      if (status === 'INSERTED') {
+      if (status === "INSERTED") {
         summaryMap[app.seedQuantity].inserted++;
       }
 
-      if (status === 'SEALED' || status === 'OPENED' || status === 'LOADED') {
+      if (status === "SEALED" || status === "OPENED" || status === "LOADED") {
         summaryMap[app.seedQuantity].available++;
       }
 
-      if (status === 'LOADED') {
+      if (status === "LOADED") {
         summaryMap[app.seedQuantity].loaded++;
       }
 
@@ -56,7 +66,9 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
       }
     });
 
-    return Object.values(summaryMap).sort((a, b) => a.seedQuantity - b.seedQuantity);
+    return Object.values(summaryMap).sort(
+      (a, b) => a.seedQuantity - b.seedQuantity,
+    );
   };
 
   // Get loaded applicators grouped by source quantity
@@ -64,9 +76,15 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
     const grouped: { [key: number]: Applicator[] } = {};
 
     processedApplicators.forEach((app) => {
-      const status = app.status || (app.usageType === 'full' ? 'INSERTED' : app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
+      const status =
+        app.status ||
+        (app.usageType === "full"
+          ? "INSERTED"
+          : app.usageType === "faulty"
+            ? "FAULTY"
+            : "SEALED");
 
-      if (status === 'LOADED' && !app.package_label) {
+      if (status === "LOADED" && !app.package_label) {
         if (!grouped[app.seedQuantity]) {
           grouped[app.seedQuantity] = [];
         }
@@ -102,25 +120,40 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
 
   const validateSelection = (): { valid: boolean; error?: string } => {
     if (selectedApplicators.length !== 4) {
-      return { valid: false, error: 'You must select exactly 4 applicators' };
+      return { valid: false, error: "You must select exactly 4 applicators" };
     }
 
     // Get seed quantities of selected applicators
-    const selectedApps = processedApplicators.filter((app) => selectedApplicators.includes(app.id));
+    const selectedApps = processedApplicators.filter((app) =>
+      selectedApplicators.includes(app.id),
+    );
     const seedQuantities = new Set(selectedApps.map((app) => app.seedQuantity));
 
     if (seedQuantities.size > 1) {
-      return { valid: false, error: 'All selected applicators must be of the same type (source quantity)' };
+      return {
+        valid: false,
+        error:
+          "All selected applicators must be of the same type (source quantity)",
+      };
     }
 
     // Verify all are LOADED status
     const allLoaded = selectedApps.every((app) => {
-      const status = app.status || (app.usageType === 'full' ? 'INSERTED' : app.usageType === 'faulty' ? 'FAULTY' : 'SEALED');
-      return status === 'LOADED';
+      const status =
+        app.status ||
+        (app.usageType === "full"
+          ? "INSERTED"
+          : app.usageType === "faulty"
+            ? "FAULTY"
+            : "SEALED");
+      return status === "LOADED";
     });
 
     if (!allLoaded) {
-      return { valid: false, error: 'All selected applicators must have LOADED status' };
+      return {
+        valid: false,
+        error: "All selected applicators must have LOADED status",
+      };
     }
 
     return { valid: true };
@@ -129,7 +162,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
   const handleCreatePackage = async () => {
     const validation = validateSelection();
     if (!validation.valid) {
-      setError(validation.error || 'Invalid selection');
+      setError(validation.error || "Invalid selection");
       return;
     }
 
@@ -150,8 +183,8 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
         onPackageCreated();
       }, 1500);
     } catch (err: any) {
-      console.error('Error creating package:', err);
-      setError(err.response?.data?.error || 'Failed to create package');
+      console.error("Error creating package:", err);
+      setError(err.response?.data?.error || "Failed to create package");
     } finally {
       setLoading(false);
     }
@@ -206,7 +239,10 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
           <tbody className="divide-y divide-gray-200 bg-white">
             {summary.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-sm text-gray-500 text-center">
+                <td
+                  colSpan={5}
+                  className="px-6 py-4 text-sm text-gray-500 text-center"
+                >
                   No applicators processed yet
                 </td>
               </tr>
@@ -214,7 +250,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
               summary.map((item) => (
                 <tr key={item.seedQuantity}>
                   <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                    {item.seedQuantity} source{item.seedQuantity > 1 ? 's' : ''}
+                    {item.seedQuantity} source{item.seedQuantity > 1 ? "s" : ""}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {item.inserted}
@@ -298,46 +334,52 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
 
                   {/* Loaded applicators grouped by type */}
                   <div className="space-y-6 max-h-96 overflow-y-auto">
-                    {Object.entries(loadedByType).map(([seedQuantity, applicators]) => (
-                      <div key={seedQuantity}>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">
-                          {seedQuantity} source{parseInt(seedQuantity) > 1 ? 's' : ''} ({applicators.length} available)
-                        </h4>
-                        <div className="space-y-2">
-                          {applicators.map((app) => (
-                            <div
-                              key={app.id}
-                              onClick={() => handleToggleApplicator(app.id)}
-                              className={`flex items-center justify-between p-3 border rounded-md cursor-pointer transition-colors ${
-                                selectedApplicators.includes(app.id)
-                                  ? 'border-primary bg-primary/10'
-                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedApplicators.includes(app.id)}
-                                  onChange={() => {}}
-                                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                                />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {app.serialNumber}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Type: {app.applicatorType || 'N/A'}
-                                  </p>
+                    {Object.entries(loadedByType).map(
+                      ([seedQuantity, applicators]) => (
+                        <div key={seedQuantity}>
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">
+                            {seedQuantity} source
+                            {parseInt(seedQuantity) > 1 ? "s" : ""} (
+                            {applicators.length} available)
+                          </h4>
+                          <div className="space-y-2">
+                            {applicators.map((app) => (
+                              <div
+                                key={app.id}
+                                onClick={() => handleToggleApplicator(app.id)}
+                                className={`flex items-center justify-between p-3 border rounded-md cursor-pointer transition-colors ${
+                                  selectedApplicators.includes(app.id)
+                                    ? "border-primary bg-primary/10"
+                                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedApplicators.includes(
+                                      app.id,
+                                    )}
+                                    onChange={() => {}}
+                                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {app.serialNumber}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      Type: {app.applicatorType || "N/A"}
+                                    </p>
+                                  </div>
                                 </div>
+                                <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-yellow-50 border border-yellow-300 text-yellow-800">
+                                  LOADED
+                                </span>
                               </div>
-                              <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-yellow-50 border border-yellow-300 text-yellow-800">
-                                LOADED
-                              </span>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ),
+                    )}
                   </div>
 
                   {/* Action buttons */}
@@ -348,7 +390,7 @@ const PackageManager = ({ treatmentId, processedApplicators, onPackageCreated }:
                       onClick={handleCreatePackage}
                       className="inline-flex w-full justify-center rounded-md bg-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:text-sm disabled:opacity-50"
                     >
-                      {loading ? 'Creating...' : 'Create Package'}
+                      {loading ? "Creating..." : "Create Package"}
                     </button>
                     <button
                       type="button"

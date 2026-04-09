@@ -5,17 +5,17 @@
  * Provides utilities for estimating storage usage and handling quota exceeded errors.
  */
 
-import { offlineDb } from './indexedDbService';
+import { offlineDb } from "./indexedDbService";
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export interface StorageEstimate {
-  used: number;           // Bytes used
-  available: number;      // Bytes available
-  quota: number;          // Total quota
-  percentUsed: number;    // Percentage used (0-100)
+  used: number; // Bytes used
+  available: number; // Bytes available
+  quota: number; // Total quota
+  percentUsed: number; // Percentage used (0-100)
 }
 
 export interface StorageStats {
@@ -28,7 +28,7 @@ export interface StorageStats {
 }
 
 export interface DataIntegrityResult {
-  status: 'ok' | 'corrupted' | 'missing';
+  status: "ok" | "corrupted" | "missing";
   pendingChangesLost?: number;
   message: string;
 }
@@ -53,7 +53,7 @@ class StorageService {
    */
   async getStorageEstimate(): Promise<StorageEstimate> {
     try {
-      if ('storage' in navigator && 'estimate' in navigator.storage) {
+      if ("storage" in navigator && "estimate" in navigator.storage) {
         const estimate = await navigator.storage.estimate();
         const used = estimate.usage || 0;
         const quota = estimate.quota || 0;
@@ -68,7 +68,7 @@ class StorageService {
         };
       }
     } catch (error) {
-      console.warn('[StorageService] Storage estimate not available:', error);
+      console.warn("[StorageService] Storage estimate not available:", error);
     }
 
     // Fallback estimate based on typical browser limits
@@ -119,7 +119,7 @@ class StorageService {
    */
   async safeWrite<T>(
     operation: () => Promise<T>,
-    estimatedSize: number
+    estimatedSize: number,
   ): Promise<T> {
     const { available } = await this.getStorageEstimate();
 
@@ -131,7 +131,7 @@ class StorageService {
       // Check again
       const { available: newAvailable } = await this.getStorageEstimate();
       if (newAvailable < estimatedSize) {
-        throw new QuotaExceededError('Insufficient storage space');
+        throw new QuotaExceededError("Insufficient storage space");
       }
     }
 
@@ -152,9 +152,11 @@ class StorageService {
    */
   private isQuotaError(error: unknown): boolean {
     if (error instanceof Error) {
-      return error.name === 'QuotaExceededError' ||
-             error.message.includes('quota') ||
-             error.message.includes('storage');
+      return (
+        error.name === "QuotaExceededError" ||
+        error.message.includes("quota") ||
+        error.message.includes("storage")
+      );
     }
     return false;
   }
@@ -173,29 +175,30 @@ class StorageService {
     try {
       const result = await offlineDb.checkDataIntegrity();
 
-      if (result.status === 'missing' && result.pendingChangesLost) {
+      if (result.status === "missing" && result.pendingChangesLost) {
         return {
           ...result,
           message: `Warning: ${result.pendingChangesLost} pending changes may have been lost. This could happen if browser storage was cleared.`,
         };
       }
 
-      if (result.status === 'corrupted') {
+      if (result.status === "corrupted") {
         return {
           ...result,
-          message: 'Offline storage may be corrupted. Consider clearing and re-downloading data.',
+          message:
+            "Offline storage may be corrupted. Consider clearing and re-downloading data.",
         };
       }
 
       return {
         ...result,
-        message: 'Data integrity check passed.',
+        message: "Data integrity check passed.",
       };
     } catch (error) {
-      console.error('[StorageService] Integrity check error:', error);
+      console.error("[StorageService] Integrity check error:", error);
       return {
-        status: 'corrupted',
-        message: 'Failed to check data integrity: ' + (error as Error).message,
+        status: "corrupted",
+        message: "Failed to check data integrity: " + (error as Error).message,
       };
     }
   }
@@ -205,7 +208,7 @@ class StorageService {
    */
   async requestPersistentStorage(): Promise<boolean> {
     try {
-      if ('storage' in navigator && 'persist' in navigator.storage) {
+      if ("storage" in navigator && "persist" in navigator.storage) {
         const persisted = await navigator.storage.persisted();
         if (persisted) {
           return true;
@@ -214,7 +217,7 @@ class StorageService {
         return await navigator.storage.persist();
       }
     } catch (error) {
-      console.warn('[StorageService] Persistent storage not available:', error);
+      console.warn("[StorageService] Persistent storage not available:", error);
     }
     return false;
   }
@@ -224,11 +227,11 @@ class StorageService {
    */
   async isPersistentStorage(): Promise<boolean> {
     try {
-      if ('storage' in navigator && 'persisted' in navigator.storage) {
+      if ("storage" in navigator && "persisted" in navigator.storage) {
         return await navigator.storage.persisted();
       }
     } catch (error) {
-      console.warn('[StorageService] Cannot check persistence:', error);
+      console.warn("[StorageService] Cannot check persistence:", error);
     }
     return false;
   }
@@ -237,13 +240,13 @@ class StorageService {
    * Get human-readable size string
    */
   formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
 
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
   /**
@@ -266,8 +269,8 @@ class StorageService {
    */
   async clearAllData(): Promise<void> {
     await offlineDb.clearAll();
-    localStorage.removeItem('ala_pendingChangesCount');
-    localStorage.removeItem('ala_deviceId');
+    localStorage.removeItem("ala_pendingChangesCount");
+    localStorage.removeItem("ala_deviceId");
   }
 }
 
@@ -278,7 +281,7 @@ class StorageService {
 export class QuotaExceededError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'QuotaExceededError';
+    this.name = "QuotaExceededError";
   }
 }
 

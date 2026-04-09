@@ -1,6 +1,10 @@
-import { Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { ExclamationTriangleIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import {
+  ExclamationTriangleIcon,
+  CheckIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -10,7 +14,7 @@ interface ConfirmationDialogProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  type?: 'warning' | 'success' | 'error' | 'info';
+  type?: "warning" | "success" | "error" | "info";
   loading?: boolean;
 }
 
@@ -20,9 +24,9 @@ const ConfirmationDialog = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Continue',
-  cancelText = 'Cancel',
-  type = 'warning',
+  confirmText = "Continue",
+  cancelText = "Cancel",
+  type = "warning",
   loading = false,
 }: ConfirmationDialogProps) => {
   const iconMap = {
@@ -33,17 +37,17 @@ const ConfirmationDialog = ({
   };
 
   const colorMap = {
-    warning: 'text-yellow-600',
-    success: 'text-green-600',
-    error: 'text-red-600',
-    info: 'text-primary',
+    warning: "text-yellow-600",
+    success: "text-green-600",
+    error: "text-red-600",
+    info: "text-primary",
   };
 
   const buttonColorMap = {
-    warning: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
-    success: 'bg-green-600 hover:bg-green-700 focus:ring-green-500',
-    error: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
-    info: 'bg-primary hover:bg-primary/90 focus:ring-primary',
+    warning: "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500",
+    success: "bg-green-600 hover:bg-green-700 focus:ring-green-500",
+    error: "bg-red-600 hover:bg-red-700 focus:ring-red-500",
+    info: "bg-primary hover:bg-primary/90 focus:ring-primary",
   };
 
   const Icon = iconMap[type];
@@ -76,8 +80,13 @@ const ConfirmationDialog = ({
             >
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                 <div className="flex items-start">
-                  <div className={`mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-${type === 'warning' ? 'yellow' : type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue'}-100 sm:mx-0 sm:h-10 sm:w-10`}>
-                    <Icon className={`h-6 w-6 ${colorMap[type]}`} aria-hidden="true" />
+                  <div
+                    className={`mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-${type === "warning" ? "yellow" : type === "error" ? "red" : type === "success" ? "green" : "blue"}-100 sm:mx-0 sm:h-10 sm:w-10`}
+                  >
+                    <Icon
+                      className={`h-6 w-6 ${colorMap[type]}`}
+                      aria-hidden="true"
+                    />
                   </div>
                   <div className="ml-4 mt-0 text-left">
                     <Dialog.Title
@@ -101,7 +110,7 @@ const ConfirmationDialog = ({
                     className={`inline-flex w-full justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm disabled:opacity-50 ${buttonColorMap[type]}`}
                     onClick={onConfirm}
                   >
-                    {loading ? 'Processing...' : confirmText}
+                    {loading ? "Processing..." : confirmText}
                   </button>
                   <button
                     type="button"

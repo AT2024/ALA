@@ -2,14 +2,16 @@
  * Type declarations for vite-plugin-pwa virtual modules
  */
 
-declare module 'virtual:pwa-register/react' {
-  import type { Dispatch, SetStateAction } from 'react';
+declare module "virtual:pwa-register/react" {
+  import type { Dispatch, SetStateAction } from "react";
 
   export interface RegisterSWOptions {
     immediate?: boolean;
     onNeedRefresh?: () => void;
     onOfflineReady?: () => void;
-    onRegistered?: (registration: ServiceWorkerRegistration | undefined) => void;
+    onRegistered?: (
+      registration: ServiceWorkerRegistration | undefined,
+    ) => void;
     onRegisterError?: (error: Error) => void;
   }
 
@@ -19,17 +21,23 @@ declare module 'virtual:pwa-register/react' {
     updateServiceWorker: (reloadPage?: boolean) => Promise<void>;
   }
 
-  export function useRegisterSW(options?: RegisterSWOptions): UseRegisterSWReturn;
+  export function useRegisterSW(
+    options?: RegisterSWOptions,
+  ): UseRegisterSWReturn;
 }
 
-declare module 'virtual:pwa-register' {
+declare module "virtual:pwa-register" {
   export interface RegisterSWOptions {
     immediate?: boolean;
     onNeedRefresh?: () => void;
     onOfflineReady?: () => void;
-    onRegistered?: (registration: ServiceWorkerRegistration | undefined) => void;
+    onRegistered?: (
+      registration: ServiceWorkerRegistration | undefined,
+    ) => void;
     onRegisterError?: (error: Error) => void;
   }
 
-  export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
+  export function registerSW(
+    options?: RegisterSWOptions,
+  ): (reloadPage?: boolean) => Promise<void>;
 }

@@ -18,7 +18,7 @@
 
 const PBKDF2_ITERATIONS = 100000;
 const KEY_LENGTH = 256; // AES-256
-const APP_SALT = 'ALA-Medical-PHI-v1'; // Static component of salt
+const APP_SALT = "ALA-Medical-PHI-v1"; // Static component of salt
 
 interface KeyMaterial {
   userId: string;
@@ -26,16 +26,16 @@ interface KeyMaterial {
   codeHash: string;
 }
 
-const STORAGE_KEY = 'ala_encryption_material';
+const STORAGE_KEY = "ala_encryption_material";
 
 /**
  * Hash a string using SHA-256
  */
 async function sha256(message: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -56,7 +56,11 @@ class EncryptionKeyService {
    * - Iterations: 100,000 (OWASP 2024 minimum)
    * - Key length: 256 bits (AES-256)
    */
-  async deriveKey(userId: string, identifier: string, codeHash: string): Promise<CryptoKey> {
+  async deriveKey(
+    userId: string,
+    identifier: string,
+    codeHash: string,
+  ): Promise<CryptoKey> {
     // Check cache to avoid re-derivation
     const materialHash = await sha256(`${userId}:${identifier}:${codeHash}`);
     if (this.cachedKey && this.cachedMaterialHash === materialHash) {
@@ -72,26 +76,26 @@ class EncryptionKeyService {
     // Import password as key material
     const passwordBuffer = new TextEncoder().encode(password);
     const baseKey = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       passwordBuffer,
-      'PBKDF2',
+      "PBKDF2",
       false,
-      ['deriveBits', 'deriveKey']
+      ["deriveBits", "deriveKey"],
     );
 
     // Derive the AES-GCM key
     const saltBuffer = new TextEncoder().encode(salt);
     const derivedKey = await crypto.subtle.deriveKey(
       {
-        name: 'PBKDF2',
+        name: "PBKDF2",
         salt: saltBuffer,
         iterations: PBKDF2_ITERATIONS,
-        hash: 'SHA-256',
+        hash: "SHA-256",
       },
       baseKey,
-      { name: 'AES-GCM', length: KEY_LENGTH },
+      { name: "AES-GCM", length: KEY_LENGTH },
       false, // Not extractable for security
-      ['encrypt', 'decrypt']
+      ["encrypt", "decrypt"],
     );
 
     // Cache the key
@@ -110,7 +114,7 @@ class EncryptionKeyService {
   async storeCredentialMaterial(
     userId: string,
     identifier: string,
-    verificationCode: string
+    verificationCode: string,
   ): Promise<void> {
     // Hash the verification code - never store plaintext
     const codeHash = await sha256(verificationCode);
@@ -126,7 +130,9 @@ class EncryptionKeyService {
     // Pre-derive and cache the key
     await this.deriveKey(userId, identifier, codeHash);
 
-    console.log('[EncryptionKeyService] Credential material stored and key derived');
+    console.log(
+      "[EncryptionKeyService] Credential material stored and key derived",
+    );
   }
 
   /**
@@ -143,7 +149,7 @@ class EncryptionKeyService {
     try {
       return JSON.parse(stored) as KeyMaterial;
     } catch {
-      console.warn('[EncryptionKeyService] Failed to parse stored material');
+      console.warn("[EncryptionKeyService] Failed to parse stored material");
       return null;
     }
   }
@@ -159,7 +165,11 @@ class EncryptionKeyService {
       return null;
     }
 
-    return this.deriveKey(material.userId, material.identifier, material.codeHash);
+    return this.deriveKey(
+      material.userId,
+      material.identifier,
+      material.codeHash,
+    );
   }
 
   /**
@@ -178,7 +188,9 @@ class EncryptionKeyService {
     sessionStorage.removeItem(STORAGE_KEY);
     this.cachedKey = null;
     this.cachedMaterialHash = null;
-    console.log('[EncryptionKeyService] Credential material and cached key cleared');
+    console.log(
+      "[EncryptionKeyService] Credential material and cached key cleared",
+    );
   }
 
   /**

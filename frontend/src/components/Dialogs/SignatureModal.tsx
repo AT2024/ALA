@@ -1,8 +1,14 @@
-import { Fragment, useState, useEffect, useCallback } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, EnvelopeIcon, CheckCircleIcon, ExclamationTriangleIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { treatmentService } from '@/services/treatmentService';
-import { useTreatment } from '@/context/TreatmentContext';
+import { Fragment, useState, useEffect, useCallback } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import {
+  XMarkIcon,
+  EnvelopeIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
+import { treatmentService } from "@/services/treatmentService";
+import { useTreatment } from "@/context/TreatmentContext";
 
 interface SiteUser {
   email: string;
@@ -23,12 +29,16 @@ interface SignatureModalProps {
   treatmentId: string;
   treatmentSite: string;
   onSuccess: () => void;
-  flowType?: 'hospital_auto' | 'alphatau_verification';
+  flowType?: "hospital_auto" | "alphatau_verification";
   userData?: UserData;
   isContinuation?: boolean; // True if this treatment is a continuation of another
 }
 
-type Step = 'email_selection' | 'code_entry' | 'signature_details' | 'hospital_confirmation';
+type Step =
+  | "email_selection"
+  | "code_entry"
+  | "signature_details"
+  | "hospital_confirmation";
 
 const SignatureModal = ({
   isOpen,
@@ -36,7 +46,7 @@ const SignatureModal = ({
   treatmentId,
   treatmentSite: _treatmentSite, // Reserved for potential future site-specific logic
   onSuccess,
-  flowType = 'alphatau_verification',
+  flowType = "alphatau_verification",
   userData,
   isContinuation = false,
 }: SignatureModalProps) => {
@@ -45,34 +55,39 @@ const SignatureModal = ({
   // Get applicators from treatment context to include in PDF
   // For removal treatments, use `applicators` (the removal tracking list)
   // For insertion treatments, use `availableApplicators` (the scanned applicators list)
-  const { availableApplicators, applicators, currentTreatment } = useTreatment();
+  const { availableApplicators, applicators, currentTreatment } =
+    useTreatment();
 
   // Map isRemoved → usageType for removal PDF generation
-  const applicatorsForPdf = currentTreatment?.type === 'removal'
-    ? applicators.map(app => ({ ...app, usageType: app.isRemoved ? 'full' as const : 'none' as const }))
-    : availableApplicators;
+  const applicatorsForPdf =
+    currentTreatment?.type === "removal"
+      ? applicators.map((app) => ({
+          ...app,
+          usageType: app.isRemoved ? ("full" as const) : ("none" as const),
+        }))
+      : availableApplicators;
 
   // Step management - hospital flow starts at confirmation, alphatau at email selection
   const [currentStep, setCurrentStep] = useState<Step>(
-    flowType === 'hospital_auto' ? 'hospital_confirmation' : 'email_selection'
+    flowType === "hospital_auto" ? "hospital_confirmation" : "email_selection",
   );
 
   // Email selection state
   const [siteUsers, setSiteUsers] = useState<SiteUser[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEmail, setSelectedEmail] = useState('');
-  const [manualEmail, setManualEmail] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEmail, setSelectedEmail] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Code entry state
-  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState("");
   const [attemptsRemaining, setAttemptsRemaining] = useState(3);
   const [canResend, setCanResend] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(60);
 
   // Signature details state
-  const [signerName, setSignerName] = useState('');
-  const [signerPosition, setSignerPosition] = useState('physicist');
+  const [signerName, setSignerName] = useState("");
+  const [signerPosition, setSignerPosition] = useState("physicist");
 
   // General state
   const [loading, setLoading] = useState(false);
@@ -85,11 +100,15 @@ const SignatureModal = ({
   useEffect(() => {
     if (isOpen) {
       // Set initial step based on flow type
-      setCurrentStep(flowType === 'hospital_auto' ? 'hospital_confirmation' : 'email_selection');
-      setSearchQuery('');
-      setSelectedEmail('');
-      setManualEmail('');
-      setVerificationCode('');
+      setCurrentStep(
+        flowType === "hospital_auto"
+          ? "hospital_confirmation"
+          : "email_selection",
+      );
+      setSearchQuery("");
+      setSelectedEmail("");
+      setManualEmail("");
+      setVerificationCode("");
       setAttemptsRemaining(3);
       setCanResend(false);
       setResendCountdown(60);
@@ -97,12 +116,12 @@ const SignatureModal = ({
       setError(null);
 
       // Pre-fill user data if provided (for hospital flow)
-      if (flowType === 'hospital_auto' && userData) {
-        setSignerName(userData.name || '');
-        setSignerPosition(userData.position || 'physicist');
+      if (flowType === "hospital_auto" && userData) {
+        setSignerName(userData.name || "");
+        setSignerPosition(userData.position || "physicist");
       } else {
-        setSignerName('');
-        setSignerPosition('physicist');
+        setSignerName("");
+        setSignerPosition("physicist");
         loadSiteUsers();
       }
     }
@@ -110,9 +129,9 @@ const SignatureModal = ({
 
   // Countdown timer for resend
   useEffect(() => {
-    if (currentStep === 'code_entry' && !canResend && resendCountdown > 0) {
+    if (currentStep === "code_entry" && !canResend && resendCountdown > 0) {
       const timer = setTimeout(() => {
-        setResendCountdown(prev => prev - 1);
+        setResendCountdown((prev) => prev - 1);
       }, 1000);
       return () => clearTimeout(timer);
     } else if (resendCountdown === 0) {
@@ -123,10 +142,11 @@ const SignatureModal = ({
   const loadSiteUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
-      const response = await treatmentService.getSiteUsersForFinalization(treatmentId);
+      const response =
+        await treatmentService.getSiteUsersForFinalization(treatmentId);
       setSiteUsers(response.users || []);
     } catch (err: any) {
-      console.error('Failed to load site users:', err);
+      console.error("Failed to load site users:", err);
       // Don't show error - user can still enter email manually
     } finally {
       setLoadingUsers(false);
@@ -142,7 +162,7 @@ const SignatureModal = ({
     return emailRegex.test(email);
   };
 
-  const filteredUsers = siteUsers.filter(user => {
+  const filteredUsers = siteUsers.filter((user) => {
     const query = searchQuery.toLowerCase();
     return (
       user.name.toLowerCase().includes(query) ||
@@ -155,12 +175,12 @@ const SignatureModal = ({
     const email = getEffectiveEmail();
 
     if (!email) {
-      setError('Please select or enter an email address');
+      setError("Please select or enter an email address");
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return;
     }
 
@@ -169,11 +189,15 @@ const SignatureModal = ({
 
     try {
       await treatmentService.sendFinalizationCode(treatmentId, email);
-      setCurrentStep('code_entry');
+      setCurrentStep("code_entry");
       setCanResend(false);
       setResendCountdown(60);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to send verification code');
+      setError(
+        err.response?.data?.error ||
+          err.message ||
+          "Failed to send verification code",
+      );
     } finally {
       setLoading(false);
     }
@@ -187,23 +211,23 @@ const SignatureModal = ({
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numeric input, max 6 digits
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
     setVerificationCode(value);
 
     // Auto-advance when 6 digits entered
     if (value.length === 6) {
-      setCurrentStep('signature_details');
+      setCurrentStep("signature_details");
     }
   };
 
   const handleVerifyAndFinalize = async () => {
     if (!signerName.trim()) {
-      setError('Please enter your full name');
+      setError("Please enter your full name");
       return;
     }
 
     if (verificationCode.length !== 6) {
-      setError('Please enter the complete 6-digit code');
+      setError("Please enter the complete 6-digit code");
       return;
     }
 
@@ -216,7 +240,7 @@ const SignatureModal = ({
         verificationCode,
         signerName.trim(),
         signerPosition,
-        applicatorsForPdf
+        applicatorsForPdf,
       );
       onSuccess();
       onClose();
@@ -228,13 +252,17 @@ const SignatureModal = ({
       }
 
       if (errorData?.attemptsRemaining === 0) {
-        setError('Too many failed attempts. Please request a new code.');
-        setCurrentStep('email_selection');
+        setError("Too many failed attempts. Please request a new code.");
+        setCurrentStep("email_selection");
       } else {
-        setError(errorData?.error || err.message || 'Verification failed. Please try again.');
+        setError(
+          errorData?.error ||
+            err.message ||
+            "Verification failed. Please try again.",
+        );
         // Go back to code entry to try again
-        setCurrentStep('code_entry');
-        setVerificationCode('');
+        setCurrentStep("code_entry");
+        setVerificationCode("");
       }
     } finally {
       setLoading(false);
@@ -244,12 +272,12 @@ const SignatureModal = ({
   // Hospital staff auto-finalize (no code verification needed)
   const handleHospitalAutoFinalize = async () => {
     if (!confirmed) {
-      setError('Please confirm the checkbox to proceed');
+      setError("Please confirm the checkbox to proceed");
       return;
     }
 
     if (!signerName.trim()) {
-      setError('Signer name is required');
+      setError("Signer name is required");
       return;
     }
 
@@ -257,11 +285,20 @@ const SignatureModal = ({
     setError(null);
 
     try {
-      await treatmentService.autoFinalize(treatmentId, signerName.trim(), signerPosition, applicatorsForPdf);
+      await treatmentService.autoFinalize(
+        treatmentId,
+        signerName.trim(),
+        signerPosition,
+        applicatorsForPdf,
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to finalize treatment');
+      setError(
+        err.response?.data?.error ||
+          err.message ||
+          "Failed to finalize treatment",
+      );
     } finally {
       setLoading(false);
     }
@@ -269,19 +306,19 @@ const SignatureModal = ({
 
   const handleBack = () => {
     setError(null);
-    if (currentStep === 'code_entry') {
-      setCurrentStep('email_selection');
-      setVerificationCode('');
-    } else if (currentStep === 'signature_details') {
-      setCurrentStep('code_entry');
+    if (currentStep === "code_entry") {
+      setCurrentStep("email_selection");
+      setVerificationCode("");
+    } else if (currentStep === "signature_details") {
+      setCurrentStep("code_entry");
     }
   };
 
   const renderStepIndicator = () => {
     const steps = [
-      { key: 'email_selection', label: '1. Select Email' },
-      { key: 'code_entry', label: '2. Enter Code' },
-      { key: 'signature_details', label: '3. Sign' },
+      { key: "email_selection", label: "1. Select Email" },
+      { key: "code_entry", label: "2. Enter Code" },
+      { key: "signature_details", label: "3. Sign" },
     ];
 
     return (
@@ -291,13 +328,13 @@ const SignatureModal = ({
             <div
               className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
                 step.key === currentStep
-                  ? 'bg-primary text-white'
-                  : steps.findIndex(s => s.key === currentStep) > index
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-200 text-gray-600'
+                  ? "bg-primary text-white"
+                  : steps.findIndex((s) => s.key === currentStep) > index
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 text-gray-600"
               }`}
             >
-              {steps.findIndex(s => s.key === currentStep) > index ? (
+              {steps.findIndex((s) => s.key === currentStep) > index ? (
                 <CheckCircleIcon className="w-5 h-5" />
               ) : (
                 index + 1
@@ -306,9 +343,9 @@ const SignatureModal = ({
             {index < steps.length - 1 && (
               <div
                 className={`w-12 h-1 ${
-                  steps.findIndex(s => s.key === currentStep) > index
-                    ? 'bg-green-500'
-                    : 'bg-gray-200'
+                  steps.findIndex((s) => s.key === currentStep) > index
+                    ? "bg-green-500"
+                    : "bg-gray-200"
                 }`}
               />
             )}
@@ -321,12 +358,16 @@ const SignatureModal = ({
   const renderEmailSelection = () => (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
-        Select a site user or enter an email address to receive the verification code.
+        Select a site user or enter an email address to receive the verification
+        code.
       </p>
 
       {/* Search/Filter */}
       <div>
-        <label htmlFor="search-users" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="search-users"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Search Users
         </label>
         <input
@@ -345,7 +386,7 @@ const SignatureModal = ({
           <div className="p-4 text-center text-gray-500">Loading users...</div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-4 text-center text-gray-500">
-            {searchQuery ? 'No users match your search' : 'No site users found'}
+            {searchQuery ? "No users match your search" : "No site users found"}
           </div>
         ) : (
           <div className="divide-y">
@@ -355,17 +396,21 @@ const SignatureModal = ({
                 type="button"
                 onClick={() => {
                   setSelectedEmail(user.email);
-                  setManualEmail('');
+                  setManualEmail("");
                   setSignerName(user.name);
-                  setSignerPosition(user.position || 'physicist');
+                  setSignerPosition(user.position || "physicist");
                 }}
                 className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                  selectedEmail === user.email ? 'bg-primary/10 border-l-4 border-primary' : ''
+                  selectedEmail === user.email
+                    ? "bg-primary/10 border-l-4 border-primary"
+                    : ""
                 }`}
               >
                 <div className="font-medium text-gray-900">{user.name}</div>
                 <div className="text-sm text-gray-500">{user.email}</div>
-                <div className="text-xs text-gray-400 capitalize">{user.position}</div>
+                <div className="text-xs text-gray-400 capitalize">
+                  {user.position}
+                </div>
               </button>
             ))}
           </div>
@@ -383,7 +428,10 @@ const SignatureModal = ({
       </div>
 
       <div>
-        <label htmlFor="manual-email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="manual-email"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Email Address
         </label>
         <input
@@ -393,7 +441,7 @@ const SignatureModal = ({
           value={manualEmail}
           onChange={(e) => {
             setManualEmail(e.target.value);
-            setSelectedEmail('');
+            setSelectedEmail("");
           }}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
@@ -414,7 +462,7 @@ const SignatureModal = ({
         disabled={loading || !getEffectiveEmail()}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
       >
-        {loading ? 'Sending...' : 'Send Verification Code'}
+        {loading ? "Sending..." : "Send Verification Code"}
       </button>
     </div>
   );
@@ -422,11 +470,15 @@ const SignatureModal = ({
   const renderCodeEntry = () => (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
-        A 6-digit verification code has been sent to <strong>{getEffectiveEmail()}</strong>
+        A 6-digit verification code has been sent to{" "}
+        <strong>{getEffectiveEmail()}</strong>
       </p>
 
       <div>
-        <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="verification-code"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Verification Code
         </label>
         <input
@@ -443,8 +495,11 @@ const SignatureModal = ({
       </div>
 
       <div className="flex items-center justify-between text-sm">
-        <span className={`${attemptsRemaining <= 1 ? 'text-red-600' : 'text-gray-500'}`}>
-          {attemptsRemaining} attempt{attemptsRemaining !== 1 ? 's' : ''} remaining
+        <span
+          className={`${attemptsRemaining <= 1 ? "text-red-600" : "text-gray-500"}`}
+        >
+          {attemptsRemaining} attempt{attemptsRemaining !== 1 ? "s" : ""}{" "}
+          remaining
         </span>
         {canResend ? (
           <button
@@ -455,9 +510,7 @@ const SignatureModal = ({
             Resend Code
           </button>
         ) : (
-          <span className="text-gray-400">
-            Resend in {resendCountdown}s
-          </span>
+          <span className="text-gray-400">Resend in {resendCountdown}s</span>
         )}
       </div>
 
@@ -470,7 +523,7 @@ const SignatureModal = ({
           Back
         </button>
         <button
-          onClick={() => setCurrentStep('signature_details')}
+          onClick={() => setCurrentStep("signature_details")}
           disabled={loading || verificationCode.length !== 6}
           className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
         >
@@ -491,8 +544,9 @@ const SignatureModal = ({
           <div className="text-sm text-amber-800">
             <p className="font-semibold">Continuation Treatment</p>
             <p className="mt-1">
-              This is a continuation of a previously finalized treatment. The PDF will include a notice
-              referencing the original treatment record.
+              This is a continuation of a previously finalized treatment. The
+              PDF will include a notice referencing the original treatment
+              record.
             </p>
           </div>
         </div>
@@ -509,7 +563,10 @@ const SignatureModal = ({
       </p>
 
       <div>
-        <label htmlFor="signer-name" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="signer-name"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Full Name <span className="text-red-500">*</span>
         </label>
         <input
@@ -523,7 +580,10 @@ const SignatureModal = ({
       </div>
 
       <div>
-        <label htmlFor="signer-position" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="signer-position"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Position <span className="text-red-500">*</span>
         </label>
         <select
@@ -543,12 +603,12 @@ const SignatureModal = ({
           Signature Date
         </label>
         <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-600">
-          {new Date().toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
+          {new Date().toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           })}
         </div>
       </div>
@@ -558,7 +618,10 @@ const SignatureModal = ({
           <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
             <p className="font-medium">Important</p>
-            <p>By clicking "Approve & Finalize", you are digitally signing this treatment report. This action cannot be undone.</p>
+            <p>
+              By clicking "Approve & Finalize", you are digitally signing this
+              treatment report. This action cannot be undone.
+            </p>
           </div>
         </div>
       </div>
@@ -576,7 +639,7 @@ const SignatureModal = ({
           disabled={loading || !signerName.trim()}
           className="flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
         >
-          {loading ? 'Processing...' : 'Approve & Finalize'}
+          {loading ? "Processing..." : "Approve & Finalize"}
         </button>
       </div>
     </div>
@@ -594,27 +657,33 @@ const SignatureModal = ({
       <div className="p-4 bg-gray-50 rounded-lg space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">Name</span>
-          <span className="text-sm font-medium text-gray-900">{signerName || userData?.name || 'Not available'}</span>
+          <span className="text-sm font-medium text-gray-900">
+            {signerName || userData?.name || "Not available"}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">Position</span>
-          <span className="text-sm font-medium text-gray-900 capitalize">{signerPosition || userData?.position || 'Not specified'}</span>
+          <span className="text-sm font-medium text-gray-900 capitalize">
+            {signerPosition || userData?.position || "Not specified"}
+          </span>
         </div>
         {userData?.site && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500">Site</span>
-            <span className="text-sm font-medium text-gray-900">{userData.site}</span>
+            <span className="text-sm font-medium text-gray-900">
+              {userData.site}
+            </span>
           </div>
         )}
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">Date</span>
           <span className="text-sm font-medium text-gray-900">
-            {new Date().toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
+            {new Date().toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
             })}
           </span>
         </div>
@@ -622,7 +691,10 @@ const SignatureModal = ({
 
       {/* Editable Name field (in case user wants to change it) */}
       <div>
-        <label htmlFor="hospital-signer-name" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="hospital-signer-name"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Full Name <span className="text-red-500">*</span>
         </label>
         <input
@@ -637,7 +709,10 @@ const SignatureModal = ({
 
       {/* Position Dropdown */}
       <div>
-        <label htmlFor="hospital-signer-position" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="hospital-signer-position"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Position <span className="text-red-500">*</span>
         </label>
         <select
@@ -664,9 +739,13 @@ const SignatureModal = ({
           onChange={(e) => setConfirmed(e.target.checked)}
           className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
         />
-        <label htmlFor="hospital-confirm" className="text-sm text-primary cursor-pointer">
-          <span className="font-medium">I confirm</span> that this treatment record is complete and accurate.
-          By clicking "Sign & Finalize", I am digitally signing this record.
+        <label
+          htmlFor="hospital-confirm"
+          className="text-sm text-primary cursor-pointer"
+        >
+          <span className="font-medium">I confirm</span> that this treatment
+          record is complete and accurate. By clicking "Sign & Finalize", I am
+          digitally signing this record.
         </label>
       </div>
 
@@ -685,7 +764,7 @@ const SignatureModal = ({
           className="flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? (
-            'Processing...'
+            "Processing..."
           ) : (
             <>
               <CheckIcon className="w-4 h-4" />
@@ -730,7 +809,9 @@ const SignatureModal = ({
                     as="h3"
                     className="text-lg font-medium leading-6 text-gray-900"
                   >
-                    {flowType === 'hospital_auto' ? 'Sign Treatment Record' : 'Digital Signature Verification'}
+                    {flowType === "hospital_auto"
+                      ? "Sign Treatment Record"
+                      : "Digital Signature Verification"}
                   </Dialog.Title>
                   <button
                     onClick={onClose}
@@ -742,7 +823,7 @@ const SignatureModal = ({
                 </div>
 
                 {/* Step Indicator - only shown for alphatau verification flow */}
-                {flowType === 'alphatau_verification' && renderStepIndicator()}
+                {flowType === "alphatau_verification" && renderStepIndicator()}
 
                 {/* Error Message */}
                 {error && (
@@ -752,10 +833,12 @@ const SignatureModal = ({
                 )}
 
                 {/* Step Content */}
-                {currentStep === 'email_selection' && renderEmailSelection()}
-                {currentStep === 'code_entry' && renderCodeEntry()}
-                {currentStep === 'signature_details' && renderSignatureDetails()}
-                {currentStep === 'hospital_confirmation' && renderHospitalConfirmation()}
+                {currentStep === "email_selection" && renderEmailSelection()}
+                {currentStep === "code_entry" && renderCodeEntry()}
+                {currentStep === "signature_details" &&
+                  renderSignatureDetails()}
+                {currentStep === "hospital_confirmation" &&
+                  renderHospitalConfirmation()}
               </Dialog.Panel>
             </Transition.Child>
           </div>

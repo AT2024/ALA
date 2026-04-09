@@ -17,11 +17,11 @@ import {
   PANC_PROS_TRANSITIONS,
   SKIN_TRANSITIONS,
   GENERIC_TRANSITIONS,
-} from '../../../shared/applicatorStatuses';
-import { offlineDb } from './indexedDbService';
+} from "../../../shared/applicatorStatuses";
+import { offlineDb } from "./indexedDbService";
 
 // Treatment type for determining which transition rules to use
-export type TreatmentType = 'panc_pros' | 'skin' | 'generic';
+export type TreatmentType = "panc_pros" | "skin" | "generic";
 
 // ============================================================================
 // Types
@@ -31,7 +31,7 @@ export interface OfflineValidationResult {
   allowed: boolean;
   requiresConfirmation: boolean;
   message: string;
-  warningLevel: 'none' | 'info' | 'warning' | 'error';
+  warningLevel: "none" | "info" | "warning" | "error";
 }
 
 export interface OfflineLimitations {
@@ -56,11 +56,13 @@ const CONFIRMATION_REQUIRED_STATUSES: ApplicatorStatus[] = [
  * Get treatment-specific transition rules (SAME as online mode)
  * This ensures offline behavior matches online exactly
  */
-function getTransitionsForTreatmentType(treatmentType: TreatmentType): Record<ApplicatorStatus, ApplicatorStatus[]> {
+function getTransitionsForTreatmentType(
+  treatmentType: TreatmentType,
+): Record<ApplicatorStatus, ApplicatorStatus[]> {
   switch (treatmentType) {
-    case 'panc_pros':
+    case "panc_pros":
       return PANC_PROS_TRANSITIONS;
-    case 'skin':
+    case "skin":
       return SKIN_TRANSITIONS;
     default:
       return GENERIC_TRANSITIONS;
@@ -90,7 +92,7 @@ const DEFAULT_EXPIRY_HOURS = 24;
 export function isValidOfflineStatusTransition(
   currentStatus: ApplicatorStatus | null,
   newStatus: ApplicatorStatus,
-  treatmentType: TreatmentType = 'generic'
+  treatmentType: TreatmentType = "generic",
 ): OfflineValidationResult {
   // Same-status is allowed (no actual transition happening) - this is a no-op
   // This handles cases where user selects an applicator but doesn't change status
@@ -98,8 +100,8 @@ export function isValidOfflineStatusTransition(
     return {
       allowed: true,
       requiresConfirmation: false,
-      message: '',
-      warningLevel: 'none',
+      message: "",
+      warningLevel: "none",
     };
   }
 
@@ -117,35 +119,36 @@ export function isValidOfflineStatusTransition(
         allowed: false,
         requiresConfirmation: false,
         message: `Cannot transition from ${currentStatus} - terminal status`,
-        warningLevel: 'error',
+        warningLevel: "error",
       };
     }
 
     return {
       allowed: false,
       requiresConfirmation: false,
-      message: `Status transition from ${currentStatus || 'SEALED'} to ${newStatus} is not allowed. Valid transitions: ${allowedStatuses.join(', ') || 'none'}`,
-      warningLevel: 'error',
+      message: `Status transition from ${currentStatus || "SEALED"} to ${newStatus} is not allowed. Valid transitions: ${allowedStatuses.join(", ") || "none"}`,
+      warningLevel: "error",
     };
   }
 
   // Check if confirmation is required (INSERTED, FAULTY are medical-critical)
-  const requiresConfirmation = CONFIRMATION_REQUIRED_STATUSES.includes(newStatus);
+  const requiresConfirmation =
+    CONFIRMATION_REQUIRED_STATUSES.includes(newStatus);
 
   if (requiresConfirmation) {
     return {
       allowed: true,
       requiresConfirmation: true,
       message: `Setting status to ${newStatus} requires confirmation. This change will sync when you reconnect.`,
-      warningLevel: 'warning',
+      warningLevel: "warning",
     };
   }
 
   return {
     allowed: true,
     requiresConfirmation: false,
-    message: '',
-    warningLevel: 'none',
+    message: "",
+    warningLevel: "none",
   };
 }
 
@@ -158,7 +161,7 @@ export function isValidOfflineStatusTransition(
  */
 export async function validateOfflineScan(
   serialNumber: string,
-  treatmentId: string
+  treatmentId: string,
 ): Promise<OfflineValidationResult> {
   // Check if applicator was pre-downloaded
   const applicator = await offlineDb.getApplicatorBySerial(serialNumber);
@@ -167,8 +170,9 @@ export async function validateOfflineScan(
     return {
       allowed: false,
       requiresConfirmation: false,
-      message: 'This applicator was not downloaded for offline use. You can only scan pre-downloaded applicators while offline.',
-      warningLevel: 'error',
+      message:
+        "This applicator was not downloaded for offline use. You can only scan pre-downloaded applicators while offline.",
+      warningLevel: "error",
     };
   }
 
@@ -177,8 +181,8 @@ export async function validateOfflineScan(
     return {
       allowed: false,
       requiresConfirmation: false,
-      message: 'This applicator belongs to a different treatment.',
-      warningLevel: 'error',
+      message: "This applicator belongs to a different treatment.",
+      warningLevel: "error",
     };
   }
 
@@ -188,8 +192,8 @@ export async function validateOfflineScan(
     return {
       allowed: false,
       requiresConfirmation: false,
-      message: 'Treatment data not found in offline storage.',
-      warningLevel: 'error',
+      message: "Treatment data not found in offline storage.",
+      warningLevel: "error",
     };
   }
 
@@ -198,15 +202,15 @@ export async function validateOfflineScan(
       allowed: false,
       requiresConfirmation: false,
       message: `Offline data has expired. Please sync and re-download when online. (Expired: ${new Date(treatment.expiresAt).toLocaleString()})`,
-      warningLevel: 'error',
+      warningLevel: "error",
     };
   }
 
   return {
     allowed: true,
     requiresConfirmation: false,
-    message: '',
-    warningLevel: 'none',
+    message: "",
+    warningLevel: "none",
   };
 }
 
@@ -218,8 +222,9 @@ export function validateOfflineFinalization(): OfflineValidationResult {
   return {
     allowed: false,
     requiresConfirmation: false,
-    message: 'Treatment finalization requires a network connection for digital signature verification. Please connect to the network to finalize this treatment.',
-    warningLevel: 'error',
+    message:
+      "Treatment finalization requires a network connection for digital signature verification. Please connect to the network to finalize this treatment.",
+    warningLevel: "error",
   };
 }
 
@@ -229,7 +234,9 @@ export function validateOfflineFinalization(): OfflineValidationResult {
  * @param treatmentId - Treatment ID to check
  * @returns True if downloaded and not expired
  */
-export async function isTreatmentAvailableOffline(treatmentId: string): Promise<boolean> {
+export async function isTreatmentAvailableOffline(
+  treatmentId: string,
+): Promise<boolean> {
   const treatment = await offlineDb.getTreatment(treatmentId);
   if (!treatment) return false;
 
@@ -270,13 +277,15 @@ All changes will be synced when you reconnect to the network.
 /**
  * Validate adding a comment while offline
  */
-export function validateOfflineComment(comment: string): OfflineValidationResult {
+export function validateOfflineComment(
+  comment: string,
+): OfflineValidationResult {
   if (!comment || comment.trim().length === 0) {
     return {
       allowed: false,
       requiresConfirmation: false,
-      message: 'Comment cannot be empty.',
-      warningLevel: 'error',
+      message: "Comment cannot be empty.",
+      warningLevel: "error",
     };
   }
 
@@ -284,16 +293,16 @@ export function validateOfflineComment(comment: string): OfflineValidationResult
     return {
       allowed: false,
       requiresConfirmation: false,
-      message: 'Comment is too long. Maximum 1000 characters.',
-      warningLevel: 'error',
+      message: "Comment is too long. Maximum 1000 characters.",
+      warningLevel: "error",
     };
   }
 
   return {
     allowed: true,
     requiresConfirmation: false,
-    message: 'Comment will be synced when you reconnect.',
-    warningLevel: 'info',
+    message: "Comment will be synced when you reconnect.",
+    warningLevel: "info",
   };
 }
 
@@ -305,7 +314,7 @@ export function validateOfflineComment(comment: string): OfflineValidationResult
  */
 export function checkBundleExpiry(
   expiresAt: string | Date,
-  warningThresholdHours: number = 2
+  warningThresholdHours: number = 2,
 ): {
   expired: boolean;
   expiringS: boolean;
@@ -314,14 +323,15 @@ export function checkBundleExpiry(
 } {
   const expiryDate = new Date(expiresAt);
   const now = new Date();
-  const hoursRemaining = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const hoursRemaining =
+    (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
   if (hoursRemaining <= 0) {
     return {
       expired: true,
       expiringS: false,
       hoursRemaining: 0,
-      message: 'Offline data has expired. Please sync and re-download.',
+      message: "Offline data has expired. Please sync and re-download.",
     };
   }
 
@@ -338,7 +348,7 @@ export function checkBundleExpiry(
     expired: false,
     expiringS: false,
     hoursRemaining,
-    message: '',
+    message: "",
   };
 }
 
@@ -346,7 +356,4 @@ export function checkBundleExpiry(
 // Exports
 // ============================================================================
 
-export {
-  CONFIRMATION_REQUIRED_STATUSES,
-  DEFAULT_EXPIRY_HOURS,
-};
+export { CONFIRMATION_REQUIRED_STATUSES, DEFAULT_EXPIRY_HOURS };

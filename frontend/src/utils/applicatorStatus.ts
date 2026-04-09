@@ -5,7 +5,7 @@
  * All status definitions come from @shared/applicatorStatuses (single source of truth).
  */
 
-import type { ApplicatorStatus } from '../../../shared/applicatorStatuses';
+import type { ApplicatorStatus } from "../../../shared/applicatorStatuses";
 import {
   // Constants
   APPLICATOR_STATUSES,
@@ -30,7 +30,7 @@ import {
   getStatusEmoji,
   getStatusColors,
   getListItemColor,
-} from '../../../shared/applicatorStatuses';
+} from "../../../shared/applicatorStatuses";
 
 // Re-export type separately (required with isolatedModules)
 export type { ApplicatorStatus };
@@ -79,23 +79,35 @@ export const LIST_REMOVAL_STATUSES: ApplicatorStatus[] = TERMINAL_STATUSES;
  * Allows checking multiple fields to determine treatment type
  */
 export interface TreatmentContext {
-  site?: string;           // Hospital/clinic site (may contain treatment type)
-  priorityId?: string;     // Order ID (e.g., "PANC-HEAD-001", "PROST-LEFT-001")
-  patientName?: string;    // Patient details (may contain PANC-, PROST- patterns)
-  subjectId?: string;      // Patient reference (may contain patterns)
-  indication?: string | null;  // Treatment indication from Priority SIBD_INDICATION (pancreas, prostate, skin)
-  getApplicatorSummary?: () => { sealed: number; opened: number; loaded: number; inserted: number; total: number };
+  site?: string; // Hospital/clinic site (may contain treatment type)
+  priorityId?: string; // Order ID (e.g., "PANC-HEAD-001", "PROST-LEFT-001")
+  patientName?: string; // Patient details (may contain PANC-, PROST- patterns)
+  subjectId?: string; // Patient reference (may contain patterns)
+  indication?: string | null; // Treatment indication from Priority SIBD_INDICATION (pancreas, prostate, skin)
+  getApplicatorSummary?: () => {
+    sealed: number;
+    opened: number;
+    loaded: number;
+    inserted: number;
+    total: number;
+  };
 }
 
 /**
  * Detect if treatment is pancreas or prostate based on multiple context fields
  * Checks: site name, order ID prefix, patient details patterns
  */
-export const isPancreasOrProstate = (context?: TreatmentContext | string): boolean => {
+export const isPancreasOrProstate = (
+  context?: TreatmentContext | string,
+): boolean => {
   // Handle legacy string parameter (just site)
-  if (typeof context === 'string') {
+  if (typeof context === "string") {
     const siteLower = context.toLowerCase();
-    return siteLower.includes('pancreas') || siteLower.includes('prostate') || siteLower.includes('לבלב');
+    return (
+      siteLower.includes("pancreas") ||
+      siteLower.includes("prostate") ||
+      siteLower.includes("לבלב")
+    );
   }
 
   if (!context) return false;
@@ -103,7 +115,7 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
   // Check indication field first (from Priority SIBD_INDICATION) - highest priority
   if (context.indication) {
     const indLower = context.indication.toLowerCase();
-    if (indLower === 'pancreas' || indLower === 'prostate') {
+    if (indLower === "pancreas" || indLower === "prostate") {
       return true;
     }
   }
@@ -111,7 +123,11 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
   // Fallback: Check site field for treatment type keywords
   if (context.site) {
     const siteLower = context.site.toLowerCase();
-    if (siteLower.includes('pancreas') || siteLower.includes('prostate') || siteLower.includes('לבלב')) {
+    if (
+      siteLower.includes("pancreas") ||
+      siteLower.includes("prostate") ||
+      siteLower.includes("לבלב")
+    ) {
       return true;
     }
   }
@@ -119,7 +135,7 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
   // Check order ID for PANC- or PROST- prefix (test data pattern)
   if (context.priorityId) {
     const orderUpper = context.priorityId.toUpperCase();
-    if (orderUpper.startsWith('PANC-') || orderUpper.startsWith('PROST-')) {
+    if (orderUpper.startsWith("PANC-") || orderUpper.startsWith("PROST-")) {
       return true;
     }
   }
@@ -127,8 +143,12 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
   // Check patient name/details for PANC- or PROST- patterns
   if (context.patientName) {
     const nameUpper = context.patientName.toUpperCase();
-    if (nameUpper.includes('PANC-') || nameUpper.includes('PROST-') ||
-        nameUpper.includes('PANC_') || nameUpper.includes('PROST_')) {
+    if (
+      nameUpper.includes("PANC-") ||
+      nameUpper.includes("PROST-") ||
+      nameUpper.includes("PANC_") ||
+      nameUpper.includes("PROST_")
+    ) {
       return true;
     }
   }
@@ -136,7 +156,7 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
   // Check subject ID for patterns
   if (context.subjectId) {
     const subjectUpper = context.subjectId.toUpperCase();
-    if (subjectUpper.includes('PANC') || subjectUpper.includes('PROST')) {
+    if (subjectUpper.includes("PANC") || subjectUpper.includes("PROST")) {
       return true;
     }
   }
@@ -149,9 +169,9 @@ export const isPancreasOrProstate = (context?: TreatmentContext | string): boole
  */
 export const isSkin = (context?: TreatmentContext | string): boolean => {
   // Handle legacy string parameter (just site)
-  if (typeof context === 'string') {
+  if (typeof context === "string") {
     const siteLower = context.toLowerCase();
-    return siteLower.includes('skin') || siteLower.includes('עור');
+    return siteLower.includes("skin") || siteLower.includes("עור");
   }
 
   if (!context) return false;
@@ -159,7 +179,7 @@ export const isSkin = (context?: TreatmentContext | string): boolean => {
   // Check indication field first (from Priority SIBD_INDICATION) - highest priority
   if (context.indication) {
     const indLower = context.indication.toLowerCase();
-    if (indLower === 'skin') {
+    if (indLower === "skin") {
       return true;
     }
   }
@@ -167,7 +187,7 @@ export const isSkin = (context?: TreatmentContext | string): boolean => {
   // Fallback: Check site field for skin keywords
   if (context.site) {
     const siteLower = context.site.toLowerCase();
-    if (siteLower.includes('skin') || siteLower.includes('עור')) {
+    if (siteLower.includes("skin") || siteLower.includes("עור")) {
       return true;
     }
   }
@@ -175,7 +195,7 @@ export const isSkin = (context?: TreatmentContext | string): boolean => {
   // Check order ID for SKIN- prefix (test data pattern)
   if (context.priorityId) {
     const orderUpper = context.priorityId.toUpperCase();
-    if (orderUpper.startsWith('SKIN-')) {
+    if (orderUpper.startsWith("SKIN-")) {
       return true;
     }
   }
@@ -183,7 +203,7 @@ export const isSkin = (context?: TreatmentContext | string): boolean => {
   // Check patient name/details for SKIN patterns
   if (context.patientName) {
     const nameUpper = context.patientName.toUpperCase();
-    if (nameUpper.includes('SKIN-') || nameUpper.includes('SKIN_')) {
+    if (nameUpper.includes("SKIN-") || nameUpper.includes("SKIN_")) {
       return true;
     }
   }
@@ -195,7 +215,7 @@ export const isSkin = (context?: TreatmentContext | string): boolean => {
  * Get the transition map for a specific treatment type
  */
 export const getTransitionsForTreatment = (
-  treatmentContext?: TreatmentContext | string
+  treatmentContext?: TreatmentContext | string,
 ): Record<ApplicatorStatus, ApplicatorStatus[]> => {
   if (isPancreasOrProstate(treatmentContext)) {
     return PANC_PROS_TRANSITIONS;
@@ -214,7 +234,7 @@ export const getTransitionsForTreatment = (
  */
 export const getAllowedNextStatuses = (
   currentStatus: ApplicatorStatus | null | undefined,
-  treatmentContext?: TreatmentContext | string
+  treatmentContext?: TreatmentContext | string,
 ): ApplicatorStatus[] => {
   // Get treatment-specific transition map
   const transitions = getTransitionsForTreatment(treatmentContext);
@@ -238,7 +258,7 @@ export const getAllowedNextStatuses = (
 export const isValidTransition = (
   fromStatus: ApplicatorStatus | null | undefined,
   toStatus: ApplicatorStatus,
-  treatmentContext?: TreatmentContext | string
+  treatmentContext?: TreatmentContext | string,
 ): boolean => {
   // New applicators are implicitly SEALED, validate transitions FROM SEALED
   if (!fromStatus) {
@@ -256,7 +276,9 @@ export const isValidTransition = (
  * @param status - Applicator status
  * @returns True if applicator should be removed from active selection list
  */
-export const shouldRemoveFromList = (status: ApplicatorStatus | string | null | undefined): boolean => {
+export const shouldRemoveFromList = (
+  status: ApplicatorStatus | string | null | undefined,
+): boolean => {
   if (!status) return false; // No status = keep in list
   return isTerminalStatus(status);
 };
@@ -267,7 +289,9 @@ export const shouldRemoveFromList = (status: ApplicatorStatus | string | null | 
  * Stage 2: Working with OPENED applicators
  * Stage 3: Working with LOADED applicators
  */
-export const getCurrentStage = (treatmentContext?: TreatmentContext): 1 | 2 | 3 => {
+export const getCurrentStage = (
+  treatmentContext?: TreatmentContext,
+): 1 | 2 | 3 => {
   if (!treatmentContext?.getApplicatorSummary) {
     return 1; // Default to stage 1
   }
@@ -290,7 +314,7 @@ export const getCurrentStage = (treatmentContext?: TreatmentContext): 1 | 2 | 3 
  * For SKIN: Shows only SEALED applicators
  */
 export const getStageFilterStatuses = (
-  treatmentContext?: TreatmentContext | string
+  treatmentContext?: TreatmentContext | string,
 ): ApplicatorStatus[] => {
   if (isSkin(treatmentContext)) {
     // SKIN: Only show SEALED (they go directly to terminal states)

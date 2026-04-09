@@ -23,14 +23,14 @@
  */
 export const TERM = {
   // Singular forms
-  source: 'source',
-  Source: 'Source',
-  SOURCE: 'SOURCE',
+  source: "source",
+  Source: "Source",
+  SOURCE: "SOURCE",
 
   // Plural forms
-  sources: 'sources',
-  Sources: 'Sources',
-  SOURCES: 'SOURCES',
+  sources: "sources",
+  Sources: "Sources",
+  SOURCES: "SOURCES",
 } as const;
 
 // =============================================================================
@@ -39,38 +39,38 @@ export const TERM = {
 
 export const LABELS = {
   // Quantity labels
-  SOURCE_QTY: 'Source Qty.',
-  SOURCES_QTY: 'Sources Qty.',
-  INSERTED_SOURCES_QTY: 'Inserted Sources Qty.',
+  SOURCE_QTY: "Source Qty.",
+  SOURCES_QTY: "Sources Qty.",
+  INSERTED_SOURCES_QTY: "Inserted Sources Qty.",
 
   // Progress labels
-  TOTAL_SOURCES: 'Total Sources',
-  SOURCES_INSERTED: 'Sources Inserted',
-  SOURCES_REMAINING: 'Sources Remaining',
-  TOTAL_SOURCES_AVAILABLE: 'Total Sources Available:',
-  EXPECTED_SOURCES: 'Expected Sources:',
-  ACTUAL_TOTAL_SOURCES: 'Actual Total Sources:',
+  TOTAL_SOURCES: "Total Sources",
+  SOURCES_INSERTED: "Sources Inserted",
+  SOURCES_REMAINING: "Sources Remaining",
+  TOTAL_SOURCES_AVAILABLE: "Total Sources Available:",
+  EXPECTED_SOURCES: "Expected Sources:",
+  ACTUAL_TOTAL_SOURCES: "Actual Total Sources:",
 
   // Activity labels
-  ACTIVITY_PER_SOURCE: 'Activity Per Source',
+  ACTIVITY_PER_SOURCE: "Activity Per Source",
 
   // Removal labels
-  SOURCE_REMOVAL: 'Source Removal',
-  SOURCE_REMOVAL_TRACKING: 'Source Removal Tracking',
-  INDIVIDUAL_SOURCE_REMOVAL: 'Individual Source Removal',
-  ADD_INDIVIDUAL_SOURCE_REMOVAL: 'Add Individual Source Removal',
-  INDIVIDUAL_SOURCES_REMOVED: 'Individual sources removed:',
-  SOURCES_REMOVED: 'Sources Removed',
-  REMOVE_INDIVIDUAL_SOURCE: 'Remove individual source',
-  COMPLETE_WITH_MISSING_SOURCES: 'Complete with Missing Sources',
+  SOURCE_REMOVAL: "Source Removal",
+  SOURCE_REMOVAL_TRACKING: "Source Removal Tracking",
+  INDIVIDUAL_SOURCE_REMOVAL: "Individual Source Removal",
+  ADD_INDIVIDUAL_SOURCE_REMOVAL: "Add Individual Source Removal",
+  INDIVIDUAL_SOURCES_REMOVED: "Individual sources removed:",
+  SOURCES_REMOVED: "Sources Removed",
+  REMOVE_INDIVIDUAL_SOURCE: "Remove individual source",
+  COMPLETE_WITH_MISSING_SOURCES: "Complete with Missing Sources",
 
   // PDF/Export labels
-  TOTAL_DART_SOURCES_INSERTED: 'Total DaRT Sources Inserted',
-  SOURCES_INSERTED_BY: 'Sources Inserted By',
+  TOTAL_DART_SOURCES_INSERTED: "Total DaRT Sources Inserted",
+  SOURCES_INSERTED_BY: "Sources Inserted By",
 
   // Status descriptions
-  SOURCES_EXPELLED: 'sources expelled',
-  DISCHARGED_SOURCES_EXPELLED: 'Discharged (sources expelled)',
+  SOURCES_EXPELLED: "sources expelled",
+  DISCHARGED_SOURCES_EXPELLED: "Discharged (sources expelled)",
 } as const;
 
 // =============================================================================

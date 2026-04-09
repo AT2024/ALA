@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 export interface DiscrepancyCategory {
   checked: boolean;
@@ -37,12 +37,16 @@ const CategoryRow = ({
   setCategory,
   showDescription = false,
 }: CategoryRowProps) => (
-  <div className={`p-3 rounded-lg border ${category.checked ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}>
+  <div
+    className={`p-3 rounded-lg border ${category.checked ? "border-amber-300 bg-amber-50" : "border-gray-200"}`}
+  >
     <label className="flex items-center cursor-pointer">
       <input
         type="checkbox"
         checked={category.checked}
-        onChange={(e) => setCategory({ ...category, checked: e.target.checked })}
+        onChange={(e) =>
+          setCategory({ ...category, checked: e.target.checked })
+        }
         className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
       />
       <span className="ml-2 text-sm font-medium text-gray-900">{label}</span>
@@ -53,8 +57,10 @@ const CategoryRow = ({
         {showDescription && (
           <input
             type="text"
-            value={(category as DiscrepancyOther).description || ''}
-            onChange={(e) => setCategory({ ...category, description: e.target.value })}
+            value={(category as DiscrepancyOther).description || ""}
+            onChange={(e) =>
+              setCategory({ ...category, description: e.target.value })
+            }
             placeholder="Specify..."
             className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
@@ -66,7 +72,12 @@ const CategoryRow = ({
               type="number"
               min="0"
               value={category.amount}
-              onChange={(e) => setCategory({ ...category, amount: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setCategory({
+                  ...category,
+                  amount: parseInt(e.target.value) || 0,
+                })
+              }
               className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-primary focus:outline-none"
             />
           </div>
@@ -75,7 +86,9 @@ const CategoryRow = ({
             <input
               type="text"
               value={category.comment}
-              onChange={(e) => setCategory({ ...category, comment: e.target.value })}
+              onChange={(e) =>
+                setCategory({ ...category, comment: e.target.value })
+              }
               placeholder="Add comment..."
               className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-primary focus:outline-none"
             />
@@ -89,14 +102,14 @@ const CategoryRow = ({
 const emptyCategory = (): DiscrepancyCategory => ({
   checked: false,
   amount: 0,
-  comment: '',
+  comment: "",
 });
 
 const emptyOther = (): DiscrepancyOther => ({
   checked: false,
   amount: 0,
-  comment: '',
-  description: '',
+  comment: "",
+  description: "",
 });
 
 const DiscrepancyClarificationSection = ({
@@ -104,8 +117,10 @@ const DiscrepancyClarificationSection = ({
   onUpdate,
 }: DiscrepancyClarificationSectionProps) => {
   const [lost, setLost] = useState<DiscrepancyCategory>(emptyCategory());
-  const [retrievedToSite, setRetrievedToSite] = useState<DiscrepancyCategory>(emptyCategory());
-  const [removalFailure, setRemovalFailure] = useState<DiscrepancyCategory>(emptyCategory());
+  const [retrievedToSite, setRetrievedToSite] =
+    useState<DiscrepancyCategory>(emptyCategory());
+  const [removalFailure, setRemovalFailure] =
+    useState<DiscrepancyCategory>(emptyCategory());
   const [other, setOther] = useState<DiscrepancyOther>(emptyOther());
 
   // Calculate total
@@ -129,29 +144,47 @@ const DiscrepancyClarificationSection = ({
         <div>
           <h3 className="font-medium text-amber-800">Discrepancy Details</h3>
           <p className="text-sm text-amber-700">
-            {sourcesNotRemoved} source{sourcesNotRemoved !== 1 ? 's' : ''} not removed. Please clarify below.
+            {sourcesNotRemoved} source{sourcesNotRemoved !== 1 ? "s" : ""} not
+            removed. Please clarify below.
           </p>
         </div>
       </div>
 
       <div className="space-y-3">
-        <CategoryRow label="Lost" category={lost} setCategory={(cat) => setLost(cat as DiscrepancyCategory)} />
-        <CategoryRow label="Retrieved to site" category={retrievedToSite} setCategory={(cat) => setRetrievedToSite(cat as DiscrepancyCategory)} />
-        <CategoryRow label="Removal failure (remained in tissue)" category={removalFailure} setCategory={(cat) => setRemovalFailure(cat as DiscrepancyCategory)} />
-        <CategoryRow label="Other" category={other} setCategory={(cat) => setOther(cat as DiscrepancyOther)} showDescription />
+        <CategoryRow
+          label="Lost"
+          category={lost}
+          setCategory={(cat) => setLost(cat as DiscrepancyCategory)}
+        />
+        <CategoryRow
+          label="Retrieved to site"
+          category={retrievedToSite}
+          setCategory={(cat) => setRetrievedToSite(cat as DiscrepancyCategory)}
+        />
+        <CategoryRow
+          label="Removal failure (remained in tissue)"
+          category={removalFailure}
+          setCategory={(cat) => setRemovalFailure(cat as DiscrepancyCategory)}
+        />
+        <CategoryRow
+          label="Other"
+          category={other}
+          setCategory={(cat) => setOther(cat as DiscrepancyOther)}
+          showDescription
+        />
       </div>
 
       {/* Validation */}
-      <div className={`flex items-center gap-2 p-3 rounded-md ${
-        isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-      }`}>
+      <div
+        className={`flex items-center gap-2 p-3 rounded-md ${
+          isValid ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+        }`}
+      >
         <span className="text-sm font-medium">
           Total clarified: {totalClarified} / {sourcesNotRemoved}
         </span>
         {!isValid && (
-          <span className="text-sm">
-            - Must equal {sourcesNotRemoved}
-          </span>
+          <span className="text-sm">- Must equal {sourcesNotRemoved}</span>
         )}
       </div>
     </div>

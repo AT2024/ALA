@@ -6,9 +6,9 @@
  * Users must explicitly choose when to update.
  */
 
-import { useRegisterSW } from 'virtual:pwa-register/react';
-import { RefreshCw, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useRegisterSW } from "virtual:pwa-register/react";
+import { RefreshCw, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface UpdatePromptProps {
   className?: string;
@@ -20,10 +20,10 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(registration) {
-      console.log('[PWA] Service worker registered:', registration);
+      console.log("[PWA] Service worker registered:", registration);
     },
     onRegisterError(error) {
-      console.error('[PWA] Service worker registration error:', error);
+      console.error("[PWA] Service worker registration error:", error);
     },
   });
 
@@ -42,10 +42,10 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
   return (
     <div
       className={cn(
-        'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50',
-        'rounded-lg bg-primary text-white shadow-lg',
-        'animate-in slide-in-from-bottom duration-300',
-        className
+        "fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50",
+        "rounded-lg bg-primary text-white shadow-lg",
+        "animate-in slide-in-from-bottom duration-300",
+        className,
       )}
       role="alert"
       aria-live="polite"
@@ -55,7 +55,8 @@ export function UpdatePrompt({ className }: UpdatePromptProps) {
         <div className="flex-1">
           <h4 className="font-medium">Update Available</h4>
           <p className="mt-1 text-sm text-white/80">
-            A new version of the app is available. Update when you&apos;re ready.
+            A new version of the app is available. Update when you&apos;re
+            ready.
           </p>
           <div className="mt-3 flex gap-3">
             <button

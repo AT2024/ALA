@@ -1,5 +1,5 @@
-import { MinusIcon } from '@heroicons/react/24/outline';
-import { ApplicatorGroup } from '@/context/TreatmentContext';
+import { MinusIcon } from "@heroicons/react/24/outline";
+import { ApplicatorGroup } from "@/context/TreatmentContext";
 
 interface RemovalTableProps {
   applicatorGroups: ApplicatorGroup[];
@@ -32,7 +32,9 @@ const RemovalTable = ({
 }: RemovalTableProps) => {
   return (
     <div className="space-y-4">
-      <h3 className="text-md font-medium text-gray-700">Applicator Removal Tracking</h3>
+      <h3 className="text-md font-medium text-gray-700">
+        Applicator Removal Tracking
+      </h3>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -61,17 +63,28 @@ const RemovalTable = ({
           <tbody className="divide-y divide-gray-200 bg-white">
             {/* Applicator Groups */}
             {applicatorGroups.map((group) => {
-              const groupTotalSources = group.totalApplicators * group.seedCount;
-              const groupRemovedSources = group.removedApplicators * group.seedCount;
-              const progress = group.totalApplicators > 0
-                ? Math.round((group.removedApplicators / group.totalApplicators) * 100)
-                : 0;
-              const isComplete = group.removedApplicators >= group.totalApplicators;
+              const groupTotalSources =
+                group.totalApplicators * group.seedCount;
+              const groupRemovedSources =
+                group.removedApplicators * group.seedCount;
+              const progress =
+                group.totalApplicators > 0
+                  ? Math.round(
+                      (group.removedApplicators / group.totalApplicators) * 100,
+                    )
+                  : 0;
+              const isComplete =
+                group.removedApplicators >= group.totalApplicators;
 
               return (
-                <tr key={group.seedCount} className={isComplete ? 'bg-green-50' : ''}>
+                <tr
+                  key={group.seedCount}
+                  className={isComplete ? "bg-green-50" : ""}
+                >
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {group.totalApplicators} applicator{group.totalApplicators !== 1 ? 's' : ''} x {group.seedCount} source{group.seedCount !== 1 ? 's' : ''}
+                    {group.totalApplicators} applicator
+                    {group.totalApplicators !== 1 ? "s" : ""} x{" "}
+                    {group.seedCount} source{group.seedCount !== 1 ? "s" : ""}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-600">
                     {groupTotalSources}
@@ -84,12 +97,14 @@ const RemovalTable = ({
                       <div className="w-24 bg-gray-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
-                            isComplete ? 'bg-green-600' : 'bg-primary'
+                            isComplete ? "bg-green-600" : "bg-primary"
                           }`}
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500 w-10">{progress}%</span>
+                      <span className="text-xs text-gray-500 w-10">
+                        {progress}%
+                      </span>
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -97,15 +112,21 @@ const RemovalTable = ({
                       onClick={() => onRemoveFromGroup(group)}
                       disabled={isComplete}
                       className="rounded-full p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={isComplete ? 'All applicators removed' : 'Remove one applicator'}
+                      title={
+                        isComplete
+                          ? "All applicators removed"
+                          : "Remove one applicator"
+                      }
                     >
                       <MinusIcon className="h-4 w-4" />
                     </button>
                   </td>
                   <td className="px-4 py-4">
                     <textarea
-                      value={groupComments[group.seedCount] || ''}
-                      onChange={(e) => onGroupCommentChange(group.seedCount, e.target.value)}
+                      value={groupComments[group.seedCount] || ""}
+                      onChange={(e) =>
+                        onGroupCommentChange(group.seedCount, e.target.value)
+                      }
                       rows={2}
                       className="w-full min-w-[150px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       placeholder="Add comment..."
@@ -117,7 +138,13 @@ const RemovalTable = ({
 
             {/* Individual Seeds Row */}
             {maxIndividualSeeds > 0 && (
-              <tr className={individualSeedsRemoved >= maxIndividualSeeds ? 'bg-green-50' : ''}>
+              <tr
+                className={
+                  individualSeedsRemoved >= maxIndividualSeeds
+                    ? "bg-green-50"
+                    : ""
+                }
+              >
                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   Individual sources
                 </td>
@@ -132,13 +159,22 @@ const RemovalTable = ({
                     <div className="w-24 bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full transition-all duration-300 ${
-                          individualSeedsRemoved >= maxIndividualSeeds ? 'bg-green-600' : 'bg-orange-500'
+                          individualSeedsRemoved >= maxIndividualSeeds
+                            ? "bg-green-600"
+                            : "bg-orange-500"
                         }`}
-                        style={{ width: `${maxIndividualSeeds > 0 ? (individualSeedsRemoved / maxIndividualSeeds) * 100 : 0}%` }}
+                        style={{
+                          width: `${maxIndividualSeeds > 0 ? (individualSeedsRemoved / maxIndividualSeeds) * 100 : 0}%`,
+                        }}
                       />
                     </div>
                     <span className="text-xs text-gray-500 w-10">
-                      {maxIndividualSeeds > 0 ? Math.round((individualSeedsRemoved / maxIndividualSeeds) * 100) : 0}%
+                      {maxIndividualSeeds > 0
+                        ? Math.round(
+                            (individualSeedsRemoved / maxIndividualSeeds) * 100,
+                          )
+                        : 0}
+                      %
                     </span>
                   </div>
                 </td>
@@ -147,7 +183,11 @@ const RemovalTable = ({
                     onClick={onRemoveIndividualSeed}
                     disabled={individualSeedsRemoved >= maxIndividualSeeds}
                     className="rounded-full p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={individualSeedsRemoved >= maxIndividualSeeds ? 'All individual sources removed' : 'Remove one individual source'}
+                    title={
+                      individualSeedsRemoved >= maxIndividualSeeds
+                        ? "All individual sources removed"
+                        : "Remove one individual source"
+                    }
                   >
                     <MinusIcon className="h-4 w-4" />
                   </button>
@@ -155,7 +195,9 @@ const RemovalTable = ({
                 <td className="px-4 py-4">
                   <textarea
                     value={individualSeedComment}
-                    onChange={(e) => onIndividualSeedCommentChange(e.target.value)}
+                    onChange={(e) =>
+                      onIndividualSeedCommentChange(e.target.value)
+                    }
                     rows={2}
                     className="w-full min-w-[150px] rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     placeholder="Add comment..."
@@ -169,9 +211,11 @@ const RemovalTable = ({
 
       {/* Summary Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-        <div className={`text-sm font-medium ${
-          totalRemoved === totalSources ? 'text-green-600' : 'text-gray-700'
-        }`}>
+        <div
+          className={`text-sm font-medium ${
+            totalRemoved === totalSources ? "text-green-600" : "text-gray-700"
+          }`}
+        >
           Total: {totalRemoved} / {totalSources} sources removed
         </div>
         {individualSeedsRemoved > 0 && (

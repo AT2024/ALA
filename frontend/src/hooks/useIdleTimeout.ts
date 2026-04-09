@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState } from "react";
 
 /**
  * HIPAA-compliant idle session timeout hook
@@ -16,7 +16,13 @@ const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const WARNING_BEFORE_MS = 60 * 1000;
 
 // Events that indicate user activity
-const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+const ACTIVITY_EVENTS = [
+  "mousedown",
+  "keydown",
+  "scroll",
+  "touchstart",
+  "mousemove",
+];
 
 interface UseIdleTimeoutOptions {
   onTimeout: () => void;
@@ -37,13 +43,15 @@ export function useIdleTimeout({
   onWarning,
   enabled = true,
   timeoutMs = IDLE_TIMEOUT_MS,
-  warningMs = WARNING_BEFORE_MS
+  warningMs = WARNING_BEFORE_MS,
 }: UseIdleTimeoutOptions): UseIdleTimeoutReturn {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const [isWarningShown, setIsWarningShown] = useState(false);
-  const [secondsRemaining, setSecondsRemaining] = useState(Math.floor(warningMs / 1000));
+  const [secondsRemaining, setSecondsRemaining] = useState(
+    Math.floor(warningMs / 1000),
+  );
 
   const clearAllTimers = useCallback(() => {
     if (timeoutRef.current) {
@@ -64,7 +72,7 @@ export function useIdleTimeout({
     setSecondsRemaining(Math.floor(warningMs / 1000));
 
     countdownRef.current = setInterval(() => {
-      setSecondsRemaining(prev => {
+      setSecondsRemaining((prev) => {
         if (prev <= 1) {
           if (countdownRef.current) {
             clearInterval(countdownRef.current);
@@ -97,7 +105,15 @@ export function useIdleTimeout({
       setIsWarningShown(false);
       onTimeout();
     }, timeoutMs);
-  }, [enabled, onTimeout, onWarning, timeoutMs, warningMs, clearAllTimers, startCountdown]);
+  }, [
+    enabled,
+    onTimeout,
+    onWarning,
+    timeoutMs,
+    warningMs,
+    clearAllTimers,
+    startCountdown,
+  ]);
 
   useEffect(() => {
     if (!enabled) {
@@ -110,7 +126,7 @@ export function useIdleTimeout({
       resetTimer();
     };
 
-    ACTIVITY_EVENTS.forEach(event => {
+    ACTIVITY_EVENTS.forEach((event) => {
       window.addEventListener(event, handleActivity, { passive: true });
     });
 
@@ -119,7 +135,7 @@ export function useIdleTimeout({
 
     // Cleanup
     return () => {
-      ACTIVITY_EVENTS.forEach(event => {
+      ACTIVITY_EVENTS.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
       clearAllTimers();
@@ -129,7 +145,7 @@ export function useIdleTimeout({
   return {
     isWarningShown,
     secondsRemaining,
-    resetTimer
+    resetTimer,
   };
 }
 

@@ -4,12 +4,12 @@
 declare const APP_VERSION: string;
 
 interface ImportMetaEnv {
-  readonly VITE_API_URL: string
-  readonly VITE_ENVIRONMENT: string
-  readonly VITE_PRIORITY_API_URL?: string
-  readonly VITE_OFFLINE_STORAGE: string
+  readonly VITE_API_URL: string;
+  readonly VITE_ENVIRONMENT: string;
+  readonly VITE_PRIORITY_API_URL?: string;
+  readonly VITE_OFFLINE_STORAGE: string;
 }
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv
+  readonly env: ImportMetaEnv;
 }

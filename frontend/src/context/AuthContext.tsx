@@ -1,16 +1,23 @@
-import { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authService } from '@/services/authService';
-import { priorityService } from '@/services/priorityService';
-import { useIdleTimeout } from '@/hooks/useIdleTimeout';
-import { encryptionKeyService } from '@/services/encryptionKeyService';
-import api from '@/services/api';
+import {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from "react";
+import { useNavigate } from "react-router-dom";
+import { authService } from "@/services/authService";
+import { priorityService } from "@/services/priorityService";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
+import { encryptionKeyService } from "@/services/encryptionKeyService";
+import api from "@/services/api";
 
 interface User {
   id: string;
   email: string;
   phoneNumber: string;
-  role: 'hospital' | 'alphatau' | 'admin';
+  role: "hospital" | "alphatau" | "admin";
   name: string;
   positionCode?: string;
   custName?: string;
@@ -24,7 +31,9 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (identifier: string) => Promise<{success: boolean; message?: string} | undefined>;
+  login: (
+    identifier: string,
+  ) => Promise<{ success: boolean; message?: string } | undefined>;
   verify: (code: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -42,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [loginIdentifier, setLoginIdentifier] = useState<string>('');
+  const [loginIdentifier, setLoginIdentifier] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,27 +59,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Token is now in HttpOnly cookie (handled automatically by browser)
     const checkAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('user');
+        const storedUser = localStorage.getItem("user");
 
         if (storedUser) {
           // Validate session with backend (cookie is sent automatically)
           // We pass empty string since token is in HttpOnly cookie now
-          const valid = await authService.validateToken('');
+          const valid = await authService.validateToken("");
 
           if (valid) {
             setUser(JSON.parse(storedUser));
           } else {
             // Session invalid, clear local storage and cache
-            localStorage.removeItem('user');
+            localStorage.removeItem("user");
             try {
               priorityService.clearCache();
             } catch (error) {
-              console.warn('Error clearing Priority cache on invalid session:', error);
+              console.warn(
+                "Error clearing Priority cache on invalid session:",
+                error,
+              );
             }
           }
         }
       } catch (err) {
-        console.error('Auth check error:', err);
+        console.error("Auth check error:", err);
       } finally {
         setIsLoading(false);
       }
@@ -82,30 +94,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (identifier: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const result = await authService.requestVerificationCode(identifier);
-      
+
       if (!result.success) {
-        setError(result.message || 'Login failed. Please try again.');
+        setError(result.message || "Login failed. Please try again.");
         return { success: false, message: result.message };
       }
-      
+
       // Store the identifier for verification
       setLoginIdentifier(identifier);
-      sessionStorage.setItem('loginIdentifier', identifier);
-      
+      sessionStorage.setItem("loginIdentifier", identifier);
+
       // Store Priority user data if provided (for session persistence)
       if (result.userData) {
-        sessionStorage.setItem('priorityUserData', JSON.stringify(result.userData));
+        sessionStorage.setItem(
+          "priorityUserData",
+          JSON.stringify(result.userData),
+        );
       }
-      
-      return { 
-        success: true, 
-        message: result.message || 'Verification code sent successfully' 
+
+      return {
+        success: true,
+        message: result.message || "Verification code sent successfully",
       };
     } catch (err: any) {
-      const errorMessage = err.message || 'Login failed. Please try again.';
+      const errorMessage = err.message || "Login failed. Please try again.";
       setError(errorMessage);
       return { success: false, message: errorMessage };
     } finally {
@@ -116,15 +131,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verify = async (code: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Get stored identifier if not in state
-      const identifier = loginIdentifier || sessionStorage.getItem('loginIdentifier') || '';
-      
+      const identifier =
+        loginIdentifier || sessionStorage.getItem("loginIdentifier") || "";
+
       if (!identifier) {
-        throw new Error('No login identifier found. Please start the login process again.');
+        throw new Error(
+          "No login identifier found. Please start the login process again.",
+        );
       }
-      
+
       const result = await authService.verifyCode(identifier, code);
 
       setUser(result.user);
@@ -132,30 +150,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store user info in localStorage for UI purposes only
       // Token is now stored in HttpOnly cookie by backend (OWASP security best practice)
       // The cookie is automatically managed by browser - not accessible via JavaScript
-      localStorage.setItem('user', JSON.stringify(result.user));
+      localStorage.setItem("user", JSON.stringify(result.user));
 
       // Store encryption key material for offline PHI encryption
       // This allows the app to derive the same encryption key on page refresh
       await encryptionKeyService.storeCredentialMaterial(
         result.user.id,
         identifier,
-        code
+        code,
       );
 
       // Clear session storage
-      sessionStorage.removeItem('loginIdentifier');
-      sessionStorage.removeItem('priorityUserData');
+      sessionStorage.removeItem("loginIdentifier");
+      sessionStorage.removeItem("priorityUserData");
 
       // Navigate based on user role
       // Admin users (positionCode=99) go to mode selection first
-      if (result.user.positionCode === '99') {
-        navigate('/mode-select');
+      if (result.user.positionCode === "99") {
+        navigate("/mode-select");
       } else {
-        navigate('/procedure-type');
+        navigate("/procedure-type");
       }
     } catch (err: any) {
-      console.error('Verification error:', err);
-      setError(err.message || 'Verification failed. Please try again.');
+      console.error("Verification error:", err);
+      setError(err.message || "Verification failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -166,28 +184,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.logout();
     } catch (error) {
-      console.warn('Logout API call failed, continuing with local cleanup:', error);
+      console.warn(
+        "Logout API call failed, continuing with local cleanup:",
+        error,
+      );
     }
 
     setUser(null);
-    setLoginIdentifier('');
+    setLoginIdentifier("");
 
     // Clear all stored data
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('loginIdentifier');
-    sessionStorage.removeItem('priorityUserData');
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("loginIdentifier");
+    sessionStorage.removeItem("priorityUserData");
 
     // Clear Priority service cache to prevent data leakage between users
     try {
       priorityService.clearCache();
     } catch (error) {
-      console.warn('Error clearing Priority cache:', error);
+      console.warn("Error clearing Priority cache:", error);
     }
 
     // Clear encryption key material to prevent access to previous user's offline data
     encryptionKeyService.clearMaterial();
 
-    navigate('/login');
+    navigate("/login");
   };
 
   const clearError = () => {
@@ -198,12 +219,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Only active when user is authenticated
   const handleIdleTimeout = useCallback(async () => {
     if (user) {
-      console.warn('Session expired due to inactivity (HIPAA compliance)');
+      console.warn("Session expired due to inactivity (HIPAA compliance)");
       // Log session timeout for HIPAA audit trail
       try {
-        await api.post('/auth/session-timeout');
+        await api.post("/auth/session-timeout");
       } catch (error) {
-        console.warn('Failed to log session timeout:', error);
+        console.warn("Failed to log session timeout:", error);
       }
       logout();
     }
@@ -211,13 +232,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleIdleWarning = useCallback(() => {
     // Warning is shown via the isIdleWarningShown state
-    console.info('Session expiring in 1 minute due to inactivity');
+    console.info("Session expiring in 1 minute due to inactivity");
   }, []);
 
   const { isWarningShown, secondsRemaining, resetTimer } = useIdleTimeout({
     onTimeout: handleIdleTimeout,
     onWarning: handleIdleWarning,
-    enabled: !!user // Only enable when user is logged in
+    enabled: !!user, // Only enable when user is logged in
   });
 
   const dismissIdleWarning = useCallback(() => {
@@ -226,13 +247,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [resetTimer]);
 
   // Update user's test mode state (called from Admin Dashboard)
-  const setTestModeEnabled = useCallback((enabled: boolean) => {
-    if (user) {
-      const updatedUser = { ...user, testModeEnabled: enabled };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-    }
-  }, [user]);
+  const setTestModeEnabled = useCallback(
+    (enabled: boolean) => {
+      if (user) {
+        const updatedUser = { ...user, testModeEnabled: enabled };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+    },
+    [user],
+  );
 
   return (
     <AuthContext.Provider
@@ -248,7 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isIdleWarningShown: isWarningShown,
         idleSecondsRemaining: secondsRemaining,
         dismissIdleWarning,
-        setTestModeEnabled
+        setTestModeEnabled,
       }}
     >
       {children}
@@ -260,8 +284,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               Session Expiring Soon
             </h2>
             <p className="text-gray-600 mb-4">
-              For your security, your session will expire in{' '}
-              <span className="font-bold text-red-600">{secondsRemaining}</span>{' '}
+              For your security, your session will expire in{" "}
+              <span className="font-bold text-red-600">{secondsRemaining}</span>{" "}
               seconds due to inactivity.
             </p>
             <p className="text-sm text-gray-500 mb-4">
@@ -283,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

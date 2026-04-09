@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 /**
  * Environment Banner Component
@@ -24,8 +24,8 @@ import { useEffect } from 'react';
 export function useIsStaging(): boolean {
   // Use explicit environment variable for reliable detection
   // Defaults to 'production' if not set for safety
-  const environment = import.meta.env.VITE_ENVIRONMENT || 'production';
-  return environment === 'staging';
+  const environment = import.meta.env.VITE_ENVIRONMENT || "production";
+  return environment === "staging";
 }
 
 export function EnvironmentBanner() {
@@ -34,9 +34,9 @@ export function EnvironmentBanner() {
   useEffect(() => {
     // Update browser tab title to match environment
     if (isStaging) {
-      document.title = '🧪 [STAGING] ALA Medical';
+      document.title = "🧪 [STAGING] ALA Medical";
     } else {
-      document.title = 'ALA Medical System';
+      document.title = "ALA Medical System";
     }
   }, [isStaging]);
 
@@ -45,7 +45,9 @@ export function EnvironmentBanner() {
       <div className="bg-yellow-500 text-black px-4 py-2 text-center font-bold fixed top-0 left-0 right-0 z-50 shadow-lg">
         <div className="flex items-center justify-center gap-2">
           <span className="text-2xl">🧪</span>
-          <span className="text-lg">STAGING ENVIRONMENT - TEST DATA ONLY - NOT PRODUCTION</span>
+          <span className="text-lg">
+            STAGING ENVIRONMENT - TEST DATA ONLY - NOT PRODUCTION
+          </span>
           <span className="text-2xl">🧪</span>
         </div>
         <div className="text-sm mt-1">

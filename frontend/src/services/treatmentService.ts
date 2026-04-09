@@ -1,54 +1,64 @@
-import api from './api';
-import { priorityService } from './priorityService';
-import type { ApplicatorStatus } from '@/utils/applicatorStatus';
+import api from "./api";
+import { priorityService } from "./priorityService";
+import type { ApplicatorStatus } from "@/utils/applicatorStatus";
 
 // Import shared types - single source of truth
-import type { Treatment, Applicator, ContinuationEligibility } from '@shared/types';
+import type {
+  Treatment,
+  Applicator,
+  ContinuationEligibility,
+} from "@shared/types";
 
 // Re-export for backwards compatibility
-export type { Treatment, Applicator, ContinuationEligibility } from '@shared/types';
+export type {
+  Treatment,
+  Applicator,
+  ContinuationEligibility,
+} from "@shared/types";
 
 export const treatmentService = {
   // Get available treatments for selection
   async getTreatments(params: {
-    type?: 'insertion' | 'removal';
+    type?: "insertion" | "removal";
     subjectId?: string;
     site?: string;
     date?: string;
   }): Promise<Treatment[]> {
     try {
       // First try to get from backend
-      const response = await api.get('/treatments', { params });
+      const response = await api.get("/treatments", { params });
       return response.data;
     } catch (error) {
       // If offline or backend fails, try to get from Priority directly
       if (navigator.onLine) {
         return await priorityService.getTreatments(params);
       }
-      
+
       // If offline, get from local storage
-      const cachedTreatments = localStorage.getItem('cached_treatments');
+      const cachedTreatments = localStorage.getItem("cached_treatments");
       if (cachedTreatments) {
         const treatments = JSON.parse(cachedTreatments) as Treatment[];
-        
+
         // Apply filters if any
-        return treatments.filter(treatment => {
+        return treatments.filter((treatment) => {
           let include = true;
           if (params.type && treatment.type !== params.type) include = false;
-          if (params.subjectId && treatment.subjectId !== params.subjectId) include = false;
+          if (params.subjectId && treatment.subjectId !== params.subjectId)
+            include = false;
           if (params.site && treatment.site !== params.site) include = false;
-          if (params.date && treatment.date.slice(0, 10) !== params.date) include = false;
+          if (params.date && treatment.date.slice(0, 10) !== params.date)
+            include = false;
           return include;
         });
       }
-      
+
       return [];
     }
   },
 
   // Create a new treatment
   async createTreatment(treatmentData: {
-    type: 'insertion' | 'removal';
+    type: "insertion" | "removal";
     subjectId: string;
     site: string;
     date: string;
@@ -61,12 +71,15 @@ export const treatmentService = {
     priorityId?: string; // Priority order ID (e.g., "PANC-HEAD-001") for workflow detection
     indication?: string | null; // Treatment indication from Priority SIBD_INDICATION (pancreas, prostate, skin)
   }): Promise<Treatment> {
-    const response = await api.post('/treatments', treatmentData);
+    const response = await api.post("/treatments", treatmentData);
     return response.data;
   },
 
   // Get removal candidates for a specific treatment number and site
-  async getRemovalCandidates(site: string, treatmentNumber: string): Promise<{
+  async getRemovalCandidates(
+    site: string,
+    treatmentNumber: string,
+  ): Promise<{
     id: string;
     subjectId: string;
     site: string;
@@ -80,8 +93,8 @@ export const treatmentService = {
     isEligible: boolean;
     reason?: string;
   }> {
-    const response = await api.get('/treatments/removal-candidates', {
-      params: { site, treatmentNumber }
+    const response = await api.get("/treatments/removal-candidates", {
+      params: { site, treatmentNumber },
     });
     return response.data;
   },
@@ -102,15 +115,15 @@ export const treatmentService = {
         id: app.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
         serialNumber: app.serialNumber,
         seedQuantity: app.seedQuantity || app.INTDATA2 || 0,
-        usageType: app.usageType || 'full',
+        usageType: app.usageType || "full",
         insertionTime: app.insertionTime || new Date().toISOString(),
-        comments: app.comments || '',
+        comments: app.comments || "",
         image: app.image || null,
         isRemoved: app.isRemoved === true,
-        removalComments: app.removalComments || '',
+        removalComments: app.removalComments || "",
         removalImage: app.removalImage || null,
         removalTime: app.removalTime || null,
-        applicatorType: app.applicatorType || 'Unknown Applicator',
+        applicatorType: app.applicatorType || "Unknown Applicator",
         insertedSeedsQty: app.insertedSeedsQty || app.seedQuantity || 0,
         // File attachment tracking fields (files stored in Priority ERP)
         attachmentFileCount: app.attachmentFileCount || 0,
@@ -121,7 +134,7 @@ export const treatmentService = {
         catalog: app.catalog || app.PARTNAME || null,
         seedLength: app.seedLength || app.SIBD_SEEDLEN || null,
         // 8-state workflow status
-        status: app.status as ApplicatorStatus | undefined
+        status: app.status as ApplicatorStatus | undefined,
       }));
     }
 
@@ -132,14 +145,27 @@ export const treatmentService = {
   // Use applicatorService.validateApplicator() for applicator validation
 
   // Add an applicator to a treatment
-  async addApplicator(treatmentId: string, applicator: Omit<Applicator, 'id'>): Promise<Applicator> {
-    const response = await api.post(`/treatments/${treatmentId}/applicators`, applicator);
+  async addApplicator(
+    treatmentId: string,
+    applicator: Omit<Applicator, "id">,
+  ): Promise<Applicator> {
+    const response = await api.post(
+      `/treatments/${treatmentId}/applicators`,
+      applicator,
+    );
     return response.data;
   },
 
   // Update an applicator
-  async updateApplicator(treatmentId: string, applicatorId: string, data: Partial<Applicator>): Promise<Applicator> {
-    const response = await api.patch(`/treatments/${treatmentId}/applicators/${applicatorId}`, data);
+  async updateApplicator(
+    treatmentId: string,
+    applicatorId: string,
+    data: Partial<Applicator>,
+  ): Promise<Applicator> {
+    const response = await api.patch(
+      `/treatments/${treatmentId}/applicators/${applicatorId}`,
+      data,
+    );
     return response.data;
   },
 
@@ -161,25 +187,40 @@ export const treatmentService = {
         lost: { checked: boolean; amount: number; comment: string };
         retrievedToSite: { checked: boolean; amount: number; comment: string };
         removalFailure: { checked: boolean; amount: number; comment: string };
-        other: { checked: boolean; amount: number; comment: string; description: string };
+        other: {
+          checked: boolean;
+          amount: number;
+          comment: string;
+          description: string;
+        };
       };
       individualSeedsRemoved: number;
-      individualSeedNotes: Array<{ reason: string; timestamp: string; count: number }>;
+      individualSeedNotes: Array<{
+        reason: string;
+        timestamp: string;
+        count: number;
+      }>;
       topGeneralComments?: string;
       removalGeneralComments?: string;
       groupComments?: Record<number, string>;
       individualSeedComment?: string;
-    }
+    },
   ): Promise<{ success: boolean; treatment: Treatment }> {
-    const response = await api.put(`/treatments/${treatmentId}/removal-procedure`, data);
+    const response = await api.put(
+      `/treatments/${treatmentId}/removal-procedure`,
+      data,
+    );
     return response.data;
   },
 
   // Export treatment data as CSV or PDF
-  async exportTreatment(treatmentId: string, format: 'csv' | 'pdf'): Promise<Blob> {
+  async exportTreatment(
+    treatmentId: string,
+    format: "csv" | "pdf",
+  ): Promise<Blob> {
     const response = await api.get(`/treatments/${treatmentId}/export`, {
       params: { format },
-      responseType: 'blob'
+      responseType: "blob",
     });
     return response.data;
   },
@@ -188,13 +229,15 @@ export const treatmentService = {
 
   // Initialize finalization - determines user flow (hospital_auto vs alphatau_verification)
   async initializeFinalization(treatmentId: string): Promise<{
-    flow: 'hospital_auto' | 'alphatau_verification';
+    flow: "hospital_auto" | "alphatau_verification";
     signerName?: string;
     signerEmail?: string;
     signerPosition?: string;
     requiresEmailSelection?: boolean;
   }> {
-    const response = await api.post(`/treatments/${treatmentId}/finalize/initiate`);
+    const response = await api.post(
+      `/treatments/${treatmentId}/finalize/initiate`,
+    );
     return response.data;
   },
 
@@ -202,18 +245,26 @@ export const treatmentService = {
   async getSiteUsersForFinalization(treatmentId: string): Promise<{
     users: Array<{ email: string; name: string; position: string }>;
   }> {
-    const response = await api.get(`/treatments/${treatmentId}/finalize/site-users`);
+    const response = await api.get(
+      `/treatments/${treatmentId}/finalize/site-users`,
+    );
     return response.data;
   },
 
   // Send verification code to target email (Position 99 flow)
-  async sendFinalizationCode(treatmentId: string, targetEmail: string): Promise<{
+  async sendFinalizationCode(
+    treatmentId: string,
+    targetEmail: string,
+  ): Promise<{
     success: boolean;
     message?: string;
   }> {
-    const response = await api.post(`/treatments/${treatmentId}/finalize/send-code`, {
-      targetEmail
-    });
+    const response = await api.post(
+      `/treatments/${treatmentId}/finalize/send-code`,
+      {
+        targetEmail,
+      },
+    );
     return response.data;
   },
 
@@ -228,17 +279,20 @@ export const treatmentService = {
       serialNumber: string;
       applicatorType?: string;
       seedQuantity: number;
-    }>
+    }>,
   ): Promise<{
     success: boolean;
     message?: string;
   }> {
-    const response = await api.post(`/treatments/${treatmentId}/finalize/verify`, {
-      code,
-      signerName,
-      signerPosition,
-      availableApplicators
-    });
+    const response = await api.post(
+      `/treatments/${treatmentId}/finalize/verify`,
+      {
+        code,
+        signerName,
+        signerPosition,
+        availableApplicators,
+      },
+    );
     return response.data;
   },
 
@@ -252,23 +306,28 @@ export const treatmentService = {
       serialNumber: string;
       applicatorType?: string;
       seedQuantity: number;
-    }>
+    }>,
   ): Promise<{
     success: boolean;
     message?: string;
   }> {
-    const response = await api.post(`/treatments/${treatmentId}/finalize/auto`, {
-      signerName,
-      signerPosition,
-      availableApplicators
-    });
+    const response = await api.post(
+      `/treatments/${treatmentId}/finalize/auto`,
+      {
+        signerName,
+        signerPosition,
+        availableApplicators,
+      },
+    );
     return response.data;
   },
 
   // ===== Treatment Continuation Methods =====
 
   // Check if a completed treatment can be continued (within 24-hour window)
-  async checkContinuable(treatmentId: string): Promise<ContinuationEligibility> {
+  async checkContinuable(
+    treatmentId: string,
+  ): Promise<ContinuationEligibility> {
     const response = await api.get(`/treatments/${treatmentId}/continuable`);
     return response.data;
   },
@@ -293,5 +352,5 @@ export const treatmentService = {
     } catch (error) {
       return null;
     }
-  }
+  },
 };

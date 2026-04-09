@@ -10,36 +10,36 @@
  * - Data expiry is enforced to limit offline exposure
  */
 
-import Dexie, { Table } from 'dexie';
-import { ApplicatorStatus } from '../../../shared/applicatorStatuses';
+import Dexie, { Table } from "dexie";
+import { ApplicatorStatus } from "../../../shared/applicatorStatuses";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type SyncStatus = 'synced' | 'pending' | 'conflict';
-export type ChangeOperation = 'create' | 'update' | 'status_change';
+export type SyncStatus = "synced" | "pending" | "conflict";
+export type ChangeOperation = "create" | "update" | "status_change";
 
 /**
  * Treatment stored in IndexedDB (encrypted PHI fields)
  */
 export interface OfflineTreatment {
   id: string;
-  type: 'insertion' | 'removal';
-  subjectId: string;           // ENCRYPTED - Patient ID
-  patientName?: string;        // ENCRYPTED
+  type: "insertion" | "removal";
+  subjectId: string; // ENCRYPTED - Patient ID
+  patientName?: string; // ENCRYPTED
   site: string;
   date: string;
   isComplete: boolean;
   userId: string;
-  surgeon?: string;            // ENCRYPTED
+  surgeon?: string; // ENCRYPTED
   seedQuantity?: number;
   activityPerSeed?: number;
   version: number;
   syncStatus: SyncStatus;
-  downloadedAt: string;        // When downloaded for offline use
-  expiresAt: string;           // When offline data expires
-  serverVersion: number;       // Server version at download time
+  downloadedAt: string; // When downloaded for offline use
+  expiresAt: string; // When offline data expires
+  serverVersion: number; // Server version at download time
 }
 
 /**
@@ -47,16 +47,16 @@ export interface OfflineTreatment {
  */
 export interface OfflineApplicator {
   id: string;
-  serialNumber: string;        // ENCRYPTED
+  serialNumber: string; // ENCRYPTED
   seedQuantity: number;
   status: ApplicatorStatus | null;
   packageLabel: string | null;
   insertionTime: string;
-  comments?: string;           // ENCRYPTED
+  comments?: string; // ENCRYPTED
   treatmentId: string;
   addedBy: string;
   isRemoved: boolean;
-  removalComments?: string;    // ENCRYPTED
+  removalComments?: string; // ENCRYPTED
   removalTime?: string;
   removedBy?: string;
   applicatorType?: string;
@@ -71,8 +71,8 @@ export interface OfflineApplicator {
  * Pending changes to sync when back online
  */
 export interface PendingChange {
-  id?: number;                 // Auto-incremented
-  entityType: 'treatment' | 'applicator';
+  id?: number; // Auto-incremented
+  entityType: "treatment" | "applicator";
   entityId: string;
   operation: ChangeOperation;
   data: Record<string, unknown>;
@@ -80,17 +80,17 @@ export interface PendingChange {
   retryCount: number;
   lastError?: string;
   nextRetryAt?: string;
-  status: 'pending' | 'syncing' | 'failed' | 'requires_manual_intervention';
-  offlineSince: string;        // When device went offline (for audit)
-  changeHash: string;          // SHA-256 of change for integrity
+  status: "pending" | "syncing" | "failed" | "requires_manual_intervention";
+  offlineSince: string; // When device went offline (for audit)
+  changeHash: string; // SHA-256 of change for integrity
 }
 
 /**
  * Conflicts detected during sync
  */
 export interface OfflineConflict {
-  id?: number;                 // Auto-incremented
-  entityType: 'treatment' | 'applicator';
+  id?: number; // Auto-incremented
+  entityType: "treatment" | "applicator";
   entityId: string;
   localData: Record<string, unknown>;
   serverData: Record<string, unknown>;
@@ -107,19 +107,19 @@ export interface OfflineConflict {
  * Fields that contain PHI and must be encrypted
  */
 const PHI_FIELDS_TO_ENCRYPT = [
-  'patientName',
-  'subjectId',
-  'surgeon',
-  'serialNumber',
-  'comments',
-  'removalComments',
+  "patientName",
+  "subjectId",
+  "surgeon",
+  "serialNumber",
+  "comments",
+  "removalComments",
 ] as const;
 
 /**
  * Encryption utilities using Web Crypto API (AES-256-GCM)
  */
 class PhiEncryption {
-  private static ALGORITHM = 'AES-GCM';
+  private static ALGORITHM = "AES-GCM";
   private static IV_LENGTH = 12;
   private cryptoKey: CryptoKey | null = null;
 
@@ -130,11 +130,11 @@ class PhiEncryption {
   async initialize(keyMaterial: string): Promise<void> {
     const keyBytes = this.base64ToBytes(keyMaterial);
     this.cryptoKey = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       keyBytes.buffer as ArrayBuffer,
       { name: PhiEncryption.ALGORITHM },
       false,
-      ['encrypt', 'decrypt']
+      ["encrypt", "decrypt"],
     );
   }
 
@@ -158,7 +158,7 @@ class PhiEncryption {
    */
   async encrypt(plaintext: string): Promise<string> {
     if (!this.cryptoKey) {
-      throw new Error('Encryption not initialized');
+      throw new Error("Encryption not initialized");
     }
 
     const iv = crypto.getRandomValues(new Uint8Array(PhiEncryption.IV_LENGTH));
@@ -167,7 +167,7 @@ class PhiEncryption {
     const ciphertext = await crypto.subtle.encrypt(
       { name: PhiEncryption.ALGORITHM, iv },
       this.cryptoKey,
-      encoded
+      encoded,
     );
 
     // Combine IV + ciphertext and encode as base64
@@ -183,7 +183,7 @@ class PhiEncryption {
    */
   async decrypt(encrypted: string): Promise<string> {
     if (!this.cryptoKey) {
-      throw new Error('Encryption not initialized');
+      throw new Error("Encryption not initialized");
     }
 
     const combined = this.base64ToBytes(encrypted);
@@ -193,7 +193,7 @@ class PhiEncryption {
     const decrypted = await crypto.subtle.decrypt(
       { name: PhiEncryption.ALGORITHM, iv },
       this.cryptoKey,
-      ciphertext
+      ciphertext,
     );
 
     return new TextDecoder().decode(decrypted);
@@ -207,7 +207,11 @@ class PhiEncryption {
 
     const result = { ...obj } as Record<string, unknown>;
     for (const field of PHI_FIELDS_TO_ENCRYPT) {
-      if (field in result && typeof result[field] === 'string' && result[field]) {
+      if (
+        field in result &&
+        typeof result[field] === "string" &&
+        result[field]
+      ) {
         result[field] = await this.encrypt(result[field] as string);
       }
     }
@@ -222,7 +226,11 @@ class PhiEncryption {
 
     const result = { ...obj } as Record<string, unknown>;
     for (const field of PHI_FIELDS_TO_ENCRYPT) {
-      if (field in result && typeof result[field] === 'string' && result[field]) {
+      if (
+        field in result &&
+        typeof result[field] === "string" &&
+        result[field]
+      ) {
         try {
           result[field] = await this.decrypt(result[field] as string);
         } catch {
@@ -244,7 +252,7 @@ class PhiEncryption {
   }
 
   private bytesToBase64(bytes: Uint8Array): string {
-    let binary = '';
+    let binary = "";
     for (let i = 0; i < bytes.length; i++) {
       binary += String.fromCharCode(bytes[i]);
     }
@@ -270,14 +278,16 @@ class OfflineDatabase extends Dexie {
   conflicts!: Table<OfflineConflict, number>;
 
   constructor() {
-    super('AlaOfflineDb');
+    super("AlaOfflineDb");
 
     this.version(1).stores({
       // Primary key: id, indexed fields for queries
-      treatments: 'id, subjectId, site, date, syncStatus, [userId+date]',
-      applicators: 'id, serialNumber, treatmentId, status, syncStatus, [treatmentId+status]',
-      pendingChanges: '++id, entityType, entityId, createdAt, [entityType+retryCount], status',
-      conflicts: '++id, entityType, entityId, createdAt, requiresAdmin',
+      treatments: "id, subjectId, site, date, syncStatus, [userId+date]",
+      applicators:
+        "id, serialNumber, treatmentId, status, syncStatus, [treatmentId+status]",
+      pendingChanges:
+        "++id, entityType, entityId, createdAt, [entityType+retryCount], status",
+      conflicts: "++id, entityType, entityId, createdAt, requiresAdmin",
     });
   }
 }
@@ -364,11 +374,13 @@ class IndexedDbService {
    */
   async getTreatmentsByUser(userId: string): Promise<OfflineTreatment[]> {
     const treatments = await this.db.treatments
-      .where('[userId+date]')
+      .where("[userId+date]")
       .between([userId, Dexie.minKey], [userId, Dexie.maxKey])
       .toArray();
 
-    return Promise.all(treatments.map(t => this.encryption.decryptPhiFields(t)));
+    return Promise.all(
+      treatments.map((t) => this.encryption.decryptPhiFields(t)),
+    );
   }
 
   /**
@@ -376,17 +388,23 @@ class IndexedDbService {
    */
   async getDownloadedTreatments(): Promise<OfflineTreatment[]> {
     const treatments = await this.db.treatments.toArray();
-    return Promise.all(treatments.map(t => this.encryption.decryptPhiFields(t)));
+    return Promise.all(
+      treatments.map((t) => this.encryption.decryptPhiFields(t)),
+    );
   }
 
   /**
    * Delete a treatment and its applicators
    */
   async deleteTreatment(id: string): Promise<void> {
-    await this.db.transaction('rw', [this.db.treatments, this.db.applicators], async () => {
-      await this.db.treatments.delete(id);
-      await this.db.applicators.where('treatmentId').equals(id).delete();
-    });
+    await this.db.transaction(
+      "rw",
+      [this.db.treatments, this.db.applicators],
+      async () => {
+        await this.db.treatments.delete(id);
+        await this.db.applicators.where("treatmentId").equals(id).delete();
+      },
+    );
   }
 
   /**
@@ -415,7 +433,7 @@ class IndexedDbService {
    */
   async saveApplicators(applicators: OfflineApplicator[]): Promise<void> {
     const encrypted = await Promise.all(
-      applicators.map(a => this.encryption.encryptPhiFields(a))
+      applicators.map((a) => this.encryption.encryptPhiFields(a)),
     );
     await this.db.applicators.bulkPut(encrypted);
   }
@@ -432,19 +450,25 @@ class IndexedDbService {
   /**
    * Get applicators for a treatment
    */
-  async getApplicatorsByTreatment(treatmentId: string): Promise<OfflineApplicator[]> {
+  async getApplicatorsByTreatment(
+    treatmentId: string,
+  ): Promise<OfflineApplicator[]> {
     const applicators = await this.db.applicators
-      .where('treatmentId')
+      .where("treatmentId")
       .equals(treatmentId)
       .toArray();
 
-    return Promise.all(applicators.map(a => this.encryption.decryptPhiFields(a)));
+    return Promise.all(
+      applicators.map((a) => this.encryption.decryptPhiFields(a)),
+    );
   }
 
   /**
    * Get applicator by serial number
    */
-  async getApplicatorBySerial(serialNumber: string): Promise<OfflineApplicator | undefined> {
+  async getApplicatorBySerial(
+    serialNumber: string,
+  ): Promise<OfflineApplicator | undefined> {
     // Need to decrypt to compare - this is less efficient but necessary for encrypted fields
     const allApplicators = await this.db.applicators.toArray();
     for (const applicator of allApplicators) {
@@ -462,12 +486,12 @@ class IndexedDbService {
   async updateApplicatorStatus(
     id: string,
     status: ApplicatorStatus,
-    version: number
+    version: number,
   ): Promise<void> {
     await this.db.applicators.update(id, {
       status,
       version,
-      syncStatus: 'pending',
+      syncStatus: "pending",
     });
   }
 
@@ -478,7 +502,7 @@ class IndexedDbService {
   /**
    * Add a pending change to sync later
    */
-  async addPendingChange(change: Omit<PendingChange, 'id'>): Promise<number> {
+  async addPendingChange(change: Omit<PendingChange, "id">): Promise<number> {
     return this.db.pendingChanges.add(change as PendingChange);
   }
 
@@ -487,19 +511,16 @@ class IndexedDbService {
    */
   async getPendingChanges(): Promise<PendingChange[]> {
     return this.db.pendingChanges
-      .where('status')
-      .equals('pending')
-      .sortBy('createdAt');
+      .where("status")
+      .equals("pending")
+      .sortBy("createdAt");
   }
 
   /**
    * Get pending changes count
    */
   async getPendingChangesCount(): Promise<number> {
-    return this.db.pendingChanges
-      .where('status')
-      .equals('pending')
-      .count();
+    return this.db.pendingChanges.where("status").equals("pending").count();
   }
 
   /**
@@ -507,7 +528,7 @@ class IndexedDbService {
    */
   async updatePendingChange(
     id: number,
-    updates: Partial<PendingChange>
+    updates: Partial<PendingChange>,
   ): Promise<void> {
     await this.db.pendingChanges.update(id, updates);
   }
@@ -524,8 +545,8 @@ class IndexedDbService {
    */
   async getChangesRequiringIntervention(): Promise<PendingChange[]> {
     return this.db.pendingChanges
-      .where('status')
-      .equals('requires_manual_intervention')
+      .where("status")
+      .equals("requires_manual_intervention")
       .toArray();
   }
 
@@ -536,7 +557,7 @@ class IndexedDbService {
   /**
    * Add a conflict
    */
-  async addConflict(conflict: Omit<OfflineConflict, 'id'>): Promise<number> {
+  async addConflict(conflict: Omit<OfflineConflict, "id">): Promise<number> {
     return this.db.conflicts.add(conflict as OfflineConflict);
   }
 
@@ -552,7 +573,7 @@ class IndexedDbService {
    */
   async getAdminRequiredConflicts(): Promise<OfflineConflict[]> {
     return this.db.conflicts
-      .where('requiresAdmin')
+      .where("requiresAdmin")
       .equals(1) // IndexedDB uses 1/0 for booleans
       .toArray();
   }
@@ -576,7 +597,7 @@ class IndexedDbService {
     let deletedCount = 0;
 
     const expiredTreatments = await this.db.treatments
-      .filter(t => t.expiresAt < now)
+      .filter((t) => t.expiresAt < now)
       .toArray();
 
     for (const treatment of expiredTreatments) {
@@ -606,10 +627,10 @@ class IndexedDbService {
 
     // Estimate storage size (rough calculation)
     const estimatedSizeBytes =
-      treatments * 2048 +      // ~2KB per treatment
-      applicators * 1024 +     // ~1KB per applicator
-      pending * 512 +          // ~0.5KB per pending change
-      conflicts * 1024;        // ~1KB per conflict
+      treatments * 2048 + // ~2KB per treatment
+      applicators * 1024 + // ~1KB per applicator
+      pending * 512 + // ~0.5KB per pending change
+      conflicts * 1024; // ~1KB per conflict
 
     return {
       treatmentCount: treatments,
@@ -624,23 +645,25 @@ class IndexedDbService {
    * Check data integrity (for startup validation)
    */
   async checkDataIntegrity(): Promise<{
-    status: 'ok' | 'corrupted' | 'missing';
+    status: "ok" | "corrupted" | "missing";
     pendingChangesLost?: number;
   }> {
     try {
       const pendingCount = await this.db.pendingChanges.count();
-      const expectedCount = parseInt(localStorage.getItem('ala_pendingChangesCount') || '0');
+      const expectedCount = parseInt(
+        localStorage.getItem("ala_pendingChangesCount") || "0",
+      );
 
       if (expectedCount > 0 && pendingCount === 0) {
-        return { status: 'missing', pendingChangesLost: expectedCount };
+        return { status: "missing", pendingChangesLost: expectedCount };
       }
 
       // Update stored count
-      localStorage.setItem('ala_pendingChangesCount', String(pendingCount));
+      localStorage.setItem("ala_pendingChangesCount", String(pendingCount));
 
-      return { status: 'ok' };
+      return { status: "ok" };
     } catch {
-      return { status: 'corrupted' };
+      return { status: "corrupted" };
     }
   }
 
@@ -649,7 +672,7 @@ class IndexedDbService {
    */
   async updatePendingChangesBackup(): Promise<void> {
     const count = await this.db.pendingChanges.count();
-    localStorage.setItem('ala_pendingChangesCount', String(count));
+    localStorage.setItem("ala_pendingChangesCount", String(count));
   }
 
   /**
@@ -657,16 +680,21 @@ class IndexedDbService {
    */
   async clearAll(): Promise<void> {
     await this.db.transaction(
-      'rw',
-      [this.db.treatments, this.db.applicators, this.db.pendingChanges, this.db.conflicts],
+      "rw",
+      [
+        this.db.treatments,
+        this.db.applicators,
+        this.db.pendingChanges,
+        this.db.conflicts,
+      ],
       async () => {
         await this.db.treatments.clear();
         await this.db.applicators.clear();
         await this.db.pendingChanges.clear();
         await this.db.conflicts.clear();
-      }
+      },
     );
-    localStorage.removeItem('ala_pendingChangesCount');
+    localStorage.removeItem("ala_pendingChangesCount");
     this.encryption.clear();
   }
 
