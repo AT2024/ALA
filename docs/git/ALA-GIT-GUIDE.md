@@ -29,6 +29,7 @@ scripts\new-feature.bat my-feature-name
 ```
 
 This automatically:
+
 - Checks out the latest develop branch
 - Creates a new feature branch with the proper naming convention
 - Sets up the branch for pushing to GitHub
@@ -39,6 +40,7 @@ As you develop your feature:
 
 - Make frequent, small commits with clear messages
 - Keep your feature branch updated with the latest changes from develop:
+
   ```bash
   git checkout develop
   git pull
@@ -57,6 +59,7 @@ When your feature is complete:
 
 1. Ensure all tests pass locally
 2. Push your branch to GitHub:
+
    ```bash
    git push -u origin feature/my-feature-name
    ```
@@ -82,6 +85,7 @@ scripts\release.bat [version]
 The version parameter is optional - if omitted, the current date will be used as the version.
 
 This script will:
+
 1. Ensure all tests pass
 2. Merge develop into main
 3. Create a version tag
@@ -103,10 +107,12 @@ scripts\new-hotfix.bat issue-description
 ```
 
 This will:
+
 1. Create a hotfix branch from main
 2. Set you up to fix the issue
 
 After fixing the issue:
+
 1. Push your hotfix branch
 2. Create a pull request to main
 3. After approval and merging, the fix will be deployed to production
@@ -148,6 +154,7 @@ Our application uses Docker for consistent environments:
 - Production: Builds optimized images with version tags
 
 To test with Docker in development:
+
 ```bash
 docker-compose -f docker-compose.dev.yml up -d
 ```

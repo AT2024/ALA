@@ -18,10 +18,10 @@ This migration adds a `patient_name` field to the `treatments` table to store th
 
 ```typescript
 const treatment = await Treatment.create({
-  type: 'insertion',
-  subjectId: 'ORD123456', // Order number from ORDNAME
-  patientName: 'PATIENT-ID-789', // Patient identifier from DETAILS
-  site: '100078',
+  type: "insertion",
+  subjectId: "ORD123456", // Order number from ORDNAME
+  patientName: "PATIENT-ID-789", // Patient identifier from DETAILS
+  site: "100078",
   date: new Date(),
   userId: user.id,
   // ... other fields
@@ -32,7 +32,7 @@ const treatment = await Treatment.create({
 
 ```typescript
 await treatment.update({
-  patientName: 'PATIENT-ID-789'
+  patientName: "PATIENT-ID-789",
 });
 ```
 
@@ -41,8 +41,8 @@ await treatment.update({
 ```typescript
 const treatments = await Treatment.findAll({
   where: {
-    patientName: 'PATIENT-ID-789'
-  }
+    patientName: "PATIENT-ID-789",
+  },
 });
 ```
 
@@ -53,13 +53,14 @@ const treatments = await Treatment.findAll({
 if (treatment.patientName) {
   console.log(`Patient: ${treatment.patientName}`);
 } else {
-  console.log('Patient name not available (legacy data)');
+  console.log("Patient name not available (legacy data)");
 }
 ```
 
 ## Development Environment
 
 In development mode, the schema change is **automatic**:
+
 1. Update the model file (already done)
 2. Restart the server
 3. Sequelize auto-sync applies the change
@@ -123,8 +124,8 @@ When fetching orders from Priority, populate this field:
 const priorityOrder = await priorityService.getOrder(orderId);
 
 const treatment = await Treatment.create({
-  subjectId: priorityOrder.ORDNAME,        // Order number
-  patientName: priorityOrder.DETAILS,      // Patient identifier
+  subjectId: priorityOrder.ORDNAME, // Order number
+  patientName: priorityOrder.DETAILS, // Patient identifier
   // ... other fields
 });
 ```
@@ -144,28 +145,28 @@ Currently using **option 3** (accept NULL) for simplicity.
 ### Unit Test Example
 
 ```typescript
-describe('Treatment with patientName', () => {
-  it('should create treatment with patient name', async () => {
+describe("Treatment with patientName", () => {
+  it("should create treatment with patient name", async () => {
     const treatment = await Treatment.create({
-      type: 'insertion',
-      subjectId: 'ORD123',
-      patientName: 'PATIENT-456',
-      site: '100078',
+      type: "insertion",
+      subjectId: "ORD123",
+      patientName: "PATIENT-456",
+      site: "100078",
       date: new Date(),
-      userId: testUser.id
+      userId: testUser.id,
     });
 
-    expect(treatment.patientName).toBe('PATIENT-456');
+    expect(treatment.patientName).toBe("PATIENT-456");
   });
 
-  it('should handle missing patient name', async () => {
+  it("should handle missing patient name", async () => {
     const treatment = await Treatment.create({
-      type: 'insertion',
-      subjectId: 'ORD123',
+      type: "insertion",
+      subjectId: "ORD123",
       // patientName not provided
-      site: '100078',
+      site: "100078",
       date: new Date(),
-      userId: testUser.id
+      userId: testUser.id,
     });
 
     expect(treatment.patientName).toBeNull();

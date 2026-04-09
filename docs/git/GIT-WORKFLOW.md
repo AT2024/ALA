@@ -16,26 +16,31 @@ Our project follows a modified GitFlow workflow with the following branch struct
 ### Starting a New Feature
 
 1. Make sure you're on the develop branch:
+
    ```
    git checkout develop
    git pull origin develop
    ```
 
 2. Create a new feature branch:
+
    ```
    ./scripts/new-feature.bat my-new-feature
    ```
+
    (On Linux/Mac: `./scripts/new-feature.sh my-new-feature`)
 
 3. Make your changes to implement the feature.
 
 4. Commit your changes:
+
    ```
    git add .
    git commit -m "Description of your changes"
    ```
 
 5. Push your feature branch to the remote repository:
+
    ```
    git push -u origin feature/my-new-feature
    ```
@@ -60,9 +65,11 @@ You can also manually trigger this workflow from GitHub Actions.
 When the code in development is ready for production:
 
 1. Use the release script:
+
    ```
    ./scripts/release.bat 1.2.3
    ```
+
    (On Linux/Mac: `./scripts/release.sh 1.2.3`)
 
    If you don't specify a version, the current date will be used.
@@ -84,20 +91,24 @@ When the code in development is ready for production:
 If you need to fix a critical issue in production:
 
 1. Create a hotfix branch:
+
    ```
    ./scripts/new-hotfix.bat critical-bug-fix
    ```
+
    (On Linux/Mac: `./scripts/new-hotfix.sh critical-bug-fix`)
 
 2. Make your changes to fix the issue.
 
 3. Commit your changes:
+
    ```
    git add .
    git commit -m "Fix critical issue"
    ```
 
 4. Push your hotfix branch:
+
    ```
    git push -u origin hotfix/critical-bug-fix
    ```
@@ -124,6 +135,7 @@ Our Docker images follow a specific tagging convention:
 ## Database Considerations
 
 Before deploying to production, the CI/CD pipeline will:
+
 1. Create a backup of the production database
 2. Apply any new migrations
 
@@ -132,6 +144,7 @@ If you need to roll back a production deployment, use the database backup to res
 ## Secrets and Environment Variables
 
 GitHub Actions secrets are used for:
+
 - SSH deployment keys
 - Server IP addresses
 - Project paths
@@ -140,6 +153,7 @@ GitHub Actions secrets are used for:
 These must be configured in your GitHub repository settings under Secrets and Variables > Actions.
 
 Required secrets for the workflow:
+
 - `DEV_SSH_PRIVATE_KEY`: SSH key for the development server
 - `DEV_SERVER_IP`: IP address of the development server
 - `DEV_SERVER_USER`: Username for development server SSH access

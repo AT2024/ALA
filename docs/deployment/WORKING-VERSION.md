@@ -2,7 +2,7 @@
 
 **Date**: September 10, 2025  
 **Git Tag**: `v1.0-working-production-2025-09-10`  
-**Commit Hash**: `973c4e1`  
+**Commit Hash**: `973c4e1`
 
 ## 🎯 FULLY WORKING STATUS
 
@@ -23,7 +23,7 @@ This tag marks a fully functional production version of the ALA application with
 ```sql
 -- All tables exist and properly configured:
 public | applicators | table | ala_user
-public | treatments  | table | ala_user  
+public | treatments  | table | ala_user
 public | users       | table | ala_user
 
 -- Applicators table with correct snake_case columns:
@@ -34,7 +34,7 @@ treatment_id, added_by, removed_by, etc.
 ### 🔧 Key Technical Fixes
 
 1. **Treatment Model Field Mappings**:
-   - `subjectId` → `subject_id` 
+   - `subjectId` → `subject_id`
    - `isComplete` → `is_complete`
    - `priorityId` → `priority_id`
    - `userId` → `user_id`

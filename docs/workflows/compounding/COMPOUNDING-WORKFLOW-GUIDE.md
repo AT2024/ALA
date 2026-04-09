@@ -3,6 +3,7 @@
 This guide shows you how to use the complete compounding engineering system in your ALA Medical Application, orchestrating mcp-as-a-judge tools with your 7 implementation agents and 3 reviewer agents.
 
 ## Table of Contents
+
 1. [Quick Start Examples](#quick-start-examples)
 2. [Complete Workflow Walkthrough](#complete-workflow-walkthrough)
 3. [Agent Orchestration Patterns](#agent-orchestration-patterns)
@@ -20,6 +21,7 @@ This guide shows you how to use the complete compounding engineering system in y
 **Workflow**:
 
 **Step 1: Planning Lane**
+
 ```
 Claude: "I'll use set_coding_task to plan this nurse tracking feature"
 
@@ -36,6 +38,7 @@ Response:
 ```
 
 **Step 2: Research & Design**
+
 ```
 Claude: "Let me research existing patterns and create detailed plan"
 [Searches docs/patterns/, reviews existing code, creates design]
@@ -54,6 +57,7 @@ Response:
 ```
 
 **Step 3: Implementation Lane (Parallel Agents)**
+
 ```
 User: "Use database-specialist and frontend-ui agents in parallel to implement this"
 
@@ -63,6 +67,7 @@ User: "Use database-specialist and frontend-ui agents in parallel to implement t
 ```
 
 **Step 4: Review Lane**
+
 ```
 Claude: "Implementation complete. Running reviewer agents..."
 
@@ -76,6 +81,7 @@ Response:
 ```
 
 **Step 5: Testing Validation**
+
 ```
 Claude: "Use testing-specialist to create comprehensive tests"
 
@@ -93,6 +99,7 @@ Response:
 ```
 
 **Step 6: Completion & Learning**
+
 ```
 Tool: mcp__mcp-as-a-judge__judge_coding_task_completion
 Args:
@@ -118,6 +125,7 @@ Claude: "Task complete! Now capturing learnings..."
 **Workflow**:
 
 **Step 1: Investigation**
+
 ```
 Claude: "I'll use priority-integration agent to investigate the timeout"
 
@@ -127,6 +135,7 @@ Finding: OData query not using pagination, loading 1000+ records
 ```
 
 **Step 2: Quick Fix**
+
 ```
 Claude: "Implementing pagination fix"
 [priority-integration agent adds $top and $skip parameters]
@@ -136,6 +145,7 @@ Tool: judge_code_change
 ```
 
 **Step 3: Learning Loop**
+
 ```
 Claude: "Creating learning documentation"
 
@@ -162,6 +172,7 @@ Creates: Pattern doc docs/patterns/integration/priority-pagination.md
 **User Request**: "Review this code for quality before I commit it"
 
 **Workflow**:
+
 ```
 Claude: "I'll use the reviewer agents to check your code"
 
@@ -190,6 +201,7 @@ Claude: "Found 1 critical and 1 high priority issue. Details:"
 ### Phase 1: Planning & Requirements (Planning Lane)
 
 #### Step 1.1: Create Coding Task
+
 ```typescript
 Tool: set_coding_task
 When: Any substantial change (features, bugs, refactoring)
@@ -203,6 +215,7 @@ Key decisions at this stage:
 ```
 
 #### Step 1.2: Handle Missing Requirements
+
 ```typescript
 Tool: raise_missing_requirements (if needed)
 When: Ambiguous requirements, unclear technical choices
@@ -215,6 +228,7 @@ Example triggers:
 ```
 
 #### Step 1.3: Handle Obstacles
+
 ```typescript
 Tool: raise_obstacle (if needed)
 When: Technical blocker, architectural decision needed
@@ -227,6 +241,7 @@ Example triggers:
 ```
 
 #### Step 1.4: Validate Plan
+
 ```typescript
 Tool: judge_coding_plan
 When: After research and design complete
@@ -247,11 +262,13 @@ Required for plan approval:
 #### Step 2.1: Choose Implementation Strategy
 
 **Parallel Execution** (when tasks are independent):
+
 ```
 "Use database-specialist and frontend-ui agents in parallel"
 ```
 
 **Sequential Execution** (when tasks depend on each other):
+
 ```
 1. database-specialist creates schema
 2. priority-integration adds API integration
@@ -261,6 +278,7 @@ Required for plan approval:
 #### Step 2.2: Implementation Agents
 
 **Available Agents**:
+
 - `testing-specialist`: Test creation, debugging, coverage
 - `priority-integration`: Priority API, OData, applicator validation
 - `frontend-ui`: React components, TypeScript, Tailwind, state management
@@ -270,6 +288,7 @@ Required for plan approval:
 - `security-audit`: Auth, JWT, vulnerability assessment
 
 **Agent Selection**:
+
 - Mention domain keywords to trigger auto-selection
 - Explicitly request agent if needed
 - Use multiple agents in parallel when possible
@@ -299,11 +318,13 @@ Required for plan approval:
    - Transaction boundaries
 
 **How to invoke**:
+
 ```
 "Use ala-code-reviewer, priority-api-reviewer, and medical-safety-reviewer to review these changes"
 ```
 
 #### Step 3.2: Code Change Validation
+
 ```typescript
 Tool: judge_code_change
 When: After implementation and reviews complete
@@ -325,6 +346,7 @@ Validates:
 ### Phase 4: Testing (Quality Assurance)
 
 #### Step 4.1: Test Implementation
+
 ```typescript
 Agent: testing-specialist
 Tasks:
@@ -336,6 +358,7 @@ Tasks:
 ```
 
 #### Step 4.2: Test Validation
+
 ```typescript
 Tool: judge_testing_implementation
 When: After tests written and executed
@@ -352,6 +375,7 @@ Requirements:
 ### Phase 5: Completion (Final Gate)
 
 #### Step 5.1: Task Completion Validation
+
 ```typescript
 Tool: judge_coding_task_completion
 When: All quality gates passed
@@ -368,6 +392,7 @@ Validates:
 #### Step 5.2: Learning Loop
 
 **Capture Knowledge**:
+
 1. Document successful patterns in `docs/patterns/`
 2. Document any issues encountered in `docs/learnings/`
 3. Create ADR if architectural decision made
@@ -475,6 +500,7 @@ Workflow:
 ### After Every Bug Fix
 
 **Required Steps**:
+
 1. Create `docs/learnings/bugs/YYYY-MM-DD-brief-description.md`
 2. Extract reusable pattern to `docs/patterns/` if applicable
 3. Update relevant reviewer agent checklist
@@ -482,6 +508,7 @@ Workflow:
 5. Create regression test
 
 **Template**:
+
 ```markdown
 # [Bug Title]
 
@@ -491,26 +518,31 @@ Workflow:
 **Area**: Priority API Integration
 
 ## Problem
+
 Priority API returned 500 error when applicator not found
 
 ## Investigation
+
 - Checked logs: Missing null check before accessing applicatorData.SONICSERIALNO
 - Root cause: Assumed applicator always exists in response
 
 ## Solution
+
 Added null check and proper error handling:
 \`\`\`typescript
 if (!applicatorData || !applicatorData.SONICSERIALNO) {
-  throw new ValidationError('Applicator not found');
+throw new ValidationError('Applicator not found');
 }
 \`\`\`
 
 ## Prevention
+
 - ✅ Added test for missing applicator scenario
 - ✅ Updated priority-api-reviewer to check null handling
 - ✅ Added to CLAUDE.md Known Pitfalls
 
 ## Related Files
+
 - [backend/src/services/applicatorService.ts:145](backend/src/services/applicatorService.ts#L145)
 - [backend/src/services/applicatorService.test.ts:87](backend/src/services/applicatorService.test.ts#L87)
 ```
@@ -518,6 +550,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 ### After Production Errors
 
 **Required Steps**:
+
 1. Create `docs/learnings/errors/YYYY-MM-DD-error-description.md`
 2. Implement monitoring/alerting improvements
 3. Create test that reproduces error
@@ -527,6 +560,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 ### After Feature Completion
 
 **Required Steps**:
+
 1. Document successful patterns in `docs/patterns/[domain]/pattern-name.md`
 2. Note what worked well
 3. Update CLAUDE.md if pattern should be default
@@ -541,6 +575,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 **When to use**: Trivial changes, documentation updates, simple fixes
 
 **Example**:
+
 ```
 "Fix typo in error message"
 "Update README with new deployment steps"
@@ -554,6 +589,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 **When to use**: New features, refactoring, database changes
 
 **Example**:
+
 ```
 "Add treatment notes feature"
 "Refactor applicator validation logic"
@@ -567,12 +603,14 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 **When to use**: Production bug, high severity
 
 **Example**:
+
 ```
 "Priority API down, need immediate fallback"
 "Treatment data lost, need recovery script"
 ```
 
 **Workflow**:
+
 1. set_coding_task (document the issue)
 2. Implement fix quickly
 3. judge_code_change (safety check)
@@ -584,6 +622,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 **When to use**: Understanding codebase, architecture review
 
 **Example**:
+
 ```
 "How does applicator validation work?"
 "What's our current test coverage?"
@@ -597,6 +636,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 **When to use**: PR review, code audit, quality check
 
 **Example**:
+
 ```
 "Review this PR for quality"
 "Check if this meets our standards"
@@ -604,6 +644,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 ```
 
 **Workflow**:
+
 1. Applicable reviewer agents only
 2. Provide feedback
 3. No implementation changes
@@ -613,6 +654,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 ## Best Practices
 
 ### DO:
+
 ✅ Use set_coding_task for substantial changes
 ✅ Run all applicable reviewer agents
 ✅ Capture learnings after every bug/error
@@ -623,6 +665,7 @@ if (!applicatorData || !applicatorData.SONICSERIALNO) {
 ✅ Create ADRs for architectural decisions
 
 ### DON'T:
+
 ❌ Skip planning for medical safety features
 ❌ Ignore reviewer agent feedback
 ❌ Forget to document learnings

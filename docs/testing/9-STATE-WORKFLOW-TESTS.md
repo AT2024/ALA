@@ -5,6 +5,7 @@ This document describes the comprehensive test suite for the 9-state applicator 
 ## Overview
 
 The test suite covers:
+
 - **Backend Unit Tests**: State machine validation and packaging logic
 - **Frontend Component Tests**: PackageManager UI and interactions
 - **Context Tests**: TreatmentContext helper functions
@@ -13,9 +14,11 @@ The test suite covers:
 ## Test Files
 
 ### Backend Unit Tests
+
 **Location**: `backend/tests/services/applicatorService.9state.test.ts`
 
 **Coverage**:
+
 - `mapStatusToUsageType()` - All 9 status mappings
 - `validateStatusTransition()` - Valid and invalid transitions
 - `createPackage()` - Success and error cases
@@ -23,15 +26,18 @@ The test suite covers:
 - `saveApplicatorToPriority()` - Sync behavior for intermediate vs terminal states
 
 **Run**:
+
 ```bash
 cd backend
 npm test -- applicatorService.9state.test.ts
 ```
 
 ### Frontend Component Tests
+
 **Location**: `frontend/src/components/__tests__/PackageManager.test.tsx`
 
 **Coverage**:
+
 - Component rendering
 - Summary table calculations
 - Dialog interactions
@@ -40,30 +46,36 @@ npm test -- applicatorService.9state.test.ts
 - Error handling
 
 **Run**:
+
 ```bash
 cd frontend
 npm test -- PackageManager.test.tsx
 ```
 
 ### Context Helper Tests
+
 **Location**: `frontend/src/context/__tests__/TreatmentContext.9state.test.tsx`
 
 **Coverage**:
+
 - `sortApplicatorsByStatus()` - Sorting logic for active vs terminal states
 - `isPancreasOrProstate()` - Treatment type detection
 - Backward compatibility with null status
 - Integration scenarios
 
 **Run**:
+
 ```bash
 cd frontend
 npm test -- TreatmentContext.9state.test.tsx
 ```
 
 ### E2E Tests
+
 **Location**: `frontend/tests/e2e/applicator-workflow.spec.ts`
 
 **Coverage**:
+
 - Complete workflow: SEALED → OPENED → LOADED → INSERTED
 - Invalid transition rejection
 - Faulty applicator workflow
@@ -75,6 +87,7 @@ npm test -- TreatmentContext.9state.test.tsx
 - Priority API sync behavior
 
 **Run**:
+
 ```bash
 cd frontend
 npm run test:e2e
@@ -83,6 +96,7 @@ npm run test:e2e
 ## Test Execution
 
 ### Run All Tests
+
 ```bash
 # Backend tests
 cd backend && npm test
@@ -95,6 +109,7 @@ cd frontend && npm run test:e2e
 ```
 
 ### Run Specific Test Suites
+
 ```bash
 # Only 9-state workflow tests
 cd backend && npm test -- 9state
@@ -108,6 +123,7 @@ cd frontend && npx playwright test applicator-workflow
 ```
 
 ### Run with Coverage
+
 ```bash
 # Backend coverage
 cd backend && npm test -- --coverage
@@ -121,6 +137,7 @@ cd frontend && npm test -- --coverage
 ### 1. State Machine Transitions
 
 #### Valid Transitions
+
 - **SEALED** → OPENED, FAULTY, UNACCOUNTED
 - **OPENED** → LOADED, FAULTY, DISPOSED, UNACCOUNTED
 - **LOADED** → INSERTED, FAULTY, DEPLOYMENT_FAILURE, UNACCOUNTED
@@ -129,6 +146,7 @@ cd frontend && npm test -- --coverage
 - **DEPLOYMENT_FAILURE** → DISPOSED, FAULTY
 
 #### Invalid Transitions
+
 - SEALED → INSERTED (must go through OPENED → LOADED first)
 - OPENED → INSERTED (must load first)
 - LOADED → DISPOSED (must be inserted or marked faulty first)
@@ -137,11 +155,13 @@ cd frontend && npm test -- --coverage
 ### 2. Package Creation
 
 #### Success Cases
+
 - 4 applicators, same seed quantity, all LOADED
 - Labels increment correctly (P1, P2, P3, ...)
 - Package labels displayed in UI
 
 #### Error Cases
+
 - Not exactly 4 applicators
 - Different seed quantities
 - Wrong status (not LOADED)
@@ -150,11 +170,13 @@ cd frontend && npm test -- --coverage
 ### 3. Priority API Sync
 
 #### Intermediate States (No Sync)
+
 - SEALED
 - OPENED
 - LOADED
 
 #### Terminal States (Sync to Priority)
+
 - INSERTED → "Full use"
 - FAULTY → "Faulty"
 - DEPLOYMENT_FAILURE → "Faulty"
@@ -165,6 +187,7 @@ cd frontend && npm test -- --coverage
 ### 4. UI Behavior
 
 #### Row Colors
+
 - SEALED → White background
 - OPENED → Red background (bg-red-50)
 - LOADED → Yellow background (bg-yellow-50)
@@ -172,17 +195,20 @@ cd frontend && npm test -- --coverage
 - Terminal states → Black background, white text (bg-gray-900)
 
 #### Sorting
+
 - Active states (SEALED, OPENED, LOADED) → Top of list
 - Terminal states → Bottom of list
 - Within groups → Sorted by seed quantity (highest first)
 
 #### Package Manager Visibility
+
 - **Visible**: Pancreas and Prostate treatments
 - **Hidden**: Skin treatments and other types
 
 ## Coverage Goals
 
 ### Backend
+
 - **Target**: > 90% coverage for applicatorService functions
 - **Critical paths**: 100% coverage
   - State machine validation
@@ -190,6 +216,7 @@ cd frontend && npm test -- --coverage
   - Priority sync logic
 
 ### Frontend
+
 - **Target**: > 80% coverage for PackageManager component
 - **Critical paths**: 100% coverage
   - Selection validation
@@ -197,6 +224,7 @@ cd frontend && npm test -- --coverage
   - Error handling
 
 ### E2E
+
 - **Target**: All critical user workflows covered
 - **Must test**:
   - Complete applicator lifecycle
@@ -207,6 +235,7 @@ cd frontend && npm test -- --coverage
 ## Debugging Tests
 
 ### Backend Test Issues
+
 ```bash
 # Run single test with verbose output
 cd backend
@@ -217,6 +246,7 @@ NODE_OPTIONS='--inspect-brk' npm test -- applicatorService.9state.test.ts
 ```
 
 ### Frontend Test Issues
+
 ```bash
 # Run with UI mode (Vitest)
 cd frontend
@@ -227,6 +257,7 @@ npm test -- PackageManager.test.tsx --reporter=verbose
 ```
 
 ### E2E Test Issues
+
 ```bash
 # Run with headed browser (see what's happening)
 cd frontend
@@ -243,6 +274,7 @@ npx playwright show-trace trace.zip
 ## CI/CD Integration
 
 ### GitHub Actions Example
+
 ```yaml
 name: Test 9-State Workflow
 
@@ -257,7 +289,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
         run: |
@@ -282,7 +314,9 @@ jobs:
 ## Test Data
 
 ### Test Applicators
+
 The tests use the following serial number conventions:
+
 - `APP-TEST-*` - General test applicators
 - `APP-PKG-*` - Package creation tests
 - `APP-P1-*`, `APP-P2-*` - Package label progression tests
@@ -292,6 +326,7 @@ The tests use the following serial number conventions:
 - `APP-TERMINAL-*` - Terminal state tests
 
 ### Test Treatments
+
 - **Pancreas**: Treatment type `pancreas_insertion`
 - **Prostate**: Treatment type `prostate_insertion`
 - **Skin**: Treatment type `skin_insertion`
@@ -299,11 +334,13 @@ The tests use the following serial number conventions:
 ## Known Issues and Limitations
 
 ### Current Limitations
+
 1. E2E tests assume test@example.com user is set up
 2. Some API mocking needed for Priority sync verification
 3. Full interaction testing in PackageManager requires more complex setup
 
 ### Future Improvements
+
 - Add visual regression tests for UI components
 - Add performance tests for large treatment datasets
 - Add integration tests with real Priority API (staging environment)
@@ -312,6 +349,7 @@ The tests use the following serial number conventions:
 ## Maintenance
 
 ### When to Update Tests
+
 - **State machine changes**: Update `validateStatusTransition` tests
 - **New statuses added**: Update all mapping and sorting tests
 - **Package logic changes**: Update package creation tests
@@ -319,6 +357,7 @@ The tests use the following serial number conventions:
 - **Priority sync changes**: Update API integration tests
 
 ### Test Review Checklist
+
 - [ ] All 9 states covered in state machine tests
 - [ ] All valid transitions tested
 - [ ] All invalid transitions tested

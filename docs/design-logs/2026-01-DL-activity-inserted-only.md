@@ -11,11 +11,13 @@ Currently, the activity calculation in the app includes applicators with both "I
 ### Current Behavior
 
 Activity is calculated using the formula:
+
 ```
 Total Activity (µCi) = Sum of Inserted Seeds × Activity Per Seed
 ```
 
 The "Sum of Inserted Seeds" currently includes:
+
 - **Full use applicators** (usageType='full' → status=INSERTED): All `seedQuantity`
 - **Faulty applicators** (usageType='faulty' → status=FAULTY): Only `insertedSeedsQty` (partial seeds)
 
@@ -54,10 +56,12 @@ Activity should **only** count seeds from applicators with `status === 'INSERTED
 ## Proposed Solution
 
 Modify all activity calculation locations to filter applicators by:
+
 - `status === 'INSERTED'` (new status field)
 - OR `usageType === 'full'` (backward compatibility)
 
 Exclude:
+
 - `status === 'FAULTY'` or `usageType === 'faulty'`
 - All other terminal statuses (DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)
 
@@ -75,15 +79,15 @@ Exclude:
 ```typescript
 // BEFORE (lines 740-745):
 const totalSeeds = applicators.reduce((sum, app) => {
-  if (app.usageType === 'full') return sum + (app.seedQuantity || 0);
-  if (app.usageType === 'faulty') return sum + (app.insertedSeedsQty || 0);
+  if (app.usageType === "full") return sum + (app.seedQuantity || 0);
+  if (app.usageType === "faulty") return sum + (app.insertedSeedsQty || 0);
   return sum;
 }, 0);
 
 // AFTER:
 const totalSeeds = applicators.reduce((sum, app) => {
   // Only count seeds from INSERTED status applicators
-  const isInserted = app.status === 'INSERTED' || app.usageType === 'full';
+  const isInserted = app.status === "INSERTED" || app.usageType === "full";
   if (isInserted) return sum + (app.seedQuantity || 0);
   return sum;
 }, 0);

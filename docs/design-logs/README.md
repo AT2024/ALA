@@ -5,6 +5,7 @@ This directory contains design log entries following the [Wix Engineering Design
 ## Purpose
 
 Design logs capture architectural reasoning and decisions **before** implementation begins. They serve as:
+
 - A record of "why" decisions were made
 - A reference for AI collaborators to understand context
 - A history that becomes immutable once implementation starts
@@ -40,10 +41,12 @@ Why is this change needed? What problem are we solving?
 ## Proposed Solution
 
 ### Option A: [Name]
+
 - Pros: ...
 - Cons: ...
 
 ### Option B: [Name]
+
 - Pros: ...
 - Cons: ...
 
@@ -54,6 +57,7 @@ Why is this change needed? What problem are we solving?
 ## Implementation Notes
 
 Key files affected:
+
 - `path/to/file1.ts` - Description of change
 - `path/to/file2.ts` - Description of change
 
@@ -62,9 +66,11 @@ Key files affected:
 > Added after implementation is complete
 
 ### Outcome
+
 [What actually happened]
 
 ### Lessons Learned
+
 [What we learned for future reference]
 ```
 
@@ -73,6 +79,7 @@ Key files affected:
 Files follow the pattern: `YYYY-MM-[topic].md`
 
 Examples:
+
 - `2026-01-environment-alignment.md`
 - `2026-02-authentication-refactor.md`
 
@@ -86,9 +93,9 @@ Examples:
 
 ## Index
 
-| ID | Title | Status | Date |
-|----|-------|--------|------|
-| DL-001 | [Environment Alignment](2026-01-environment-alignment.md) | Implemented | 2026-01-07 |
+| ID     | Title                                                               | Status      | Date       |
+| ------ | ------------------------------------------------------------------- | ----------- | ---------- |
+| DL-001 | [Environment Alignment](2026-01-environment-alignment.md)           | Implemented | 2026-01-07 |
 | DL-002 | [Parallel Worktree Workflow](2026-01-parallel-worktree-workflow.md) | Implemented | 2026-01-08 |
-| DL-003 | [Version Display](2026-01-version-display.md) | Implemented | 2026-01-11 |
-| DL-004 | [Removal PDF Fix](2026-01-removal-pdf-fix.md) | Implemented | 2026-01-11 |
+| DL-003 | [Version Display](2026-01-version-display.md)                       | Implemented | 2026-01-11 |
+| DL-004 | [Removal PDF Fix](2026-01-removal-pdf-fix.md)                       | Implemented | 2026-01-11 |

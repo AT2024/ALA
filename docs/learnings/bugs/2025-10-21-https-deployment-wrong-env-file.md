@@ -20,12 +20,14 @@ Production site (https://ala-app.israelcentral.cloudapp.azure.com) became inacce
 ## Root Cause Analysis
 
 ### Primary Issues
+
 1. **Wrong Environment File**: Used `.env.azure` instead of `.env.azure.https` for HTTPS deployment
 2. **Wrong Nginx Config**: Docker cache used `nginx.staging.conf` (port 8080 only) instead of `nginx.https.azure.conf` (ports 8080 + 8443)
 3. **Port Mapping Mismatch**: Docker mapped 80→80, 443→443 but nginx listened on 8080/8443
 4. **Multiple Confusing Files**: 13 environment files existed, causing confusion about which to use
 
 ### Why It Happened
+
 - Deployment scripts (`deploy-https.sh`) referenced outdated file paths
 - Multiple backup files (`.env.azure.backup*`) cluttered the directory
 - No clear documentation about which environment file to use
@@ -35,6 +37,7 @@ Production site (https://ala-app.israelcentral.cloudapp.azure.com) became inacce
 ## Investigation Process (with mistakes)
 
 ### What Went Wrong in Investigation
+
 1. ❌ Changed deployment config multiple times without understanding baseline
 2. ❌ Switched between environment files without checking what was actually working
 3. ❌ Kept rebuilding containers hoping it would fix itself
@@ -42,6 +45,7 @@ Production site (https://ala-app.israelcentral.cloudapp.azure.com) became inacce
 5. ❌ Ran in circles making changes without systematic analysis
 
 ### What Finally Worked
+
 1. ✅ Stopped and analyzed the actual current state
 2. ✅ Checked git history to understand HTTPS deployment evolution
 3. ✅ Identified nginx config mismatch (8080/8443 vs 80/443)
@@ -52,6 +56,7 @@ Production site (https://ala-app.israelcentral.cloudapp.azure.com) became inacce
 ## Solution
 
 ### Immediate Fix
+
 ```bash
 # 1. Update environment file with correct nginx config and ports
 ssh azureuser@20.217.84.100
@@ -75,6 +80,7 @@ docker-compose -f docker-compose.azure.yml --env-file .env.azure.https up -d fro
 ```
 
 ### Long-term Preventions
+
 1. **Cleaned up environment files**: Removed 11 confusing files, kept only 2:
    - `.env.azure.https` - Production HTTPS environment (active)
    - `.env.azure.https.template` - Template for creating new environments
@@ -92,6 +98,7 @@ docker-compose -f docker-compose.azure.yml --env-file .env.azure.https up -d fro
 ## Technical Details
 
 ### Nginx Configuration
+
 ```nginx
 # nginx.https.azure.conf - CORRECT for production
 server {
@@ -106,14 +113,16 @@ server {
 ```
 
 ### Docker Port Mappings
+
 ```yaml
 # docker-compose.azure.yml - CORRECT configuration
 ports:
-  - "${HTTP_PORT:-80}:${NGINX_HTTP_PORT:-8080}"   # Host 80 → Container 8080
+  - "${HTTP_PORT:-80}:${NGINX_HTTP_PORT:-8080}" # Host 80 → Container 8080
   - "${HTTPS_PORT:-443}:${NGINX_HTTPS_PORT:-8443}" # Host 443 → Container 8443
 ```
 
 ### Environment Variables Required
+
 ```bash
 NGINX_CONFIG=nginx.https.azure.conf  # Use Azure HTTPS nginx config
 NGINX_HTTP_PORT=8080                 # Internal nginx HTTP port
@@ -125,6 +134,7 @@ HTTPS_PORT=443                        # External HTTPS port
 ## Lessons Learned
 
 ### Critical Lessons
+
 1. **NEVER change deployment config without understanding current state**
    - First: Check what's running, what ports are listening, what config is loaded
    - Then: Make ONE change at a time and verify
@@ -151,6 +161,7 @@ HTTPS_PORT=443                        # External HTTPS port
    - Make it impossible to make the same mistake
 
 ### Process Improvements
+
 - Added "Critical Deployment Information" section to CLAUDE.md
 - Created environment file naming convention (only `.env.azure.https` for production)
 - Documented nginx port requirements clearly
@@ -159,6 +170,7 @@ HTTPS_PORT=443                        # External HTTPS port
 ## Prevention Checklist
 
 Before deploying to production:
+
 - [ ] Verify using `.env.azure.https` (not any other env file)
 - [ ] Check `NGINX_CONFIG=nginx.https.azure.conf` in env file
 - [ ] Verify port variables: `NGINX_HTTP_PORT=8080`, `NGINX_HTTPS_PORT=8443`
@@ -168,5 +180,6 @@ Before deploying to production:
 - [ ] Have rollback plan ready
 
 ## Related Documentation
+
 - [CLAUDE.md - Critical Deployment Information](../../CLAUDE.md#critical-deployment-information)
 - [CLAUDE.md - Known Pitfalls - Deployment Issues](../../CLAUDE.md#deployment-issues)

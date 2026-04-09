@@ -3,11 +3,13 @@
 ## Base URLs
 
 ### Local Development
+
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:5000
 - **WebSocket**: ws://localhost:5000
 
 ### Production (Azure)
+
 - **Frontend**: https://ala-app.israelcentral.cloudapp.azure.com
 - **Backend API**: https://ala-app.israelcentral.cloudapp.azure.com/api
 - **WebSocket**: wss://ala-app.israelcentral.cloudapp.azure.com
@@ -16,6 +18,7 @@
 ## Authentication Endpoints
 
 ### Request Authentication Code
+
 ```http
 POST /api/auth/request-code
 Content-Type: application/json
@@ -26,6 +29,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -34,12 +38,14 @@ Content-Type: application/json
 ```
 
 **Notes:**
+
 - Code expires in 5 minutes
 - Code is 6 digits
 - Sent via email for production users
 - Fixed code `123456` for `test@example.com`
 
 ### Verify Authentication Code
+
 ```http
 POST /api/auth/verify
 Content-Type: application/json
@@ -51,6 +57,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -65,17 +72,20 @@ Content-Type: application/json
 ```
 
 **Notes:**
+
 - Returns JWT token valid for 24 hours
 - Token must be included in Authorization header for protected endpoints
 - Position Code 99 = Full admin access to all sites
 
 ### Refresh Token
+
 ```http
 POST /api/auth/refresh
 Authorization: Bearer <current-token>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -86,11 +96,13 @@ Authorization: Bearer <current-token>
 ## Health & Status Endpoints
 
 ### Health Check
+
 ```http
 GET /api/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -105,12 +117,14 @@ GET /api/health
 ```
 
 ### System Status
+
 ```http
 GET /api/status
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "activeSessions": 5,
@@ -127,12 +141,14 @@ Authorization: Bearer <token>
 ## Treatment Endpoints
 
 ### Get Available Treatments
+
 ```http
 GET /api/treatments
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "treatments": [
@@ -151,12 +167,14 @@ Authorization: Bearer <token>
 ```
 
 ### Get Treatment Details
+
 ```http
 GET /api/treatments/:treatmentId
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "id": "TR001",
@@ -186,6 +204,7 @@ Authorization: Bearer <token>
 ```
 
 ### Start Treatment Session
+
 ```http
 POST /api/treatments/start
 Authorization: Bearer <token>
@@ -198,6 +217,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "sessionId": "SES123456",
@@ -208,6 +228,7 @@ Content-Type: application/json
 ```
 
 ### End Treatment Session
+
 ```http
 POST /api/treatments/end
 Authorization: Bearer <token>
@@ -227,6 +248,7 @@ Content-Type: application/json
 ## Applicator Endpoints
 
 ### Validate Applicator
+
 ```http
 POST /api/applicators/validate
 Authorization: Bearer <token>
@@ -240,6 +262,7 @@ Content-Type: application/json
 ```
 
 **Response (Success):**
+
 ```json
 {
   "valid": true,
@@ -253,6 +276,7 @@ Content-Type: application/json
 ```
 
 **Response (Validation Failed):**
+
 ```json
 {
   "valid": false,
@@ -262,6 +286,7 @@ Content-Type: application/json
 ```
 
 **Validation Failure Reasons:**
+
 - `already_scanned` - Already used in current treatment
 - `wrong_treatment` - Not for insertion/removal type
 - `no_use` - Marked as no use in Priority
@@ -269,6 +294,7 @@ Content-Type: application/json
 - `expired` - Past expiry date
 
 ### Scan Applicator
+
 ```http
 POST /api/applicators/scan
 Authorization: Bearer <token>
@@ -282,11 +308,13 @@ Content-Type: application/json
 ```
 
 **Use Types:**
+
 - `full_use` - All seeds used
 - `faulty` - Seeds were faulty
 - `no_use` - Applicator not used
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -302,12 +330,14 @@ Content-Type: application/json
 ```
 
 ### Get Recent Applicators
+
 ```http
 GET /api/applicators/recent?hours=24
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "applicators": [
@@ -324,12 +354,14 @@ Authorization: Bearer <token>
 ## Site Management Endpoints
 
 ### Get Available Sites
+
 ```http
 GET /api/sites
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "sites": [
@@ -344,12 +376,14 @@ Authorization: Bearer <token>
 ```
 
 **Notes:**
+
 - Position Code 99 users get all 100+ sites
 - Other users get sites based on Priority PHONEBOOK authorization
 
 ## Priority Integration Endpoints
 
 ### Sync with Priority
+
 ```http
 POST /api/priority/sync
 Authorization: Bearer <token>
@@ -362,12 +396,14 @@ Content-Type: application/json
 ```
 
 **Sync Types:**
+
 - `orders` - Patient orders
 - `applicators` - Applicator list
 - `sites` - Customer/site list
 - `all` - Full sync
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -383,17 +419,21 @@ Content-Type: application/json
 ## WebSocket Events
 
 ### Connection
+
 ```javascript
-const ws = new WebSocket('ws://localhost:5000');
-ws.send(JSON.stringify({
-  type: 'auth',
-  token: 'Bearer token'
-}));
+const ws = new WebSocket("ws://localhost:5000");
+ws.send(
+  JSON.stringify({
+    type: "auth",
+    token: "Bearer token",
+  }),
+);
 ```
 
 ### Event Types
 
 #### Treatment Updates
+
 ```json
 {
   "type": "treatment_update",
@@ -408,6 +448,7 @@ ws.send(JSON.stringify({
 ```
 
 #### Validation Results
+
 ```json
 {
   "type": "validation_result",
@@ -421,15 +462,16 @@ ws.send(JSON.stringify({
 
 ## Test Users
 
-| Email | Code | Access Level | Purpose |
-|-------|------|--------------|---------|
-| `test@example.com` | `123456` | Limited | Development testing |
-| `test@bypass.com` | Any code | Limited | Emergency bypass |
+| Email                | Code      | Access Level             | Purpose                         |
+| -------------------- | --------- | ------------------------ | ------------------------------- |
+| `test@example.com`   | `123456`  | Limited                  | Development testing             |
+| `test@bypass.com`    | Any code  | Limited                  | Emergency bypass                |
 | `alexs@alphatau.com` | Via email | Position 99 (Full Admin) | Production admin with all sites |
 
 ## Error Responses
 
 ### Standard Error Format
+
 ```json
 {
   "success": false,
@@ -442,14 +484,15 @@ ws.send(JSON.stringify({
 ```
 
 ### Common Error Codes
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `INVALID_TOKEN` | 401 | Token invalid or expired |
-| `UNAUTHORIZED` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `VALIDATION_ERROR` | 400 | Request validation failed |
-| `PRIORITY_ERROR` | 502 | Priority API error |
-| `SERVER_ERROR` | 500 | Internal server error |
+
+| Code               | HTTP Status | Description               |
+| ------------------ | ----------- | ------------------------- |
+| `INVALID_TOKEN`    | 401         | Token invalid or expired  |
+| `UNAUTHORIZED`     | 403         | Insufficient permissions  |
+| `NOT_FOUND`        | 404         | Resource not found        |
+| `VALIDATION_ERROR` | 400         | Request validation failed |
+| `PRIORITY_ERROR`   | 502         | Priority API error        |
+| `SERVER_ERROR`     | 500         | Internal server error     |
 
 ## Rate Limiting
 
@@ -461,12 +504,14 @@ ws.send(JSON.stringify({
 ## Request Headers
 
 ### Required Headers
+
 ```http
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
 ### Optional Headers
+
 ```http
 X-Request-ID: unique-request-id
 X-Client-Version: 1.0.0
@@ -476,6 +521,7 @@ Accept-Language: en-US
 ## Response Headers
 
 ### Standard Response Headers
+
 ```http
 X-Request-ID: unique-request-id
 X-Response-Time: 125ms
@@ -486,12 +532,14 @@ X-Rate-Limit-Reset: 1696089600
 ## Pagination
 
 ### Query Parameters
+
 - `page` - Page number (default: 1)
 - `limit` - Items per page (default: 20, max: 100)
 - `sort` - Sort field (e.g., `date`, `-date` for descending)
 - `filter` - Filter expression
 
 ### Paginated Response
+
 ```json
 {
   "data": [],
@@ -509,6 +557,7 @@ X-Rate-Limit-Reset: 1696089600
 The API uses URL versioning. Current version: v1
 
 Future versions will be available at:
+
 - `/api/v2/...`
 - `/api/v3/...`
 
@@ -517,13 +566,16 @@ The unversioned `/api/...` endpoints will always point to v1 for backward compat
 ## CORS Configuration
 
 ### Allowed Origins (Production)
+
 - https://ala-app.israelcentral.cloudapp.azure.com
 - http://ala-app.israelcentral.cloudapp.azure.com (redirects to HTTPS)
 
 ### Allowed Methods
+
 - GET, POST, PUT, DELETE, OPTIONS
 
 ### Allowed Headers
+
 - Authorization, Content-Type, X-Request-ID, X-Client-Version
 
 ## Security Notes

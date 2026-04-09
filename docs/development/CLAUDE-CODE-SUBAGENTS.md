@@ -7,7 +7,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ## 🤖 Available Sub-Agents
 
 ### 1. **Priority Integration Specialist** (`priority-integration`)
+
 **Auto-triggered by**: Priority API, authentication, applicator validation, patient data, OData queries
+
 ```bash
 # Example queries that trigger this agent:
 "Fix Priority API authentication issues"
@@ -17,7 +19,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ```
 
 ### 2. **Database Specialist** (`database-specialist`)
+
 **Auto-triggered by**: Database, PostgreSQL, Sequelize, migrations, table creation, field mapping
+
 ```bash
 # Example queries that trigger this agent:
 "Create new database table for audit logs"
@@ -27,7 +31,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ```
 
 ### 3. **Frontend UI Specialist** (`frontend-ui`)
+
 **Auto-triggered by**: React components, TypeScript errors, UI styling, Tailwind CSS, state management
+
 ```bash
 # Example queries that trigger this agent:
 "Create new React component for treatment tracking"
@@ -37,7 +43,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ```
 
 ### 4. **Azure Deployment Specialist** (`deployment-azure`)
+
 **Auto-triggered by**: Azure VM, deployment, Docker containers, production issues, SSH problems
+
 ```bash
 # Example queries that trigger this agent:
 "Deploy latest changes to Azure VM"
@@ -47,7 +55,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ```
 
 ### 5. **Security Audit Specialist** (`security-audit`)
+
 **Auto-triggered by**: Security vulnerabilities, authentication, JWT problems, CORS errors, compliance
+
 ```bash
 # Example queries that trigger this agent:
 "Audit authentication system security"
@@ -57,7 +67,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ```
 
 ### 6. **Testing Specialist** (`testing-specialist`)
+
 **Auto-triggered by**: Test failures, test creation, coverage, Jest/Vitest/Playwright testing
+
 ```bash
 # Example queries that trigger this agent:
 "Write unit tests for Priority service"
@@ -67,7 +79,9 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ```
 
 ### 7. **Performance Optimization Specialist** (`performance-optimization`)
+
 **Auto-triggered by**: Slow performance, API timeouts, bundle size, memory leaks, optimization
+
 ```bash
 # Example queries that trigger this agent:
 "Optimize slow API endpoints"
@@ -79,6 +93,7 @@ Your ALA Medical Application now has 7 specialized Claude Code sub-agents that w
 ## 🚀 How to Use Sub-Agents
 
 ### Automatic Invocation (Recommended)
+
 Just ask Claude Code naturally about your task. The appropriate specialist will be automatically selected:
 
 ```bash
@@ -93,6 +108,7 @@ Just ask Claude Code naturally about your task. The appropriate specialist will 
 ```
 
 ### Manual Invocation
+
 You can also explicitly request a specific agent:
 
 ```bash
@@ -102,6 +118,7 @@ You can also explicitly request a specific agent:
 ```
 
 ### Parallel Agent Execution
+
 Ask Claude Code to use multiple agents simultaneously:
 
 ```bash
@@ -111,20 +128,25 @@ Ask Claude Code to use multiple agents simultaneously:
 ## 📊 Benefits
 
 ### 1. **Specialized Expertise**
+
 Each agent has deep knowledge of their domain and follows best practices specific to your application.
 
 ### 2. **Automatic Routing**
+
 Tasks are automatically routed to the right specialist without you having to think about it.
 
 ### 3. **Context Preservation**
+
 Sub-agents work in separate contexts, keeping your main conversation clean and focused.
 
 ### 4. **Consistent Patterns**
+
 Each agent follows established patterns and knows the critical files in your codebase.
 
 ## 🔧 Agent Capabilities
 
 ### Tool Access by Agent
+
 - **Priority Integration**: Read, Write, Edit, MultiEdit, Bash, Grep, WebFetch
 - **Database**: Read, Write, Edit, MultiEdit, Bash, Grep
 - **Frontend UI**: Read, Write, Edit, MultiEdit, Bash, Grep
@@ -134,7 +156,9 @@ Each agent follows established patterns and knows the critical files in your cod
 - **Performance**: Read, Grep, Bash, Edit
 
 ### Key Files Each Agent Knows
+
 Each agent is pre-configured with knowledge of critical files:
+
 - Priority agent knows `priorityService.ts`, `applicatorService.ts`
 - Database agent knows model files, `database.ts`, `dbInit.ts`
 - Frontend agent knows components, contexts, `Scanner.tsx`
@@ -148,6 +172,7 @@ Each agent is pre-configured with knowledge of critical files:
 ### Typical Workflows
 
 1. **API Issue Investigation**
+
    ```
    "Priority API is returning 401 errors"
    → priority-integration agent investigates auth flow
@@ -155,6 +180,7 @@ Each agent is pre-configured with knowledge of critical files:
    ```
 
 2. **New Feature Development**
+
    ```
    "Add treatment approval workflow"
    → database-specialist creates approval table
@@ -163,6 +189,7 @@ Each agent is pre-configured with knowledge of critical files:
    ```
 
 3. **Production Deployment**
+
    ```
    "Deploy the latest changes and verify health"
    → deployment-azure handles Azure VM deployment
@@ -179,7 +206,9 @@ Each agent is pre-configured with knowledge of critical files:
 ## 🎛️ Configuration
 
 ### File Location
+
 Agents are located in: `.claude/agents/`
+
 - `priority-integration.md`
 - `database-specialist.md`
 - `frontend-ui.md`
@@ -189,7 +218,9 @@ Agents are located in: `.claude/agents/`
 - `performance-optimization.md`
 
 ### Customization
+
 You can modify any agent by editing their markdown file:
+
 - Update tool permissions in the YAML frontmatter
 - Modify the description to change auto-trigger conditions
 - Add domain-specific instructions in the system prompt
@@ -205,6 +236,7 @@ You can modify any agent by editing their markdown file:
 ## 🔍 Monitoring and Feedback
 
 The sub-agents will:
+
 - Provide clear reasoning for their selections
 - Show their specialized knowledge in responses
 - Follow established patterns from your CLAUDE.md file
@@ -215,6 +247,7 @@ The sub-agents will:
 Start using the sub-agents immediately! Just ask Claude Code about any development task, and the appropriate specialist will automatically help you. No setup required - the agents are ready to work.
 
 Examples to try right now:
+
 - "Check if the Priority API is working correctly"
 - "Create a new React component for user preferences"
 - "Deploy the latest changes to production"

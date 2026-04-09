@@ -11,6 +11,7 @@
 ## ✅ What's COMPLETE (Committed)
 
 ### Backend Infrastructure
+
 - ✅ [backend/src/middleware/upload.ts](../backend/src/middleware/upload.ts) - Multer configuration
   - File type validation (images: JPEG, PNG, GIF, WebP; videos: MP4, MPEG, MOV, AVI, WMV)
   - 50MB max file size per file, 10 files max per request
@@ -30,6 +31,7 @@
   - `@types/node-cron@^3.0.11`
 
 ### Frontend Display
+
 - ✅ [frontend/src/pages/Treatment/UseList.tsx](../frontend/src/pages/Treatment/UseList.tsx) - Upload status display
   - "Uploads" column in applicator list
   - File count badges with status (pending/syncing/synced/failed)
@@ -47,6 +49,7 @@
   - Updated App.tsx routes
 
 ### Configuration
+
 - ✅ Docker volumes for uploads persistence
 - ✅ Nginx cache optimizations
 - ✅ Jest config modernization
@@ -57,11 +60,13 @@
 ## ❌ What's MISSING (Blockers)
 
 ### 🚨 BLOCKER 1: SyncService (High Priority)
+
 **File**: `backend/src/services/syncService.ts` (DOES NOT EXIST)
 
 **Status**: File missing, referenced in reverted controller code
 
 **Required Implementation**:
+
 ```typescript
 class SyncService {
   /**
@@ -79,11 +84,13 @@ class SyncService {
 ```
 
 **Depends on**:
+
 - Priority API integration (priorityService.updateApplicatorWithAttachment exists but untested)
 - Applicator model with attachment fields
 - Database migration
 
 **Testing needs**:
+
 - Unit tests for sync logic
 - Integration tests with Priority API
 - Error handling and retry tests
@@ -91,11 +98,13 @@ class SyncService {
 ---
 
 ### 🚨 BLOCKER 2: Database Migration (Critical)
+
 **File**: `backend/src/migrations/YYYYMMDD-add-applicator-attachments.sql` (DOES NOT EXIST)
 
 **Status**: Migration missing, model references fields that don't exist in database
 
 **Required SQL**:
+
 ```sql
 -- Add attachment fields to applicators table
 ALTER TABLE applicators ADD COLUMN IF NOT EXISTS attachment_filename VARCHAR(255);
@@ -112,6 +121,7 @@ CREATE INDEX IF NOT EXISTS idx_applicators_zip_path ON applicators(attachment_zi
 ```
 
 **Migration steps**:
+
 1. Create migration file with timestamp
 2. Test on local database first
 3. Plan rollback strategy
@@ -120,6 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_applicators_zip_path ON applicators(attachment_zi
 6. Apply to production
 
 **Notes**:
+
 - Must run BEFORE uncommenting zipService cleanup methods
 - Must run BEFORE adding upload handler to controller
 - Test with existing treatments to ensure no breaking changes
@@ -127,15 +138,18 @@ CREATE INDEX IF NOT EXISTS idx_applicators_zip_path ON applicators(attachment_zi
 ---
 
 ### 🚨 BLOCKER 3: Applicator Model Fields (Critical)
+
 **File**: [backend/src/models/Applicator.ts](../backend/src/models/Applicator.ts)
 
 **Status**: Missing `attachmentSyncStatus` field definition
 
 **Current State**:
+
 - Model has: `attachmentFilename`, `attachmentZipPath`, `attachmentFileCount`, `attachmentSizeBytes`
 - Model MISSING: `attachmentSyncStatus` (referenced in zipService and controller)
 
 **Required Addition**:
+
 ```typescript
 // In ApplicatorAttributes interface:
 attachmentSyncStatus: 'pending' | 'syncing' | 'synced' | 'failed' | null;
@@ -155,21 +169,26 @@ attachmentSyncStatus: {
 ```
 
 **Must be done AFTER**:
+
 - Database migration is applied
 
 ---
 
 ### 🚨 BLOCKER 4: File Upload UI (High Priority)
+
 **File**: [frontend/src/pages/Treatment/TreatmentDocumentation.tsx](../frontend/src/pages/Treatment/TreatmentDocumentation.tsx)
 
 **Status**: State variables exist but no UI controls
 
 **Current State**:
+
 - Has state: `selectedFiles`, `filePreviews`, `uploading`, `uploadSuccess`
 - Missing: Actual UI to trigger file selection and upload
 
 **Required UI Elements**:
+
 1. **File Input Control**:
+
    ```tsx
    <input
      type="file"
@@ -202,6 +221,7 @@ attachmentSyncStatus: {
    - Link to specific applicator
 
 **Service Integration**:
+
 ```typescript
 // Already exists in treatmentService (currently reverted)
 async uploadApplicatorFiles(
@@ -212,6 +232,7 @@ async uploadApplicatorFiles(
 ```
 
 **UX Considerations**:
+
 - Show upload status after save
 - Allow immediate file upload after applicator entry
 - Clear feedback for sync status
@@ -220,40 +241,46 @@ async uploadApplicatorFiles(
 ---
 
 ### 🚨 BLOCKER 5: Upload Controller Handler (Medium Priority)
+
 **File**: [backend/src/controllers/applicatorController.ts](../backend/src/controllers/applicatorController.ts)
 
 **Status**: Handler exists but was reverted due to dependencies
 
 **Required Implementation**:
-```typescript
-export const uploadApplicatorFiles = asyncHandler(async (req: Request, res: Response) => {
-  const { treatmentId, id } = req.params;
-  const files = req.files as Express.Multer.File[];
 
-  // 1. Verify files were uploaded
-  // 2. Verify treatment exists and user has access
-  // 3. Verify applicator belongs to treatment
-  // 4. Create ZIP from uploaded files
-  // 5. Update applicator with ZIP info and set syncStatus='pending'
-  // 6. Clean up temp files
-  // 7. Trigger background sync (syncService.syncApplicatorById)
-  // 8. Return success response
-});
+```typescript
+export const uploadApplicatorFiles = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { treatmentId, id } = req.params;
+    const files = req.files as Express.Multer.File[];
+
+    // 1. Verify files were uploaded
+    // 2. Verify treatment exists and user has access
+    // 3. Verify applicator belongs to treatment
+    // 4. Create ZIP from uploaded files
+    // 5. Update applicator with ZIP info and set syncStatus='pending'
+    // 6. Clean up temp files
+    // 7. Trigger background sync (syncService.syncApplicatorById)
+    // 8. Return success response
+  },
+);
 ```
 
 **Route Registration**:
+
 ```typescript
 // In backend/src/routes/treatmentRoutes.ts
 router.post(
-  '/:treatmentId/applicators/:id/upload',
+  "/:treatmentId/applicators/:id/upload",
   validateApplicatorUpdate,
   criticalOperationHealthCheck,
-  uploadMiddleware.array('files', 10),
-  uploadApplicatorFiles
+  uploadMiddleware.array("files", 10),
+  uploadApplicatorFiles,
 );
 ```
 
 **Depends on**:
+
 - SyncService implementation
 - Applicator model with attachment fields
 - Database migration
@@ -261,6 +288,7 @@ router.post(
 ---
 
 ### 🚨 BLOCKER 6: Priority API Integration (Medium Priority)
+
 **File**: [backend/src/services/priorityService.ts](../backend/src/services/priorityService.ts)
 
 **Status**: Method exists but was reverted, needs testing
@@ -268,12 +296,14 @@ router.post(
 **Method**: `updateApplicatorWithAttachment()`
 
 **Implementation Exists**:
+
 - Converts ZIP to Base64
 - Calls Priority PATCH endpoint
 - Updates SIBD_APPLICATUSELIST_SUBFORM
 - Sets EXTFILENAME and EXTFILEDATA fields
 
 **Testing Needs**:
+
 1. **Unit Tests**:
    - Base64 conversion
    - OData endpoint construction
@@ -293,12 +323,14 @@ router.post(
    - Performance testing with large files (50MB)
 
 **Priority API Endpoints Used**:
+
 ```
 GET  /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM?$filter=SERNUM eq '{serialNumber}'
 PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 ```
 
 **Fields Updated**:
+
 - `EXTFILENAME`: Filename (e.g., "applicator-uuid-timestamp.zip")
 - `EXTFILEDATA`: Base64-encoded ZIP content
 
@@ -307,6 +339,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 ## 📋 Implementation Checklist
 
 ### Phase 1: Database & Model (Foundation)
+
 - [ ] Create database migration file
 - [ ] Test migration on local database
 - [ ] Add `attachmentSyncStatus` field to Applicator model
@@ -315,6 +348,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 - [ ] Update Sequelize model tests
 
 ### Phase 2: Backend Services
+
 - [ ] Create SyncService class
   - [ ] `syncApplicatorById()` method
   - [ ] Error handling and retry logic
@@ -324,6 +358,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 - [ ] Add integration tests for Priority API sync
 
 ### Phase 3: Backend Controller
+
 - [ ] Implement `uploadApplicatorFiles` handler
 - [ ] Add route registration
 - [ ] Test file upload endpoint with Postman
@@ -331,6 +366,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 - [ ] Add validation tests (file type, size, count)
 
 ### Phase 4: Frontend UI
+
 - [ ] Design file upload UI flow
   - [ ] Decide: When does user upload? (After save? During? Separate?)
   - [ ] Sketch wireframe
@@ -342,6 +378,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 - [ ] Add UI tests (Vitest component tests)
 
 ### Phase 5: End-to-End Testing
+
 - [ ] Test complete workflow:
   1. Create treatment
   2. Add applicator
@@ -362,6 +399,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
   - [ ] Database remains consistent
 
 ### Phase 6: Production Deployment
+
 - [ ] Deploy to staging
 - [ ] QA testing on staging
 - [ ] Performance testing (50MB files)
@@ -417,9 +455,11 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 ## 💡 Design Decisions to Make
 
 ### 1. Upload Timing
+
 **Question**: When should the user upload files?
 
 **Options**:
+
 - **A) Immediately after applicator save** (recommended)
   - Pros: User still in context, natural workflow
   - Cons: Adds friction to applicator entry
@@ -435,9 +475,11 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 **Recommendation**: Option A (immediately after save) with skip option
 
 ### 2. Upload Requirement
+
 **Question**: Are file uploads required or optional?
 
 **Options**:
+
 - **Required**: Every applicator must have files
   - Pros: Complete documentation
   - Cons: Blocks workflow if no photos taken
@@ -449,9 +491,11 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 **Recommendation**: Optional (clinical workflow may not always allow photos)
 
 ### 3. Sync Strategy
+
 **Question**: When should files sync to Priority?
 
 **Options**:
+
 - **Immediate**: Sync right after upload
   - Pros: Data in Priority ASAP
   - Cons: Blocks UI if Priority is slow
@@ -467,9 +511,11 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 **Recommendation**: Background (already implemented in reverted controller)
 
 ### 4. Retry Logic
+
 **Question**: How should failed syncs be handled?
 
 **Recommendation**:
+
 - Automatic retry: 3 attempts with exponential backoff
 - After 3 failures: Mark as 'failed', require manual intervention
 - Show failed status in UI with "Retry" button
@@ -480,18 +526,21 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 ## 🔍 Testing Strategy
 
 ### Unit Tests
+
 - [ ] zipService: ZIP creation, Base64 conversion, cleanup
 - [ ] SyncService: Sync logic, error handling, retry
 - [ ] uploadMiddleware: File validation, size limits
 - [ ] Controller: Authorization, file handling, cleanup on error
 
 ### Integration Tests
+
 - [ ] End-to-end upload workflow
 - [ ] Priority API sync with test data
 - [ ] Database transactions and rollback
 - [ ] File system cleanup after errors
 
 ### Manual Testing Checklist
+
 - [ ] Upload 1 image (small, < 1MB)
 - [ ] Upload 10 images (at max limit)
 - [ ] Upload 1 video (large, 40MB)
@@ -510,6 +559,7 @@ PATCH /ORDERS('{orderId}')/SIBD_APPLICATUSELIST_SUBFORM({lineKey})
 ## 📊 Metrics to Track
 
 After deployment, monitor:
+
 - Upload success rate
 - Average file size
 - Sync success rate to Priority
@@ -523,27 +573,35 @@ After deployment, monitor:
 ## 🚨 Risks & Mitigations
 
 ### Risk 1: Disk Space Exhaustion
+
 **Mitigation**:
+
 - Cleanup cron job runs daily
 - Monitor disk usage
 - Alert if > 80% full
 - Set max total upload size (e.g., 10GB limit)
 
 ### Risk 2: Priority API Failures
+
 **Mitigation**:
+
 - Retry logic with exponential backoff
 - Persist failed sync status
 - Manual retry option in UI
 - Alert on high failure rate
 
 ### Risk 3: File Corruption
+
 **Mitigation**:
+
 - SHA-256 checksum verification
 - Test file integrity after download from Priority
 - Log checksums for debugging
 
 ### Risk 4: Performance Impact
+
 **Mitigation**:
+
 - Background sync (non-blocking)
 - Compress with level 9 (smaller ZIPs)
 - Limit max file size (50MB)

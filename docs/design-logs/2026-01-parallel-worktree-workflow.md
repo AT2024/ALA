@@ -12,6 +12,7 @@ The ALA project needs automated infrastructure for parallel AI agent development
 ### Problem Statement
 
 Currently, parallel agent development requires:
+
 1. Manual branch creation and management
 2. Manual port allocation to avoid conflicts
 3. Manual .env file setup for each parallel session
@@ -38,6 +39,7 @@ Currently, parallel agent development requires:
 A bash script to automate Git Worktree creation, environment syncing, and port allocation.
 
 **CLI Interface:**
+
 ```bash
 ./scripts/setup-parallel-worker.sh create --branch feat/feature-A --name worker-1
 ./scripts/setup-parallel-worker.sh list
@@ -46,12 +48,14 @@ A bash script to automate Git Worktree creation, environment syncing, and port a
 ```
 
 **Port Allocation:**
+
 - Formula: `port = base_port + (worker_number * 100)`
 - Worker 1: Frontend 3100, Backend 5100
 - Worker 2: Frontend 3200, Backend 5200
 - Maximum 9 parallel workers
 
 **Features:**
+
 - Registry-based port tracking (`.worktree-registry.json`)
 - .env file copying with automatic port patching
 - npm install in worktree
@@ -63,19 +67,20 @@ A bash script to automate Git Worktree creation, environment syncing, and port a
 A Claude Code slash command to spawn background agents for analysis tasks.
 
 **Critical Constraint:** Background agents CANNOT write files. They can only:
+
 - Run tests, linting, type checking
 - Perform code review analysis
 - Generate text reports
 
 **Supported Task Types:**
 
-| Task | Command | Agent |
-|------|---------|-------|
-| test | `npm test` | testing-specialist |
-| lint | `npm run lint && typecheck` | ala-code-reviewer |
-| review | Read-only analysis | ala-code-reviewer |
-| security | Security scanning | security-audit |
-| coverage | `npm run test:coverage` | testing-specialist |
+| Task     | Command                     | Agent              |
+| -------- | --------------------------- | ------------------ |
+| test     | `npm test`                  | testing-specialist |
+| lint     | `npm run lint && typecheck` | ala-code-reviewer  |
+| review   | Read-only analysis          | ala-code-reviewer  |
+| security | Security scanning           | security-audit     |
+| coverage | `npm run test:coverage`     | testing-specialist |
 
 ### Component 3: Isolation Rules
 
@@ -90,30 +95,30 @@ Updates to `CLAUDE.md` and `.claude/settings.md` with strict isolation principle
 
 Implement all three components with the following design decisions:
 
-| Question | Decision | Rationale |
-|----------|----------|-----------|
-| Worktree Location | `.worktrees/` | Hidden, gitignored, keeps root clean |
-| Platform Support | Bash only | Matches existing patterns, works with Git Bash |
-| Database Handling | Shared database | Simpler setup, acceptable for dev |
-| Background Agents | Analysis-only | Technical limitation - background agents cannot write files |
+| Question          | Decision        | Rationale                                                   |
+| ----------------- | --------------- | ----------------------------------------------------------- |
+| Worktree Location | `.worktrees/`   | Hidden, gitignored, keeps root clean                        |
+| Platform Support  | Bash only       | Matches existing patterns, works with Git Bash              |
+| Database Handling | Shared database | Simpler setup, acceptable for dev                           |
+| Background Agents | Analysis-only   | Technical limitation - background agents cannot write files |
 
 ## Implementation Notes
 
 ### Files Created
 
-| File | Purpose |
-|------|---------|
-| `scripts/setup-parallel-worker.sh` | Worktree management script |
-| `.claude/commands/spawn.md` | Background agent spawning command |
+| File                               | Purpose                           |
+| ---------------------------------- | --------------------------------- |
+| `scripts/setup-parallel-worker.sh` | Worktree management script        |
+| `.claude/commands/spawn.md`        | Background agent spawning command |
 
 ### Files Modified
 
-| File | Change |
-|------|--------|
-| `CLAUDE.md` | Add "Parallel Development with Git Worktrees" section |
-| `.claude/settings.md` | Add "Parallel Worktree Isolation Rules" section |
-| `DESIGN_LOG.md` | Add DL-002 entry to index |
-| `.gitignore` | Add `.worktrees/` exclusion |
+| File                  | Change                                                |
+| --------------------- | ----------------------------------------------------- |
+| `CLAUDE.md`           | Add "Parallel Development with Git Worktrees" section |
+| `.claude/settings.md` | Add "Parallel Worktree Isolation Rules" section       |
+| `DESIGN_LOG.md`       | Add DL-002 entry to index                             |
+| `.gitignore`          | Add `.worktrees/` exclusion                           |
 
 ### Directory Structure
 
@@ -132,12 +137,12 @@ ala-improved/
 
 ## Alternatives Considered
 
-| Alternative | Decision | Rationale |
-|-------------|----------|-----------|
-| Docker-per-worker | SKIP | Too resource-intensive for development |
-| Python orchestration | SKIP | Bash matches existing script patterns |
-| MCP coordination server | SKIP | Violates isolation principle |
-| File-based agent handoffs | SKIP | Creates coordination complexity |
+| Alternative               | Decision | Rationale                              |
+| ------------------------- | -------- | -------------------------------------- |
+| Docker-per-worker         | SKIP     | Too resource-intensive for development |
+| Python orchestration      | SKIP     | Bash matches existing script patterns  |
+| MCP coordination server   | SKIP     | Violates isolation principle           |
+| File-based agent handoffs | SKIP     | Creates coordination complexity        |
 
 ## Results
 

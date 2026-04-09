@@ -1,9 +1,11 @@
 # ALA Medical Application - Offline Implementation Guide
+
 ## Complete Task Breakdown with Sub-Agent Assignments
 
 ---
 
 ## Overview
+
 This document provides a comprehensive, step-by-step implementation plan for adding offline capabilities to the ALA medical application. Each task is assigned to the most appropriate sub-agent with specific instructions, verification criteria, and dependencies.
 
 ---
@@ -11,11 +13,13 @@ This document provides a comprehensive, step-by-step implementation plan for add
 ## Phase 1: Database Foundation (database-specialist)
 
 ### Task 1.1: Create Offline Support Schema
+
 **Sub-agent**: database-specialist
 **Priority**: CRITICAL
 **Dependencies**: None
 
 **Implementation Instructions**:
+
 ```sql
 -- Add to all existing tables:
 ALTER TABLE treatments ADD COLUMN IF NOT EXISTS sync_status VARCHAR(20) DEFAULT 'synced';
@@ -66,6 +70,7 @@ CREATE INDEX idx_applicators_sync ON applicators(sync_status, last_modified);
 ```
 
 **Verification Steps**:
+
 1. SSH into Azure VM: `ssh azureuser@20.217.84.100`
 2. Connect to database: `docker exec -it ala-db-azure psql -U ala_user -d ala_production`
 3. Run `\dt` to verify new tables exist
@@ -77,80 +82,79 @@ CREATE INDEX idx_applicators_sync ON applicators(sync_status, last_modified);
 ## Phase 2: Frontend PWA Setup (frontend-ui)
 
 ### Task 2.1: Create Service Worker
+
 **Sub-agent**: frontend-ui
 **Priority**: CRITICAL
 **Dependencies**: None
 
 **File**: `frontend/public/service-worker.js`
+
 ```javascript
-const CACHE_NAME = 'ala-medical-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/offline.html'
-];
+const CACHE_NAME = "ala-medical-v1";
+const urlsToCache = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
 // Install event - cache essential files
-self.addEventListener('install', event => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache)),
   );
   self.skipWaiting();
 });
 
 // Activate event - clean old caches
-self.addEventListener('activate', event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name)),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
 
 // Fetch event - network first, fallback to cache
-self.addEventListener('fetch', event => {
-  if (event.request.url.includes('/api/')) {
+self.addEventListener("fetch", (event) => {
+  if (event.request.url.includes("/api/")) {
     // API calls: network first, cache fallback
     event.respondWith(
       fetch(event.request)
-        .then(response => {
+        .then((response) => {
           const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
+          caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
           });
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => caches.match(event.request)),
     );
   } else {
     // Static assets: cache first
     event.respondWith(
-      caches.match(event.request)
-        .then(response => response || fetch(event.request))
+      caches
+        .match(event.request)
+        .then((response) => response || fetch(event.request)),
     );
   }
 });
 
 // Background sync for queued operations
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-treatments') {
+self.addEventListener("sync", (event) => {
+  if (event.tag === "sync-treatments") {
     event.waitUntil(syncTreatments());
   }
 });
 
 async function syncTreatments() {
   // Implementation will be added by backend team
-  console.log('Syncing treatments...');
+  console.log("Syncing treatments...");
 }
 ```
 
 **File**: `frontend/public/manifest.json`
+
 ```json
 {
   "name": "ALA Medical Treatment Tracker",
@@ -177,40 +181,45 @@ async function syncTreatments() {
 ```
 
 **File**: `frontend/public/offline.html`
+
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>ALA Medical - Offline</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: #f5f5f5;
-    }
-    .offline-container {
-      text-align: center;
-      padding: 2rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-  </style>
-</head>
-<body>
-  <div class="offline-container">
-    <h1>You're Offline</h1>
-    <p>The application is working in offline mode. Your data will sync when connection is restored.</p>
-  </div>
-</body>
+  <head>
+    <title>ALA Medical - Offline</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background: #f5f5f5;
+      }
+      .offline-container {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="offline-container">
+      <h1>You're Offline</h1>
+      <p>
+        The application is working in offline mode. Your data will sync when
+        connection is restored.
+      </p>
+    </div>
+  </body>
 </html>
 ```
 
 **Verification Steps**:
+
 1. Check service worker registration in Chrome DevTools > Application > Service Workers
 2. Verify cache storage in DevTools > Application > Cache Storage
 3. Test offline mode: DevTools > Network > Offline checkbox
@@ -218,18 +227,21 @@ async function syncTreatments() {
 5. Test install prompt appears on mobile/desktop
 
 ### Task 2.2: Register Service Worker in React
+
 **Sub-agent**: frontend-ui
 **Priority**: CRITICAL
 **Dependencies**: Task 2.1
 
 **File**: `frontend/src/registerServiceWorker.ts`
+
 ```typescript
 export function register() {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('SW registered:', registration);
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((registration) => {
+          console.log("SW registered:", registration);
 
           // Check for updates every 60 seconds
           setInterval(() => {
@@ -237,14 +249,17 @@ export function register() {
           }, 60000);
 
           // Handle updates
-          registration.addEventListener('updatefound', () => {
+          registration.addEventListener("updatefound", () => {
             const newWorker = registration.installing;
             if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              newWorker.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
                   // New update available
-                  if (confirm('New version available! Reload to update?')) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  if (confirm("New version available! Reload to update?")) {
+                    newWorker.postMessage({ type: "SKIP_WAITING" });
                     window.location.reload();
                   }
                 }
@@ -252,15 +267,16 @@ export function register() {
             }
           });
         })
-        .catch(error => console.error('SW registration failed:', error));
+        .catch((error) => console.error("SW registration failed:", error));
     });
   }
 }
 ```
 
 **Modify**: `frontend/src/main.tsx`
+
 ```typescript
-import { register } from './registerServiceWorker';
+import { register } from "./registerServiceWorker";
 // ... existing imports
 
 // After ReactDOM.createRoot
@@ -272,24 +288,26 @@ register();
 ## Phase 3: Offline Storage Layer (frontend-ui)
 
 ### Task 3.1: Implement IndexedDB Service
+
 **Sub-agent**: frontend-ui
 **Priority**: CRITICAL
 **Dependencies**: None
 
 **File**: `frontend/src/services/offlineStorage.ts`
+
 ```typescript
-import Dexie, { Table } from 'dexie';
+import Dexie, { Table } from "dexie";
 
 export interface OfflineTreatment {
   id?: number;
   localId: string;
   patientId: string;
   patientName: string;
-  treatmentType: 'insertion' | 'removal';
+  treatmentType: "insertion" | "removal";
   seedsPlanned: number;
   seedsUsed: number;
   applicators: OfflineApplicator[];
-  syncStatus: 'pending' | 'synced' | 'conflict';
+  syncStatus: "pending" | "synced" | "conflict";
   lastModified: Date;
   deviceId: string;
   version: number;
@@ -303,18 +321,18 @@ export interface OfflineApplicator {
   partName: string;
   seedCount: number;
   usageType: string;
-  syncStatus: 'pending' | 'synced' | 'conflict';
+  syncStatus: "pending" | "synced" | "conflict";
   lastModified: Date;
 }
 
 export interface SyncQueueItem {
   id?: number;
-  operationType: 'CREATE' | 'UPDATE' | 'DELETE';
-  entityType: 'treatment' | 'applicator';
+  operationType: "CREATE" | "UPDATE" | "DELETE";
+  entityType: "treatment" | "applicator";
   entityLocalId: string;
   payload: any;
   retryCount: number;
-  status: 'pending' | 'syncing' | 'completed' | 'failed';
+  status: "pending" | "syncing" | "completed" | "failed";
   errorMessage?: string;
   createdAt: Date;
 }
@@ -325,43 +343,45 @@ class OfflineDatabase extends Dexie {
   syncQueue!: Table<SyncQueueItem>;
 
   constructor() {
-    super('ALAMedicalOffline');
+    super("ALAMedicalOffline");
 
     this.version(1).stores({
-      treatments: '++id, localId, patientId, syncStatus, lastModified',
-      applicators: '++id, localId, treatmentLocalId, serialNumber, syncStatus',
-      syncQueue: '++id, entityLocalId, status, entityType, createdAt'
+      treatments: "++id, localId, patientId, syncStatus, lastModified",
+      applicators: "++id, localId, treatmentLocalId, serialNumber, syncStatus",
+      syncQueue: "++id, entityLocalId, status, entityType, createdAt",
     });
   }
 
-  async addToSyncQueue(item: Omit<SyncQueueItem, 'id' | 'createdAt'>) {
+  async addToSyncQueue(item: Omit<SyncQueueItem, "id" | "createdAt">) {
     return this.syncQueue.add({
       ...item,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
   }
 
   async getPendingSyncItems() {
-    return this.syncQueue.where('status').equals('pending').toArray();
+    return this.syncQueue.where("status").equals("pending").toArray();
   }
 
   async clearSyncedItems() {
-    return this.syncQueue.where('status').equals('completed').delete();
+    return this.syncQueue.where("status").equals("completed").delete();
   }
 }
 
 export const offlineDb = new OfflineDatabase();
 
 // Helper functions
-export async function saveOfflineTreatment(treatment: Omit<OfflineTreatment, 'id'>) {
+export async function saveOfflineTreatment(
+  treatment: Omit<OfflineTreatment, "id">,
+) {
   const id = await offlineDb.treatments.add(treatment);
   await offlineDb.addToSyncQueue({
-    operationType: 'CREATE',
-    entityType: 'treatment',
+    operationType: "CREATE",
+    entityType: "treatment",
     entityLocalId: treatment.localId,
     payload: treatment,
     retryCount: 0,
-    status: 'pending'
+    status: "pending",
   });
   return id;
 }
@@ -379,17 +399,19 @@ export async function syncWithServer() {
 ```
 
 **NPM Package to Install**:
+
 ```bash
 npm install dexie
 ```
 
 **Verification Steps**:
+
 1. Open Chrome DevTools > Application > IndexedDB
 2. Verify "ALAMedicalOffline" database exists
 3. Test data insertion in console:
    ```javascript
-   const db = new Dexie('ALAMedicalOffline');
-   db.open().then(() => console.log('DB opened'));
+   const db = new Dexie("ALAMedicalOffline");
+   db.open().then(() => console.log("DB opened"));
    ```
 4. Create test treatment and verify it appears in IndexedDB
 5. Check sync queue has pending items
@@ -399,11 +421,13 @@ npm install dexie
 ## Phase 4: Offline Context Implementation (frontend-ui)
 
 ### Task 4.1: Create Offline Context
+
 **Sub-agent**: frontend-ui
 **Priority**: HIGH
 **Dependencies**: Task 3.1
 
 **File**: `frontend/src/contexts/OfflineContext.tsx`
+
 ```typescript
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { offlineDb, syncWithServer } from '../services/offlineStorage';
@@ -513,6 +537,7 @@ export const useOffline = () => {
 ```
 
 **Add to**: `frontend/src/App.tsx`
+
 ```typescript
 import { OfflineProvider } from './contexts/OfflineContext';
 
@@ -527,11 +552,13 @@ import { OfflineProvider } from './contexts/OfflineContext';
 ## Phase 5: Offline UI Components (frontend-ui)
 
 ### Task 5.1: Create Offline Status Indicator
+
 **Sub-agent**: frontend-ui
 **Priority**: HIGH
 **Dependencies**: Task 4.1
 
 **File**: `frontend/src/components/OfflineIndicator.tsx`
+
 ```typescript
 import React from 'react';
 import { useOffline } from '../contexts/OfflineContext';
@@ -607,14 +634,16 @@ export function OfflineIndicator() {
 ## Phase 6: Backend Sync API (general-purpose)
 
 ### Task 6.1: Create Sync Controller and Routes
+
 **Sub-agent**: general-purpose
 **Priority**: HIGH
 **Dependencies**: Task 1.1
 
 **File**: `backend/src/controllers/syncController.ts`
+
 ```typescript
-import { Request, Response } from 'express';
-import { syncService } from '../services/syncService';
+import { Request, Response } from "express";
+import { syncService } from "../services/syncService";
 
 export const syncController = {
   // Push local changes to server
@@ -624,7 +653,7 @@ export const syncController = {
       const results = await syncService.processSync(deviceId, operations);
       res.json({ success: true, results });
     } catch (error) {
-      res.status(500).json({ error: 'Sync failed', details: error.message });
+      res.status(500).json({ error: "Sync failed", details: error.message });
     }
   },
 
@@ -632,10 +661,13 @@ export const syncController = {
   async pull(req: Request, res: Response) {
     try {
       const { deviceId, lastSyncTime } = req.query;
-      const updates = await syncService.getUpdates(deviceId as string, lastSyncTime as string);
+      const updates = await syncService.getUpdates(
+        deviceId as string,
+        lastSyncTime as string,
+      );
       res.json({ success: true, updates });
     } catch (error) {
-      res.status(500).json({ error: 'Pull failed', details: error.message });
+      res.status(500).json({ error: "Pull failed", details: error.message });
     }
   },
 
@@ -646,31 +678,35 @@ export const syncController = {
       const status = await syncService.getSyncStatus(deviceId);
       res.json({ success: true, status });
     } catch (error) {
-      res.status(500).json({ error: 'Status check failed', details: error.message });
+      res
+        .status(500)
+        .json({ error: "Status check failed", details: error.message });
     }
-  }
+  },
 };
 ```
 
 **File**: `backend/src/routes/syncRoutes.ts`
+
 ```typescript
-import { Router } from 'express';
-import { syncController } from '../controllers/syncController';
-import { authenticate } from '../middleware/auth';
+import { Router } from "express";
+import { syncController } from "../controllers/syncController";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
-router.post('/push', authenticate, syncController.push);
-router.get('/pull', authenticate, syncController.pull);
-router.get('/status/:deviceId', authenticate, syncController.status);
+router.post("/push", authenticate, syncController.push);
+router.get("/pull", authenticate, syncController.pull);
+router.get("/status/:deviceId", authenticate, syncController.status);
 
 export default router;
 ```
 
 **Add to**: `backend/src/server.ts`
+
 ```typescript
-import syncRoutes from './routes/syncRoutes';
-app.use('/api/sync', syncRoutes);
+import syncRoutes from "./routes/syncRoutes";
+app.use("/api/sync", syncRoutes);
 ```
 
 ---
@@ -678,11 +714,13 @@ app.use('/api/sync', syncRoutes);
 ## Phase 7: Test Data Integration (general-purpose)
 
 ### Task 7.1: Enable Test Data on Azure VM
+
 **Sub-agent**: deployment-azure
 **Priority**: HIGH
 **Dependencies**: None
 
 **SSH Commands**:
+
 ```bash
 # Connect to VM
 ssh azureuser@20.217.84.100
@@ -699,6 +737,7 @@ docker logs ala-api-azure --tail=50 | grep "test data"
 ```
 
 **Verification Steps**:
+
 1. Login as test@example.com (code: 123456)
 2. Verify test hospitals appear in site selection
 3. Check test patients are visible
@@ -709,50 +748,52 @@ docker logs ala-api-azure --tail=50 | grep "test data"
 ## Phase 8: Testing Suite (testing-specialist)
 
 ### Task 8.1: Create Offline Tests
+
 **Sub-agent**: testing-specialist
 **Priority**: MEDIUM
 **Dependencies**: All previous tasks
 
 **File**: `frontend/src/__tests__/offline.test.ts`
-```typescript
-import { offlineDb } from '../services/offlineStorage';
 
-describe('Offline Functionality', () => {
+```typescript
+import { offlineDb } from "../services/offlineStorage";
+
+describe("Offline Functionality", () => {
   beforeEach(async () => {
     await offlineDb.delete();
     await offlineDb.open();
   });
 
-  test('saves treatment offline', async () => {
+  test("saves treatment offline", async () => {
     const treatment = {
-      localId: 'test-123',
-      patientId: 'P001',
-      patientName: 'Test Patient',
-      treatmentType: 'insertion' as const,
+      localId: "test-123",
+      patientId: "P001",
+      patientName: "Test Patient",
+      treatmentType: "insertion" as const,
       seedsPlanned: 10,
       seedsUsed: 0,
       applicators: [],
-      syncStatus: 'pending' as const,
+      syncStatus: "pending" as const,
       lastModified: new Date(),
-      deviceId: 'test-device',
-      version: 1
+      deviceId: "test-device",
+      version: 1,
     };
 
     const id = await offlineDb.treatments.add(treatment);
     expect(id).toBeDefined();
 
     const saved = await offlineDb.treatments.get(id);
-    expect(saved?.patientName).toBe('Test Patient');
+    expect(saved?.patientName).toBe("Test Patient");
   });
 
-  test('queues operations for sync', async () => {
+  test("queues operations for sync", async () => {
     await offlineDb.addToSyncQueue({
-      operationType: 'CREATE',
-      entityType: 'treatment',
-      entityLocalId: 'test-123',
+      operationType: "CREATE",
+      entityType: "treatment",
+      entityLocalId: "test-123",
       payload: {},
       retryCount: 0,
-      status: 'pending'
+      status: "pending",
     });
 
     const pending = await offlineDb.getPendingSyncItems();
@@ -762,30 +803,31 @@ describe('Offline Functionality', () => {
 ```
 
 **E2E Test**: `frontend/e2e/offline.spec.ts`
-```typescript
-import { test, expect } from '@playwright/test';
 
-test.describe('Offline Mode', () => {
-  test('shows offline indicator when offline', async ({ page, context }) => {
-    await page.goto('/');
+```typescript
+import { test, expect } from "@playwright/test";
+
+test.describe("Offline Mode", () => {
+  test("shows offline indicator when offline", async ({ page, context }) => {
+    await page.goto("/");
 
     // Go offline
     await context.setOffline(true);
 
     // Check indicator appears
-    await expect(page.locator('text=Offline Mode')).toBeVisible();
+    await expect(page.locator("text=Offline Mode")).toBeVisible();
 
     // Try to create treatment
-    await page.click('text=New Treatment');
+    await page.click("text=New Treatment");
 
     // Should work offline
-    await expect(page.locator('text=Treatment saved locally')).toBeVisible();
+    await expect(page.locator("text=Treatment saved locally")).toBeVisible();
   });
 
-  test('syncs when coming back online', async ({ page, context }) => {
+  test("syncs when coming back online", async ({ page, context }) => {
     // Start offline
     await context.setOffline(true);
-    await page.goto('/');
+    await page.goto("/");
 
     // Create treatment offline
     // ... treatment creation steps
@@ -794,8 +836,10 @@ test.describe('Offline Mode', () => {
     await context.setOffline(false);
 
     // Should auto-sync
-    await expect(page.locator('text=Syncing')).toBeVisible();
-    await expect(page.locator('text=All data synced')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=Syncing")).toBeVisible();
+    await expect(page.locator("text=All data synced")).toBeVisible({
+      timeout: 10000,
+    });
   });
 });
 ```
@@ -805,6 +849,7 @@ test.describe('Offline Mode', () => {
 ## Implementation Order & Timeline
 
 ### Week 1 - Foundation
+
 1. **Day 1-2**: Database schema (database-specialist)
    - Run migrations on Azure VM
    - Verify sync tables created
@@ -818,6 +863,7 @@ test.describe('Offline Mode', () => {
    - Test data persistence
 
 ### Week 2 - Integration
+
 1. **Day 1-2**: Offline Context (frontend-ui)
    - Implement context provider
    - Add to app
@@ -831,6 +877,7 @@ test.describe('Offline Mode', () => {
    - Verify test user works
 
 ### Week 3 - Polish
+
 1. **Day 1-2**: UI Components (frontend-ui)
    - Add status indicators
    - Implement sync UI
@@ -848,12 +895,14 @@ test.describe('Offline Mode', () => {
 ## Verification Checklist
 
 ### Database
+
 - [ ] Sync tables created
 - [ ] Indexes added
 - [ ] Test data inserts work
 - [ ] Triggers functioning
 
 ### Frontend
+
 - [ ] Service Worker registered
 - [ ] Cache storage working
 - [ ] IndexedDB accessible
@@ -861,18 +910,21 @@ test.describe('Offline Mode', () => {
 - [ ] PWA installable
 
 ### Backend
+
 - [ ] Sync endpoints responding
 - [ ] Queue processing works
 - [ ] Conflict detection active
 - [ ] Test data loading
 
 ### Integration
+
 - [ ] Offline mode works
 - [ ] Data persists locally
 - [ ] Sync on reconnection
 - [ ] No data loss
 
 ### Testing
+
 - [ ] Unit tests pass
 - [ ] E2E tests pass
 - [ ] Manual testing complete
@@ -883,6 +935,7 @@ test.describe('Offline Mode', () => {
 ## Deployment Commands
 
 ### Local Development
+
 ```bash
 # Frontend
 cd frontend
@@ -898,6 +951,7 @@ docker exec -it postgres psql -U admin -d medical_app
 ```
 
 ### Azure VM Production
+
 ```bash
 # Connect
 ssh azureuser@20.217.84.100

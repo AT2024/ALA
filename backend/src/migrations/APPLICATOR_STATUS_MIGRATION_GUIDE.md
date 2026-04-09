@@ -9,6 +9,7 @@ This migration adds `status` and `package_label` fields to the `applicators` tab
 ## Field Details
 
 ### Status Field
+
 - **Database Column**: `status` (snake_case - no mapping needed)
 - **Sequelize Model**: `status` (same name)
 - **Type**: VARCHAR(50), nullable
@@ -26,6 +27,7 @@ This migration adds `status` and `package_label` fields to the `applicators` tab
 - **Backward Compatibility**: Nullable, with automatic backfill from `usageType`
 
 ### Package Label Field
+
 - **Database Column**: `package_label` (snake_case)
 - **Sequelize Model**: `packageLabel` (camelCase)
 - **Type**: VARCHAR(10), nullable
@@ -73,6 +75,7 @@ SEALED → OPENED → LOADED → INSERTED → [DISCHARGED | DISPOSED]
 ### Terminal States
 
 Once an applicator reaches a terminal state, no further status transitions are allowed:
+
 - **INSERTED** (success path)
 - **DISPOSED** (disposed path)
 - **DISCHARGED** (discharged path)
@@ -98,14 +101,14 @@ END;
 ### Creating a New Applicator (Post-Scan)
 
 ```typescript
-import { ApplicatorStatus } from '../models/Applicator';
+import { ApplicatorStatus } from "../models/Applicator";
 
 const applicator = await Applicator.create({
-  serialNumber: 'APP12345',
+  serialNumber: "APP12345",
   seedQuantity: 100,
-  usageType: 'full', // Keep for Priority sync
-  status: 'SCANNED', // New workflow state
-  packageLabel: 'A', // Group with other applicators from package A
+  usageType: "full", // Keep for Priority sync
+  status: "SCANNED", // New workflow state
+  packageLabel: "A", // Group with other applicators from package A
   insertionTime: new Date(),
   treatmentId: treatment.id,
   addedBy: user.id,
@@ -117,26 +120,26 @@ const applicator = await Applicator.create({
 ```typescript
 // When applicator is inserted
 await applicator.update({
-  status: 'INSERTED',
+  status: "INSERTED",
   insertionTime: new Date(),
 });
 
 // When applicator is removed
 await applicator.update({
-  status: 'REMOVED',
+  status: "REMOVED",
   removalTime: new Date(),
   isRemoved: true,
 });
 
 // When applicator is disposed
 await applicator.update({
-  status: 'DISPOSED',
+  status: "DISPOSED",
 });
 
 // Mark as faulty
 await applicator.update({
-  status: 'FAULTY',
-  usageType: 'faulty', // Keep both in sync
+  status: "FAULTY",
+  usageType: "faulty", // Keep both in sync
 });
 ```
 
@@ -146,43 +149,40 @@ await applicator.update({
 // Get all scanned applicators ready for insertion
 const scannedApplicators = await Applicator.findAll({
   where: {
-    status: 'SCANNED',
+    status: "SCANNED",
     treatmentId: treatment.id,
   },
-  order: [['packageLabel', 'ASC']],
+  order: [["packageLabel", "ASC"]],
 });
 
 // Get all applicators from package A
 const packageA = await Applicator.findAll({
   where: {
-    packageLabel: 'A',
+    packageLabel: "A",
     treatmentId: treatment.id,
   },
 });
 
 // Count applicators by status
 const statusCounts = await Applicator.findAll({
-  attributes: [
-    'status',
-    [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-  ],
-  group: ['status'],
+  attributes: ["status", [sequelize.fn("COUNT", sequelize.col("id")), "count"]],
+  group: ["status"],
 });
 ```
 
 ### Type Safety
 
 ```typescript
-import Applicator, { ApplicatorStatus } from '../models/Applicator';
+import Applicator, { ApplicatorStatus } from "../models/Applicator";
 
 // TypeScript will enforce valid status values
-const validStatus: ApplicatorStatus = 'INSERTED'; // OK
-const invalidStatus: ApplicatorStatus = 'INVALID'; // Type error
+const validStatus: ApplicatorStatus = "INSERTED"; // OK
+const invalidStatus: ApplicatorStatus = "INVALID"; // Type error
 
 // Use in functions
 function updateApplicatorStatus(
   applicator: Applicator,
-  newStatus: ApplicatorStatus
+  newStatus: ApplicatorStatus,
 ): Promise<Applicator> {
   return applicator.update({ status: newStatus });
 }
@@ -191,6 +191,7 @@ function updateApplicatorStatus(
 ## Development Environment
 
 In development mode, the schema change is **automatic**:
+
 1. Update the model file (already done)
 2. Restart the server
 3. Sequelize auto-sync applies the change with `alter: true`
@@ -276,29 +277,29 @@ COMMIT;
 ### Unit Test Example
 
 ```typescript
-describe('Applicator with status field', () => {
-  it('should create applicator with SCANNED status', async () => {
+describe("Applicator with status field", () => {
+  it("should create applicator with SCANNED status", async () => {
     const applicator = await Applicator.create({
-      serialNumber: 'APP123',
+      serialNumber: "APP123",
       seedQuantity: 100,
-      usageType: 'full',
-      status: 'SCANNED',
-      packageLabel: 'A',
+      usageType: "full",
+      status: "SCANNED",
+      packageLabel: "A",
       insertionTime: new Date(),
       treatmentId: treatment.id,
       addedBy: user.id,
     });
 
-    expect(applicator.status).toBe('SCANNED');
-    expect(applicator.packageLabel).toBe('A');
+    expect(applicator.status).toBe("SCANNED");
+    expect(applicator.packageLabel).toBe("A");
   });
 
-  it('should enforce valid status values', async () => {
+  it("should enforce valid status values", async () => {
     const applicator = await Applicator.build({
-      serialNumber: 'APP123',
+      serialNumber: "APP123",
       seedQuantity: 100,
-      usageType: 'full',
-      status: 'INVALID_STATUS' as any, // Force invalid value
+      usageType: "full",
+      status: "INVALID_STATUS" as any, // Force invalid value
       insertionTime: new Date(),
       treatmentId: treatment.id,
       addedBy: user.id,
@@ -307,11 +308,11 @@ describe('Applicator with status field', () => {
     await expect(applicator.validate()).rejects.toThrow();
   });
 
-  it('should handle NULL status for backward compatibility', async () => {
+  it("should handle NULL status for backward compatibility", async () => {
     const applicator = await Applicator.create({
-      serialNumber: 'APP123',
+      serialNumber: "APP123",
       seedQuantity: 100,
-      usageType: 'full',
+      usageType: "full",
       status: null, // Explicitly NULL
       insertionTime: new Date(),
       treatmentId: treatment.id,
@@ -321,15 +322,15 @@ describe('Applicator with status field', () => {
     expect(applicator.status).toBeNull();
   });
 
-  it('should query applicators by package label', async () => {
+  it("should query applicators by package label", async () => {
     await Applicator.bulkCreate([
-      { serialNumber: 'A1', packageLabel: 'A', status: 'SCANNED', /* ... */ },
-      { serialNumber: 'A2', packageLabel: 'A', status: 'SCANNED', /* ... */ },
-      { serialNumber: 'B1', packageLabel: 'B', status: 'SCANNED', /* ... */ },
+      { serialNumber: "A1", packageLabel: "A", status: "SCANNED" /* ... */ },
+      { serialNumber: "A2", packageLabel: "A", status: "SCANNED" /* ... */ },
+      { serialNumber: "B1", packageLabel: "B", status: "SCANNED" /* ... */ },
     ]);
 
     const packageA = await Applicator.findAll({
-      where: { packageLabel: 'A' },
+      where: { packageLabel: "A" },
     });
 
     expect(packageA).toHaveLength(2);
@@ -384,12 +385,14 @@ CREATE TABLE applicator_audit_log (
 ### Setup Instructions
 
 1. **Apply Migration**:
+
    ```bash
    docker exec -it deployment_db_1 psql -U postgres -d ala_db
    \i /app/migrations/20251119000001-create-audit-log.sql
    ```
 
 2. **Verify Table Created**:
+
    ```sql
    \d applicator_audit_log
    ```
@@ -406,22 +409,22 @@ CREATE TABLE applicator_audit_log (
 The audit logging is automatic when using `applicatorService` functions:
 
 ```typescript
-import { ApplicatorAuditLog } from '../models';
+import { ApplicatorAuditLog } from "../models";
 
 // Query audit trail for an applicator
 const auditLogs = await ApplicatorAuditLog.findAll({
   where: { applicatorId: applicator.id },
-  order: [['changedAt', 'DESC']],
-  include: [{ model: Applicator, as: 'applicator' }]
+  order: [["changedAt", "DESC"]],
+  include: [{ model: Applicator, as: "applicator" }],
 });
 
 // Get timeline of status changes
-const timeline = auditLogs.map(log => ({
+const timeline = auditLogs.map((log) => ({
   timestamp: log.changedAt,
   from: log.oldStatus,
   to: log.newStatus,
   by: log.changedBy,
-  reason: log.reason
+  reason: log.reason,
 }));
 ```
 
@@ -446,21 +449,25 @@ This migration is **Step 1** of the 9-state workflow implementation. Remaining s
 ## Important Notes
 
 ### Field Naming Convention
+
 - **status**: No snake_case mapping needed (same in DB and model)
 - **packageLabel** → `package_label`: Follows existing camelCase to snake_case pattern
 
 ### Backward Compatibility
+
 - Both fields are **nullable** to support existing applicators
 - Automatic backfill ensures existing data has appropriate status
 - `usageType` field is **preserved** for Priority ERP integration
 - No breaking changes to existing API endpoints
 
 ### Performance
+
 - Indexes added for both `status` and `package_label` fields
 - Queries by status or package will be fast
 - Migration uses transaction for atomic changes
 
 ### Data Integrity
+
 - Sequelize validation enforces only valid status values
 - Migration backfill ensures no orphaned records
 - Preserves all existing applicator data

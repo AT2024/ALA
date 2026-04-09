@@ -3,6 +3,7 @@
 ## Quick Start
 
 ### Interactive Runner (Recommended)
+
 ```bash
 # Start the interactive runner
 node run.js
@@ -17,6 +18,7 @@ npm start
 ```
 
 ### Direct Commands
+
 ```bash
 # Development (default - simplified)
 docker-compose up -d                    # Start development with hot reload
@@ -33,27 +35,32 @@ docker-compose down -v --remove-orphans # Clean everything
 ## Architecture
 
 ### Multi-Stage Dockerfiles
+
 Both frontend and backend use optimized multi-stage builds:
 
 **Backend** (`backend/Dockerfile`):
+
 - `base`: Common Node.js Alpine setup
 - `development`: Hot reload with nodemon/ts-node
 - `build`: TypeScript compilation
 - `production`: Optimized runtime
 
 **Frontend** (`frontend/Dockerfile`):
-- `base`: Common Node.js Alpine setup  
+
+- `base`: Common Node.js Alpine setup
 - `development`: Vite dev server with HMR
 - `build`: Static asset compilation
 - `production`: Nginx serving optimized assets
 
 ### Compose System (Simplified)
+
 - **docker-compose.yml**: Development-focused configuration (default)
 - **docker-compose.prod.yml**: Production overrides only
 
 ## Environment Configuration
 
 ### File Hierarchy
+
 ```
 environments/
 ├── .env.docker          # Docker-specific config
@@ -66,6 +73,7 @@ environments/
 ```
 
 ### Loading Order
+
 1. Docker Compose environment section (dev-focused)
 2. `env_file` directives (docker + development)
 3. Production overrides (when using prod compose file)
@@ -74,17 +82,20 @@ environments/
 ## Security Features
 
 ### Base Images
+
 - **Node.js**: `node:20.19.2-alpine` (updated for security)
 - **Nginx**: `nginx:1.27.3-alpine` (latest stable)
 - Alpine Linux for minimal attack surface
 
 ### Container Security
+
 - Non-root users (nodejs:1001, nginx-app:1001)
 - Read-only filesystems where possible
 - Minimal package installations
 - Security update automation
 
 ### Network Security
+
 - Internal Docker network isolation
 - Database not exposed in production
 - Health checks for all services
@@ -92,6 +103,7 @@ environments/
 ## Development Workflow
 
 ### Hot Reload Setup
+
 ```bash
 # Start development environment
 node run.js
@@ -104,7 +116,9 @@ node run.js
 ```
 
 ### Volume Mounts (Built-in)
+
 Development mode (default) automatically mounts source code:
+
 - `./backend:/usr/src/app` (API source with hot reload)
 - `./frontend:/usr/src/app` (Frontend source with HMR)
 - `node_modules` preserved in containers for performance
@@ -112,6 +126,7 @@ Development mode (default) automatically mounts source code:
 ## Production Deployment
 
 ### Optimized Build
+
 ```bash
 # Production deployment
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
@@ -125,6 +140,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ### Resource Optimization
+
 - **Frontend**: Static files served by Nginx
 - **Backend**: Compiled JavaScript (no TypeScript runtime)
 - **Database**: Persistent volumes with health checks
@@ -133,12 +149,15 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ## Monitoring & Debugging
 
 ### Health Checks
+
 All services have health checks:
+
 - **API**: `GET /api/health`
 - **Frontend**: HTTP availability check
 - **Database**: `pg_isready` connection test
 
 ### Log Management
+
 ```bash
 # View all logs
 docker-compose logs -f
@@ -153,6 +172,7 @@ docker-compose logs --tail=50
 ```
 
 ### Container Access
+
 ```bash
 # Backend shell
 docker-compose exec api sh
@@ -169,6 +189,7 @@ docker-compose exec frontend sh
 ### Common Issues
 
 **Port Conflicts**:
+
 ```bash
 # Check what's using ports
 sudo lsof -i :3000
@@ -180,12 +201,14 @@ docker-compose down
 ```
 
 **Permission Issues**:
+
 ```bash
 # Fix file permissions
 sudo chown -R $USER:$USER .
 ```
 
 **Build Failures**:
+
 ```bash
 # Clean rebuild
 docker-compose down -v
@@ -194,6 +217,7 @@ docker-compose up -d
 ```
 
 **Database Connection Issues**:
+
 ```bash
 # Reset database
 docker-compose down -v
@@ -204,11 +228,13 @@ docker-compose up -d
 ### Performance Optimization
 
 **Development**:
+
 - Use `.dockerignore` to exclude unnecessary files
 - Preserve `node_modules` volumes for faster rebuilds
 - Enable BuildKit for faster builds: `DOCKER_BUILDKIT=1`
 
 **Production**:
+
 - Multi-stage builds minimize image size
 - Alpine base images reduce attack surface
 - Nginx serves static files efficiently
@@ -217,6 +243,7 @@ docker-compose up -d
 ## Security Scanning
 
 The project includes automated security scanning:
+
 ```bash
 # Run security scan
 node scripts/security-scan.js
@@ -229,6 +256,7 @@ docker scout cves ala-improved-frontend
 ## Backup & Recovery
 
 ### Database Backup
+
 ```bash
 # Create backup
 docker-compose exec db pg_dump -U postgres ala_db > backup.sql
@@ -238,6 +266,7 @@ docker-compose exec -T db psql -U postgres ala_db < backup.sql
 ```
 
 ### Volume Management
+
 ```bash
 # List volumes
 docker volume ls | grep ala
@@ -252,6 +281,7 @@ docker run --rm -v ala-postgres-data-prod:/data -v $(pwd):/backup alpine tar xzf
 ## CI/CD Integration
 
 ### GitHub Actions Example
+
 ```yaml
 name: Docker Build
 on: [push]
@@ -269,6 +299,7 @@ jobs:
 ```
 
 ### Deployment Pipeline
+
 1. **Build**: Multi-stage Docker builds
 2. **Test**: Automated testing in containers
 3. **Scan**: Security vulnerability scanning

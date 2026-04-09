@@ -6,16 +6,16 @@ The ALA system tracks applicators through an 8-state workflow. The available tra
 
 ## Status Definitions
 
-| Status | Code | Description | Terminal | Requires Comment |
-|--------|------|-------------|----------|------------------|
-| Sealed | SEALED | Unopened package | No | No |
-| Opened | OPENED | Package opened | No | No |
-| Loaded | LOADED | Ready for insertion | No | No |
-| Inserted | INSERTED | Successfully deployed | Yes | No |
-| Faulty | FAULTY | Defective equipment | Yes | Yes |
-| Disposed | DISPOSED | Discarded | Yes | Yes |
-| Discharged | DISCHARGED | Seeds expelled | Yes | Yes |
-| Deployment Failure | DEPLOYMENT_FAILURE | Failed deployment | Yes | Yes |
+| Status             | Code               | Description           | Terminal | Requires Comment |
+| ------------------ | ------------------ | --------------------- | -------- | ---------------- |
+| Sealed             | SEALED             | Unopened package      | No       | No               |
+| Opened             | OPENED             | Package opened        | No       | No               |
+| Loaded             | LOADED             | Ready for insertion   | No       | No               |
+| Inserted           | INSERTED           | Successfully deployed | Yes      | No               |
+| Faulty             | FAULTY             | Defective equipment   | Yes      | Yes              |
+| Disposed           | DISPOSED           | Discarded             | Yes      | Yes              |
+| Discharged         | DISCHARGED         | Seeds expelled        | Yes      | Yes              |
+| Deployment Failure | DEPLOYMENT_FAILURE | Failed deployment     | Yes      | Yes              |
 
 ## Treatment-Specific Workflows
 
@@ -145,25 +145,27 @@ Used when treatment type is unknown or not specified.
 
 ### Color Coding
 
-| Status | Background | Text | Meaning |
-|--------|------------|------|---------|
-| SEALED | White | Gray | Unopened, ready to use |
-| OPENED | Light Red | Red | Requires attention |
-| LOADED | Light Yellow | Yellow | In progress |
-| INSERTED | Light Green | Green | Success |
-| FAULTY | Dark Gray | White | Failure - defective |
-| DISPOSED | Dark Gray | White | Failure - discarded |
-| DISCHARGED | Dark Gray | White | Failure - expelled |
-| DEPLOYMENT_FAILURE | Dark Gray | White | Failure - deployment |
+| Status             | Background   | Text   | Meaning                |
+| ------------------ | ------------ | ------ | ---------------------- |
+| SEALED             | White        | Gray   | Unopened, ready to use |
+| OPENED             | Light Red    | Red    | Requires attention     |
+| LOADED             | Light Yellow | Yellow | In progress            |
+| INSERTED           | Light Green  | Green  | Success                |
+| FAULTY             | Dark Gray    | White  | Failure - defective    |
+| DISPOSED           | Dark Gray    | White  | Failure - discarded    |
+| DISCHARGED         | Dark Gray    | White  | Failure - expelled     |
+| DEPLOYMENT_FAILURE | Dark Gray    | White  | Failure - deployment   |
 
 ### Status Categories
 
 **In-Progress Statuses** (appear in "Choose from List"):
+
 - SEALED
 - OPENED
 - LOADED
 
 **Terminal Statuses** (appear in "Use List Table"):
+
 - INSERTED (success)
 - FAULTY (failure)
 - DISPOSED (failure)
@@ -173,6 +175,7 @@ Used when treatment type is unknown or not specified.
 ## Audit Trail Requirements
 
 Every status transition generates an audit log entry containing:
+
 - Applicator ID
 - Previous status (null for first scan)
 - New status
@@ -184,6 +187,7 @@ Every status transition generates an audit log entry containing:
 ## Implementation Reference
 
 Status definitions are maintained in a single source of truth:
+
 - File: `shared/applicatorStatuses.ts`
 - Used by both frontend and backend
 - Includes transition maps, labels, colors, and helper functions

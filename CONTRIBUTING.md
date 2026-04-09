@@ -25,6 +25,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -37,6 +38,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore`: Maintenance
 
 **Examples:**
+
 ```bash
 feat: add applicator barcode scanning
 fix: resolve signature modal validation bug
@@ -47,6 +49,7 @@ refactor: simplify priority service error handling
 ### Pre-commit Hooks
 
 Husky runs automatically on commit:
+
 - **pre-commit**: Lint staged files
 - **commit-msg**: Validate commit message format
 

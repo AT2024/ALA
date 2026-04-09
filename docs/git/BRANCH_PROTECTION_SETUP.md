@@ -13,6 +13,7 @@ This guide provides step-by-step instructions to configure branch protection rul
 **Branch name pattern**: `production`
 
 **Settings to Enable**:
+
 - ✅ **Require a pull request before merging**
   - Required number of reviewers: **2**
   - ✅ Dismiss stale pull request approvals when new commits are pushed
@@ -37,6 +38,7 @@ This guide provides step-by-step instructions to configure branch protection rul
 **Branch name pattern**: `main`
 
 **Settings to Enable**:
+
 - ✅ **Require a pull request before merging**
   - Required number of reviewers: **1**
   - ✅ Dismiss stale pull request approvals when new commits are pushed
@@ -61,6 +63,7 @@ This guide provides step-by-step instructions to configure branch protection rul
 **Branch name pattern**: `develop`
 
 **Settings to Enable**:
+
 - ✅ **Require status checks to pass before merging**
   - Required status checks:
     - `unit-tests`
@@ -76,16 +79,19 @@ This guide provides step-by-step instructions to configure branch protection rul
 ## Additional Repository Settings
 
 ### Default Branch Configuration
+
 1. Go to **Repository → Settings → General → Default branch**
 2. Change default branch from `main` to `develop`
 3. This ensures new features branch from develop by default
 
 ### Auto-merge Configuration
+
 1. Go to **Repository → Settings → General → Pull Requests**
 2. ✅ Enable "Allow auto-merge"
 3. ✅ Enable "Automatically delete head branches"
 
 ### Security Settings
+
 1. Go to **Repository → Settings → Security & analysis**
 2. ✅ Enable "Dependency graph"
 3. ✅ Enable "Dependabot alerts"
@@ -95,6 +101,7 @@ This guide provides step-by-step instructions to configure branch protection rul
 ## Workflow Integration
 
 ### Status Checks Creation
+
 The following status checks will be automatically created once the enhanced GitHub Actions workflows are implemented (Phase 3):
 
 - `backend-tests`: Jest unit and integration tests
@@ -106,6 +113,7 @@ The following status checks will be automatically created once the enhanced GitH
 - `build`: Successful Docker builds
 
 ### Emergency Access
+
 - Repository admins can bypass branch protection in emergencies
 - All bypasses are logged in the repository's security audit log
 - Use sparingly and document in commit messages
@@ -121,18 +129,21 @@ After configuring branch protection:
 ## Best Practices
 
 ### For Development Team
+
 - Always branch from `develop` for new features
 - Use descriptive branch names: `feature/applicator-validation`, `fix/priority-api-timeout`
 - Ensure all status checks pass before requesting review
 - Address all review comments before merging
 
 ### For Code Reviews
+
 - Review for medical data handling compliance
 - Verify Priority API integration patterns
 - Check for proper error handling and logging
 - Validate test coverage for new functionality
 
 ### For Emergency Fixes
+
 - Use `hotfix/` branches from production for critical production issues
 - Follow accelerated review process but maintain quality standards
 - Deploy hotfixes to production immediately after merge

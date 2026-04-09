@@ -7,6 +7,7 @@
 ## Context
 
 After deploying PR #25 (removal comment fields) to Azure production, the application failed with:
+
 ```
 column "top_general_comments" does not exist
 ```
@@ -15,32 +16,36 @@ column "top_general_comments" does not exist
 
 ## Affected Columns
 
-| Column | Status in Dev | Status in Prod (before fix) |
-|--------|--------------|------------------------------|
-| `top_general_comments` | ✅ Auto-created | ❌ Missing |
-| `group_comments` | ✅ Auto-created | ❌ Missing |
-| `individual_seed_comment` | ✅ Auto-created | ❌ Missing |
-| `removal_general_comments` | ✅ Existed | ✅ Existed |
+| Column                     | Status in Dev   | Status in Prod (before fix) |
+| -------------------------- | --------------- | --------------------------- |
+| `top_general_comments`     | ✅ Auto-created | ❌ Missing                  |
+| `group_comments`           | ✅ Auto-created | ❌ Missing                  |
+| `individual_seed_comment`  | ✅ Auto-created | ❌ Missing                  |
+| `removal_general_comments` | ✅ Existed      | ✅ Existed                  |
 
 ## How Development vs Production Differs
 
 ### Development Environment
+
 ```typescript
 // backend/src/config/database.ts
 await sequelize.sync({
-  alter: process.env.NODE_ENV === 'development',  // TRUE in dev
-  force: false
+  alter: process.env.NODE_ENV === "development", // TRUE in dev
+  force: false,
 });
 ```
+
 - Sequelize automatically adds/modifies columns to match model
 - Changes appear instantly on server restart
 - No migration files required
 
 ### Production Environment
+
 ```typescript
 // alter: false in production
 await sequelize.sync({ alter: false, force: false });
 ```
+
 - Schema changes require manual SQL migrations
 - Files stored in `backend/src/migrations/`
 - Must be applied via `psql` or `docker exec`
@@ -98,6 +103,7 @@ ssh azureuser@20.217.84.100 "docker exec ala-db psql -U ala_user -d ala_producti
 ### Fix Applied (2026-01-13)
 
 Migration `20260113000000-add-removal-comment-fields.sql` created and applied:
+
 - Added `top_general_comments` TEXT
 - Added `group_comments` TEXT
 - Added `individual_seed_comment` TEXT

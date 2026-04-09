@@ -6,32 +6,37 @@
 ## Current Focus: System Optimization & Environment Alignment
 
 ### Active Design Questions
+
 - [ ] How should Local and Azure environments stay synchronized? (owner: team, due: ongoing)
 - [ ] What patterns ensure safe production deployments? (owner: team, due: ongoing)
 
 ### Environment Notes
 
 #### Local Development
+
 - Port: 3000 (frontend), 5000 (backend)
 - Database: Local PostgreSQL
 - Start: `npm run dev` in both frontend/ and backend/
 
 #### Azure Production
+
 - URL: https://ala-app.israelcentral.cloudapp.azure.com
 - VM: 20.217.84.100
 - Deploy: `ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"`
 - **Before Azure changes**: Check latest design log entry
 
 ### Recent Decisions
-| Date | Decision | Log Link |
-|------|----------|----------|
+
+| Date       | Decision                            | Log Link                                                       |
+| ---------- | ----------------------------------- | -------------------------------------------------------------- |
 | 2026-01-13 | Database Migration Process (DL-005) | [Link](docs/design-logs/2026-01-database-migration-process.md) |
-| 2026-01-11 | Removal PDF Fix (DL-004) | [Link](docs/design-logs/2026-01-removal-pdf-fix.md) |
-| 2026-01-07 | Environment Alignment Strategy | [Link](docs/design-logs/2026-01-environment-alignment.md) |
+| 2026-01-11 | Removal PDF Fix (DL-004)            | [Link](docs/design-logs/2026-01-removal-pdf-fix.md)            |
+| 2026-01-07 | Environment Alignment Strategy      | [Link](docs/design-logs/2026-01-environment-alignment.md)      |
 
 ---
 
 ## Quick Commands
+
 - `/design` - Start a new design log entry
 - `/azure-check` - Validate Azure parity before deployment
 
@@ -45,6 +50,7 @@
 ## What is a "Significant Change"?
 
 A change requires a design log entry if it involves:
+
 - **Database schema** - migrations, new tables, column modifications
 - **API contracts** - new endpoints, breaking changes, auth modifications
 - **Azure infrastructure** - Docker config, networking, environment variables
@@ -54,9 +60,9 @@ A change requires a design log entry if it involves:
 
 ## Design Log Index
 
-| ID | Title | Status | Created |
-|----|-------|--------|---------|
-| DL-001 | [Environment Alignment](docs/design-logs/2026-01-environment-alignment.md) | Implemented | 2026-01-07 |
+| ID     | Title                                                                                | Status      | Created    |
+| ------ | ------------------------------------------------------------------------------------ | ----------- | ---------- |
+| DL-001 | [Environment Alignment](docs/design-logs/2026-01-environment-alignment.md)           | Implemented | 2026-01-07 |
 | DL-002 | [Parallel Worktree Workflow](docs/design-logs/2026-01-parallel-worktree-workflow.md) | Implemented | 2026-01-08 |
-| DL-003 | [Version Display](docs/design-logs/2026-01-version-display.md) | Implemented | 2026-01-11 |
+| DL-003 | [Version Display](docs/design-logs/2026-01-version-display.md)                       | Implemented | 2026-01-11 |
 | DL-005 | [Database Migration Process](docs/design-logs/2026-01-database-migration-process.md) | Implemented | 2026-01-13 |

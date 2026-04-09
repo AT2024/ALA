@@ -5,17 +5,20 @@ This directory contains documentation for development workflows, processes, and 
 ## Directory Structure
 
 ### `/compounding`
+
 Compounding engineering workflows that create a self-improving development system. These workflows ensure each task makes future work easier rather than harder.
 
 ## Philosophy
 
 The compounding engineering approach follows a cycle:
+
 1. **Plan it out in detail** - Thorough planning prevents rework
 2. **Do the work** - Execute with quality and documentation
 3. **Make sure it works** - Validate through multiple lenses
 4. **Record learnings** - Capture knowledge for future tasks
 
 Each iteration should:
+
 - Leave the codebase easier to understand
 - Add preventive measures for common errors
 - Document patterns that work well
@@ -26,17 +29,20 @@ Each iteration should:
 ### Three-Lane Development Model
 
 **Planning Lane**: Use mcp-as-a-judge tools for requirements and design
+
 - `set_coding_task` - Create task and get workflow guidance
 - `judge_coding_plan` - Validate plan before implementation
 - Research and architectural decisions
 
 **Implementation Lane**: Use specialized agents for domain work
+
 - Database changes - `database-specialist`
 - UI components - `frontend-ui`
 - API integration - `priority-integration`
 - Parallel execution when possible
 
 **Review Lane**: Use reviewer agents for quality assurance
+
 - Code standards - `ala-code-reviewer`
 - Priority integration - `priority-integration-reviewer`
 - Patient safety - `medical-safety-reviewer`
@@ -45,6 +51,7 @@ Each iteration should:
 ### Quality Gates
 
 Every substantial change should pass through:
+
 1. **Planning Review**: `judge_coding_plan` approval
 2. **Code Review**: `judge_code_change` approval
 3. **Testing Review**: `judge_testing_implementation` approval
@@ -53,6 +60,7 @@ Every substantial change should pass through:
 ### Learning Loops
 
 After each task:
+
 1. Document lessons in `docs/learnings/`
 2. Extract patterns to `docs/patterns/`
 3. Update reviewer agents if new standards emerge

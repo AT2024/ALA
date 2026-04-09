@@ -7,32 +7,32 @@ All automated and manual changes are recorded here to maintain regulatory tracea
 
 ## Document Control
 
-| Document Information | |
-|---------------------|---|
-| **Document ID** | ALA-SRSLOG-001 |
-| **Version** | 1.0 |
-| **Date** | December 2025 |
-| **Status** | Active |
+| Document Information |                          |
+| -------------------- | ------------------------ |
+| **Document ID**      | ALA-SRSLOG-001           |
+| **Version**          | 1.0                      |
+| **Date**             | December 2025            |
+| **Status**           | Active                   |
 | **Parent Documents** | ALA-SRS-001, ALA-RTM-001 |
 
 ---
 
 ## Change Types
 
-| Type | Description |
-|------|-------------|
-| Auto | Automated update via GitHub Action |
-| Manual | Manual update by team member |
-| Review | Changes from code review feedback |
-| Audit | Changes from compliance audit |
+| Type   | Description                        |
+| ------ | ---------------------------------- |
+| Auto   | Automated update via GitHub Action |
+| Manual | Manual update by team member       |
+| Review | Changes from code review feedback  |
+| Audit  | Changes from compliance audit      |
 
 ---
 
 ## Change Log
 
-| Date | Type | Commit Range | Changes | Author | Status |
-|------|------|--------------|---------|--------|--------|
-| 2025-12-29 | Manual | Initial | Created change log document | Team | Approved |
+| Date       | Type   | Commit Range | Changes                     | Author | Status   |
+| ---------- | ------ | ------------ | --------------------------- | ------ | -------- |
+| 2025-12-29 | Manual | Initial      | Created change log document | Team   | Approved |
 
 ---
 
@@ -48,5 +48,5 @@ Per SRS-SEC-014, this change log and all SRS documentation must be retained for 
 
 ---
 
-*This document is automatically updated by the SRS Update workflow.*
-*Manual entries should be added in the format shown above.*
+_This document is automatically updated by the SRS Update workflow._
+_Manual entries should be added in the format shown above._

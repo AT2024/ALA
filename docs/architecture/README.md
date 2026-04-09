@@ -5,6 +5,7 @@ This directory contains architectural decisions and system design documentation 
 ## Directory Structure
 
 ### `/adr` - Architectural Decision Records
+
 Document important architectural decisions using the ADR format. This creates a historical record of why certain choices were made, which prevents revisiting old discussions and helps new team members understand the system.
 
 ## ADR Template
@@ -12,6 +13,7 @@ Document important architectural decisions using the ADR format. This creates a 
 Create files with naming: `adr/ADR-[number]-[title].md`
 
 Example:
+
 ```markdown
 # ADR-001: Use PostgreSQL for Treatment Data Storage
 
@@ -20,13 +22,17 @@ Example:
 **Deciders**: [Names or roles]
 
 ## Context
+
 What is the issue we're facing that requires a decision?
 
 ## Decision
+
 What is the architectural decision we're making?
 
 ## Rationale
+
 Why this particular decision?
+
 - Reason 1
 - Reason 2
 - Reason 3
@@ -34,32 +40,40 @@ Why this particular decision?
 ## Consequences
 
 ### Positive
+
 - Benefit 1
 - Benefit 2
 
 ### Negative
+
 - Tradeoff 1
 - Tradeoff 2
 
 ### Neutral
+
 - Side effect 1
 
 ## Alternatives Considered
+
 ### Option 1: [Alternative]
+
 - Pros: ...
 - Cons: ...
 - Why not chosen: ...
 
 ### Option 2: [Alternative]
+
 - Pros: ...
 - Cons: ...
 - Why not chosen: ...
 
 ## Related Decisions
+
 - Links to related ADRs
 - Links to superseded decisions
 
 ## References
+
 - [Relevant documentation]
 - [Research or articles that influenced this decision]
 ```
@@ -75,6 +89,7 @@ Why this particular decision?
 ## Usage
 
 Create an ADR when making decisions about:
+
 - Technology choices (databases, frameworks, libraries)
 - System architecture changes
 - API design patterns
@@ -93,6 +108,7 @@ Create an ADR when making decisions about:
 ## Example ADRs to Create
 
 Consider documenting these existing decisions:
+
 - ADR-001: Use PostgreSQL for Treatment Data Storage
 - ADR-002: Integrate with Priority ERP for Patient Data
 - ADR-003: Use JWT for Authentication

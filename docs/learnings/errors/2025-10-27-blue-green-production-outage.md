@@ -14,6 +14,7 @@ While attempting to test the blue-green deployment system, I took down the entir
 **Primary**: Testing deployment infrastructure changes directly on production without a separate test environment.
 
 **Contributing Factors**:
+
 1. No staging environment for testing deployment changes
 2. Insufficient planning before executing deployment infrastructure changes
 3. Did not verify backup/rollback plan before making changes
@@ -33,11 +34,13 @@ While attempting to test the blue-green deployment system, I took down the entir
 ## What Went Wrong
 
 ### Technical Issues
+
 1. **DNS Resolution**: Frontend nginx config referenced `api:5000` but blue-green containers named `api-blue`/`api-green`
 2. **Missing SSL Volumes**: Production docker-compose.yml missing SSL certificate mounts
 3. **Network Alias Fix**: Required but never tested in isolation
 
 ### Process Failures
+
 1. **No Test Environment**: Tested on production instead of local/staging
 2. **No Rollback Plan**: No verified rollback procedure before changes
 3. **Insufficient Verification**: Did not verify current system health before changes
@@ -56,6 +59,7 @@ While attempting to test the blue-green deployment system, I took down the entir
 ## Prevention Measures
 
 ### Immediate Actions (Completed)
+
 - ✅ Production restored and verified
 - ✅ This incident documented
 - ✅ Updated deployment documentation with warnings
@@ -91,12 +95,14 @@ While attempting to test the blue-green deployment system, I took down the entir
 ## Lessons Learned
 
 ### What I Did Wrong
+
 1. **Assumed deployment testing was safe** - It's not. Deployment infrastructure changes are HIGH RISK.
 2. **No rollback plan** - Started making changes without knowing how to undo them.
 3. **Insufficient verification** - Didn't test the fix (network aliases) before deploying.
 4. **Production as test environment** - Used live system to test unproven changes.
 
 ### What I Should Have Done
+
 1. **Test locally first** - Run complete blue-green workflow on local machine
 2. **Verify rollback** - Test emergency recovery before making changes
 3. **Document plan** - Write down exactly what will happen before executing
@@ -106,12 +112,14 @@ While attempting to test the blue-green deployment system, I took down the entir
 ## Code Changes Required
 
 ### Update deployment/README.md
+
 Add prominent warning about testing deployment changes:
 
 ```markdown
 ## ⚠️ CRITICAL: Testing Deployment Changes
 
 NEVER test deployment infrastructure changes on production:
+
 - Test locally first with docker-compose
 - Verify complete workflow in local environment
 - Only deploy to production after 100% local success
@@ -119,11 +127,14 @@ NEVER test deployment infrastructure changes on production:
 ```
 
 ### Update CLAUDE.md
+
 Add to "Known Pitfalls & Solutions" section:
 
 ```markdown
 ### Deployment Infrastructure Testing
+
 **Pitfall**: Testing deployment system changes on production
+
 - **Symptom**: Production outage while testing "zero-downtime" deployment
 - **Solution**: ALWAYS test deployment changes locally first
 - **Prevention**: Pre-deployment checklist enforcement
@@ -131,6 +142,7 @@ Add to "Known Pitfalls & Solutions" section:
 ```
 
 ## Related Documents
+
 - [Deployment README](../../deployment/README.md)
 - [Blue-Green Deployment Guide](../../deployment/BLUE_GREEN_DEPLOYMENT.md)
 - [CLAUDE.md Project Instructions](../../CLAUDE.md)
@@ -138,15 +150,18 @@ Add to "Known Pitfalls & Solutions" section:
 ## Impact Assessment
 
 **User Impact**:
+
 - Application completely unavailable for ~30 minutes
 - Potential data loss if transactions were in progress
 - Trust damage from breaking production during "safety" feature testing
 
 **Business Impact**:
+
 - Medical application downtime (patient safety concern)
 - Violated core principle: deployment changes should be boring and safe
 
 **Technical Debt**:
+
 - Need staging environment for deployment testing
 - Need automated testing for deployment workflows
 - Need pre-deployment verification checklist

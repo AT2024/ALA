@@ -8,12 +8,14 @@
 ## Context
 
 The ALA medical treatment tracking application currently displays no version information to users. This makes it difficult to:
+
 - Verify which version is deployed to production
 - Debug issues by confirming version alignment
 - Track PWA update deployments
 - Provide support when users report issues
 
 ### Current State
+
 - `frontend/package.json` has version `0.1.0`
 - `Layout.tsx` has a footer (line 197-199) with copyright but no version
 - `LoginPage.tsx` and `VerificationPage.tsx` are standalone pages (no Layout wrapper)
@@ -33,6 +35,7 @@ The ALA medical treatment tracking application currently displays no version inf
 Use Vite's built-in `define` configuration to inject the version as a global constant at build time.
 
 **Why this approach:**
+
 - Zero runtime overhead (replaced at build time)
 - No additional dependencies
 - Standard Vite pattern
@@ -43,14 +46,14 @@ Use Vite's built-in `define` configuration to inject the version as a global con
 #### 1. Update `frontend/vite.config.ts`
 
 ```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
-import { resolve } from 'path';
-import { readFileSync } from 'fs';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
+import { resolve } from "path";
+import { readFileSync } from "fs";
 
 // Read version from package.json
-const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const packageJson = JSON.parse(readFileSync("./package.json", "utf-8"));
 const version = packageJson.version;
 
 export default defineConfig({
@@ -73,7 +76,9 @@ declare const APP_VERSION: string;
 
 ```tsx
 <footer className="border-t bg-secondary p-4 text-center text-sm text-muted-foreground">
-  <p>&copy; {new Date().getFullYear()} AlphaTau Medical Ltd. All rights reserved.</p>
+  <p>
+    &copy; {new Date().getFullYear()} AlphaTau Medical Ltd. All rights reserved.
+  </p>
   <p className="mt-1 text-xs text-muted-foreground/70">v{APP_VERSION}</p>
 </footer>
 ```
@@ -101,6 +106,7 @@ declare const APP_VERSION: string;
 **Selected Approach: Vite `define` option with subtle UI placement**
 
 Rationale:
+
 - Simple, no external dependencies
 - Consistent with Vite best practices
 - Version appears on ALL user-facing pages
@@ -110,13 +116,13 @@ Rationale:
 
 ### Files Modified
 
-| File | Change |
-|------|--------|
-| `frontend/vite.config.ts` | Add `fs` import, read package.json, add `define` option |
-| `frontend/src/vite-env.d.ts` | Add `APP_VERSION` type declaration |
-| `frontend/src/components/Layout.tsx` | Add version to footer |
-| `frontend/src/pages/Auth/LoginPage.tsx` | Add version below form |
-| `frontend/src/pages/Auth/VerificationPage.tsx` | Add version below form |
+| File                                           | Change                                                  |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| `frontend/vite.config.ts`                      | Add `fs` import, read package.json, add `define` option |
+| `frontend/src/vite-env.d.ts`                   | Add `APP_VERSION` type declaration                      |
+| `frontend/src/components/Layout.tsx`           | Add version to footer                                   |
+| `frontend/src/pages/Auth/LoginPage.tsx`        | Add version below form                                  |
+| `frontend/src/pages/Auth/VerificationPage.tsx` | Add version below form                                  |
 
 ## Results
 

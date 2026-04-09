@@ -1,43 +1,46 @@
 # Software Requirements Specification
 
 ## Accountability Log Application (ALA)
+
 ### Medical Treatment Tracking System
 
 ---
 
-| Document Information | |
-|---------------------|---|
-| **Document ID** | ALA-SRS-001 |
-| **Version** | 4.1 |
-| **Date** | February 2026 |
-| **Status** | Draft |
-| **Classification** | Internal |
-| **Safety Classification** | IEC 62304 Class B |
-| **FDA Documentation Level** | Enhanced |
+| Document Information        |                   |
+| --------------------------- | ----------------- |
+| **Document ID**             | ALA-SRS-001       |
+| **Version**                 | 4.1               |
+| **Date**                    | February 2026     |
+| **Status**                  | Draft             |
+| **Classification**          | Internal          |
+| **Safety Classification**   | IEC 62304 Class B |
+| **FDA Documentation Level** | Enhanced          |
 
 ---
 
 ## Approvals
 
-| Role | Name | Signature | Date |
-|------|------|-----------|------|
-| Author | | | |
-| Technical Review | | | |
-| QA Review | | | |
-| Project Manager | | | |
+| Role             | Name | Signature | Date |
+| ---------------- | ---- | --------- | ---- |
+| Author           |      |           |      |
+| Technical Review |      |           |      |
+| QA Review        |      |           |      |
+| Project Manager  |      |           |      |
 
 ---
 
 <!-- AUTO-UPDATE:START revision_history -->
+
 ## Revision History
 
-| Version | Date | Author | Description |
-|---------|------|--------|-------------|
-| 1.0 | 2024 | - | Initial SRS for ALA |
-| 2.0 | December 2025 | - | Complete rewrite reflecting current implementation |
-| 3.0 | December 2025 | - | Full overhaul: Added risk integration (ISO 14971), HIPAA 2025 compliance, cybersecurity section, missing features (attachments, treatment types, radioactivity), populated traceability matrix |
-| 4.0 | January 2026 | - | Major update: Added Offline Mode/PWA (Section 3.14), Treatment Continuation (Section 3.15), Enhanced Removal Procedure with Discrepancy Tracking (Section 3.8), new hazards (HAZ-011 to HAZ-016), updated data dictionary |
-| 4.1 | February 2026 | - | Gap analysis updates: Added HIPAA Authentication Audit Logging (Section 3.9.2), SignatureVerification and ApplicatorCache models (Section 6.2), corrected Priority API endpoint names (Section 4.3), fixed session timeout to 15 minutes (Section 5.3), added admin test mode toggle (Section 3.10), clarified treatment type enum values (Section 3.12) |
+| Version | Date          | Author | Description                                                                                                                                                                                                                                                                                                                                              |
+| ------- | ------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2024          | -      | Initial SRS for ALA                                                                                                                                                                                                                                                                                                                                      |
+| 2.0     | December 2025 | -      | Complete rewrite reflecting current implementation                                                                                                                                                                                                                                                                                                       |
+| 3.0     | December 2025 | -      | Full overhaul: Added risk integration (ISO 14971), HIPAA 2025 compliance, cybersecurity section, missing features (attachments, treatment types, radioactivity), populated traceability matrix                                                                                                                                                           |
+| 4.0     | January 2026  | -      | Major update: Added Offline Mode/PWA (Section 3.14), Treatment Continuation (Section 3.15), Enhanced Removal Procedure with Discrepancy Tracking (Section 3.8), new hazards (HAZ-011 to HAZ-016), updated data dictionary                                                                                                                                |
+| 4.1     | February 2026 | -      | Gap analysis updates: Added HIPAA Authentication Audit Logging (Section 3.9.2), SignatureVerification and ApplicatorCache models (Section 6.2), corrected Priority API endpoint names (Section 4.3), fixed session timeout to 15 minutes (Section 5.3), added admin test mode toggle (Section 3.10), clarified treatment type enum values (Section 3.12) |
+
 <!-- AUTO-UPDATE:END revision_history -->
 
 ---
@@ -77,6 +80,7 @@ This Software Requirements Specification (SRS) document describes the functional
 The Accountability Log Application (ALA) is a web-based medical treatment tracking system designed to replace paper-based accountability logs (QSR-4001-01) for seed applicator procedures used in brachytherapy treatments.
 
 **In Scope:**
+
 - User authentication and authorization via Priority ERP integration
 - Treatment session management (insertion and removal procedures)
 - Real-time applicator tracking with 8-state workflow management
@@ -87,6 +91,7 @@ The Accountability Log Application (ALA) is a web-based medical treatment tracki
 - Integration with Alpha Tau Medical's Priority ERP system
 
 **Out of Scope:**
+
 - Medical device control or operation
 - Patient medical records management
 - Billing or insurance processing
@@ -103,33 +108,33 @@ The ALA system digitizes the tracking of seed applicator usage during brachyther
 
 ### 1.4 Definitions, Acronyms, and Abbreviations
 
-| Term | Definition |
-|------|------------|
-| ALA | Accountability Log Application |
-| Applicator | Medical device used to deploy radioactive seeds during brachytherapy |
-| Brachytherapy | Cancer treatment using radioactive seeds implanted near tumors |
-| ERP | Enterprise Resource Planning |
-| HttpOnly Cookie | Secure cookie type inaccessible to JavaScript (XSS protection) |
-| JWT | JSON Web Token - standard for secure authentication tokens |
-| OData | Open Data Protocol - REST-based data access protocol |
-| Position Code | Priority ERP user classification (99 = admin) |
-| Priority | Alpha Tau Medical's ERP system |
-| QR Code | Quick Response Code - 2D barcode format |
-| Seed | Radioactive implant used in brachytherapy |
-| Subject ID | Unique patient treatment identifier from Priority ORDERS |
-| Treatment | A single brachytherapy procedure (insertion or removal) |
+| Term            | Definition                                                           |
+| --------------- | -------------------------------------------------------------------- |
+| ALA             | Accountability Log Application                                       |
+| Applicator      | Medical device used to deploy radioactive seeds during brachytherapy |
+| Brachytherapy   | Cancer treatment using radioactive seeds implanted near tumors       |
+| ERP             | Enterprise Resource Planning                                         |
+| HttpOnly Cookie | Secure cookie type inaccessible to JavaScript (XSS protection)       |
+| JWT             | JSON Web Token - standard for secure authentication tokens           |
+| OData           | Open Data Protocol - REST-based data access protocol                 |
+| Position Code   | Priority ERP user classification (99 = admin)                        |
+| Priority        | Alpha Tau Medical's ERP system                                       |
+| QR Code         | Quick Response Code - 2D barcode format                              |
+| Seed            | Radioactive implant used in brachytherapy                            |
+| Subject ID      | Unique patient treatment identifier from Priority ORDERS             |
+| Treatment       | A single brachytherapy procedure (insertion or removal)              |
 
 ### 1.5 References
 
-| ID | Document | Description |
-|----|----------|-------------|
-| REF-01 | IEEE/ISO/IEC 29148:2018 | Systems and software engineering - Life cycle processes - Requirements engineering |
-| REF-02 | IEC 62304:2006+AMD1:2015 | Medical device software - Software life cycle processes |
-| REF-03 | ISO 14971:2019 | Medical devices - Application of risk management to medical devices |
-| REF-04 | QSR-4001-01 | Accountability Log (paper form being replaced) |
-| REF-05 | Priority ERP OData API | Integration specification for Priority system |
-| REF-06 | OWASP Top 10 | Web application security risks |
-| REF-07 | HIPAA Security Rule 2025 | Updated cybersecurity requirements (Federal Register 2025-01-06) |
+| ID     | Document                   | Description                                                                         |
+| ------ | -------------------------- | ----------------------------------------------------------------------------------- |
+| REF-01 | IEEE/ISO/IEC 29148:2018    | Systems and software engineering - Life cycle processes - Requirements engineering  |
+| REF-02 | IEC 62304:2006+AMD1:2015   | Medical device software - Software life cycle processes                             |
+| REF-03 | ISO 14971:2019             | Medical devices - Application of risk management to medical devices                 |
+| REF-04 | QSR-4001-01                | Accountability Log (paper form being replaced)                                      |
+| REF-05 | Priority ERP OData API     | Integration specification for Priority system                                       |
+| REF-06 | OWASP Top 10               | Web application security risks                                                      |
+| REF-07 | HIPAA Security Rule 2025   | Updated cybersecurity requirements (Federal Register 2025-01-06)                    |
 | REF-08 | FDA Cybersecurity Guidance | Content of Premarket Submissions for Management of Cybersecurity in Medical Devices |
 
 ### 1.6 Document Conventions
@@ -169,59 +174,61 @@ The ALA operates as a standalone web application that integrates with Alpha Tau 
 
 The ALA provides the following high-level functions:
 
-| Function | Description |
-|----------|-------------|
-| Authentication | Email-based verification with JWT session management |
-| Treatment Selection | Choose patient treatments from Priority ERP data |
-| Applicator Scanning | QR code/barcode scanning with validation |
-| 8-State Workflow | Track applicator status through procedure stages |
-| Progress Tracking | Real-time visualization of treatment completion |
-| Treatment Finalization | Digital signature capture and PDF generation |
-| Removal Tracking | Track seed removal procedures (30+ days post-insertion) |
-| Audit Logging | Comprehensive audit trail for regulatory compliance (applicator and authentication events) |
+| Function               | Description                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| Authentication         | Email-based verification with JWT session management                                       |
+| Treatment Selection    | Choose patient treatments from Priority ERP data                                           |
+| Applicator Scanning    | QR code/barcode scanning with validation                                                   |
+| 8-State Workflow       | Track applicator status through procedure stages                                           |
+| Progress Tracking      | Real-time visualization of treatment completion                                            |
+| Treatment Finalization | Digital signature capture and PDF generation                                               |
+| Removal Tracking       | Track seed removal procedures (30+ days post-insertion)                                    |
+| Audit Logging          | Comprehensive audit trail for regulatory compliance (applicator and authentication events) |
 
 ### 2.3 User Classes and Characteristics
 
-| User Class | Role | Permissions | Technical Expertise |
-|------------|------|-------------|---------------------|
-| Hospital Worker | Clinical staff performing treatments | View/edit treatments at assigned sites only | Basic - familiar with medical procedures |
-| AlphaTau Employee | Clinical operations support | View/edit all treatments, approve applicator exceptions | Intermediate - trained on ALA system |
-| Administrator | System management | Full access including logs and configuration | Advanced - IT/technical background |
+| User Class        | Role                                 | Permissions                                             | Technical Expertise                      |
+| ----------------- | ------------------------------------ | ------------------------------------------------------- | ---------------------------------------- |
+| Hospital Worker   | Clinical staff performing treatments | View/edit treatments at assigned sites only             | Basic - familiar with medical procedures |
+| AlphaTau Employee | Clinical operations support          | View/edit all treatments, approve applicator exceptions | Intermediate - trained on ALA system     |
+| Administrator     | System management                    | Full access including logs and configuration            | Advanced - IT/technical background       |
 
 **Position Code 99**: Users with Priority position code 99 receive full administrative access regardless of assigned role.
 
 ### 2.4 Operating Environment
 
-| Component | Requirement |
-|-----------|-------------|
+| Component          | Requirement                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
 | **Client Devices** | Modern web browser (Chrome 90+, Safari 14+, Firefox 88+, Edge 90+) on mobile phones, tablets, or desktop computers |
-| **Screen Size** | Minimum 320px width (responsive design) |
-| **Network** | Internet connection required for Priority ERP integration |
-| **Camera** | Device camera required for QR code scanning (optional manual entry available) |
-| **Server** | Azure Virtual Machine (Ubuntu 20.04 LTS) |
-| **Database** | PostgreSQL 14+ |
-| **Runtime** | Node.js 18 LTS |
+| **Screen Size**    | Minimum 320px width (responsive design)                                                                            |
+| **Network**        | Internet connection required for Priority ERP integration                                                          |
+| **Camera**         | Device camera required for QR code scanning (optional manual entry available)                                      |
+| **Server**         | Azure Virtual Machine (Ubuntu 20.04 LTS)                                                                           |
+| **Database**       | PostgreSQL 14+                                                                                                     |
+| **Runtime**        | Node.js 18 LTS                                                                                                     |
 
 ### 2.5 Design and Implementation Constraints
 
-| Constraint | Description |
-|------------|-------------|
-| C-01 | System shall integrate with existing Priority ERP OData API without modifications to Priority |
-| C-02 | All patient-identifiable data shall remain in Priority ERP; ALA stores only Subject IDs |
-| C-03 | System shall be accessible on mobile devices in clinical environments |
-| C-04 | System shall support concurrent users performing treatments at different sites |
-| C-05 | System shall maintain audit trail for regulatory compliance (IEC 62304) |
-| C-06 | Authentication tokens shall be stored in HttpOnly secure cookies (XSS protection) |
+| Constraint | Description                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| C-01       | System shall integrate with existing Priority ERP OData API without modifications to Priority |
+| C-02       | All patient-identifiable data shall remain in Priority ERP; ALA stores only Subject IDs       |
+| C-03       | System shall be accessible on mobile devices in clinical environments                         |
+| C-04       | System shall support concurrent users performing treatments at different sites                |
+| C-05       | System shall maintain audit trail for regulatory compliance (IEC 62304)                       |
+| C-06       | Authentication tokens shall be stored in HttpOnly secure cookies (XSS protection)             |
 
 ### 2.6 Assumptions and Dependencies
 
 **Assumptions:**
+
 - Users have valid Priority ERP accounts with appropriate site access
 - Clinical environment has WiFi or cellular data connectivity
 - Applicators have valid QR codes/barcodes matching Priority inventory
 - Users are trained on brachytherapy procedures and ALA usage
 
 **Dependencies:**
+
 - Priority ERP system availability for authentication and data
 - Azure cloud infrastructure availability
 - Email delivery service for verification codes
@@ -232,11 +239,13 @@ The ALA provides the following high-level functions:
 **Software Safety Classification:** Class B
 
 **Rationale:** The ALA is a documentation and tracking system that does not directly control medical device operation. However, incorrect tracking could lead to:
+
 - Unreported applicator usage
 - Incorrect seed counts in patient documentation
 - Compliance documentation errors
 
 The system implements the following safety measures:
+
 - Comprehensive audit logging of all status changes
 - Validation against Priority ERP master data
 - Digital signature requirements for finalization
@@ -249,6 +258,7 @@ The system implements the following safety measures:
 ### 3.1 Authentication and Authorization
 
 #### 3.1.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall authenticate users via email verification codes and authorize access based on Priority ERP user data and role assignments.
@@ -256,6 +266,7 @@ The system shall authenticate users via email verification codes and authorize a
 #### 3.1.2 Stimulus/Response Sequences
 
 **Login Flow:**
+
 1. User enters email address
 2. System validates email against Priority PHONEBOOK
 3. System sends 6-digit verification code via email
@@ -264,6 +275,7 @@ The system shall authenticate users via email verification codes and authorize a
 6. User redirected to procedure selection
 
 **Session Management:**
+
 1. Authenticated user makes request
 2. System validates JWT from HttpOnly cookie
 3. If valid, request proceeds
@@ -271,28 +283,29 @@ The system shall authenticate users via email verification codes and authorize a
 
 #### 3.1.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-AUTH-001 | The system shall validate user email addresses against Priority ERP PHONEBOOK table | Critical |
-| SRS-AUTH-002 | The system shall generate cryptographically secure 6-digit verification codes | Critical |
-| SRS-AUTH-003 | The system shall send verification codes via email using configured SMTP service | Critical |
-| SRS-AUTH-004 | Verification codes shall expire after 10 minutes | High |
-| SRS-AUTH-005 | The system shall hash verification codes using bcrypt before storage | Critical |
-| SRS-AUTH-006 | The system shall issue JWT tokens with 7-day expiration upon successful verification | High |
+| ID           | Requirement                                                                          | Priority |
+| ------------ | ------------------------------------------------------------------------------------ | -------- |
+| SRS-AUTH-001 | The system shall validate user email addresses against Priority ERP PHONEBOOK table  | Critical |
+| SRS-AUTH-002 | The system shall generate cryptographically secure 6-digit verification codes        | Critical |
+| SRS-AUTH-003 | The system shall send verification codes via email using configured SMTP service     | Critical |
+| SRS-AUTH-004 | Verification codes shall expire after 10 minutes                                     | High     |
+| SRS-AUTH-005 | The system shall hash verification codes using bcrypt before storage                 | Critical |
+| SRS-AUTH-006 | The system shall issue JWT tokens with 7-day expiration upon successful verification | High     |
 | SRS-AUTH-007 | JWT tokens shall be stored in HttpOnly secure cookies (not accessible to JavaScript) | Critical |
-| SRS-AUTH-008 | The system shall track failed verification attempts per user | High |
-| SRS-AUTH-009 | The system shall allow users to request code resend | Medium |
-| SRS-AUTH-010 | The system shall extract user site access from Priority metadata | Critical |
-| SRS-AUTH-011 | Users with Position Code 99 shall receive full access to all sites | High |
-| SRS-AUTH-012 | The system shall implement automatic session timeout after inactivity | Medium |
-| SRS-AUTH-013 | The system shall provide logout functionality that clears authentication cookies | High |
-| SRS-AUTH-014 | The system shall prevent user enumeration by returning generic error messages | High |
+| SRS-AUTH-008 | The system shall track failed verification attempts per user                         | High     |
+| SRS-AUTH-009 | The system shall allow users to request code resend                                  | Medium   |
+| SRS-AUTH-010 | The system shall extract user site access from Priority metadata                     | Critical |
+| SRS-AUTH-011 | Users with Position Code 99 shall receive full access to all sites                   | High     |
+| SRS-AUTH-012 | The system shall implement automatic session timeout after inactivity                | Medium   |
+| SRS-AUTH-013 | The system shall provide logout functionality that clears authentication cookies     | High     |
+| SRS-AUTH-014 | The system shall prevent user enumeration by returning generic error messages        | High     |
 
 ---
 
 ### 3.2 Treatment Selection
 
 #### 3.2.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall allow users to select treatment procedures (insertion or removal) from Priority ERP data based on their site access permissions.
@@ -300,6 +313,7 @@ The system shall allow users to select treatment procedures (insertion or remova
 #### 3.2.2 Stimulus/Response Sequences
 
 **Insertion Selection:**
+
 1. User selects "Insertion" procedure type
 2. System fetches available treatments from Priority ORDERS
 3. System filters treatments by user's authorized sites
@@ -307,6 +321,7 @@ The system shall allow users to select treatment procedures (insertion or remova
 5. System creates local treatment record linked to Priority
 
 **Removal Selection:**
+
 1. User selects "Removal" procedure type
 2. System fetches completed insertion treatments eligible for removal
 3. User selects treatment to perform removal
@@ -314,24 +329,25 @@ The system shall allow users to select treatment procedures (insertion or remova
 
 #### 3.2.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-TSEL-001 | The system shall allow users to choose between insertion and removal procedure types | Critical |
-| SRS-TSEL-002 | The system shall fetch treatment data from Priority ERP ORDERS table | Critical |
-| SRS-TSEL-003 | The system shall display only treatments at sites the user is authorized to access | Critical |
-| SRS-TSEL-004 | The system shall combine related Priority procedures for pancreas treatments | High |
-| SRS-TSEL-005 | The system shall allow treatment search by Subject ID, date, and site | High |
-| SRS-TSEL-006 | The system shall display patient identifier (DETAILS field) from Priority | High |
-| SRS-TSEL-007 | For removal procedures, the system shall only show insertions completed at least 30 days prior | High |
-| SRS-TSEL-008 | The system shall create a local treatment record with reference to Priority ID | Critical |
-| SRS-TSEL-009 | The system shall store treatment metadata: type, site, date, Subject ID, surgeon | High |
-| SRS-TSEL-010 | The system shall record the user who created the treatment | High |
+| ID           | Requirement                                                                                    | Priority |
+| ------------ | ---------------------------------------------------------------------------------------------- | -------- |
+| SRS-TSEL-001 | The system shall allow users to choose between insertion and removal procedure types           | Critical |
+| SRS-TSEL-002 | The system shall fetch treatment data from Priority ERP ORDERS table                           | Critical |
+| SRS-TSEL-003 | The system shall display only treatments at sites the user is authorized to access             | Critical |
+| SRS-TSEL-004 | The system shall combine related Priority procedures for pancreas treatments                   | High     |
+| SRS-TSEL-005 | The system shall allow treatment search by Subject ID, date, and site                          | High     |
+| SRS-TSEL-006 | The system shall display patient identifier (DETAILS field) from Priority                      | High     |
+| SRS-TSEL-007 | For removal procedures, the system shall only show insertions completed at least 30 days prior | High     |
+| SRS-TSEL-008 | The system shall create a local treatment record with reference to Priority ID                 | Critical |
+| SRS-TSEL-009 | The system shall store treatment metadata: type, site, date, Subject ID, surgeon               | High     |
+| SRS-TSEL-010 | The system shall record the user who created the treatment                                     | High     |
 
 ---
 
 ### 3.3 Applicator Scanning and Validation
 
 #### 3.3.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall scan and validate applicator QR codes/barcodes against Priority ERP inventory data.
@@ -339,6 +355,7 @@ The system shall scan and validate applicator QR codes/barcodes against Priority
 #### 3.3.2 Stimulus/Response Sequences
 
 **Scan Flow:**
+
 1. User initiates barcode scan (camera or manual entry)
 2. System decodes QR code to extract serial number
 3. System validates serial number against Priority SIBD_APPUSELISTTEXT
@@ -348,24 +365,25 @@ The system shall scan and validate applicator QR codes/barcodes against Priority
 
 #### 3.3.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-SCAN-001 | The system shall support QR code scanning using device camera | Critical |
-| SRS-SCAN-002 | The system shall support manual serial number entry as fallback | Critical |
-| SRS-SCAN-003 | The system shall validate applicator serial numbers against Priority SIBD_APPUSELISTTEXT | Critical |
-| SRS-SCAN-004 | The system shall detect and notify if an applicator was already scanned for the current treatment | High |
-| SRS-SCAN-005 | The system shall detect applicators assigned to different treatments | High |
-| SRS-SCAN-006 | The system shall display applicator details: serial number, seed quantity, applicator type | High |
-| SRS-SCAN-007 | The system shall retrieve seed quantity from Priority based on serial number | Critical |
-| SRS-SCAN-008 | The system shall allow users to manually override seed quantity with justification | Medium |
-| SRS-SCAN-009 | The system shall record package label from scanned data when available | Medium |
-| SRS-SCAN-010 | The system shall store applicator type (PARTS.PARTDES) from Priority | Medium |
+| ID           | Requirement                                                                                       | Priority |
+| ------------ | ------------------------------------------------------------------------------------------------- | -------- |
+| SRS-SCAN-001 | The system shall support QR code scanning using device camera                                     | Critical |
+| SRS-SCAN-002 | The system shall support manual serial number entry as fallback                                   | Critical |
+| SRS-SCAN-003 | The system shall validate applicator serial numbers against Priority SIBD_APPUSELISTTEXT          | Critical |
+| SRS-SCAN-004 | The system shall detect and notify if an applicator was already scanned for the current treatment | High     |
+| SRS-SCAN-005 | The system shall detect applicators assigned to different treatments                              | High     |
+| SRS-SCAN-006 | The system shall display applicator details: serial number, seed quantity, applicator type        | High     |
+| SRS-SCAN-007 | The system shall retrieve seed quantity from Priority based on serial number                      | Critical |
+| SRS-SCAN-008 | The system shall allow users to manually override seed quantity with justification                | Medium   |
+| SRS-SCAN-009 | The system shall record package label from scanned data when available                            | Medium   |
+| SRS-SCAN-010 | The system shall store applicator type (PARTS.PARTDES) from Priority                              | Medium   |
 
 ---
 
 ### 3.4 Applicator 8-State Workflow Management
 
 #### 3.4.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall track applicators through an 8-state workflow that varies by treatment type.
@@ -373,55 +391,59 @@ The system shall track applicators through an 8-state workflow that varies by tr
 #### 3.4.2 Stimulus/Response Sequences
 
 **State Transition (Pancreas/Prostate):**
+
 1. Applicator scanned → Status: SEALED
 2. User opens package → Status: OPENED
 3. User loads applicator → Status: LOADED
 4. User deploys seeds → Status: INSERTED (or FAULTY/DISCHARGED/DEPLOYMENT_FAILURE)
 
 **State Transition (Skin):**
+
 1. Applicator scanned → Status: SEALED
 2. User deploys seeds → Status: INSERTED (or FAULTY)
 
 #### 3.4.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
+| ID           | Requirement                                                                                                                        | Priority |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | SRS-WKFL-001 | The system shall support 8 applicator statuses: SEALED, OPENED, LOADED, INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE | Critical |
-| SRS-WKFL-002 | The system shall enforce treatment-specific transition rules (Pancreas/Prostate vs. Skin vs. Generic) | Critical |
-| SRS-WKFL-003 | For Pancreas/Prostate: SEALED→OPENED→LOADED→(INSERTED\|DISCHARGED\|DEPLOYMENT_FAILURE) | Critical |
-| SRS-WKFL-004 | For Skin: SEALED→(INSERTED\|FAULTY) | Critical |
-| SRS-WKFL-005 | Terminal statuses (INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) shall not allow further transitions | Critical |
-| SRS-WKFL-006 | The system shall require comments for all failure terminal statuses (FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) | High |
-| SRS-WKFL-007 | The system shall create audit log entries for every status transition | Critical |
-| SRS-WKFL-008 | Audit logs shall record: old status, new status, user, timestamp, reason, request ID | Critical |
-| SRS-WKFL-009 | The system shall display available transitions based on current status and treatment type | High |
-| SRS-WKFL-010 | The system shall visually distinguish status types: success (green), failure (dark), in-progress (yellow/red) | Medium |
+| SRS-WKFL-002 | The system shall enforce treatment-specific transition rules (Pancreas/Prostate vs. Skin vs. Generic)                              | Critical |
+| SRS-WKFL-003 | For Pancreas/Prostate: SEALED→OPENED→LOADED→(INSERTED\|DISCHARGED\|DEPLOYMENT_FAILURE)                                             | Critical |
+| SRS-WKFL-004 | For Skin: SEALED→(INSERTED\|FAULTY)                                                                                                | Critical |
+| SRS-WKFL-005 | Terminal statuses (INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE) shall not allow further transitions                 | Critical |
+| SRS-WKFL-006 | The system shall require comments for all failure terminal statuses (FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE)             | High     |
+| SRS-WKFL-007 | The system shall create audit log entries for every status transition                                                              | Critical |
+| SRS-WKFL-008 | Audit logs shall record: old status, new status, user, timestamp, reason, request ID                                               | Critical |
+| SRS-WKFL-009 | The system shall display available transitions based on current status and treatment type                                          | High     |
+| SRS-WKFL-010 | The system shall visually distinguish status types: success (green), failure (dark), in-progress (yellow/red)                      | Medium   |
 
 ---
 
 ### 3.5 Real-Time Progress Tracking
 
 #### 3.5.1 Description and Priority
+
 **Priority:** High
 
 The system shall display real-time progress of treatment completion.
 
 #### 3.5.2 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-PROG-001 | The system shall display total applicators vs. processed applicators | High |
-| SRS-PROG-002 | The system shall display total seeds vs. inserted seeds | High |
-| SRS-PROG-003 | The system shall calculate and display completion percentage | High |
-| SRS-PROG-004 | The system shall show usage type distribution (full, faulty, none) | Medium |
-| SRS-PROG-005 | The system shall show applicator status breakdown by state | Medium |
-| SRS-PROG-006 | Progress display shall update in real-time as applicators are processed | High |
+| ID           | Requirement                                                             | Priority |
+| ------------ | ----------------------------------------------------------------------- | -------- |
+| SRS-PROG-001 | The system shall display total applicators vs. processed applicators    | High     |
+| SRS-PROG-002 | The system shall display total seeds vs. inserted seeds                 | High     |
+| SRS-PROG-003 | The system shall calculate and display completion percentage            | High     |
+| SRS-PROG-004 | The system shall show usage type distribution (full, faulty, none)      | Medium   |
+| SRS-PROG-005 | The system shall show applicator status breakdown by state              | Medium   |
+| SRS-PROG-006 | Progress display shall update in real-time as applicators are processed | High     |
 
 ---
 
 ### 3.6 Treatment Finalization and Digital Signatures
 
 #### 3.6.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall support treatment finalization with digital signature verification.
@@ -429,12 +451,14 @@ The system shall support treatment finalization with digital signature verificat
 #### 3.6.2 Stimulus/Response Sequences
 
 **Hospital Auto-Signature:**
+
 1. Hospital user clicks "Finalize"
 2. System auto-captures user information as signature
 3. PDF generated with signature
 4. Treatment marked complete
 
 **AlphaTau Verification:**
+
 1. User initiates finalization
 2. User selects signer from site users list
 3. System sends verification code to signer's email
@@ -445,45 +469,47 @@ The system shall support treatment finalization with digital signature verificat
 
 #### 3.6.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-FINL-001 | The system shall support two finalization types: hospital_auto and alphatau_verified | Critical |
-| SRS-FINL-002 | Hospital users may auto-sign treatments using their authenticated identity | High |
-| SRS-FINL-003 | AlphaTau finalization shall require verification code sent to signer's email | Critical |
-| SRS-FINL-004 | Signature verification codes shall expire after 1 hour | High |
-| SRS-FINL-005 | The system shall limit signature verification attempts to 3 per code | High |
-| SRS-FINL-006 | The system shall fetch available signers from Priority PHONEBOOK for the treatment site | High |
-| SRS-FINL-007 | The system shall record signer name, email, position, and signature timestamp | Critical |
-| SRS-FINL-008 | Finalization shall mark treatment as complete with completedBy and completedAt | Critical |
-| SRS-FINL-009 | Completed treatments shall be immutable (no further applicator changes) | Critical |
+| ID           | Requirement                                                                             | Priority |
+| ------------ | --------------------------------------------------------------------------------------- | -------- |
+| SRS-FINL-001 | The system shall support two finalization types: hospital_auto and alphatau_verified    | Critical |
+| SRS-FINL-002 | Hospital users may auto-sign treatments using their authenticated identity              | High     |
+| SRS-FINL-003 | AlphaTau finalization shall require verification code sent to signer's email            | Critical |
+| SRS-FINL-004 | Signature verification codes shall expire after 1 hour                                  | High     |
+| SRS-FINL-005 | The system shall limit signature verification attempts to 3 per code                    | High     |
+| SRS-FINL-006 | The system shall fetch available signers from Priority PHONEBOOK for the treatment site | High     |
+| SRS-FINL-007 | The system shall record signer name, email, position, and signature timestamp           | Critical |
+| SRS-FINL-008 | Finalization shall mark treatment as complete with completedBy and completedAt          | Critical |
+| SRS-FINL-009 | Completed treatments shall be immutable (no further applicator changes)                 | Critical |
 
 ---
 
 ### 3.7 PDF Generation and Export
 
 #### 3.7.1 Description and Priority
+
 **Priority:** High
 
 The system shall generate comprehensive treatment documentation in PDF format.
 
 #### 3.7.2 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-EXPRT-001 | The system shall generate PDF documents containing complete treatment information | High |
-| SRS-EXPRT-002 | PDF shall include: treatment summary, site, date, Subject ID, surgeon | High |
-| SRS-EXPRT-003 | PDF shall include complete applicator list with serial numbers, statuses, seed quantities | High |
-| SRS-EXPRT-004 | PDF shall include signature information (name, position, timestamp) | Critical |
-| SRS-EXPRT-005 | PDF shall include seed count totals (inserted, removed, remaining) | High |
-| SRS-EXPRT-006 | The system shall store generated PDF in database (BYTEA field) | High |
-| SRS-EXPRT-007 | The system shall support JSON export of treatment data | Medium |
-| SRS-EXPRT-008 | Exported documents shall not include internal Alpha Tau employee names | Medium |
+| ID            | Requirement                                                                               | Priority |
+| ------------- | ----------------------------------------------------------------------------------------- | -------- |
+| SRS-EXPRT-001 | The system shall generate PDF documents containing complete treatment information         | High     |
+| SRS-EXPRT-002 | PDF shall include: treatment summary, site, date, Subject ID, surgeon                     | High     |
+| SRS-EXPRT-003 | PDF shall include complete applicator list with serial numbers, statuses, seed quantities | High     |
+| SRS-EXPRT-004 | PDF shall include signature information (name, position, timestamp)                       | Critical |
+| SRS-EXPRT-005 | PDF shall include seed count totals (inserted, removed, remaining)                        | High     |
+| SRS-EXPRT-006 | The system shall store generated PDF in database (BYTEA field)                            | High     |
+| SRS-EXPRT-007 | The system shall support JSON export of treatment data                                    | Medium   |
+| SRS-EXPRT-008 | Exported documents shall not include internal Alpha Tau employee names                    | Medium   |
 
 ---
 
 ### 3.8 Removal Workflow
 
 #### 3.8.1 Description and Priority
+
 **Priority:** High
 
 The system shall support tracking of seed removal procedures with comprehensive discrepancy tracking to document any difference between inserted and removed sources.
@@ -491,6 +517,7 @@ The system shall support tracking of seed removal procedures with comprehensive 
 #### 3.8.2 Stimulus/Response Sequences
 
 **Removal Procedure Flow:**
+
 1. User selects removal procedure for eligible treatment (30+ days post-insertion)
 2. System loads applicators from original insertion
 3. User marks applicators as removed (group removal)
@@ -501,6 +528,7 @@ The system shall support tracking of seed removal procedures with comprehensive 
 8. User finalizes treatment
 
 **Discrepancy Clarification Flow:**
+
 1. System detects removed sources ≠ inserted sources
 2. System displays discrepancy clarification section
 3. User selects applicable categories (Lost, Retrieved to site, Remained in tissue, Other)
@@ -510,150 +538,156 @@ The system shall support tracking of seed removal procedures with comprehensive 
 
 #### 3.8.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-RMVL-001 | The system shall allow removal procedures for treatments at least 30 days post-insertion | High |
-| SRS-RMVL-002 | The system shall display applicators from the original insertion treatment | High |
-| SRS-RMVL-003 | The system shall track number of seeds removed per applicator | High |
-| SRS-RMVL-004 | The system shall allow removal comments per applicator | Medium |
-| SRS-RMVL-005 | The system shall track removal timestamp | High |
-| SRS-RMVL-006 | The system shall track who performed each removal | High |
-| SRS-RMVL-007 | The system shall display removal progress (seeds removed vs. total seeds) | High |
-| SRS-RMVL-008 | The system shall color-code final count: green if zero seeds remain, red otherwise | Medium |
-| SRS-RMVL-009 | The system shall provide a removal procedure form for capturing removal details | High |
-| SRS-RMVL-010 | Removal procedure form shall capture: removal date, all-same-date flag | High |
-| SRS-RMVL-011 | If sources removed on different dates, system shall capture additional date and reason | High |
-| SRS-RMVL-012 | The system shall auto-calculate total sources removed from applicators + individual seeds | High |
-| SRS-RMVL-013 | The system shall detect discrepancy when removed sources ≠ inserted sources | Critical |
-| SRS-RMVL-014 | Discrepancy clarification shall track 4 categories: Lost, Retrieved to site, Remained in tissue (removal failure), Other | High |
-| SRS-RMVL-015 | Each discrepancy category shall include: checked flag, amount, and comment fields | High |
-| SRS-RMVL-016 | Sum of clarified amounts must equal the number of sources not removed | High |
-| SRS-RMVL-017 | The system shall support individual seed removal with predefined reasons | Medium |
-| SRS-RMVL-018 | Individual seed removal reasons shall include: Applicator rupture, Patient arrived from home, Other | Medium |
-| SRS-RMVL-019 | The system shall calculate removal progress from applicator removals + individual seed removals | High |
-| SRS-RMVL-020 | The system shall allow treatment completion with missing sources when properly documented | Medium |
-| SRS-RMVL-021 | The system shall store discrepancy clarification data as JSON | High |
-| SRS-RMVL-022 | The system shall store individual seed removal notes as JSON | Medium |
+| ID           | Requirement                                                                                                              | Priority |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ | -------- |
+| SRS-RMVL-001 | The system shall allow removal procedures for treatments at least 30 days post-insertion                                 | High     |
+| SRS-RMVL-002 | The system shall display applicators from the original insertion treatment                                               | High     |
+| SRS-RMVL-003 | The system shall track number of seeds removed per applicator                                                            | High     |
+| SRS-RMVL-004 | The system shall allow removal comments per applicator                                                                   | Medium   |
+| SRS-RMVL-005 | The system shall track removal timestamp                                                                                 | High     |
+| SRS-RMVL-006 | The system shall track who performed each removal                                                                        | High     |
+| SRS-RMVL-007 | The system shall display removal progress (seeds removed vs. total seeds)                                                | High     |
+| SRS-RMVL-008 | The system shall color-code final count: green if zero seeds remain, red otherwise                                       | Medium   |
+| SRS-RMVL-009 | The system shall provide a removal procedure form for capturing removal details                                          | High     |
+| SRS-RMVL-010 | Removal procedure form shall capture: removal date, all-same-date flag                                                   | High     |
+| SRS-RMVL-011 | If sources removed on different dates, system shall capture additional date and reason                                   | High     |
+| SRS-RMVL-012 | The system shall auto-calculate total sources removed from applicators + individual seeds                                | High     |
+| SRS-RMVL-013 | The system shall detect discrepancy when removed sources ≠ inserted sources                                              | Critical |
+| SRS-RMVL-014 | Discrepancy clarification shall track 4 categories: Lost, Retrieved to site, Remained in tissue (removal failure), Other | High     |
+| SRS-RMVL-015 | Each discrepancy category shall include: checked flag, amount, and comment fields                                        | High     |
+| SRS-RMVL-016 | Sum of clarified amounts must equal the number of sources not removed                                                    | High     |
+| SRS-RMVL-017 | The system shall support individual seed removal with predefined reasons                                                 | Medium   |
+| SRS-RMVL-018 | Individual seed removal reasons shall include: Applicator rupture, Patient arrived from home, Other                      | Medium   |
+| SRS-RMVL-019 | The system shall calculate removal progress from applicator removals + individual seed removals                          | High     |
+| SRS-RMVL-020 | The system shall allow treatment completion with missing sources when properly documented                                | Medium   |
+| SRS-RMVL-021 | The system shall store discrepancy clarification data as JSON                                                            | High     |
+| SRS-RMVL-022 | The system shall store individual seed removal notes as JSON                                                             | Medium   |
 
 ---
 
 ### 3.9 Audit Logging
 
 #### 3.9.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall maintain comprehensive audit logs for regulatory compliance, covering both applicator status tracking and authentication events.
 
 #### 3.9.2 Applicator Audit Logging
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-AUDT-001 | The system shall log all applicator status transitions in ApplicatorAuditLog table | Critical |
-| SRS-AUDT-002 | Audit log entries shall include: applicator ID, old status, new status, user, timestamp | Critical |
-| SRS-AUDT-003 | Audit log entries shall include reason/comments when provided | High |
-| SRS-AUDT-004 | Audit log entries shall include request ID for correlation | High |
-| SRS-AUDT-005 | Audit logs shall be immutable (no updates or deletes) | Critical |
-| SRS-AUDT-006 | The system shall index audit logs by applicator ID and timestamp for efficient retrieval | High |
-| SRS-AUDT-007 | The system shall support audit log queries by time range and applicator | High |
+| ID           | Requirement                                                                              | Priority |
+| ------------ | ---------------------------------------------------------------------------------------- | -------- |
+| SRS-AUDT-001 | The system shall log all applicator status transitions in ApplicatorAuditLog table       | Critical |
+| SRS-AUDT-002 | Audit log entries shall include: applicator ID, old status, new status, user, timestamp  | Critical |
+| SRS-AUDT-003 | Audit log entries shall include reason/comments when provided                            | High     |
+| SRS-AUDT-004 | Audit log entries shall include request ID for correlation                               | High     |
+| SRS-AUDT-005 | Audit logs shall be immutable (no updates or deletes)                                    | Critical |
+| SRS-AUDT-006 | The system shall index audit logs by applicator ID and timestamp for efficient retrieval | High     |
+| SRS-AUDT-007 | The system shall support audit log queries by time range and applicator                  | High     |
 
 #### 3.9.3 Authentication Audit Logging (HIPAA 2025)
 
 The system shall log all authentication-related events in an AuthAuditLog table for HIPAA 2025 compliance. This includes successful and failed logins, logouts, session timeouts, and OTP requests.
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-AAUD-001 | The system shall log all authentication events in the AuthAuditLog table | Critical |
+| ID           | Requirement                                                                                                             | Priority |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------- | -------- |
+| SRS-AAUD-001 | The system shall log all authentication events in the AuthAuditLog table                                                | Critical |
 | SRS-AAUD-002 | The system shall track 5 authentication event types: LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, SESSION_TIMEOUT, OTP_REQUEST | Critical |
-| SRS-AAUD-003 | LOGIN_FAILURE events shall record the failure reason (e.g., invalid code, expired code, user not found) | High |
-| SRS-AAUD-004 | The system shall mask email identifiers in audit logs for privacy (e.g., "us***@example.com") | High |
-| SRS-AAUD-005 | The system shall mask phone identifiers in audit logs for privacy (e.g., "555-***-4567") | High |
-| SRS-AAUD-006 | The system shall capture client IP address (supporting X-Forwarded-For for proxied requests) | High |
-| SRS-AAUD-007 | The system shall capture User-Agent header for device identification | Medium |
-| SRS-AAUD-008 | Auth audit logs shall be immutable (no updates or deletes) | Critical |
-| SRS-AAUD-009 | The system shall index auth audit logs by userId and eventTime for efficient querying | High |
-| SRS-AAUD-010 | Auth audit logging shall never throw exceptions that interrupt the authentication flow | Critical |
-| SRS-AAUD-011 | The system shall provide a POST `/api/auth/session-timeout` endpoint for frontend idle timeout reporting | High |
-| SRS-AAUD-012 | Auth audit logs shall include a requestId field for correlation with other system logs | Medium |
+| SRS-AAUD-003 | LOGIN_FAILURE events shall record the failure reason (e.g., invalid code, expired code, user not found)                 | High     |
+| SRS-AAUD-004 | The system shall mask email identifiers in audit logs for privacy (e.g., "us\*\*\*@example.com")                        | High     |
+| SRS-AAUD-005 | The system shall mask phone identifiers in audit logs for privacy (e.g., "555-\*\*\*-4567")                             | High     |
+| SRS-AAUD-006 | The system shall capture client IP address (supporting X-Forwarded-For for proxied requests)                            | High     |
+| SRS-AAUD-007 | The system shall capture User-Agent header for device identification                                                    | Medium   |
+| SRS-AAUD-008 | Auth audit logs shall be immutable (no updates or deletes)                                                              | Critical |
+| SRS-AAUD-009 | The system shall index auth audit logs by userId and eventTime for efficient querying                                   | High     |
+| SRS-AAUD-010 | Auth audit logging shall never throw exceptions that interrupt the authentication flow                                  | Critical |
+| SRS-AAUD-011 | The system shall provide a POST `/api/auth/session-timeout` endpoint for frontend idle timeout reporting                | High     |
+| SRS-AAUD-012 | Auth audit logs shall include a requestId field for correlation with other system logs                                  | Medium   |
 
 ---
 
 ### 3.10 Admin Dashboard
 
 #### 3.10.1 Description and Priority
+
 **Priority:** Medium
 
 The system shall provide administrative dashboard for system monitoring.
 
 #### 3.10.2 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-ADMN-001 | The system shall provide dashboard accessible only to admin users | Medium |
-| SRS-ADMN-002 | Dashboard shall display treatment statistics | Medium |
-| SRS-ADMN-003 | Dashboard shall display system logs | Medium |
-| SRS-ADMN-004 | Dashboard shall support filtering by date range and site | Low |
-| SRS-ADMN-005 | The system shall provide a GET `/api/admin/test-mode` endpoint to retrieve the current user's test mode status | Low |
-| SRS-ADMN-006 | The system shall provide a PUT `/api/admin/test-mode` endpoint to toggle test mode for the authenticated user (stored in user metadata) | Low |
+| ID           | Requirement                                                                                                                             | Priority |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| SRS-ADMN-001 | The system shall provide dashboard accessible only to admin users                                                                       | Medium   |
+| SRS-ADMN-002 | Dashboard shall display treatment statistics                                                                                            | Medium   |
+| SRS-ADMN-003 | Dashboard shall display system logs                                                                                                     | Medium   |
+| SRS-ADMN-004 | Dashboard shall support filtering by date range and site                                                                                | Low      |
+| SRS-ADMN-005 | The system shall provide a GET `/api/admin/test-mode` endpoint to retrieve the current user's test mode status                          | Low      |
+| SRS-ADMN-006 | The system shall provide a PUT `/api/admin/test-mode` endpoint to toggle test mode for the authenticated user (stored in user metadata) | Low      |
 
 ---
 
 ### 3.11 File Attachments
 
 #### 3.11.1 Description and Priority
+
 **Priority:** Medium
 
 The system shall support file attachments per applicator for documenting images, certificates, or other relevant files.
 
 #### 3.11.2 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-ATCH-001 | The system shall support file attachments per applicator | Medium |
-| SRS-ATCH-002 | The system shall track attachment filename for each upload | Medium |
-| SRS-ATCH-003 | The system shall track attachment count per applicator | Medium |
-| SRS-ATCH-004 | The system shall track attachment size in bytes | Medium |
-| SRS-ATCH-005 | The system shall track attachment sync status (pending, syncing, synced, failed) | Medium |
+| ID           | Requirement                                                                      | Priority |
+| ------------ | -------------------------------------------------------------------------------- | -------- |
+| SRS-ATCH-001 | The system shall support file attachments per applicator                         | Medium   |
+| SRS-ATCH-002 | The system shall track attachment filename for each upload                       | Medium   |
+| SRS-ATCH-003 | The system shall track attachment count per applicator                           | Medium   |
+| SRS-ATCH-004 | The system shall track attachment size in bytes                                  | Medium   |
+| SRS-ATCH-005 | The system shall track attachment sync status (pending, syncing, synced, failed) | Medium   |
 
 ---
 
 ### 3.12 Treatment Type Handling
 
 #### 3.12.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall support multiple treatment types with type-specific workflow behaviors.
 
 #### 3.12.2 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
+| ID           | Requirement                                                                                                                                                                                                                        | Priority |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | SRS-TYPE-001 | The system shall support two treatment type enum values: `insertion` and `removal`. Treatment workflow variants (pancreas, prostate, skin) are determined by applicator data from Priority ERP, not stored as separate type values | Critical |
-| SRS-TYPE-002 | Pancreas treatments shall combine related Priority orders via reference chain detection | High |
-| SRS-TYPE-003 | Treatment priorityId shall support JSON array format for combined/referenced orders | High |
-| SRS-TYPE-004 | Each treatment type shall have type-specific workflow transitions per SRS-WKFL-002 | Critical |
+| SRS-TYPE-002 | Pancreas treatments shall combine related Priority orders via reference chain detection                                                                                                                                            | High     |
+| SRS-TYPE-003 | Treatment priorityId shall support JSON array format for combined/referenced orders                                                                                                                                                | High     |
+| SRS-TYPE-004 | Each treatment type shall have type-specific workflow transitions per SRS-WKFL-002                                                                                                                                                 | Critical |
 
 ---
 
 ### 3.13 Radioactivity Tracking
 
 #### 3.13.1 Description and Priority
+
 **Priority:** High
 
 The system shall track radioactivity levels (activity per seed) for treatment documentation.
 
 #### 3.13.2 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-RAD-001 | The system shall track activity per seed (radioactivity level) for treatments | High |
-| SRS-RAD-002 | Activity per seed shall be included in PDF export per SRS-EXPRT-002 | High |
-| SRS-RAD-003 | Activity per seed shall be retrieved from Priority ORDERS data | High |
+| ID          | Requirement                                                                   | Priority |
+| ----------- | ----------------------------------------------------------------------------- | -------- |
+| SRS-RAD-001 | The system shall track activity per seed (radioactivity level) for treatments | High     |
+| SRS-RAD-002 | Activity per seed shall be included in PDF export per SRS-EXPRT-002           | High     |
+| SRS-RAD-003 | Activity per seed shall be retrieved from Priority ORDERS data                | High     |
 
 ---
 
 ### 3.14 Offline Mode & PWA Architecture
 
 #### 3.14.1 Description and Priority
+
 **Priority:** Critical
 
 The system shall implement Progressive Web App (PWA) capabilities enabling offline operation with HIPAA-compliant data encryption and automatic synchronization when connectivity is restored.
@@ -661,6 +695,7 @@ The system shall implement Progressive Web App (PWA) capabilities enabling offli
 #### 3.14.2 Stimulus/Response Sequences
 
 **Offline Download Flow:**
+
 1. User selects treatment for offline use
 2. System validates user has site access
 3. System downloads treatment bundle (treatment + applicators)
@@ -669,6 +704,7 @@ The system shall implement Progressive Web App (PWA) capabilities enabling offli
 6. Bundle marked with 24-hour expiry
 
 **Offline Operation Flow:**
+
 1. Network connectivity lost (or user goes offline)
 2. System displays offline status banner
 3. User can view downloaded treatments
@@ -677,6 +713,7 @@ The system shall implement Progressive Web App (PWA) capabilities enabling offli
 6. Finalization BLOCKED until online
 
 **Sync Flow (Reconnection):**
+
 1. Network connectivity restored
 2. System auto-triggers sync
 3. Pending changes pushed to server (idempotent)
@@ -686,39 +723,40 @@ The system shall implement Progressive Web App (PWA) capabilities enabling offli
 
 #### 3.14.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-OFFL-001 | The system shall implement Progressive Web App (PWA) architecture with service workers | Critical |
-| SRS-OFFL-002 | The system shall use IndexedDB for offline data storage via Dexie.js | Critical |
-| SRS-OFFL-003 | The system shall encrypt PHI at rest using AES-256-GCM (HIPAA 2025 compliant) | Critical |
-| SRS-OFFL-004 | The system shall use PBKDF2 key derivation with 100,000 iterations (OWASP 2024) | Critical |
-| SRS-OFFL-005 | The system shall detect and track network connectivity status in real-time | High |
-| SRS-OFFL-006 | The system shall queue offline changes with SHA-256 integrity hashes | Critical |
-| SRS-OFFL-007 | The system shall auto-sync pending changes when network connectivity restores | High |
-| SRS-OFFL-008 | The system shall implement exponential backoff retry (1s initial, 60s max, 5 retries) | High |
-| SRS-OFFL-009 | The system shall support treatment bundle download for offline use | High |
-| SRS-OFFL-010 | Offline bundles shall expire after 24 hours | High |
-| SRS-OFFL-011 | The system shall detect and store sync conflicts for resolution | Critical |
-| SRS-OFFL-012 | Medical-critical status conflicts (INSERTED, FAULTY) shall require admin resolution | Critical |
-| SRS-OFFL-013 | The system shall maintain offline audit log with device ID and timestamps | Critical |
-| SRS-OFFL-014 | Treatment finalization shall be BLOCKED while offline (requires digital signature) | Critical |
-| SRS-OFFL-015 | The system shall support clock synchronization with server (5-minute tolerance) | High |
-| SRS-OFFL-016 | The system shall track and display storage usage statistics | Medium |
-| SRS-OFFL-017 | The system shall warn users at 80% storage capacity | Medium |
-| SRS-OFFL-018 | The system shall auto-delete expired offline bundles | Medium |
-| SRS-OFFL-019 | The system shall request persistent storage permission from browser | Medium |
-| SRS-OFFL-020 | The system shall display offline status banner with pending change count | High |
-| SRS-OFFL-021 | The system shall provide manual sync trigger button | Medium |
-| SRS-OFFL-022 | The system shall implement user-controlled app updates (no auto-update during treatment) | Critical |
+| ID           | Requirement                                                                                              | Priority |
+| ------------ | -------------------------------------------------------------------------------------------------------- | -------- |
+| SRS-OFFL-001 | The system shall implement Progressive Web App (PWA) architecture with service workers                   | Critical |
+| SRS-OFFL-002 | The system shall use IndexedDB for offline data storage via Dexie.js                                     | Critical |
+| SRS-OFFL-003 | The system shall encrypt PHI at rest using AES-256-GCM (HIPAA 2025 compliant)                            | Critical |
+| SRS-OFFL-004 | The system shall use PBKDF2 key derivation with 100,000 iterations (OWASP 2024)                          | Critical |
+| SRS-OFFL-005 | The system shall detect and track network connectivity status in real-time                               | High     |
+| SRS-OFFL-006 | The system shall queue offline changes with SHA-256 integrity hashes                                     | Critical |
+| SRS-OFFL-007 | The system shall auto-sync pending changes when network connectivity restores                            | High     |
+| SRS-OFFL-008 | The system shall implement exponential backoff retry (1s initial, 60s max, 5 retries)                    | High     |
+| SRS-OFFL-009 | The system shall support treatment bundle download for offline use                                       | High     |
+| SRS-OFFL-010 | Offline bundles shall expire after 24 hours                                                              | High     |
+| SRS-OFFL-011 | The system shall detect and store sync conflicts for resolution                                          | Critical |
+| SRS-OFFL-012 | Medical-critical status conflicts (INSERTED, FAULTY) shall require admin resolution                      | Critical |
+| SRS-OFFL-013 | The system shall maintain offline audit log with device ID and timestamps                                | Critical |
+| SRS-OFFL-014 | Treatment finalization shall be BLOCKED while offline (requires digital signature)                       | Critical |
+| SRS-OFFL-015 | The system shall support clock synchronization with server (5-minute tolerance)                          | High     |
+| SRS-OFFL-016 | The system shall track and display storage usage statistics                                              | Medium   |
+| SRS-OFFL-017 | The system shall warn users at 80% storage capacity                                                      | Medium   |
+| SRS-OFFL-018 | The system shall auto-delete expired offline bundles                                                     | Medium   |
+| SRS-OFFL-019 | The system shall request persistent storage permission from browser                                      | Medium   |
+| SRS-OFFL-020 | The system shall display offline status banner with pending change count                                 | High     |
+| SRS-OFFL-021 | The system shall provide manual sync trigger button                                                      | Medium   |
+| SRS-OFFL-022 | The system shall implement user-controlled app updates (no auto-update during treatment)                 | Critical |
 | SRS-OFFL-023 | Encrypted fields shall include: patientName, subjectId, surgeon, serialNumber, comments, removalComments | Critical |
-| SRS-OFFL-024 | The system shall support idempotent sync using change hashes (prevent duplicate processing) | High |
-| SRS-OFFL-025 | The system shall warn iOS users about 7-day storage eviction risk | Medium |
+| SRS-OFFL-024 | The system shall support idempotent sync using change hashes (prevent duplicate processing)              | High     |
+| SRS-OFFL-025 | The system shall warn iOS users about 7-day storage eviction risk                                        | Medium   |
 
 ---
 
 ### 3.15 Treatment Continuation
 
 #### 3.15.1 Description and Priority
+
 **Priority:** High
 
 The system shall allow users to continue a completed insertion treatment within a 24-hour window, enabling additional applicators to be added in follow-up sessions.
@@ -726,6 +764,7 @@ The system shall allow users to continue a completed insertion treatment within 
 #### 3.15.2 Stimulus/Response Sequences
 
 **Continuation Detection Flow:**
+
 1. User selects patient for insertion procedure
 2. System checks for completed treatments with same patient + site
 3. System evaluates 24-hour eligibility window (from lastActivityAt or completedAt)
@@ -734,6 +773,7 @@ The system shall allow users to continue a completed insertion treatment within 
 6. User confirms continuation or cancels
 
 **Continuation Creation Flow:**
+
 1. User confirms continuation
 2. System creates new treatment with parentTreatmentId linking to parent
 3. New treatment inherits: type, subjectId, patientName, site, surgeon, priority info
@@ -743,18 +783,18 @@ The system shall allow users to continue a completed insertion treatment within 
 
 #### 3.15.3 Functional Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-CONT-001 | The system shall allow continuation of completed insertion treatments within 24-hour window | High |
-| SRS-CONT-002 | Continuation eligibility shall be based on lastActivityAt or completedAt timestamp | High |
-| SRS-CONT-003 | The system shall track parent-child treatment relationship via parentTreatmentId | High |
-| SRS-CONT-004 | Continuation treatment shall inherit: type, subjectId, patientName, site, surgeon, priority info | High |
-| SRS-CONT-005 | Continuation treatment shall use current date (not parent treatment date) | High |
-| SRS-CONT-006 | The system shall display modal when continuable treatment detected | Medium |
-| SRS-CONT-007 | Continuation modal shall show: hours remaining, reusable applicator count, parent details | Medium |
-| SRS-CONT-008 | Reusable applicators are those with OPENED or LOADED status | High |
-| SRS-CONT-009 | Only insertion treatments can be continued (removal treatments cannot be continued) | High |
-| SRS-CONT-010 | The system shall provide API endpoints for continuation eligibility check and creation | High |
+| ID           | Requirement                                                                                      | Priority |
+| ------------ | ------------------------------------------------------------------------------------------------ | -------- |
+| SRS-CONT-001 | The system shall allow continuation of completed insertion treatments within 24-hour window      | High     |
+| SRS-CONT-002 | Continuation eligibility shall be based on lastActivityAt or completedAt timestamp               | High     |
+| SRS-CONT-003 | The system shall track parent-child treatment relationship via parentTreatmentId                 | High     |
+| SRS-CONT-004 | Continuation treatment shall inherit: type, subjectId, patientName, site, surgeon, priority info | High     |
+| SRS-CONT-005 | Continuation treatment shall use current date (not parent treatment date)                        | High     |
+| SRS-CONT-006 | The system shall display modal when continuable treatment detected                               | Medium   |
+| SRS-CONT-007 | Continuation modal shall show: hours remaining, reusable applicator count, parent details        | Medium   |
+| SRS-CONT-008 | Reusable applicators are those with OPENED or LOADED status                                      | High     |
+| SRS-CONT-009 | Only insertion treatments can be continued (removal treatments cannot be continued)              | High     |
+| SRS-CONT-010 | The system shall provide API endpoints for continuation eligibility check and creation           | High     |
 
 ---
 
@@ -764,68 +804,68 @@ The system shall allow users to continue a completed insertion treatment within 
 
 #### 4.1.1 General UI Requirements
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-UI-001 | The system shall be responsive and function on mobile devices (320px minimum width) | High |
-| SRS-UI-002 | The system shall use accessible color contrast ratios (WCAG 2.1 AA) | Medium |
-| SRS-UI-003 | The system shall provide clear error messages for all user actions | High |
-| SRS-UI-004 | The system shall display loading indicators during async operations | Medium |
-| SRS-UI-005 | The system shall display environment indicator (staging/production) | Medium |
+| ID         | Requirement                                                                         | Priority |
+| ---------- | ----------------------------------------------------------------------------------- | -------- |
+| SRS-UI-001 | The system shall be responsive and function on mobile devices (320px minimum width) | High     |
+| SRS-UI-002 | The system shall use accessible color contrast ratios (WCAG 2.1 AA)                 | Medium   |
+| SRS-UI-003 | The system shall provide clear error messages for all user actions                  | High     |
+| SRS-UI-004 | The system shall display loading indicators during async operations                 | Medium   |
+| SRS-UI-005 | The system shall display environment indicator (staging/production)                 | Medium   |
 
 #### 4.1.2 Key Screens
 
-| Screen | Purpose | Key Elements |
-|--------|---------|--------------|
-| Login | User authentication | Email input, verification code input |
-| Procedure Type | Select insertion/removal | Two prominent selection buttons |
-| Treatment Selection | Choose patient/treatment | Search filters, treatment list, selection |
+| Screen                  | Purpose                      | Key Elements                               |
+| ----------------------- | ---------------------------- | ------------------------------------------ |
+| Login                   | User authentication          | Email input, verification code input       |
+| Procedure Type          | Select insertion/removal     | Two prominent selection buttons            |
+| Treatment Selection     | Choose patient/treatment     | Search filters, treatment list, selection  |
 | Treatment Documentation | Scan and process applicators | Scanner, applicator form, progress display |
-| Use List | Review applicators, finalize | Applicator table, edit, finalize button |
-| Seed Removal | Track removal procedure | Applicator list, removal inputs, progress |
+| Use List                | Review applicators, finalize | Applicator table, edit, finalize button    |
+| Seed Removal            | Track removal procedure      | Applicator list, removal inputs, progress  |
 
 ### 4.2 Hardware Interfaces
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-HW-001 | The system shall access device camera for QR code scanning via browser APIs | High |
-| SRS-HW-002 | The system shall function without camera using manual entry | Critical |
+| ID         | Requirement                                                                 | Priority |
+| ---------- | --------------------------------------------------------------------------- | -------- |
+| SRS-HW-001 | The system shall access device camera for QR code scanning via browser APIs | High     |
+| SRS-HW-002 | The system shall function without camera using manual entry                 | Critical |
 
 ### 4.3 Software Interfaces
 
 #### 4.3.1 Priority ERP OData API
 
-| Endpoint | Purpose | Data |
-|----------|---------|------|
-| PHONEBOOK | User authentication, site access | Email, position code, authorized sites |
-| ORDERS | Treatment/patient data | Subject ID, patient details, site, date |
-| SIBD_APPUSELISTTEXT | Applicator inventory (read, text/display variant) | SERNUMTEXT, SIBD_SEEDQTY, PARTDESTEXT, PARTNAMETEXT |
-| ORDERS/{id}/SIBD_APPUSELISTTEXT_SUBFORM | Applicator data per order (read) | Applicator details linked to specific order |
-| ORDERS/{id}/SIBD_APPLICATUSELIST_SUBFORM | Applicator data per order (write) | Used for posting applicator usage data back to Priority |
+| Endpoint                                 | Purpose                                           | Data                                                    |
+| ---------------------------------------- | ------------------------------------------------- | ------------------------------------------------------- |
+| PHONEBOOK                                | User authentication, site access                  | Email, position code, authorized sites                  |
+| ORDERS                                   | Treatment/patient data                            | Subject ID, patient details, site, date                 |
+| SIBD_APPUSELISTTEXT                      | Applicator inventory (read, text/display variant) | SERNUMTEXT, SIBD_SEEDQTY, PARTDESTEXT, PARTNAMETEXT     |
+| ORDERS/{id}/SIBD_APPUSELISTTEXT_SUBFORM  | Applicator data per order (read)                  | Applicator details linked to specific order             |
+| ORDERS/{id}/SIBD_APPLICATUSELIST_SUBFORM | Applicator data per order (write)                 | Used for posting applicator usage data back to Priority |
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-API-001 | The system shall authenticate to Priority API using configured credentials | Critical |
-| SRS-API-002 | The system shall handle Priority API timeouts (30 second default) | High |
-| SRS-API-003 | The system shall cache Priority applicator data in ApplicatorCache table with 24-hour TTL to reduce API calls and provide fail-safe validation | Medium |
-| SRS-API-004 | The system shall provide fallback test data when Priority is unavailable (development only) | Medium |
-| SRS-API-005 | The system shall implement a fail-closed cache pattern: if Priority is down AND cache is stale (>24h), operations shall be blocked rather than proceeding with stale data | High |
+| ID          | Requirement                                                                                                                                                               | Priority |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| SRS-API-001 | The system shall authenticate to Priority API using configured credentials                                                                                                | Critical |
+| SRS-API-002 | The system shall handle Priority API timeouts (30 second default)                                                                                                         | High     |
+| SRS-API-003 | The system shall cache Priority applicator data in ApplicatorCache table with 24-hour TTL to reduce API calls and provide fail-safe validation                            | Medium   |
+| SRS-API-004 | The system shall provide fallback test data when Priority is unavailable (development only)                                                                               | Medium   |
+| SRS-API-005 | The system shall implement a fail-closed cache pattern: if Priority is down AND cache is stale (>24h), operations shall be blocked rather than proceeding with stale data | High     |
 
 #### 4.3.2 Database Interface
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-DB-001 | The system shall use PostgreSQL 14+ for data persistence | Critical |
-| SRS-DB-002 | The system shall use Sequelize ORM for database operations | High |
-| SRS-DB-003 | The system shall implement database connection pooling | High |
-| SRS-DB-004 | The system shall implement health checks for database connectivity | High |
+| ID         | Requirement                                                        | Priority |
+| ---------- | ------------------------------------------------------------------ | -------- |
+| SRS-DB-001 | The system shall use PostgreSQL 14+ for data persistence           | Critical |
+| SRS-DB-002 | The system shall use Sequelize ORM for database operations         | High     |
+| SRS-DB-003 | The system shall implement database connection pooling             | High     |
+| SRS-DB-004 | The system shall implement health checks for database connectivity | High     |
 
 ### 4.4 Communication Interfaces
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-COM-001 | The system shall use HTTPS for all client-server communication | Critical |
-| SRS-COM-002 | The system shall use SMTP for sending verification emails | High |
-| SRS-COM-003 | The system shall implement email retry logic for delivery failures | Medium |
+| ID          | Requirement                                                        | Priority |
+| ----------- | ------------------------------------------------------------------ | -------- |
+| SRS-COM-001 | The system shall use HTTPS for all client-server communication     | Critical |
+| SRS-COM-002 | The system shall use SMTP for sending verification emails          | High     |
+| SRS-COM-003 | The system shall implement email retry logic for delivery failures | Medium   |
 
 ---
 
@@ -833,88 +873,88 @@ The system shall allow users to continue a completed insertion treatment within 
 
 ### 5.1 Performance Requirements
 
-| ID | Requirement | Priority | Metric |
-|----|-------------|----------|--------|
-| SRS-PERF-001 | Page load time shall be under 3 seconds on 4G connection | High | < 3000ms |
-| SRS-PERF-002 | API response time shall be under 2 seconds for standard operations | High | < 2000ms |
-| SRS-PERF-003 | QR code scanning shall decode within 500ms | High | < 500ms |
-| SRS-PERF-004 | PDF generation shall complete within 10 seconds | Medium | < 10000ms |
-| SRS-PERF-005 | System shall support 50 concurrent users | Medium | 50 users |
-| SRS-PERF-006 | Offline bundle download shall complete within 30 seconds | High | < 30000ms |
-| SRS-PERF-007 | Offline sync operation shall complete within 60 seconds | High | < 60000ms |
-| SRS-PERF-008 | IndexedDB read/write operations shall complete within 500ms | High | < 500ms |
-| SRS-PERF-009 | PHI encryption/decryption shall complete within 100ms per record | High | < 100ms |
+| ID           | Requirement                                                        | Priority | Metric    |
+| ------------ | ------------------------------------------------------------------ | -------- | --------- |
+| SRS-PERF-001 | Page load time shall be under 3 seconds on 4G connection           | High     | < 3000ms  |
+| SRS-PERF-002 | API response time shall be under 2 seconds for standard operations | High     | < 2000ms  |
+| SRS-PERF-003 | QR code scanning shall decode within 500ms                         | High     | < 500ms   |
+| SRS-PERF-004 | PDF generation shall complete within 10 seconds                    | Medium   | < 10000ms |
+| SRS-PERF-005 | System shall support 50 concurrent users                           | Medium   | 50 users  |
+| SRS-PERF-006 | Offline bundle download shall complete within 30 seconds           | High     | < 30000ms |
+| SRS-PERF-007 | Offline sync operation shall complete within 60 seconds            | High     | < 60000ms |
+| SRS-PERF-008 | IndexedDB read/write operations shall complete within 500ms        | High     | < 500ms   |
+| SRS-PERF-009 | PHI encryption/decryption shall complete within 100ms per record   | High     | < 100ms   |
 
 ### 5.2 Safety Requirements (IEC 62304)
 
-| ID | Requirement | Priority | Rationale |
-|----|-------------|----------|-----------|
-| SRS-SAFE-001 | The system shall validate all applicator data against Priority master data | Critical | Prevent incorrect tracking |
-| SRS-SAFE-002 | The system shall require confirmation before terminal status transitions | High | Prevent accidental state changes |
-| SRS-SAFE-003 | The system shall maintain immutable audit trail of all status changes | Critical | Regulatory compliance |
-| SRS-SAFE-004 | The system shall prevent modification of finalized treatments | Critical | Data integrity |
-| SRS-SAFE-005 | The system shall require comments for failure statuses | High | Documentation of issues |
-| SRS-SAFE-006 | The system shall display clear warnings for unusual conditions | High | User awareness |
+| ID           | Requirement                                                                | Priority | Rationale                        |
+| ------------ | -------------------------------------------------------------------------- | -------- | -------------------------------- |
+| SRS-SAFE-001 | The system shall validate all applicator data against Priority master data | Critical | Prevent incorrect tracking       |
+| SRS-SAFE-002 | The system shall require confirmation before terminal status transitions   | High     | Prevent accidental state changes |
+| SRS-SAFE-003 | The system shall maintain immutable audit trail of all status changes      | Critical | Regulatory compliance            |
+| SRS-SAFE-004 | The system shall prevent modification of finalized treatments              | Critical | Data integrity                   |
+| SRS-SAFE-005 | The system shall require comments for failure statuses                     | High     | Documentation of issues          |
+| SRS-SAFE-006 | The system shall display clear warnings for unusual conditions             | High     | User awareness                   |
 
 ### 5.3 Security Requirements
 
-| ID | Requirement | Priority | Implementation |
-|----|-------------|----------|----------------|
-| SRS-SEC-001 | The system shall store JWT tokens in HttpOnly secure cookies | Critical | XSS protection |
-| SRS-SEC-002 | The system shall hash verification codes using bcrypt | Critical | Password security |
-| SRS-SEC-003 | The system shall implement rate limiting on authentication endpoints | Critical | Brute-force protection |
-| SRS-SEC-004 | The system shall implement rate limiting on API endpoints | High | DoS protection |
-| SRS-SEC-005 | The system shall enforce HTTPS in production | Critical | Transport security |
-| SRS-SEC-006 | The system shall implement CORS origin validation | High | Cross-origin protection |
-| SRS-SEC-007 | The system shall implement security headers via Helmet.js | High | Security hardening |
-| SRS-SEC-008 | The system shall prevent user enumeration via generic error messages | High | Information disclosure |
-| SRS-SEC-009 | The system shall validate all user input | Critical | Injection prevention |
-| SRS-SEC-010 | The system shall use AES-256 encryption for data at rest | Critical | Data protection |
-| SRS-SEC-011 | The system shall use TLS 1.3 for all data in transit | Critical | Transport security |
-| SRS-SEC-012 | Multi-factor authentication shall be used for ePHI access (email verification code) | Critical | HIPAA 2025 |
-| SRS-SEC-013 | Network segmentation shall isolate ePHI systems | High | HIPAA 2025 |
-| SRS-SEC-014 | Audit logs shall be retained for minimum 6 years per HIPAA | Critical | Regulatory compliance |
-| SRS-SEC-015 | Audit log integrity shall be verified via immutability controls | High | Data integrity |
-| SRS-SEC-016 | Session timeout shall occur after 15 minutes of inactivity (HIPAA-compliant idle timeout) | High | Access control |
+| ID          | Requirement                                                                               | Priority | Implementation          |
+| ----------- | ----------------------------------------------------------------------------------------- | -------- | ----------------------- |
+| SRS-SEC-001 | The system shall store JWT tokens in HttpOnly secure cookies                              | Critical | XSS protection          |
+| SRS-SEC-002 | The system shall hash verification codes using bcrypt                                     | Critical | Password security       |
+| SRS-SEC-003 | The system shall implement rate limiting on authentication endpoints                      | Critical | Brute-force protection  |
+| SRS-SEC-004 | The system shall implement rate limiting on API endpoints                                 | High     | DoS protection          |
+| SRS-SEC-005 | The system shall enforce HTTPS in production                                              | Critical | Transport security      |
+| SRS-SEC-006 | The system shall implement CORS origin validation                                         | High     | Cross-origin protection |
+| SRS-SEC-007 | The system shall implement security headers via Helmet.js                                 | High     | Security hardening      |
+| SRS-SEC-008 | The system shall prevent user enumeration via generic error messages                      | High     | Information disclosure  |
+| SRS-SEC-009 | The system shall validate all user input                                                  | Critical | Injection prevention    |
+| SRS-SEC-010 | The system shall use AES-256 encryption for data at rest                                  | Critical | Data protection         |
+| SRS-SEC-011 | The system shall use TLS 1.3 for all data in transit                                      | Critical | Transport security      |
+| SRS-SEC-012 | Multi-factor authentication shall be used for ePHI access (email verification code)       | Critical | HIPAA 2025              |
+| SRS-SEC-013 | Network segmentation shall isolate ePHI systems                                           | High     | HIPAA 2025              |
+| SRS-SEC-014 | Audit logs shall be retained for minimum 6 years per HIPAA                                | Critical | Regulatory compliance   |
+| SRS-SEC-015 | Audit log integrity shall be verified via immutability controls                           | High     | Data integrity          |
+| SRS-SEC-016 | Session timeout shall occur after 15 minutes of inactivity (HIPAA-compliant idle timeout) | High     | Access control          |
 
 **Rate Limiting Configuration:**
 
-| Endpoint Type | Limit | Window |
-|---------------|-------|--------|
-| Authentication | 20 requests | 15 minutes |
-| Code Request | 10 requests | 15 minutes |
-| Verification | 15 requests | 15 minutes |
-| Token Validation | 50 requests | 15 minutes |
-| General API | 100 requests | 15 minutes |
+| Endpoint Type    | Limit        | Window     |
+| ---------------- | ------------ | ---------- |
+| Authentication   | 20 requests  | 15 minutes |
+| Code Request     | 10 requests  | 15 minutes |
+| Verification     | 15 requests  | 15 minutes |
+| Token Validation | 50 requests  | 15 minutes |
+| General API      | 100 requests | 15 minutes |
 
 ### 5.4 Software Quality Attributes
 
-| Attribute | Requirement |
-|-----------|-------------|
-| **Availability** | System shall be available 99.5% during business hours |
-| **Reliability** | System shall recover from crashes within 5 minutes |
-| **Maintainability** | System shall use TypeScript for type safety |
-| **Portability** | System shall run in Docker containers |
-| **Scalability** | System shall support horizontal scaling via Docker Swarm |
+| Attribute           | Requirement                                              |
+| ------------------- | -------------------------------------------------------- |
+| **Availability**    | System shall be available 99.5% during business hours    |
+| **Reliability**     | System shall recover from crashes within 5 minutes       |
+| **Maintainability** | System shall use TypeScript for type safety              |
+| **Portability**     | System shall run in Docker containers                    |
+| **Scalability**     | System shall support horizontal scaling via Docker Swarm |
 
 ### 5.5 Business Rules
 
-| ID | Rule | Priority |
-|----|------|----------|
-| SRS-BR-001 | Removal procedures are only allowed 30+ days after insertion | High |
-| SRS-BR-002 | Position Code 99 users have full site access | High |
-| SRS-BR-003 | Test data (test@example.com) is isolated from production | Critical |
-| SRS-BR-004 | Failure statuses require explanatory comments | High |
-| SRS-BR-005 | Completed treatments cannot be modified | Critical |
+| ID         | Rule                                                         | Priority |
+| ---------- | ------------------------------------------------------------ | -------- |
+| SRS-BR-001 | Removal procedures are only allowed 30+ days after insertion | High     |
+| SRS-BR-002 | Position Code 99 users have full site access                 | High     |
+| SRS-BR-003 | Test data (test@example.com) is isolated from production     | Critical |
+| SRS-BR-004 | Failure statuses require explanatory comments                | High     |
+| SRS-BR-005 | Completed treatments cannot be modified                      | Critical |
 
 ### 5.6 Backup and Recovery Requirements
 
-| ID | Requirement | Priority | Metric |
-|----|-------------|----------|--------|
-| SRS-RECV-001 | The system shall support automated database backup every 24 hours | High | Daily backup |
-| SRS-RECV-002 | Recovery Time Objective (RTO) shall be less than 4 hours | High | < 4 hours |
-| SRS-RECV-003 | Recovery Point Objective (RPO) shall be less than 24 hours | High | < 24 hours |
-| SRS-RECV-004 | Backup integrity shall be verified weekly | Medium | Weekly verification |
+| ID           | Requirement                                                       | Priority | Metric              |
+| ------------ | ----------------------------------------------------------------- | -------- | ------------------- |
+| SRS-RECV-001 | The system shall support automated database backup every 24 hours | High     | Daily backup        |
+| SRS-RECV-002 | Recovery Time Objective (RTO) shall be less than 4 hours          | High     | < 4 hours           |
+| SRS-RECV-003 | Recovery Point Objective (RPO) shall be less than 24 hours        | High     | < 24 hours          |
+| SRS-RECV-004 | Backup integrity shall be verified weekly                         | Medium   | Weekly verification |
 
 ---
 
@@ -968,108 +1008,110 @@ The system shall allow users to continue a completed insertion treatment within 
 
 #### 6.2.1 Users Table
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique user identifier |
-| name | VARCHAR(255) | NOT NULL | User's display name |
-| email | VARCHAR(255) | UNIQUE | User's email address |
-| phoneNumber | VARCHAR(50) | UNIQUE | User's phone number |
-| role | ENUM | NOT NULL, default 'hospital' | User role (hospital, alphatau, admin) |
-| verificationCode | VARCHAR(255) | nullable | Hashed verification code |
-| verificationExpires | TIMESTAMP | nullable | Code expiration time |
-| failedAttempts | INTEGER | NOT NULL, default 0 | Failed verification count |
-| lastLogin | TIMESTAMP | nullable | Last successful login |
-| metadata | JSON | nullable | Priority user data (position, sites) |
+| Field               | Type         | Constraints                  | Description                           |
+| ------------------- | ------------ | ---------------------------- | ------------------------------------- |
+| id                  | UUID         | PK, auto-generated           | Unique user identifier                |
+| name                | VARCHAR(255) | NOT NULL                     | User's display name                   |
+| email               | VARCHAR(255) | UNIQUE                       | User's email address                  |
+| phoneNumber         | VARCHAR(50)  | UNIQUE                       | User's phone number                   |
+| role                | ENUM         | NOT NULL, default 'hospital' | User role (hospital, alphatau, admin) |
+| verificationCode    | VARCHAR(255) | nullable                     | Hashed verification code              |
+| verificationExpires | TIMESTAMP    | nullable                     | Code expiration time                  |
+| failedAttempts      | INTEGER      | NOT NULL, default 0          | Failed verification count             |
+| lastLogin           | TIMESTAMP    | nullable                     | Last successful login                 |
+| metadata            | JSON         | nullable                     | Priority user data (position, sites)  |
 
 #### 6.2.2 Treatments Table
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique treatment identifier |
-| type | ENUM | NOT NULL | Treatment type (insertion, removal) |
-| subjectId | VARCHAR(100) | NOT NULL, indexed | Priority Subject ID |
-| patientName | VARCHAR(255) | nullable | Patient identifier from Priority |
-| site | VARCHAR(100) | NOT NULL | Treatment site |
-| date | TIMESTAMP | NOT NULL, indexed | Treatment date |
-| isComplete | BOOLEAN | NOT NULL, default false | Completion status |
-| priorityId | VARCHAR(100) | nullable | Reference to Priority system |
-| userId | UUID | FK→users, NOT NULL | Creating user |
-| completedBy | UUID | FK→users, nullable | Completing user |
-| completedAt | TIMESTAMP | nullable | Completion timestamp |
-| seedQuantity | INTEGER | nullable | Total seed count |
-| activityPerSeed | FLOAT | nullable | Radiation activity per seed (Bq) |
-| surgeon | VARCHAR(255) | nullable | Performing surgeon |
-| parentTreatmentId | UUID | FK→treatments, nullable | Links continuation to parent treatment |
-| lastActivityAt | TIMESTAMP | nullable | Last applicator activity for 24-hour continuation window |
-| removalDate | DATE | nullable | Date of removal procedure |
-| allSourcesSameDate | BOOLEAN | nullable | Whether all sources removed on same day |
-| additionalRemovalDate | DATE | nullable | Secondary removal date if different |
-| reasonNotSameDate | TEXT | nullable | Reason for different removal dates |
-| discrepancyClarification | JSON | nullable | Discrepancy tracking data (Lost, Retrieved, Remained, Other) |
-| individualSeedsRemoved | INTEGER | nullable, default 0 | Count of individually removed seeds |
-| individualSeedNotes | JSON | nullable | Notes for individual seed removals |
-| removalGeneralComments | TEXT | nullable | General removal comments |
-| syncStatus | ENUM | nullable | Offline sync status (pending, syncing, synced, failed) |
-| version | INTEGER | NOT NULL, default 1 | Optimistic locking version for sync conflicts |
+| Field                    | Type         | Constraints             | Description                                                  |
+| ------------------------ | ------------ | ----------------------- | ------------------------------------------------------------ |
+| id                       | UUID         | PK, auto-generated      | Unique treatment identifier                                  |
+| type                     | ENUM         | NOT NULL                | Treatment type (insertion, removal)                          |
+| subjectId                | VARCHAR(100) | NOT NULL, indexed       | Priority Subject ID                                          |
+| patientName              | VARCHAR(255) | nullable                | Patient identifier from Priority                             |
+| site                     | VARCHAR(100) | NOT NULL                | Treatment site                                               |
+| date                     | TIMESTAMP    | NOT NULL, indexed       | Treatment date                                               |
+| isComplete               | BOOLEAN      | NOT NULL, default false | Completion status                                            |
+| priorityId               | VARCHAR(100) | nullable                | Reference to Priority system                                 |
+| userId                   | UUID         | FK→users, NOT NULL      | Creating user                                                |
+| completedBy              | UUID         | FK→users, nullable      | Completing user                                              |
+| completedAt              | TIMESTAMP    | nullable                | Completion timestamp                                         |
+| seedQuantity             | INTEGER      | nullable                | Total seed count                                             |
+| activityPerSeed          | FLOAT        | nullable                | Radiation activity per seed (Bq)                             |
+| surgeon                  | VARCHAR(255) | nullable                | Performing surgeon                                           |
+| parentTreatmentId        | UUID         | FK→treatments, nullable | Links continuation to parent treatment                       |
+| lastActivityAt           | TIMESTAMP    | nullable                | Last applicator activity for 24-hour continuation window     |
+| removalDate              | DATE         | nullable                | Date of removal procedure                                    |
+| allSourcesSameDate       | BOOLEAN      | nullable                | Whether all sources removed on same day                      |
+| additionalRemovalDate    | DATE         | nullable                | Secondary removal date if different                          |
+| reasonNotSameDate        | TEXT         | nullable                | Reason for different removal dates                           |
+| discrepancyClarification | JSON         | nullable                | Discrepancy tracking data (Lost, Retrieved, Remained, Other) |
+| individualSeedsRemoved   | INTEGER      | nullable, default 0     | Count of individually removed seeds                          |
+| individualSeedNotes      | JSON         | nullable                | Notes for individual seed removals                           |
+| removalGeneralComments   | TEXT         | nullable                | General removal comments                                     |
+| syncStatus               | ENUM         | nullable                | Offline sync status (pending, syncing, synced, failed)       |
+| version                  | INTEGER      | NOT NULL, default 1     | Optimistic locking version for sync conflicts                |
 
 **Notes:**
+
 - The `priorityId` field may contain a JSON array when treatments combine multiple Priority orders (e.g., pancreas multi-stage treatments).
 - The `parentTreatmentId` links continuation treatments to their parent (24-hour continuation window).
 - The `discrepancyClarification` stores JSON with structure: `{ lost: {checked, amount, comment}, retrievedToSite: {...}, remainedInTissue: {...}, other: {..., description} }`.
 
 #### 6.2.3 Applicators Table
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique applicator identifier |
-| serialNumber | VARCHAR(100) | NOT NULL, indexed | Applicator serial number |
-| seedQuantity | INTEGER | NOT NULL, default 0 | Seeds in applicator |
-| usageType | ENUM | NOT NULL, default 'full' | Usage outcome (full, faulty, none) |
-| status | VARCHAR(50) | nullable, validated | Workflow status |
-| packageLabel | VARCHAR(10) | nullable | Package identifier |
-| insertionTime | TIMESTAMP | NOT NULL | When applicator was used |
-| comments | TEXT | nullable | Usage comments |
-| treatmentId | UUID | FK→treatments, NOT NULL | Parent treatment |
-| addedBy | UUID | FK→users, NOT NULL | User who added |
-| isRemoved | BOOLEAN | NOT NULL, default false | Removal tracking |
-| removalTime | TIMESTAMP | nullable | When removed |
-| removedBy | UUID | FK→users, nullable | User who removed |
-| applicatorType | VARCHAR(255) | nullable | Type from Priority PARTS |
-| attachmentFilename | VARCHAR(255) | nullable | Uploaded file name |
-| attachmentFileCount | INTEGER | NOT NULL, default 0 | Number of attached files |
-| attachmentSizeBytes | BIGINT | NOT NULL, default 0 | Total attachment size |
-| attachmentSyncStatus | ENUM | NOT NULL, default 'pending' | Sync state (pending, syncing, synced, failed) |
+| Field                | Type         | Constraints                 | Description                                   |
+| -------------------- | ------------ | --------------------------- | --------------------------------------------- |
+| id                   | UUID         | PK, auto-generated          | Unique applicator identifier                  |
+| serialNumber         | VARCHAR(100) | NOT NULL, indexed           | Applicator serial number                      |
+| seedQuantity         | INTEGER      | NOT NULL, default 0         | Seeds in applicator                           |
+| usageType            | ENUM         | NOT NULL, default 'full'    | Usage outcome (full, faulty, none)            |
+| status               | VARCHAR(50)  | nullable, validated         | Workflow status                               |
+| packageLabel         | VARCHAR(10)  | nullable                    | Package identifier                            |
+| insertionTime        | TIMESTAMP    | NOT NULL                    | When applicator was used                      |
+| comments             | TEXT         | nullable                    | Usage comments                                |
+| treatmentId          | UUID         | FK→treatments, NOT NULL     | Parent treatment                              |
+| addedBy              | UUID         | FK→users, NOT NULL          | User who added                                |
+| isRemoved            | BOOLEAN      | NOT NULL, default false     | Removal tracking                              |
+| removalTime          | TIMESTAMP    | nullable                    | When removed                                  |
+| removedBy            | UUID         | FK→users, nullable          | User who removed                              |
+| applicatorType       | VARCHAR(255) | nullable                    | Type from Priority PARTS                      |
+| attachmentFilename   | VARCHAR(255) | nullable                    | Uploaded file name                            |
+| attachmentFileCount  | INTEGER      | NOT NULL, default 0         | Number of attached files                      |
+| attachmentSizeBytes  | BIGINT       | NOT NULL, default 0         | Total attachment size                         |
+| attachmentSyncStatus | ENUM         | NOT NULL, default 'pending' | Sync state (pending, syncing, synced, failed) |
 
 #### 6.2.4 ApplicatorAuditLog Table
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique log entry identifier |
-| applicatorId | UUID | FK→applicators, NOT NULL | Related applicator |
-| oldStatus | VARCHAR(50) | nullable | Previous status |
-| newStatus | VARCHAR(50) | NOT NULL, validated | New status |
-| changedBy | VARCHAR(255) | NOT NULL | User email who made change |
-| changedAt | TIMESTAMP | NOT NULL, default NOW() | When change occurred |
-| reason | TEXT | nullable | Reason for change |
-| requestId | VARCHAR(100) | nullable | Correlation ID |
+| Field        | Type         | Constraints              | Description                 |
+| ------------ | ------------ | ------------------------ | --------------------------- |
+| id           | UUID         | PK, auto-generated       | Unique log entry identifier |
+| applicatorId | UUID         | FK→applicators, NOT NULL | Related applicator          |
+| oldStatus    | VARCHAR(50)  | nullable                 | Previous status             |
+| newStatus    | VARCHAR(50)  | NOT NULL, validated      | New status                  |
+| changedBy    | VARCHAR(255) | NOT NULL                 | User email who made change  |
+| changedAt    | TIMESTAMP    | NOT NULL, default NOW()  | When change occurred        |
+| reason       | TEXT         | nullable                 | Reason for change           |
+| requestId    | VARCHAR(100) | nullable                 | Correlation ID              |
 
 #### 6.2.5 AuthAuditLog Table (HIPAA Authentication Audit)
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique audit entry identifier |
-| userId | UUID | FK→users, nullable | User who triggered the event (NULL for failed logins where user may not exist) |
-| eventType | VARCHAR(50) | NOT NULL, validated | Event type: LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, SESSION_TIMEOUT, OTP_REQUEST |
-| eventTime | TIMESTAMP | NOT NULL, default NOW() | When the event occurred |
-| ipAddress | VARCHAR(45) | nullable | Client IP address (supports IPv6) |
-| userAgent | TEXT | nullable | Client User-Agent header |
-| identifier | VARCHAR(255) | nullable | Privacy-masked email/phone (e.g., "us***@example.com") |
-| failureReason | TEXT | nullable | Reason for failure (LOGIN_FAILURE events only) |
-| requestId | VARCHAR(100) | nullable | Correlation ID for log tracing |
+| Field         | Type         | Constraints             | Description                                                                    |
+| ------------- | ------------ | ----------------------- | ------------------------------------------------------------------------------ |
+| id            | UUID         | PK, auto-generated      | Unique audit entry identifier                                                  |
+| userId        | UUID         | FK→users, nullable      | User who triggered the event (NULL for failed logins where user may not exist) |
+| eventType     | VARCHAR(50)  | NOT NULL, validated     | Event type: LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT, SESSION_TIMEOUT, OTP_REQUEST |
+| eventTime     | TIMESTAMP    | NOT NULL, default NOW() | When the event occurred                                                        |
+| ipAddress     | VARCHAR(45)  | nullable                | Client IP address (supports IPv6)                                              |
+| userAgent     | TEXT         | nullable                | Client User-Agent header                                                       |
+| identifier    | VARCHAR(255) | nullable                | Privacy-masked email/phone (e.g., "us\*\*\*@example.com")                      |
+| failureReason | TEXT         | nullable                | Reason for failure (LOGIN_FAILURE events only)                                 |
+| requestId     | VARCHAR(100) | nullable                | Correlation ID for log tracing                                                 |
 
 **Indexes:** userId, eventTime, eventType, composite (userId + eventTime)
 
 **Notes:**
+
 - This table supports HIPAA 2025 requirements for authentication event tracking.
 - The `identifier` field stores privacy-masked values, never raw emails or phone numbers.
 - The service layer catches all errors internally to ensure audit logging never disrupts the authentication flow.
@@ -1077,78 +1119,80 @@ The system shall allow users to continue a completed insertion treatment within 
 
 #### 6.2.6 SignatureVerification Table
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique verification identifier |
-| treatmentId | UUID | FK→treatments, NOT NULL | Treatment being finalized |
-| targetEmail | VARCHAR(255) | NOT NULL | Email of the person signing |
-| verificationCode | VARCHAR(255) | NOT NULL | Bcrypt-hashed verification code |
-| verificationExpires | TIMESTAMP | NOT NULL | Code expiration (1 hour from generation) |
-| failedAttempts | INTEGER | NOT NULL, default 0 | Count of failed verification attempts |
-| status | ENUM | NOT NULL, default 'pending' | Status: pending, verified, expired, failed |
-| signerName | VARCHAR(255) | nullable | Name of the signer |
-| signerPosition | VARCHAR(100) | nullable | Position/title of the signer |
+| Field               | Type         | Constraints                 | Description                                |
+| ------------------- | ------------ | --------------------------- | ------------------------------------------ |
+| id                  | UUID         | PK, auto-generated          | Unique verification identifier             |
+| treatmentId         | UUID         | FK→treatments, NOT NULL     | Treatment being finalized                  |
+| targetEmail         | VARCHAR(255) | NOT NULL                    | Email of the person signing                |
+| verificationCode    | VARCHAR(255) | NOT NULL                    | Bcrypt-hashed verification code            |
+| verificationExpires | TIMESTAMP    | NOT NULL                    | Code expiration (1 hour from generation)   |
+| failedAttempts      | INTEGER      | NOT NULL, default 0         | Count of failed verification attempts      |
+| status              | ENUM         | NOT NULL, default 'pending' | Status: pending, verified, expired, failed |
+| signerName          | VARCHAR(255) | nullable                    | Name of the signer                         |
+| signerPosition      | VARCHAR(100) | nullable                    | Position/title of the signer               |
 
 **Indexes:** treatmentId, targetEmail, status, verificationExpires
 
 **Notes:**
+
 - A treatment can have multiple SignatureVerification records (e.g., if a code expires and a new one is generated).
 - After 3 failed attempts, the status is automatically set to `failed`.
 - Methods: `generateCode()` creates a new 6-digit code with 1-hour expiry; `verifyCode()` validates and tracks attempts; `getRemainingAttempts()` returns attempts left; `isStillValid()` checks if verification is still usable.
 
 #### 6.2.7 SyncConflict Table (Offline Support)
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique conflict identifier |
-| entityType | ENUM | NOT NULL | Type: 'treatment' or 'applicator' |
-| entityId | UUID | NOT NULL, indexed | ID of the conflicting entity |
-| localData | JSON | NOT NULL | Data from offline device |
-| serverData | JSON | NOT NULL | Data currently on server |
-| conflictType | VARCHAR(50) | NOT NULL | Type: 'version_mismatch', 'status_conflict', 'field_conflict' |
-| resolution | ENUM | nullable | Resolution: 'local_wins', 'server_wins', 'merged', null (unresolved) |
-| resolvedBy | UUID | FK→users, nullable | User who resolved conflict |
-| resolvedAt | TIMESTAMP | nullable | When conflict was resolved |
-| requiresAdmin | BOOLEAN | NOT NULL, default false | Medical-critical conflicts require admin resolution |
-| deviceId | VARCHAR(100) | NOT NULL | Device that created offline change |
-| overwrittenData | JSON | nullable | Data that was overwritten (HIPAA audit trail) |
-| createdAt | TIMESTAMP | NOT NULL, default NOW() | When conflict was detected |
+| Field           | Type         | Constraints             | Description                                                          |
+| --------------- | ------------ | ----------------------- | -------------------------------------------------------------------- |
+| id              | UUID         | PK, auto-generated      | Unique conflict identifier                                           |
+| entityType      | ENUM         | NOT NULL                | Type: 'treatment' or 'applicator'                                    |
+| entityId        | UUID         | NOT NULL, indexed       | ID of the conflicting entity                                         |
+| localData       | JSON         | NOT NULL                | Data from offline device                                             |
+| serverData      | JSON         | NOT NULL                | Data currently on server                                             |
+| conflictType    | VARCHAR(50)  | NOT NULL                | Type: 'version_mismatch', 'status_conflict', 'field_conflict'        |
+| resolution      | ENUM         | nullable                | Resolution: 'local_wins', 'server_wins', 'merged', null (unresolved) |
+| resolvedBy      | UUID         | FK→users, nullable      | User who resolved conflict                                           |
+| resolvedAt      | TIMESTAMP    | nullable                | When conflict was resolved                                           |
+| requiresAdmin   | BOOLEAN      | NOT NULL, default false | Medical-critical conflicts require admin resolution                  |
+| deviceId        | VARCHAR(100) | NOT NULL                | Device that created offline change                                   |
+| overwrittenData | JSON         | nullable                | Data that was overwritten (HIPAA audit trail)                        |
+| createdAt       | TIMESTAMP    | NOT NULL, default NOW() | When conflict was detected                                           |
 
 #### 6.2.8 OfflineAuditLog Table (Offline Support)
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | UUID | PK, auto-generated | Unique audit entry identifier |
-| entityType | ENUM | NOT NULL | Type: 'treatment' or 'applicator' |
-| entityId | UUID | NOT NULL, indexed | ID of the affected entity |
-| operation | ENUM | NOT NULL | Operation: 'create', 'update', 'status_change', 'sync' |
-| deviceId | VARCHAR(100) | NOT NULL | Device that performed operation |
-| userId | UUID | FK→users, NOT NULL | User who performed operation |
-| beforeState | JSON | nullable | Entity state before change |
-| afterState | JSON | NOT NULL | Entity state after change |
-| offlineAt | TIMESTAMP | NOT NULL | When operation occurred offline |
-| syncedAt | TIMESTAMP | nullable | When operation was synced to server |
-| changeHash | VARCHAR(64) | NOT NULL, indexed | SHA-256 hash for idempotency checking |
-| metadata | JSON | nullable | Additional operation metadata |
-| createdAt | TIMESTAMP | NOT NULL, default NOW() | When audit entry was created |
+| Field       | Type         | Constraints             | Description                                            |
+| ----------- | ------------ | ----------------------- | ------------------------------------------------------ |
+| id          | UUID         | PK, auto-generated      | Unique audit entry identifier                          |
+| entityType  | ENUM         | NOT NULL                | Type: 'treatment' or 'applicator'                      |
+| entityId    | UUID         | NOT NULL, indexed       | ID of the affected entity                              |
+| operation   | ENUM         | NOT NULL                | Operation: 'create', 'update', 'status_change', 'sync' |
+| deviceId    | VARCHAR(100) | NOT NULL                | Device that performed operation                        |
+| userId      | UUID         | FK→users, NOT NULL      | User who performed operation                           |
+| beforeState | JSON         | nullable                | Entity state before change                             |
+| afterState  | JSON         | NOT NULL                | Entity state after change                              |
+| offlineAt   | TIMESTAMP    | NOT NULL                | When operation occurred offline                        |
+| syncedAt    | TIMESTAMP    | nullable                | When operation was synced to server                    |
+| changeHash  | VARCHAR(64)  | NOT NULL, indexed       | SHA-256 hash for idempotency checking                  |
+| metadata    | JSON         | nullable                | Additional operation metadata                          |
+| createdAt   | TIMESTAMP    | NOT NULL, default NOW() | When audit entry was created                           |
 
 #### 6.2.9 ApplicatorCache Table (ERP Fail-Safe Cache)
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| serialNumber | VARCHAR(100) | PK | Applicator serial number (natural key) |
-| SIBD_NOUSE | VARCHAR(10) | nullable | 'Y' if applicator marked "NO USE" in Priority |
-| SIBD_EXPIRY | VARCHAR(50) | nullable | Expiry date from Priority ERP |
-| SIBD_TREATTYPE | VARCHAR(50) | nullable | Treatment type compatibility |
-| SIBD_SEEDQTY | INTEGER | nullable | Seed quantity from Priority |
-| SIBD_SEEDLEN | DECIMAL(5,2) | nullable | Seed length from Priority |
-| PARTDES | VARCHAR(255) | nullable | Part description / applicator type |
-| PARTNAME | VARCHAR(100) | nullable | Catalog number |
-| cachedAt | TIMESTAMP | NOT NULL | When cache entry was last updated from ERP |
+| Field          | Type         | Constraints | Description                                   |
+| -------------- | ------------ | ----------- | --------------------------------------------- |
+| serialNumber   | VARCHAR(100) | PK          | Applicator serial number (natural key)        |
+| SIBD_NOUSE     | VARCHAR(10)  | nullable    | 'Y' if applicator marked "NO USE" in Priority |
+| SIBD_EXPIRY    | VARCHAR(50)  | nullable    | Expiry date from Priority ERP                 |
+| SIBD_TREATTYPE | VARCHAR(50)  | nullable    | Treatment type compatibility                  |
+| SIBD_SEEDQTY   | INTEGER      | nullable    | Seed quantity from Priority                   |
+| SIBD_SEEDLEN   | DECIMAL(5,2) | nullable    | Seed length from Priority                     |
+| PARTDES        | VARCHAR(255) | nullable    | Part description / applicator type            |
+| PARTNAME       | VARCHAR(100) | nullable    | Catalog number                                |
+| cachedAt       | TIMESTAMP    | NOT NULL    | When cache entry was last updated from ERP    |
 
 **Indexes:** cachedAt (for stale cache queries)
 
 **Notes:**
+
 - **SAFETY-CRITICAL**: This cache implements a fail-closed (not fail-open) pattern for ERP offline resilience.
 - Cache is updated on every successful Priority ERP query for applicator data.
 - TTL: 24 hours. If Priority is down AND cache is stale (older than 24h), operations are BLOCKED.
@@ -1157,13 +1201,13 @@ The system shall allow users to continue a completed insertion treatment within 
 
 ### 6.3 Data Integrity and Retention
 
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| SRS-DATA-001 | The system shall use foreign key constraints for referential integrity | Critical |
-| SRS-DATA-002 | The system shall use database transactions for multi-step operations | Critical |
-| SRS-DATA-003 | Audit log records shall never be deleted | Critical |
+| ID           | Requirement                                                                   | Priority |
+| ------------ | ----------------------------------------------------------------------------- | -------- |
+| SRS-DATA-001 | The system shall use foreign key constraints for referential integrity        | Critical |
+| SRS-DATA-002 | The system shall use database transactions for multi-step operations          | Critical |
+| SRS-DATA-003 | Audit log records shall never be deleted                                      | Critical |
 | SRS-DATA-004 | Treatment data shall be retained for minimum 7 years (regulatory requirement) | Critical |
-| SRS-DATA-005 | The system shall implement database backups | High |
+| SRS-DATA-005 | The system shall implement database backups                                   | High     |
 
 ---
 
@@ -1171,22 +1215,22 @@ The system shall allow users to continue a completed insertion treatment within 
 
 ### 7.1 Verification Methods
 
-| Requirement Category | Verification Method |
-|---------------------|---------------------|
-| Authentication (SRS-AUTH-*) | Unit tests, integration tests, security penetration testing |
-| Treatment Selection (SRS-TSEL-*) | Integration tests with Priority API mocks |
-| Applicator Scanning (SRS-SCAN-*) | Unit tests, E2E tests with test barcodes |
-| Workflow (SRS-WKFL-*) | Unit tests for state machine, integration tests |
-| Progress (SRS-PROG-*) | Frontend component tests |
-| Finalization (SRS-FINL-*) | E2E tests, manual QA verification |
-| Export (SRS-EXPRT-*) | Integration tests, manual PDF review |
-| Removal (SRS-RMVL-*) | Integration tests, E2E tests for discrepancy tracking |
-| Applicator Audit (SRS-AUDT-*) | Database queries, integration tests |
-| Auth Audit (SRS-AAUD-*) | Unit tests, integration tests, HIPAA compliance review |
-| Security (SRS-SEC-*) | Security scanning, penetration testing |
-| Performance (SRS-PERF-*) | Load testing, performance monitoring |
-| Offline Mode (SRS-OFFL-*) | PWA testing, offline simulation, sync conflict tests, encryption validation |
-| Treatment Continuation (SRS-CONT-*) | Integration tests, 24-hour window validation, E2E tests |
+| Requirement Category                 | Verification Method                                                         |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| Authentication (SRS-AUTH-\*)         | Unit tests, integration tests, security penetration testing                 |
+| Treatment Selection (SRS-TSEL-\*)    | Integration tests with Priority API mocks                                   |
+| Applicator Scanning (SRS-SCAN-\*)    | Unit tests, E2E tests with test barcodes                                    |
+| Workflow (SRS-WKFL-\*)               | Unit tests for state machine, integration tests                             |
+| Progress (SRS-PROG-\*)               | Frontend component tests                                                    |
+| Finalization (SRS-FINL-\*)           | E2E tests, manual QA verification                                           |
+| Export (SRS-EXPRT-\*)                | Integration tests, manual PDF review                                        |
+| Removal (SRS-RMVL-\*)                | Integration tests, E2E tests for discrepancy tracking                       |
+| Applicator Audit (SRS-AUDT-\*)       | Database queries, integration tests                                         |
+| Auth Audit (SRS-AAUD-\*)             | Unit tests, integration tests, HIPAA compliance review                      |
+| Security (SRS-SEC-\*)                | Security scanning, penetration testing                                      |
+| Performance (SRS-PERF-\*)            | Load testing, performance monitoring                                        |
+| Offline Mode (SRS-OFFL-\*)           | PWA testing, offline simulation, sync conflict tests, encryption validation |
+| Treatment Continuation (SRS-CONT-\*) | Integration tests, 24-hour window validation, E2E tests                     |
 
 ### 7.2 Traceability Matrix
 
@@ -1195,12 +1239,14 @@ The complete requirements traceability matrix is maintained in a separate docume
 **See:** [srs/traceability-matrix.md](srs/traceability-matrix.md)
 
 The traceability matrix includes:
+
 - All 230 requirements with unique IDs
 - Hazard linkage (from ISO 14971 analysis)
 - Test case references
 - Implementation status
 
 **Summary Statistics:**
+
 - Total Requirements: 230
 - Implemented: 198 (86.1%)
 - Needs Verification: 27 (11.7%)
@@ -1223,55 +1269,57 @@ The complete hazard analysis is maintained in a separate document:
 **IEC 62304 Safety Class: B**
 
 **Rationale:** The ALA is a documentation and tracking system that does not directly control medical device operation. However, incorrect tracking could result in:
+
 - Unreported applicator usage affecting regulatory compliance
 - Incorrect seed counts in patient documentation
 - Treatment documentation errors
 
 ### 8.3 Hazard Summary
 
-| Hazard ID | Description | Initial Risk | Residual Risk | Related Requirements |
-|-----------|-------------|--------------|---------------|---------------------|
-| HAZ-001 | Incorrect applicator tracking | Medium | ALARP | SRS-SCAN-003, SRS-AUDT-001 |
-| HAZ-002 | Incorrect seed count | Medium | ALARP | SRS-SCAN-007, SRS-SCAN-008 |
-| HAZ-003 | Unauthorized access to patient data | Medium | Low | SRS-AUTH-*, SRS-SEC-*, SRS-AAUD-* |
-| HAZ-004 | Data loss during documentation | Medium | ALARP | SRS-DATA-002, SRS-RECV-* |
-| HAZ-005 | Audit trail tampering | Medium | ALARP | SRS-AUDT-005, SRS-SEC-015 |
-| HAZ-006 | Applicator used on wrong patient | Medium | ALARP | SRS-SCAN-004, SRS-SCAN-005 |
-| HAZ-007 | Treatment finalized without verification | Medium | Low | SRS-FINL-003, SRS-FINL-009 |
-| HAZ-008 | Removal on wrong treatment | Medium | ALARP | SRS-RMVL-001, SRS-TSEL-007 |
-| HAZ-009 | Session hijacking | Medium | Low | SRS-AUTH-007, SRS-SEC-016, SRS-AAUD-001 |
-| HAZ-010 | Brute force attack | Low | Low | SRS-SEC-003, SRS-AUTH-004, SRS-AAUD-003 |
-| HAZ-011 | Data loss during offline sync | Medium | ALARP | SRS-OFFL-006, SRS-OFFL-011 |
-| HAZ-012 | Stale offline data used in treatment | Medium | Low | SRS-OFFL-010, SRS-OFFL-015 |
-| HAZ-013 | Unauthorized offline PHI access | Medium | ALARP | SRS-OFFL-003, SRS-OFFL-004, SRS-OFFL-023 |
-| HAZ-014 | Clock skew causing timestamp errors | Low | Low | SRS-OFFL-015, SRS-AUDT-003 |
-| HAZ-015 | Treatment finalized offline without verification | Medium | ALARP | SRS-OFFL-014 |
-| HAZ-016 | Continuation on wrong patient | Medium | ALARP | SRS-CONT-003, SRS-CONT-004, SRS-CONT-009 |
+| Hazard ID | Description                                      | Initial Risk | Residual Risk | Related Requirements                     |
+| --------- | ------------------------------------------------ | ------------ | ------------- | ---------------------------------------- |
+| HAZ-001   | Incorrect applicator tracking                    | Medium       | ALARP         | SRS-SCAN-003, SRS-AUDT-001               |
+| HAZ-002   | Incorrect seed count                             | Medium       | ALARP         | SRS-SCAN-007, SRS-SCAN-008               |
+| HAZ-003   | Unauthorized access to patient data              | Medium       | Low           | SRS-AUTH-_, SRS-SEC-_, SRS-AAUD-\*       |
+| HAZ-004   | Data loss during documentation                   | Medium       | ALARP         | SRS-DATA-002, SRS-RECV-\*                |
+| HAZ-005   | Audit trail tampering                            | Medium       | ALARP         | SRS-AUDT-005, SRS-SEC-015                |
+| HAZ-006   | Applicator used on wrong patient                 | Medium       | ALARP         | SRS-SCAN-004, SRS-SCAN-005               |
+| HAZ-007   | Treatment finalized without verification         | Medium       | Low           | SRS-FINL-003, SRS-FINL-009               |
+| HAZ-008   | Removal on wrong treatment                       | Medium       | ALARP         | SRS-RMVL-001, SRS-TSEL-007               |
+| HAZ-009   | Session hijacking                                | Medium       | Low           | SRS-AUTH-007, SRS-SEC-016, SRS-AAUD-001  |
+| HAZ-010   | Brute force attack                               | Low          | Low           | SRS-SEC-003, SRS-AUTH-004, SRS-AAUD-003  |
+| HAZ-011   | Data loss during offline sync                    | Medium       | ALARP         | SRS-OFFL-006, SRS-OFFL-011               |
+| HAZ-012   | Stale offline data used in treatment             | Medium       | Low           | SRS-OFFL-010, SRS-OFFL-015               |
+| HAZ-013   | Unauthorized offline PHI access                  | Medium       | ALARP         | SRS-OFFL-003, SRS-OFFL-004, SRS-OFFL-023 |
+| HAZ-014   | Clock skew causing timestamp errors              | Low          | Low           | SRS-OFFL-015, SRS-AUDT-003               |
+| HAZ-015   | Treatment finalized offline without verification | Medium       | ALARP         | SRS-OFFL-014                             |
+| HAZ-016   | Continuation on wrong patient                    | Medium       | ALARP         | SRS-CONT-003, SRS-CONT-004, SRS-CONT-009 |
 
 ### 8.4 Safety-Critical Requirements
 
 The following requirements are classified as safety-critical based on their role in risk control:
 
-| Requirement ID | Description | Related Hazards |
-|---------------|-------------|-----------------|
-| SRS-SCAN-003 | Validate applicator against Priority | HAZ-001, HAZ-006 |
-| SRS-SCAN-005 | Detect wrong treatment applicator | HAZ-006 |
-| SRS-AUDT-005 | Immutable audit logs | HAZ-001, HAZ-005 |
-| SRS-AUTH-007 | HttpOnly secure cookies | HAZ-003, HAZ-009 |
-| SRS-FINL-009 | Immutable finalized treatments | HAZ-007 |
-| SRS-SEC-003 | Rate limiting on authentication | HAZ-003, HAZ-010 |
-| SRS-AAUD-001 | Log all authentication events | HAZ-003, HAZ-009, HAZ-010 |
-| SRS-AAUD-008 | Auth audit logs immutable | HAZ-003, HAZ-005 |
-| SRS-OFFL-003 | Encrypt PHI at rest using AES-256-GCM | HAZ-013 |
-| SRS-OFFL-006 | Queue offline changes with integrity hashes | HAZ-011 |
-| SRS-OFFL-011 | Detect and store sync conflicts | HAZ-011 |
-| SRS-OFFL-012 | Medical-critical conflicts require admin resolution | HAZ-011, HAZ-012 |
-| SRS-OFFL-014 | Block treatment finalization offline | HAZ-015 |
-| SRS-CONT-003 | Track parent-child treatment relationship | HAZ-016 |
+| Requirement ID | Description                                         | Related Hazards           |
+| -------------- | --------------------------------------------------- | ------------------------- |
+| SRS-SCAN-003   | Validate applicator against Priority                | HAZ-001, HAZ-006          |
+| SRS-SCAN-005   | Detect wrong treatment applicator                   | HAZ-006                   |
+| SRS-AUDT-005   | Immutable audit logs                                | HAZ-001, HAZ-005          |
+| SRS-AUTH-007   | HttpOnly secure cookies                             | HAZ-003, HAZ-009          |
+| SRS-FINL-009   | Immutable finalized treatments                      | HAZ-007                   |
+| SRS-SEC-003    | Rate limiting on authentication                     | HAZ-003, HAZ-010          |
+| SRS-AAUD-001   | Log all authentication events                       | HAZ-003, HAZ-009, HAZ-010 |
+| SRS-AAUD-008   | Auth audit logs immutable                           | HAZ-003, HAZ-005          |
+| SRS-OFFL-003   | Encrypt PHI at rest using AES-256-GCM               | HAZ-013                   |
+| SRS-OFFL-006   | Queue offline changes with integrity hashes         | HAZ-011                   |
+| SRS-OFFL-011   | Detect and store sync conflicts                     | HAZ-011                   |
+| SRS-OFFL-012   | Medical-critical conflicts require admin resolution | HAZ-011, HAZ-012          |
+| SRS-OFFL-014   | Block treatment finalization offline                | HAZ-015                   |
+| SRS-CONT-003   | Track parent-child treatment relationship           | HAZ-016                   |
 
 ### 8.5 Risk Control Verification
 
 All risk control measures shall be verified through:
+
 1. Code review confirming implementation
 2. Unit tests for control logic
 3. Integration tests for end-to-end validation
@@ -1285,17 +1333,18 @@ This section addresses FDA cybersecurity guidance and HIPAA 2025 security requir
 
 ### 9.1 Cybersecurity Framework
 
-| ID | Requirement | Priority | Reference |
-|----|-------------|----------|-----------|
-| SRS-CYBER-001 | The system shall maintain a Software Bill of Materials (SBOM) | High | FDA Guidance |
-| SRS-CYBER-002 | The system shall undergo vulnerability scanning every 6 months | High | HIPAA 2025 |
-| SRS-CYBER-003 | The system shall undergo annual penetration testing | High | HIPAA 2025 |
-| SRS-CYBER-004 | The system shall have documented incident response procedures | High | HIPAA 2025 |
-| SRS-CYBER-005 | The system shall have patch management process (critical patches within 30 days) | High | FDA Guidance |
+| ID            | Requirement                                                                      | Priority | Reference    |
+| ------------- | -------------------------------------------------------------------------------- | -------- | ------------ |
+| SRS-CYBER-001 | The system shall maintain a Software Bill of Materials (SBOM)                    | High     | FDA Guidance |
+| SRS-CYBER-002 | The system shall undergo vulnerability scanning every 6 months                   | High     | HIPAA 2025   |
+| SRS-CYBER-003 | The system shall undergo annual penetration testing                              | High     | HIPAA 2025   |
+| SRS-CYBER-004 | The system shall have documented incident response procedures                    | High     | HIPAA 2025   |
+| SRS-CYBER-005 | The system shall have patch management process (critical patches within 30 days) | High     | FDA Guidance |
 
 ### 9.2 Software Bill of Materials (SBOM)
 
 The system shall maintain an SBOM documenting:
+
 - All open-source dependencies
 - Version numbers for each component
 - Known vulnerabilities (CVEs)
@@ -1303,18 +1352,19 @@ The system shall maintain an SBOM documenting:
 
 ### 9.3 Vulnerability Management
 
-| Activity | Frequency | Responsible |
-|----------|-----------|-------------|
-| Vulnerability scanning | Every 6 months | DevOps |
-| Penetration testing | Annual | Third-party security firm |
-| Dependency updates | Monthly review | Development team |
-| Critical patch deployment | Within 30 days | DevOps |
+| Activity                  | Frequency      | Responsible               |
+| ------------------------- | -------------- | ------------------------- |
+| Vulnerability scanning    | Every 6 months | DevOps                    |
+| Penetration testing       | Annual         | Third-party security firm |
+| Dependency updates        | Monthly review | Development team          |
+| Critical patch deployment | Within 30 days | DevOps                    |
 
 ### 9.4 Incident Response
 
 The system shall support incident response through:
-- Comprehensive audit logging (per SRS-AUDT-*)
-- User session management (per SRS-AUTH-*)
+
+- Comprehensive audit logging (per SRS-AUDT-\*)
+- User session management (per SRS-AUTH-\*)
 - Network monitoring integration capability
 - Forensic data preservation
 
@@ -1355,6 +1405,7 @@ See [docs/srs/applicator-state-diagram.md](srs/applicator-state-diagram.md)
 ```
 
 **Legend:**
+
 - Terminal states: INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE
 - In-progress states: SEALED, OPENED, LOADED
 - Green highlight: INSERTED (success)
@@ -1362,63 +1413,68 @@ See [docs/srs/applicator-state-diagram.md](srs/applicator-state-diagram.md)
 
 ### Appendix B: User Role Permission Matrix
 
-| Permission | Hospital | AlphaTau | Admin |
-|------------|----------|----------|-------|
-| Login | Yes | Yes | Yes |
-| View treatments (own sites) | Yes | Yes | Yes |
-| View treatments (all sites) | No | Yes | Yes |
-| Create insertion treatment | Yes | Yes | Yes |
-| Create removal treatment | Yes | Yes | Yes |
-| Add applicators | Yes | Yes | Yes |
-| Edit applicators | Yes | Yes | Yes |
-| Finalize treatment (auto) | Yes | No | Yes |
-| Finalize treatment (verified) | N/A | Yes | Yes |
-| View admin dashboard | No | No | Yes |
-| View system logs | No | No | Yes |
+| Permission                    | Hospital | AlphaTau | Admin |
+| ----------------------------- | -------- | -------- | ----- |
+| Login                         | Yes      | Yes      | Yes   |
+| View treatments (own sites)   | Yes      | Yes      | Yes   |
+| View treatments (all sites)   | No       | Yes      | Yes   |
+| Create insertion treatment    | Yes      | Yes      | Yes   |
+| Create removal treatment      | Yes      | Yes      | Yes   |
+| Add applicators               | Yes      | Yes      | Yes   |
+| Edit applicators              | Yes      | Yes      | Yes   |
+| Finalize treatment (auto)     | Yes      | No       | Yes   |
+| Finalize treatment (verified) | N/A      | Yes      | Yes   |
+| View admin dashboard          | No       | No       | Yes   |
+| View system logs              | No       | No       | Yes   |
 
 **Note:** Position Code 99 overrides all restrictions and grants full admin access.
 
 ### Appendix C: Priority API Integration Details
 
 #### Authentication
+
 - Method: Basic Authentication
 - Credentials: Configured via environment variables
 
 #### PHONEBOOK Query
+
 ```
 GET /PHONEBOOK?$filter=EMAIL eq '{email}'
 &$select=EMAIL,NAME,POSITION,PHONE,SITES
 ```
 
 #### ORDERS Query
+
 ```
 GET /ORDERS?$filter=SITE eq '{site}' and DATE ge {startDate}
 &$select=ORDNAME,DETAILS,SIESSION,SITE,DATE,SURGEON
 ```
 
 #### SIBD_APPUSELISTTEXT Query (Read - Text/Display Variant)
+
 ```
 GET /SIBD_APPUSELISTTEXT?$filter=SERNUMTEXT eq '{serialNumber}'
 &$select=SERNUMTEXT,SIBD_SEEDQTY,PARTDESTEXT,PARTNAMETEXT,SIBD_NOUSE,SIBD_EXPIRY,SIBD_TREATTYPE,SIBD_SEEDLEN
 ```
 
 #### SIBD_APPLICATUSELIST_SUBFORM (Write - Per Order)
+
 ```
 POST /ORDERS('{orderName}')/SIBD_APPLICATUSELIST_SUBFORM
 ```
 
 ### Appendix D: Glossary
 
-| Term | Definition |
-|------|------------|
-| Applicator | Medical device used to deploy brachytherapy seeds |
-| Brachytherapy | Internal radiation therapy using implanted radioactive sources |
-| HttpOnly Cookie | Cookie with HttpOnly flag preventing JavaScript access |
-| JWT | JSON Web Token for stateless authentication |
-| OData | Open Data Protocol for REST APIs |
-| Position Code | Priority ERP user classification number |
-| Subject ID | Unique patient/treatment identifier in Priority ERP |
-| Terminal Status | Applicator status that does not allow further transitions |
+| Term            | Definition                                                     |
+| --------------- | -------------------------------------------------------------- |
+| Applicator      | Medical device used to deploy brachytherapy seeds              |
+| Brachytherapy   | Internal radiation therapy using implanted radioactive sources |
+| HttpOnly Cookie | Cookie with HttpOnly flag preventing JavaScript access         |
+| JWT             | JSON Web Token for stateless authentication                    |
+| OData           | Open Data Protocol for REST APIs                               |
+| Position Code   | Priority ERP user classification number                        |
+| Subject ID      | Unique patient/treatment identifier in Priority ERP            |
+| Terminal Status | Applicator status that does not allow further transitions      |
 
 ---
 
@@ -1435,4 +1491,4 @@ This generates `docs/ALA_SRS.docx` using the `docx` npm library.
 
 ---
 
-*Document generated in compliance with IEEE/ISO/IEC 29148:2018 and IEC 62304:2006+AMD1:2015*
+_Document generated in compliance with IEEE/ISO/IEC 29148:2018 and IEC 62304:2006+AMD1:2015_

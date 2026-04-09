@@ -1,19 +1,24 @@
 # Frontend Testing Infrastructure
 
 ## Overview
+
 This directory contains the testing setup and utilities for the ALA Medical Treatment Tracking System frontend.
 
 ## Test Setup Files
 
 ### `setup.ts`
+
 Global test configuration that:
+
 - Extends Vitest's expect with jest-dom matchers
 - Cleans up after each test
 - Mocks browser APIs (window.matchMedia, IntersectionObserver)
 - Configures localStorage/sessionStorage cleanup
 
 ### `testUtils.tsx`
+
 Reusable test utilities including:
+
 - Custom render function with all providers (Auth, Treatment, Router)
 - Mock data (users, treatments, applicators)
 - Helper functions for authentication setup
@@ -22,6 +27,7 @@ Reusable test utilities including:
 ## Running Tests
 
 ### Unit Tests
+
 ```bash
 npm run test:unit          # Run all tests once
 npm run test:watch         # Run tests in watch mode
@@ -31,6 +37,7 @@ npm run test:ci            # Run tests for CI with verbose output
 ```
 
 ### End-to-End Tests
+
 ```bash
 npm run test:e2e           # Run all E2E tests
 npm run test:e2e:ui        # Open Playwright UI
@@ -40,30 +47,37 @@ npm run test:e2e:debug     # Debug E2E tests
 ## Test Structure
 
 ### Component Tests
+
 Location: `src/components/__tests__/`
 
 Tests for UI components:
+
 - **ProgressTracker.test.tsx** - Treatment progress display
 - **Layout.test.tsx** - App layout with navigation
 - **ProtectedRoute.test.tsx** - Route authentication guard
 - **ConfirmationDialog.test.tsx** - Confirmation dialog component
 
 ### Context Tests
+
 Location: `src/context/__tests__/`
 
 Tests for React context providers:
+
 - **AuthContext.test.tsx** - Authentication state management
 - **TreatmentContext.test.tsx** - Treatment workflow state
 
 ### Service Tests
+
 Location: `src/services/__tests__/`
 
 Tests for API and service layers:
+
 - **api.test.ts** - Axios instance configuration and interceptors
 
 ## Writing Tests
 
 ### Basic Component Test
+
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
@@ -79,6 +93,7 @@ describe('MyComponent', () => {
 ```
 
 ### Test with User Interaction
+
 ```typescript
 import userEvent from '@testing-library/user-event';
 
@@ -92,6 +107,7 @@ it('should handle button click', async () => {
 ```
 
 ### Test with Authenticated User
+
 ```typescript
 import { setupAuthenticatedUser } from '../../../tests/testUtils';
 
@@ -111,6 +127,7 @@ it('should show user data when authenticated', () => {
 - **Statements**: 70% minimum
 
 View coverage report:
+
 ```bash
 npm run test:coverage
 # Open coverage/index.html in browser
@@ -119,14 +136,17 @@ npm run test:coverage
 ## Mock Data
 
 ### Mock Users
+
 - `mockUser` - Regular hospital user
 - `mockAdminUser` - Admin user with full access
 
 ### Mock Treatments
+
 - `mockTreatment` - Insertion treatment
 - `mockRemovalTreatment` - Removal treatment
 
 ### Mock Applicators
+
 - `mockApplicator` - Full use applicator
 - `mockFaultyApplicator` - Faulty applicator
 - `mockNoUseApplicator` - Unused applicator
@@ -145,6 +165,7 @@ npm run test:coverage
 ## Troubleshooting
 
 ### Tests Fail Due to Missing Dependencies
+
 ```bash
 # Clean reinstall
 rm -rf node_modules package-lock.json
@@ -152,21 +173,25 @@ npm install
 ```
 
 ### Coverage Provider Issues
+
 ```bash
 # Install matching coverage provider version
 npm install -D @vitest/coverage-v8@^1.3.1
 ```
 
 ### Rollup Module Errors
+
 ```bash
 # Install optional rollup dependency
 npm install --save-optional @rollup/rollup-win32-x64-msvc
 ```
 
 ### React Router Errors
+
 Ensure components are wrapped with `BrowserRouter`:
+
 ```typescript
-import { render } from '../../../tests/testUtils';
+import { render } from "../../../tests/testUtils";
 // testUtils already includes BrowserRouter
 ```
 
@@ -179,11 +204,13 @@ import { render } from '../../../tests/testUtils';
 ## CI/CD Integration
 
 The `test:ci` script is optimized for continuous integration:
+
 ```bash
 npm run test:ci
 ```
 
 This runs tests with:
+
 - Coverage reporting
 - Verbose output
 - Single run (no watch mode)

@@ -15,6 +15,7 @@ Your ALA Medical Application now has a complete **compounding engineering system
 > "Each unit of engineering work makes subsequent units of work easier—not harder."
 
 This is achieved through:
+
 1. **Three-Lane Workflow**: Planning → Implementation → Review
 2. **Learning Loops**: Every bug/feature teaches the system
 3. **Knowledge Capture**: Patterns, pitfalls, and decisions documented
@@ -60,12 +61,14 @@ docs/
 Located in [.claude/agents/](.claude/agents/):
 
 **[ala-code-reviewer.md](.claude/agents/ala-code-reviewer.md)**
+
 - Reviews code quality and TypeScript best practices
 - Checks adherence to established patterns
 - Validates documentation standards
 - **Role**: General code quality gatekeeper
 
 **[priority-api-reviewer.md](.claude/agents/priority-api-reviewer.md)**
+
 - Reviews Priority ERP integration code
 - Validates OData query syntax
 - Checks applicator validation completeness
@@ -73,6 +76,7 @@ Located in [.claude/agents/](.claude/agents/):
 - **Role**: Priority integration specialist
 
 **[medical-safety-reviewer.md](.claude/agents/medical-safety-reviewer.md)**
+
 - Reviews patient safety requirements
 - Validates data integrity and audit trails
 - Checks transaction boundaries
@@ -84,6 +88,7 @@ Located in [.claude/agents/](.claude/agents/):
 Your [CLAUDE.md](CLAUDE.md) now includes:
 
 **New Sections**:
+
 - **Three-Lane Workflow Model** - How to orchestrate agents and tools
 - **Learning Loops** - How to capture knowledge after bugs/features
 - **Decision Log** - Why we made key architectural choices
@@ -92,6 +97,7 @@ Your [CLAUDE.md](CLAUDE.md) now includes:
 - **Quality Gates** - The 6-gate approval process
 
 **Enhanced Sections**:
+
 - **Specialized Agent Usage** - Now distinguishes implementation vs reviewer agents
 - Clear workflow guidance for when to use which tool/agent
 
@@ -173,27 +179,32 @@ Located in [.claude/agents/](.claude/agents/):
 Your system now uses these quality gates:
 
 ### Planning Gate
+
 - **`set_coding_task`** - Start any substantial change (creates task_id)
 - **`raise_missing_requirements`** - Clarify ambiguous requirements
 - **`raise_obstacle`** - Involve user in critical decisions
 - **`judge_coding_plan`** - Validate plan before implementation
 
 ### Implementation Gate
+
 - **`judge_code_change`** - Review implementation against plan
 - Requires: Git diff of all changes
 - Validates: Quality, safety, pattern compliance
 
 ### Testing Gate
+
 - **`judge_testing_implementation`** - Validate test quality
 - Requires: Test files + test execution output
 - Validates: Coverage, test quality, execution results
 
 ### Completion Gate
+
 - **`judge_coding_task_completion`** - Final validation
 - Checks: All gates passed, requirements met
 - Approves: Ready for deployment
 
 ### Recovery Tool
+
 - **`get_current_coding_task`** - Recover task_id if lost
 
 ---
@@ -203,33 +214,39 @@ Your system now uses these quality gates:
 Every substantial change must pass through these gates:
 
 ### Gate 1: Planning Review
+
 - Tool: `judge_coding_plan`
 - Validates: Requirements clear, design sound, risks identified
 - Blocker: Critical missing requirements or design flaws
 
 ### Gate 2: Implementation
+
 - Agents: Specialist agents implement with domain expertise
 - Parallel: Use multiple agents when tasks are independent
 - Documentation: Update relevant docs as you code
 
 ### Gate 3: Code Review
+
 - Agents: `ala-code-reviewer`, `priority-api-reviewer`, `medical-safety-reviewer`
 - Validates: Code quality, patterns, safety requirements
 - Blocker: Critical safety issues or major quality problems
 
 ### Gate 4: Code Change Validation
+
 - Tool: `judge_code_change`
 - Validates: Implementation matches plan, quality standards met
 - Requires: Git diff of all changes
 - Blocker: Data integrity issues, safety violations
 
 ### Gate 5: Testing Validation
+
 - Tool: `judge_testing_implementation`
 - Validates: Test quality, coverage, execution results
 - Requires: Test files list + test execution output
 - Blocker: Insufficient coverage of critical paths
 
 ### Gate 6: Completion Validation
+
 - Tool: `judge_coding_task_completion`
 - Validates: All requirements met, quality gates passed
 - Final check before deployment
@@ -273,21 +290,25 @@ Every substantial change must pass through these gates:
 ## 📚 Documentation Created
 
 ### Core Guides
+
 - **[QUICK-START.md](docs/workflows/compounding/QUICK-START.md)** - 5-minute introduction
 - **[COMPOUNDING-WORKFLOW-GUIDE.md](docs/workflows/compounding/COMPOUNDING-WORKFLOW-GUIDE.md)** - Complete workflow guide
 - **[Enhanced CLAUDE.md](CLAUDE.md)** - Updated with compounding sections
 
 ### Templates & Examples
+
 - **[docs/learnings/README.md](docs/learnings/README.md)** - Learning documentation templates
 - **[docs/patterns/README.md](docs/patterns/README.md)** - Pattern documentation guide
 - **[docs/architecture/README.md](docs/architecture/README.md)** - ADR templates
 - **[docs/workflows/README.md](docs/workflows/README.md)** - Workflow overview
 
 ### Example Documents
+
 - **[priority-odata-queries.md](docs/patterns/integration/priority-odata-queries.md)** - Example pattern
 - **[ADR-001-PostgreSQL-Treatment-Data.md](docs/architecture/adr/ADR-001-PostgreSQL-Treatment-Data.md)** - Example ADR
 
 ### Agent Configurations
+
 - **[ala-code-reviewer.md](.claude/agents/ala-code-reviewer.md)** - Code quality reviewer
 - **[priority-api-reviewer.md](.claude/agents/priority-api-reviewer.md)** - Priority integration reviewer
 - **[medical-safety-reviewer.md](.claude/agents/medical-safety-reviewer.md)** - Medical safety reviewer
@@ -317,21 +338,25 @@ Verify your setup:
 Track these to measure improvement:
 
 ### Development Velocity
+
 - [ ] Time to implement similar features (should decrease)
 - [ ] Iterations needed for approval (should decrease)
 - [ ] Context switching frequency (should decrease)
 
 ### Quality Improvements
+
 - [ ] Production bugs per release (should decrease)
 - [ ] Test coverage percentage (should increase)
 - [ ] Code review iterations (should decrease)
 
 ### Knowledge Growth
+
 - [ ] Documented patterns count (should increase)
 - [ ] Documented learnings count (should increase)
 - [ ] ADRs created (should grow steadily)
 
 ### System Learning
+
 - [ ] Reviewer agent updates (indicates learning)
 - [ ] CLAUDE.md enhancements (indicates captured knowledge)
 - [ ] Pattern reuse frequency (indicates compounding effect)
@@ -341,27 +366,32 @@ Track these to measure improvement:
 ## 🎓 Next Steps
 
 ### Week 1: Familiarization
+
 1. Read [QUICK-START.md](docs/workflows/compounding/QUICK-START.md)
 2. Try a simple feature with the full workflow
 3. See how the reviewer agents work
 
 ### Week 2: First Learning Loop
+
 1. Fix a bug using the workflow
 2. Document it in `docs/learnings/bugs/`
 3. Extract a pattern if applicable
 4. Update a reviewer agent
 
 ### Week 3: First ADR
+
 1. Document an architectural decision you made
 2. Use the template in `docs/architecture/README.md`
 3. Link from CLAUDE.md Decision Log
 
 ### Week 4: First Pattern
+
 1. Found a pattern that works well?
 2. Document it in `docs/patterns/[domain]/`
 3. Reference it in CLAUDE.md
 
 ### Ongoing
+
 - Use the full workflow for substantial changes
 - Capture learnings after every bug/error
 - Update reviewer agents as standards evolve
@@ -372,11 +402,13 @@ Track these to measure improvement:
 ## 💡 Pro Tips
 
 **Parallel is Faster**:
+
 ```
 "Use database-specialist and frontend-ui agents in parallel"
 ```
 
 **Auto-Selection Works Well**:
+
 ```
 "Fix Priority API timeout"  → auto-triggers priority-integration
 "React component slow"      → auto-triggers frontend-ui
@@ -384,11 +416,13 @@ Track these to measure improvement:
 ```
 
 **Review Before Committing**:
+
 ```
 "Review this code with all applicable reviewers"
 ```
 
 **Full Workflow for Big Changes**:
+
 ```
 "Add nurse tracking feature using the full workflow"
 ```
@@ -398,18 +432,22 @@ Track these to measure improvement:
 ## 🆘 Troubleshooting
 
 ### Agent Not Triggering?
+
 - Use explicit keywords ("Priority API", "React component", "database")
 - Or explicitly request: "Use priority-integration agent"
 
 ### Task ID Lost?
+
 - Use `get_current_coding_task` to recover it
 - Always save task_id for reference
 
 ### Reviewer Agent Too Strict?
+
 - They're supposed to be! That's good for quality
 - But you can edit agents in [.claude/agents/](.claude/agents/) if needed
 
 ### Don't Know Which Workflow to Use?
+
 - **Substantial changes**: Full workflow
 - **Bug fixes**: set_coding_task + implement + review + document
 - **Trivial changes**: Just do it, no workflow
@@ -419,10 +457,12 @@ Track these to measure improvement:
 ## 📖 References
 
 ### External
+
 - **Every Marketplace**: https://github.com/EveryInc/every-marketplace
 - **Compounding Engineering Article**: https://every.to/source-code/my-ai-had-already-fixed-the-code-before-i-saw-it
 
 ### Internal
+
 - **Quick Start**: [QUICK-START.md](docs/workflows/compounding/QUICK-START.md)
 - **Complete Guide**: [COMPOUNDING-WORKFLOW-GUIDE.md](docs/workflows/compounding/COMPOUNDING-WORKFLOW-GUIDE.md)
 - **Enhanced CLAUDE.md**: [CLAUDE.md](CLAUDE.md)

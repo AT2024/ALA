@@ -11,6 +11,7 @@ This application tracks medical treatments using source applicators with real-ti
 ## 🚀 Quick Start
 
 ### Development
+
 ```bash
 # Start development environment
 npm run dev                          # Interactive menu (recommended)
@@ -27,6 +28,7 @@ cd frontend && npm run test:e2e      # Playwright E2E tests
 ```
 
 ### Production (Azure VM)
+
 ```bash
 # Quick deployment (radically simplified - October 2025)
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
@@ -127,6 +129,7 @@ ala-improved/
 ## ✨ Features
 
 ### Medical Treatment Tracking
+
 - **Real-time Progress Tracking**: Live calculation of treatment completion percentages
 - **Applicator Validation**: 5-scenario validation against Priority system
   - Already scanned, wrong treatment type, no use, not allowed, valid
@@ -135,6 +138,7 @@ ala-improved/
 - **Barcode Scanning**: Html5QrcodeScanner integration for applicator identification
 
 ### Priority ERP Integration
+
 - **Real-time Data Sync**: Live queries to Priority PHONEBOOK, ORDERS, and PARTS
 - **Reference Chain Validation**: Handle complex order relationships
 - **Site-based Permissions**: Position Code 99 for full access, others site-restricted
@@ -142,6 +146,7 @@ ala-improved/
 - **Fallback Support**: Graceful degradation with test data
 
 ### Security & Authentication
+
 - **Verification Code Login**: SMS/email-based authentication
 - **JWT Token Management**: Secure session handling
 - **Site-based Access Control**: Restricted access based on user permissions
@@ -149,6 +154,7 @@ ala-improved/
 - **Container Security**: Non-root execution (UID/GID: 1001)
 
 ### Production Features
+
 - **Azure VM Deployment**: Running at 20.217.84.100
 - **Health Monitoring**: Comprehensive health checks
 - **Container Management**: Docker-based deployment with health checks
@@ -158,6 +164,7 @@ ala-improved/
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Node.js 20.x**: Latest LTS with Express framework
 - **TypeScript**: Full type safety with strict configuration
 - **PostgreSQL 16.6**: Primary database with Sequelize ORM
@@ -165,6 +172,7 @@ ala-improved/
 - **Winston Logging**: Structured logging with emoji indicators
 
 ### Frontend
+
 - **React 18**: Modern React with hooks and Context API
 - **TypeScript**: Complete type coverage
 - **Tailwind CSS**: Utility-first styling with responsive design
@@ -173,6 +181,7 @@ ala-improved/
 - **jsPDF**: PDF generation for treatment reports
 
 ### DevOps & Deployment
+
 - **Docker & Docker Compose**: Containerized deployment
 - **Azure VM**: Production hosting (20.217.84.100)
 - **GitHub Actions**: CI/CD pipelines with security scanning
@@ -180,6 +189,7 @@ ala-improved/
 - **Playwright**: End-to-end testing framework
 
 ### Priority Integration
+
 - **OData API**: RESTful queries to Priority system
 - **Reference Chain Handling**: Complex order relationship management
 - **Date Filtering**: Server-side date filtering for performance
@@ -188,6 +198,7 @@ ala-improved/
 ## 🏃‍♂️ Development Workflow
 
 ### Local Development
+
 ```bash
 # Start development environment
 npm run dev                         # Interactive menu
@@ -214,6 +225,7 @@ docker-compose logs -f frontend     # Frontend logs
 ```
 
 ### Environment Management
+
 - **Development**: `docker-compose.yml` (default)
 - **Production**: `deployment/azure/.env.azure` on Azure VM
 - **Staging**: `deployment/docker/docker-compose.staging.yml`
@@ -221,6 +233,7 @@ docker-compose logs -f frontend     # Frontend logs
 ## 🚀 Production Deployment
 
 ### Azure VM Environment
+
 - **VM IP**: 20.217.84.100 (ATM-ISR-Docker resource group)
 - **SSH Access**: `ssh azureuser@20.217.84.100`
 - **Frontend**: http://20.217.84.100:3000
@@ -228,6 +241,7 @@ docker-compose logs -f frontend     # Frontend logs
 - **Containers**: ala-frontend-azure, ala-api-azure, ala-db-azure
 
 ### Deployment Commands
+
 ```bash
 # Quick deployment (recommended)
 ssh azureuser@20.217.84.100 "cd ala-improved && ~/deployment/scripts/deploy.sh"
@@ -247,12 +261,14 @@ ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
 ## 🎯 Priority API Integration
 
 ### Core Endpoints
+
 - **PHONEBOOK**: User authentication and site permissions
 - **ORDERS**: Treatment and patient data
 - **PARTS/SIBD_APPLICATUSELIST**: Applicator validation
 - **CUSTOMERS**: Site information for Position Code 99 users
 
 ### Key Features
+
 - **Reference Chain Validation**: Handle complex order relationships
 - **Date-optimized Queries**: `SIBD_TREATDAY` filtering at API level
 - **Site-based Access**: Position Code 99 = all sites, others restricted
@@ -260,6 +276,7 @@ ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
 - **Fallback Support**: Test data fallback for development
 
 ### Test Users
+
 - **alexs@alphatau.com**: Position Code 99 (Full Admin Access)
 - **test@bypass.com**: Emergency bypass user
 - **test@example.com**: Development mode (fixed code: 123456)
@@ -267,6 +284,7 @@ ssh azureuser@20.217.84.100 "docker logs ala-api-azure --tail=20"
 ## 📜 Scripts & Automation
 
 ### Available Scripts
+
 ```bash
 # Interactive debugging and management
 node scripts/debug-unified.js       # Main debugging tool
@@ -286,6 +304,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 ```
 
 ### CI/CD Pipelines
+
 - **test-and-build.yml**: Run tests and build on PR
 - **deploy-develop.yml**: Auto-deploy to development
 - **deploy-staging.yml**: Deploy to staging environment
@@ -295,6 +314,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 ## 🏗️ Architecture
 
 ### Data Flow
+
 1. **Authentication**: Priority PHONEBOOK API verification
 2. **Treatment Selection**: Auto-populate from Priority ORDERS
 3. **Applicator Processing**: Real-time validation against Priority
@@ -302,11 +322,13 @@ deployment/scripts/monitor.sh       # Production monitoring
 5. **Documentation**: PDF/JSON export with treatment summary
 
 ### State Management
+
 - **TreatmentContext**: Global treatment state with progress calculations
 - **AuthContext**: User session and site permissions
 - **Local Storage**: Offline support and Priority data caching
 
 ### Error Handling
+
 - **Multi-layer Validation**: Frontend, backend, and Priority API validation
 - **Graceful Degradation**: Fallback to test data on API failures
 - **User-friendly Messages**: Clear error messages with actionable guidance
@@ -315,6 +337,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 ## 📚 Documentation
 
 ### Organized Documentation
+
 - **`docs/analysis/`**: Codebase analysis and architecture reviews
 - **`docs/database/`**: Database design and implementation guides
 - **`docs/deployment/`**: Deployment procedures and Docker configurations
@@ -323,6 +346,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 - **`docs/git/`**: Git workflows and branch management
 
 ### Key Documents
+
 - **`CLAUDE.md`**: Claude Code integration and workflow guidance
 - **`docs/database/DATABASE_DESIGN_GUIDE.md`**: Database schema and relationships
 - **`docs/deployment/DOCKER.md`**: Docker configuration and deployment
@@ -331,6 +355,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 ## 🔒 Security
 
 ### Security Features
+
 - **Container Security**: Non-root execution, minimal attack surface
 - **Authentication**: JWT-based with verification codes
 - **Input Validation**: Comprehensive validation and sanitization
@@ -338,6 +363,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 - **Vulnerability Scanning**: Automated Trivy scans in CI/CD
 
 ### Security Versions
+
 - **Node.js**: Latest LTS with security patches
 - **PostgreSQL**: 16.6-alpine with security updates
 - **Dependencies**: Regular updates and vulnerability monitoring
@@ -345,6 +371,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 ## 🧪 Testing
 
 ### Test Coverage
+
 - **Backend**: Jest unit and integration tests
 - **Frontend**: Vitest component tests
 - **E2E Testing**: Playwright for full workflow testing
@@ -352,6 +379,7 @@ deployment/scripts/monitor.sh       # Production monitoring
 - **Security Testing**: Automated vulnerability scanning
 
 ### Test Commands
+
 ```bash
 # Backend testing
 cd backend && npm run test
@@ -369,10 +397,12 @@ node scripts/security-scan.js
 ## 📈 Monitoring & Health
 
 ### Health Endpoints
+
 - **Backend**: `GET /api/health` - API status and database connectivity
 - **Priority**: `GET /api/priority/health` - Priority API connectivity
 
 ### Monitoring
+
 ```bash
 # Production health checks
 curl http://20.217.84.100:5000/api/health
@@ -387,12 +417,14 @@ docker-compose logs -f
 ## 🔧 Troubleshooting
 
 ### Common Issues
+
 - **Priority API Empty Results**: Check date format, authentication, logs (🎯 vs ❌)
 - **Applicator Validation Failing**: Verify 5-scenario validation logic
 - **Container Issues**: Use `docker-compose down -v && docker-compose up -d --build`
 - **TypeScript Errors**: Run `cd backend && npm run build`
 
 ### Recovery
+
 ```bash
 # Version recovery
 git fetch --tags && git checkout v1.0-working-production-2025-09-10

@@ -1,6 +1,7 @@
 # QA Testing Mission: Treatment Continuation Flow
 
 ## Your Role
+
 You are a **Professional QA Engineer** testing the ALA Medical Treatment Tracking System. Your mission is to thoroughly test the "Treatment Continuation" feature - the ability for users to finish a treatment, return later (within 24 hours), and continue adding applicators to the same patient session.
 
 ## CRITICAL: Test Environment
@@ -16,41 +17,54 @@ You are a **Professional QA Engineer** testing the ALA Medical Treatment Trackin
 **IMPORTANT: Before running ANY tests, verify the Chrome extension is working!**
 
 #### Step 1: Verify Claude Code Version
+
 Run this command to check your version:
+
 ```bash
 claude --version
 ```
+
 **Required**: v2.0.73 or higher. If older, run `claude update`
 
 #### Step 2: Install Chrome Extension (if not installed)
+
 1. Open Chrome and go to: https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn
 2. Click "Add to Chrome"
 3. **Required version**: 1.0.36 or higher
 
 #### Step 3: Start Claude Code with Chrome Enabled
+
 ```bash
 claude --chrome
 ```
+
 This launches Claude Code with browser automation capabilities.
 
 #### Step 4: Verify Connection
+
 In Claude Code, run:
+
 ```
 /chrome
 ```
+
 You should see the chrome tools are enabled. If you see "Chrome extension not detected":
+
 - Make sure Chrome is open
 - Restart Chrome completely
 - Re-run `/chrome` command
 
 #### Step 5: Start the Application
+
 ```bash
 cd backend && npm run dev   # In one terminal
 cd frontend && npm run dev  # In another terminal
 ```
+
 Verify health: `curl http://localhost:5000/api/health`
 
 ### Chrome Extension Commands You'll Use
+
 - **Navigate**: Claude will navigate to URLs automatically
 - **Click**: Claude will click buttons and links
 - **Type**: Claude will fill in forms
@@ -59,6 +73,7 @@ Verify health: `curl http://localhost:5000/api/health`
 - **Read Console**: Claude can check browser console for errors
 
 ### Handling Login/CAPTCHAs
+
 If Claude encounters a login page or CAPTCHA, it will pause and ask you to handle it manually. Once you've logged in, tell Claude to continue.
 
 ---
@@ -66,7 +81,9 @@ If Claude encounters a login page or CAPTCHA, it will pause and ask you to handl
 ## UNDERSTANDING THE FEATURE
 
 ### What is Treatment Continuation?
+
 When a medical staff completes an insertion treatment and signs it, they have a **24-hour window** to continue that treatment if needed. This allows:
+
 - Adding more applicators to the same patient session
 - Reusing applicators that were OPENED or LOADED but not INSERTED
 - Generating a continuation PDF that references the original
@@ -74,23 +91,28 @@ When a medical staff completes an insertion treatment and signs it, they have a 
 ### Key Technical Details
 
 **Database Fields** (Treatment model):
+
 - `parentTreatmentId`: Links continuation to parent treatment
 - `lastActivityAt`: Timestamp of last applicator activity (used for 24-hour window)
 
 **API Endpoints**:
+
 - `GET /api/treatments/:id/continuable` - Check eligibility (returns canContinue, hoursRemaining, reusableApplicatorCount)
 - `POST /api/treatments/:id/continue` - Create continuation treatment
 - `GET /api/treatments/:id/parent` - Get parent treatment info
 
 **Applicator Status Rules**:
+
 - **Reusable** (can be used in continuation): SEALED, OPENED, LOADED
 - **Terminal** (cannot be reused): INSERTED, FAULTY, DISPOSED, DISCHARGED, DEPLOYMENT_FAILURE
 
 **UI Indicators**:
+
 - **Amber box**: "Continue This Treatment" - shown on completed treatments within 24-hour window
 - **Blue box**: "Continuation Treatment" - shown when viewing a continuation treatment
 
 **PDF Differences**:
+
 - **Initial PDF**: No continuation notice
 - **Continuation PDF**: Orange box at top saying "CONTINUATION TREATMENT - Original treatment PDF created at [timestamp]"
 
@@ -250,6 +272,7 @@ When a medical staff completes an insertion treatment and signs it, they have a 
 **Objective**: Verify that patient/treatment data is correctly preserved in continuation.
 
 1. **API Verification** (Use browser DevTools Network tab or curl)
+
    ```bash
    # After creating continuation, get the treatment details
    curl http://localhost:5000/api/treatments/{continuation-id}
@@ -296,6 +319,7 @@ When a medical staff completes an insertion treatment and signs it, they have a 
 ## VERIFICATION CHECKLIST
 
 ### Initial Treatment
+
 - [ ] Treatment created successfully
 - [ ] All applicators processed with correct statuses
 - [ ] UseList displays all applicators correctly
@@ -304,6 +328,7 @@ When a medical staff completes an insertion treatment and signs it, they have a 
 - [ ] "Continue Treatment" option appears after completion
 
 ### Continuation Treatment
+
 - [ ] Continuation created successfully via "Continue Treatment" button
 - [ ] Blue "Continuation Treatment" indicator displayed
 - [ ] Original treatment date shown in indicator
@@ -312,12 +337,14 @@ When a medical staff completes an insertion treatment and signs it, they have a 
 - [ ] parentTreatmentId set correctly in API response
 
 ### Applicator Reuse Rules
+
 - [ ] INSERTED applicator from parent: REJECTED with clear error
 - [ ] OPENED applicator from parent: ACCEPTED, status preserved
 - [ ] LOADED applicator from parent: ACCEPTED, status preserved
 - [ ] New applicators can be added normally
 
 ### Continuation PDF
+
 - [ ] PDF generated successfully
 - [ ] Orange "CONTINUATION TREATMENT" notice at top
 - [ ] Shows "Original treatment PDF created at [timestamp]"
@@ -336,6 +363,7 @@ If you find an issue, document it as follows:
 **Severity**: Critical / High / Medium / Low
 
 **Steps to Reproduce**:
+
 1. [Step 1]
 2. [Step 2]
 3. [Step n]
@@ -350,6 +378,7 @@ If you find an issue, document it as follows:
 [Screenshot or console output]
 
 **Relevant Files**:
+
 - [File path 1]
 - [File path 2]
 
@@ -386,16 +415,20 @@ If you find an issue, document it as follows:
 ## START TESTING
 
 ### First: Verify Chrome Extension is Working
+
 Before testing the application, verify the Chrome extension setup:
+
 1. Run `/chrome` in Claude Code terminal
 2. Ask Claude to navigate to http://localhost:5173
 3. Ask Claude to take a screenshot
 4. If you see the ALA login page, the extension is working!
 
 ### Then: Execute Test Scenarios
+
 Begin with **Scenario 1 (Happy Path)** as it covers the most critical functionality.
 
 Use the Chrome extension to:
+
 - Navigate to pages
 - Click buttons and fill forms
 - Take screenshots at verification points

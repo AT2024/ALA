@@ -1,9 +1,11 @@
 # ALA Medical Application - Complete Database Design & Implementation Guide
+
 ## For database-specialist Sub-Agent
 
 ---
 
 ## Table of Contents
+
 1. [Overview & Architecture](#overview--architecture)
 2. [Core Database Schema](#core-database-schema)
 3. [Offline Support Extensions](#offline-support-extensions)
@@ -20,7 +22,9 @@
 ## Overview & Architecture
 
 ### Database Requirements
+
 The ALA medical application requires a PostgreSQL database that supports:
+
 1. **Core Medical Data**: Users, treatments, applicators
 2. **Priority API Integration**: Syncing with external medical system
 3. **Offline Capabilities**: Local data storage with sync queue
@@ -28,12 +32,14 @@ The ALA medical application requires a PostgreSQL database that supports:
 5. **Audit Trail**: Complete tracking of all medical operations
 
 ### Technology Stack
+
 - **Database**: PostgreSQL 16.6
 - **ORM**: Sequelize 6.32.0
 - **Node.js Backend**: Express with TypeScript
 - **Deployment**: Docker containers on Azure VM
 
 ### Database Naming Conventions
+
 - **Tables**: Plural, snake_case (e.g., `treatments`, `sync_queue`)
 - **Columns**: Snake_case (e.g., `serial_number`, `is_complete`)
 - **Indexes**: `idx_[table]_[column]` (e.g., `idx_treatments_sync`)
@@ -45,6 +51,7 @@ The ALA medical application requires a PostgreSQL database that supports:
 ## Core Database Schema
 
 ### 1. Users Table
+
 Stores all system users (medical staff, administrators, test users).
 
 ```sql
@@ -94,11 +101,12 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 ```
 
 **Metadata Structure**:
+
 ```json
 {
-  "sites": ["100078", "100040"],  // Hospital codes user can access
-  "positionCode": 99,              // 99 = admin access to all sites
-  "priorityUserId": "USR123",      // ID in Priority system
+  "sites": ["100078", "100040"], // Hospital codes user can access
+  "positionCode": 99, // 99 = admin access to all sites
+  "priorityUserId": "USR123", // ID in Priority system
   "preferences": {
     "language": "en",
     "notifications": true
@@ -107,6 +115,7 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 ```
 
 ### 2. Treatments Table
+
 Core treatment records for insertion and removal procedures.
 
 ```sql
@@ -171,6 +180,7 @@ CREATE TRIGGER update_treatments_updated_at BEFORE UPDATE ON treatments
 ```
 
 ### 3. Applicators Table
+
 Detailed tracking of medical applicators (seed delivery devices).
 
 ```sql
@@ -249,6 +259,7 @@ CREATE TRIGGER update_applicators_updated_at BEFORE UPDATE ON applicators
 ## Offline Support Extensions
 
 ### 4. Sync Queue Table
+
 Manages all pending operations when offline.
 
 ```sql
@@ -302,6 +313,7 @@ CREATE INDEX idx_sync_queue_entity ON sync_queue(entity_type, local_id);
 ```
 
 ### 5. Sync Conflicts Table
+
 Tracks and resolves data conflicts during synchronization.
 
 ```sql
@@ -349,6 +361,7 @@ CREATE INDEX idx_conflicts_created ON sync_conflicts(created_at DESC);
 ```
 
 ### 6. Sync Log Table
+
 Audit trail for all synchronization operations.
 
 ```sql
@@ -398,39 +411,41 @@ CREATE INDEX idx_sync_log_started ON sync_log(started_at DESC);
 ## Field Mapping Strategy
 
 ### Naming Convention Mappings
+
 The application uses camelCase in JavaScript/TypeScript but snake_case in PostgreSQL.
 
-| JavaScript (camelCase) | Database (snake_case) | Description |
-|------------------------|----------------------|-------------|
-| `serialNumber` | `serial_number` | Applicator serial |
-| `isComplete` | `is_complete` | Treatment status |
-| `treatmentId` | `treatment_id` | Foreign key |
-| `seedQuantity` | `seed_quantity` | Number of seeds |
-| `activityPerSeed` | `activity_per_seed` | Radiation activity |
-| `insertionTime` | `insertion_time` | When applicator inserted |
-| `isRemoved` | `is_removed` | Removal status |
-| `removalComments` | `removal_comments` | Removal notes |
-| `imagePath` | `image_path` | Photo location |
-| `addedBy` | `added_by` | User foreign key |
-| `removedBy` | `removed_by` | User foreign key |
-| `completedAt` | `completed_at` | Completion timestamp |
-| `completedBy` | `completed_by` | User who completed |
-| `subjectId` | `subject_id` | Patient identifier |
-| `priorityId` | `priority_id` | External system ID |
-| `usageType` | `usage_type` | Applicator usage |
-| `phoneNumber` | `phone_number` | User contact |
-| `verificationCode` | `verification_code` | Auth code |
-| `lastLogin` | `last_login` | Login tracking |
-| `syncStatus` | `sync_status` | Offline sync state |
-| `lastModified` | `last_modified` | Sync timestamp |
-| `deviceId` | `device_id` | Device identifier |
-| `localId` | `local_id` | Offline UUID |
+| JavaScript (camelCase) | Database (snake_case) | Description              |
+| ---------------------- | --------------------- | ------------------------ |
+| `serialNumber`         | `serial_number`       | Applicator serial        |
+| `isComplete`           | `is_complete`         | Treatment status         |
+| `treatmentId`          | `treatment_id`        | Foreign key              |
+| `seedQuantity`         | `seed_quantity`       | Number of seeds          |
+| `activityPerSeed`      | `activity_per_seed`   | Radiation activity       |
+| `insertionTime`        | `insertion_time`      | When applicator inserted |
+| `isRemoved`            | `is_removed`          | Removal status           |
+| `removalComments`      | `removal_comments`    | Removal notes            |
+| `imagePath`            | `image_path`          | Photo location           |
+| `addedBy`              | `added_by`            | User foreign key         |
+| `removedBy`            | `removed_by`          | User foreign key         |
+| `completedAt`          | `completed_at`        | Completion timestamp     |
+| `completedBy`          | `completed_by`        | User who completed       |
+| `subjectId`            | `subject_id`          | Patient identifier       |
+| `priorityId`           | `priority_id`         | External system ID       |
+| `usageType`            | `usage_type`          | Applicator usage         |
+| `phoneNumber`          | `phone_number`        | User contact             |
+| `verificationCode`     | `verification_code`   | Auth code                |
+| `lastLogin`            | `last_login`          | Login tracking           |
+| `syncStatus`           | `sync_status`         | Offline sync state       |
+| `lastModified`         | `last_modified`       | Sync timestamp           |
+| `deviceId`             | `device_id`           | Device identifier        |
+| `localId`              | `local_id`            | Offline UUID             |
 
 ---
 
 ## Migration Scripts
 
 ### Initial Setup Migration
+
 **File**: `backend/src/migrations/001_initial_setup.sql`
 
 ```sql
@@ -458,6 +473,7 @@ ORDER BY tablename;
 ```
 
 ### Add Offline Support Migration
+
 **File**: `backend/src/migrations/007_add_offline_support.sql`
 
 ```sql
@@ -520,6 +536,7 @@ CREATE TRIGGER update_applicators_last_modified
 ## Sequelize Model Updates
 
 ### Update Treatment Model for Offline
+
 **File**: `backend/src/models/Treatment.ts` (additions)
 
 ```typescript
@@ -565,6 +582,7 @@ localId: {
 ## Test Data Structure
 
 ### Test Users Setup
+
 ```sql
 -- Test user with bypass code (always 123456)
 INSERT INTO users (id, name, email, phone_number, role, metadata) VALUES
@@ -614,6 +632,7 @@ INSERT INTO users (id, name, email, phone_number, role, metadata) VALUES
 ```
 
 ### Test Treatments Setup
+
 ```sql
 -- Create test treatments that match test-data.json
 INSERT INTO treatments (
@@ -652,6 +671,7 @@ INSERT INTO treatments (
 ## Verification & Testing
 
 ### Database Health Check Script
+
 **File**: `backend/scripts/check-database.sql`
 
 ```sql
@@ -706,6 +726,7 @@ WHERE trigger_schema = 'public';
 ```
 
 ### Test Offline Functionality
+
 ```sql
 -- Simulate offline operation
 INSERT INTO sync_queue (
@@ -746,12 +767,14 @@ SELECT * FROM sync_conflicts WHERE resolution_status = 'pending';
 ## Azure VM Deployment
 
 ### Step 1: Connect to Azure VM
+
 ```bash
 ssh azureuser@20.217.84.100
 cd ala-improved
 ```
 
 ### Step 2: Run Database Migrations
+
 ```bash
 # Connect to database container
 docker exec -it ala-db-azure psql -U ala_user -d ala_production
@@ -767,6 +790,7 @@ docker exec -it ala-db-azure psql -U ala_user -d ala_production
 ```
 
 ### Step 3: Seed Test Data
+
 ```bash
 # For production with test mode
 docker exec -it ala-db-azure psql -U ala_user -d ala_production <<EOF
@@ -784,6 +808,7 @@ EOF
 ```
 
 ### Step 4: Verify Database
+
 ```bash
 # Check tables
 docker exec -it ala-db-azure psql -U ala_user -d ala_production -c "\dt"
@@ -796,6 +821,7 @@ docker exec -it ala-db-azure psql -U ala_user -d ala_production -c "SELECT COUNT
 ```
 
 ### Step 5: Update Backend Environment
+
 ```bash
 # Add offline support flag
 echo "ENABLE_OFFLINE_MODE=true" >> azure/.env.azure
@@ -815,6 +841,7 @@ docker logs ala-api-azure --tail=50
 ### Common Issues
 
 #### 1. Migration Fails
+
 ```sql
 -- Check current schema version
 SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1;
@@ -831,6 +858,7 @@ COMMIT;
 ```
 
 #### 2. Foreign Key Violations
+
 ```sql
 -- Find orphaned records
 SELECT a.* FROM applicators a
@@ -842,6 +870,7 @@ DELETE FROM applicators WHERE treatment_id NOT IN (SELECT id FROM treatments);
 ```
 
 #### 3. Sync Queue Stuck
+
 ```sql
 -- Reset failed items
 UPDATE sync_queue
@@ -855,6 +884,7 @@ AND completed_at < CURRENT_TIMESTAMP - INTERVAL '7 days';
 ```
 
 #### 4. Duplicate Key Errors
+
 ```sql
 -- Find duplicates
 SELECT serial_number, COUNT(*)
@@ -869,6 +899,7 @@ WHERE is_removed = false;
 ```
 
 #### 5. Performance Issues
+
 ```sql
 -- Analyze tables
 ANALYZE users;
@@ -888,6 +919,7 @@ WHERE is_complete = false;
 ```
 
 ### Database Monitoring Queries
+
 ```sql
 -- Active connections
 SELECT pid, usename, application_name, client_addr, state
@@ -918,6 +950,7 @@ WHERE pg_blocking_pids(pid)::text != '{}';
 ## Implementation Checklist for database-specialist
 
 ### Phase 1: Core Schema (Day 1-2)
+
 - [ ] Create users table with all fields
 - [ ] Create treatments table with relationships
 - [ ] Create applicators table with constraints
@@ -926,6 +959,7 @@ WHERE pg_blocking_pids(pid)::text != '{}';
 - [ ] Verify foreign key constraints
 
 ### Phase 2: Offline Support (Day 3)
+
 - [ ] Add sync columns to existing tables
 - [ ] Create sync_queue table
 - [ ] Create sync_conflicts table
@@ -934,6 +968,7 @@ WHERE pg_blocking_pids(pid)::text != '{}';
 - [ ] Update triggers for version control
 
 ### Phase 3: Test Data (Day 4)
+
 - [ ] Insert test@example.com user
 - [ ] Create test treatments
 - [ ] Add test applicators
@@ -941,6 +976,7 @@ WHERE pg_blocking_pids(pid)::text != '{}';
 - [ ] Test offline queue operations
 
 ### Phase 4: Azure Deployment (Day 5)
+
 - [ ] SSH to Azure VM
 - [ ] Run all migrations
 - [ ] Seed production test data
@@ -949,6 +985,7 @@ WHERE pg_blocking_pids(pid)::text != '{}';
 - [ ] Restart backend container
 
 ### Phase 5: Verification (Day 6)
+
 - [ ] Run health check queries
 - [ ] Test all CRUD operations
 - [ ] Verify sync queue works

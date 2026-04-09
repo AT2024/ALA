@@ -1,30 +1,36 @@
 # ALA Medical Treatment Tracking System
 
 ## Project Context
+
 Medical treatment tracking application for source applicator procedures with Priority ERP integration.
+
 - **Purpose**: Real-time tracking and validation of medical source applicator treatments
 - **Critical**: Patient safety system - accuracy and data integrity are paramount
 - **Tech Stack**: React/TypeScript/Tailwind frontend, Express/TypeScript backend, PostgreSQL database
 - **Key Integration**: Priority ERP for patient data, site access, and applicator validation
 
 ## Key Files
+
 - **Priority Service**: [backend/src/services/priorityService.ts](backend/src/services/priorityService.ts)
 - **Applicator Logic**: [backend/src/services/applicatorService.ts](backend/src/services/applicatorService.ts)
 - **Treatment State**: [frontend/src/context/TreatmentContext.tsx](frontend/src/context/TreatmentContext.tsx)
 - **Treatment UI**: [frontend/src/pages/Treatment/TreatmentDocumentation.tsx](frontend/src/pages/Treatment/TreatmentDocumentation.tsx)
 
 ## Environment
+
 - **Production**: https://ala-app.israelcentral.cloudapp.azure.com (Azure VM: 20.217.84.100)
 - **Local Dev**: `npm run dev` in both frontend/ and backend/ directories
 - **Test User**: test@example.com (code: 123456)
 - **Admin User**: amitaik@alphatau.com (Position 99 = full site access)
 
 ## Quick Deploy
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 ```
 
 ## Documentation
+
 - **Design Log**: [DESIGN_LOG.md](DESIGN_LOG.md) - Active design decisions and questions
 - **Design History**: [docs/design-logs/](docs/design-logs/) - Historical design records
 - **Deployment**: [docs/deployment/](docs/deployment/) - Azure VM and local setup
@@ -37,6 +43,7 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **Agent Behavior**: [.claude/settings.md](.claude/settings.md) - Claude Code guidelines
 
 ## Commands
+
 - `/design` - Start a new design log entry (for significant changes)
 - `/azure-check` - Validate Local vs Azure parity before deployment
 - `/spawn` - Launch background agent for analysis (see [settings.md](.claude/settings.md))
@@ -47,11 +54,13 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - `/worker list` - List active workers
 
 ## Testing
+
 - **Backend**: `cd backend && npm test`
 - **Frontend**: `cd frontend && npm test`
 - **TDD**: Write failing test before fixing bugs (see [settings.md](.claude/settings.md#test-driven-development))
 
 ## Database Migrations
+
 - **Development**: Auto-sync via `sequelize.sync({ alter: true })` - columns auto-created
 - **Production**: ALWAYS create migration file in `backend/src/migrations/`
 - **Rule**: Any model column addition MUST have a corresponding `.sql` migration file
@@ -59,6 +68,7 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **Design Log**: See [DL-005](docs/design-logs/2026-01-database-migration-process.md) for details
 
 ## Parallel Development
+
 - **Setup**: `/worker create <name>` or `./scripts/setup-parallel-worker.sh create --branch BRANCH --name NAME`
 - **Database Isolation**: Each worker gets its own PostgreSQL database (`ala_worker_<name>`), copied from main. Changes in workers don't affect main database.
 - **Rules**: See "Parallel Worktree Isolation Rules" in [settings.md](.claude/settings.md)

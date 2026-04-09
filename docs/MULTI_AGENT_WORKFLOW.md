@@ -9,6 +9,7 @@
 **Tech Stack:** React/TypeScript/Tailwind frontend, Express/TypeScript backend, PostgreSQL, Priority ERP integration
 
 **Prerequisites:**
+
 - Git repository on `develop` branch
 - All tests passing (`npm test`)
 - No uncommitted changes
@@ -29,10 +30,12 @@ git pull origin develop
 ### Step 2: Define/update contracts for ALL planned features
 
 **Files to potentially update:**
+
 - `shared/applicatorStatuses.ts` - Treatment state definitions
 - `shared/types.ts` - Create if needed for new interfaces
 
 **Example - adding new interface:**
+
 ```typescript
 // shared/types.ts
 export interface NewFeatureData {
@@ -97,13 +100,13 @@ attrib -R "backend\src\services\priorityService.ts"
 
 **Files to lock:**
 
-| File | Why | Risk if Modified |
-|------|-----|------------------|
-| `shared/applicatorStatuses.ts` | Central treatment state contract | Merge hell, state inconsistencies |
-| `backend/src/models/*.ts` | Database schema definitions | Data corruption, migration failures |
-| `frontend/src/context/TreatmentContext.tsx` | Global state management | State bugs across all features |
-| `package.json` (all 3) | Dependency versions | Build failures, version conflicts |
-| `backend/src/services/priorityService.ts` | Priority ERP adapter | Patient data integrity risk |
+| File                                        | Why                              | Risk if Modified                    |
+| ------------------------------------------- | -------------------------------- | ----------------------------------- |
+| `shared/applicatorStatuses.ts`              | Central treatment state contract | Merge hell, state inconsistencies   |
+| `backend/src/models/*.ts`                   | Database schema definitions      | Data corruption, migration failures |
+| `frontend/src/context/TreatmentContext.tsx` | Global state management          | State bugs across all features      |
+| `package.json` (all 3)                      | Dependency versions              | Build failures, version conflicts   |
+| `backend/src/services/priorityService.ts`   | Priority ERP adapter             | Patient data integrity risk         |
 
 ---
 
@@ -142,7 +145,7 @@ git checkout -b feat/feature-C
 
 ## Phase 3: Agent Prompt Template (COPY THIS EXACTLY)
 
-```
+````
 ═══════════════════════════════════════════════════════════════════
                     ALA FEATURE AGENT PROMPT
 ═══════════════════════════════════════════════════════════════════
@@ -186,20 +189,20 @@ YOU CANNOT MODIFY (READ-ONLY / LOCKED):
      validateApplicator: jest.fn().mockResolvedValue(true),
      // ... mock all methods you use
    }));
-   ```
+````
 
 3. NEVER let tests hit real Priority API
    - No network calls in tests
    - Mock ALL external dependencies
 
 ═══════════════════════════════════════════════════════════════════
-                    AUDIT LOGGING (MEDICAL COMPLIANCE)
+AUDIT LOGGING (MEDICAL COMPLIANCE)
 ═══════════════════════════════════════════════════════════════════
 
 Every applicator status change MUST create audit log:
 
 ```typescript
-import ApplicatorAuditLog from '../models/ApplicatorAuditLog';
+import ApplicatorAuditLog from "../models/ApplicatorAuditLog";
 
 // REQUIRED for every status change
 await ApplicatorAuditLog.create({
@@ -207,19 +210,20 @@ await ApplicatorAuditLog.create({
   oldStatus: applicator.currentStatus,
   newStatus: newStatus,
   changedBy: user.email,
-  reason: 'Description of why status changed',
-  requestId: req.headers['x-request-id'] || null,
+  reason: "Description of why status changed",
+  requestId: req.headers["x-request-id"] || null,
 });
 ```
 
 For NON-applicator data changes, add TODO comment:
+
 ```typescript
 // TODO: Audit - [describe the data modification]
 await someModel.update({ ... });
 ```
 
 ═══════════════════════════════════════════════════════════════════
-                    3-STRIKE RULE (BEFORE EVERY COMMIT)
+3-STRIKE RULE (BEFORE EVERY COMMIT)
 ═══════════════════════════════════════════════════════════════════
 
 Before committing, ALL THREE must pass:
@@ -231,7 +235,7 @@ Strike 3: npm test (with at least one new test for your changes)
 If ANY fails, fix before committing. No exceptions.
 
 ═══════════════════════════════════════════════════════════════════
-                    CODE STYLE REQUIREMENTS
+CODE STYLE REQUIREMENTS
 ═══════════════════════════════════════════════════════════════════
 
 - Functional components only (no class components)
@@ -241,7 +245,7 @@ If ANY fails, fix before committing. No exceptions.
 - Follow existing patterns in the codebase
 
 ═══════════════════════════════════════════════════════════════════
-                         YOUR TASK
+YOUR TASK
 ═══════════════════════════════════════════════════════════════════
 
 [DESCRIBE THE SPECIFIC FEATURE HERE]
@@ -250,6 +254,7 @@ Example: "Add a 'Syringe Disposal' confirmation step to the treatment
 flow. Include audit logging for the disposal action."
 
 ═══════════════════════════════════════════════════════════════════
+
 ```
 
 ---
@@ -284,10 +289,12 @@ flow. Include audit logging for the disposal action."
 ### Merge Order (ALWAYS follow this sequence)
 
 ```
-1. Backend API changes    → Establishes contracts
+
+1. Backend API changes → Establishes contracts
 2. Frontend consuming API → Uses established contracts
-3. Tests/docs             → Validates everything
-```
+3. Tests/docs → Validates everything
+
+````
 
 ### Step-by-Step Merge Process
 
@@ -318,7 +325,7 @@ npm test
 
 # 8. Final build verification
 npm run build
-```
+````
 
 ### Handling Merge Conflicts
 
@@ -390,6 +397,7 @@ ONLY proceed to next merge if ALL checks pass.
 **Branch:** `feat/pdf-export-v2`
 
 **Agent Scope:**
+
 ```
 YOUR SCOPE (you CAN modify):
 - backend/src/services/pdfGenerationService.ts
@@ -403,6 +411,7 @@ YOUR SCOPE (you CAN modify):
 **Branch:** `feat/admin-dashboard`
 
 **Agent Scope:**
+
 ```
 YOUR SCOPE (you CAN modify):
 - frontend/src/pages/Admin/ (create new directory)
@@ -416,6 +425,7 @@ YOUR SCOPE (you CAN modify):
 **Branch:** `feat/api-caching`
 
 **Agent Scope:**
+
 ```
 YOUR SCOPE (you CAN modify):
 - backend/src/middleware/cache.ts (create new)
@@ -429,14 +439,14 @@ YOUR SCOPE (you CAN modify):
 
 ## Risk Assessment
 
-| Risk | P | I | Score | Mitigation |
-|------|---|---|-------|------------|
-| Agent modifies locked file | 2 | 5 | 10 | File locking + scope in prompt |
-| Priority API called in test | 3 | 5 | 15 | Mandatory mock rule in prompt |
-| Merge conflict in shared types | 3 | 4 | 12 | Contract-first development |
-| Audit log missing | 3 | 5 | 15 | Explicit audit rule in prompt |
-| Patient flow broken after merge | 2 | 5 | 10 | Visual verification checklist |
-| Type mismatch between agents | 4 | 3 | 12 | Contract commit before branching |
+| Risk                            | P   | I   | Score | Mitigation                       |
+| ------------------------------- | --- | --- | ----- | -------------------------------- |
+| Agent modifies locked file      | 2   | 5   | 10    | File locking + scope in prompt   |
+| Priority API called in test     | 3   | 5   | 15    | Mandatory mock rule in prompt    |
+| Merge conflict in shared types  | 3   | 4   | 12    | Contract-first development       |
+| Audit log missing               | 3   | 5   | 15    | Explicit audit rule in prompt    |
+| Patient flow broken after merge | 2   | 5   | 10    | Visual verification checklist    |
+| Type mismatch between agents    | 4   | 3   | 12    | Contract commit before branching |
 
 **Address risks with score > 8 first.** All mitigations are built into this plan.
 
@@ -444,18 +454,18 @@ YOUR SCOPE (you CAN modify):
 
 ## Summary: Your Role as Coordinator
 
-| Phase | Your Action | Agent Action |
-|-------|-------------|--------------|
-| 0 | Define contracts (shared types) | - |
-| 1 | Lock critical files (attrib +R) | - |
-| 2 | Create feature branches | - |
-| 3 | Write scoped prompts using template | - |
-| 4 | Start agents in separate terminals | Implement features |
-| 5 | Monitor for scope drift | Follow 3-strike rule |
-| 6 | Sequential merge + 3-strike check | - |
-| 7 | Visual patient-path verification | - |
-| 8 | Unlock files (attrib -R) | - |
-| 9 | Deploy to staging/production | - |
+| Phase | Your Action                         | Agent Action         |
+| ----- | ----------------------------------- | -------------------- |
+| 0     | Define contracts (shared types)     | -                    |
+| 1     | Lock critical files (attrib +R)     | -                    |
+| 2     | Create feature branches             | -                    |
+| 3     | Write scoped prompts using template | -                    |
+| 4     | Start agents in separate terminals  | Implement features   |
+| 5     | Monitor for scope drift             | Follow 3-strike rule |
+| 6     | Sequential merge + 3-strike check   | -                    |
+| 7     | Visual patient-path verification    | -                    |
+| 8     | Unlock files (attrib -R)            | -                    |
+| 9     | Deploy to staging/production        | -                    |
 
 **You are the Architect + Tester + Mediator. Agents are Workers only.**
 
@@ -463,13 +473,13 @@ YOUR SCOPE (you CAN modify):
 
 ## What We Intentionally Skipped
 
-| Proposed | Verdict | Reason |
-|----------|---------|--------|
-| 4-agent hierarchy | SKIP | Overkill for solo dev - coordination > coding |
-| 30-min rebase cycles | SKIP | Adds friction for independent features |
-| Shadow Observer agent | SKIP | You ARE the observer |
-| Python orchestration | SKIP | Manual is correct at your scale |
-| AuditService (fictional) | SKIP | Use existing ApplicatorAuditLog model |
+| Proposed                 | Verdict | Reason                                        |
+| ------------------------ | ------- | --------------------------------------------- |
+| 4-agent hierarchy        | SKIP    | Overkill for solo dev - coordination > coding |
+| 30-min rebase cycles     | SKIP    | Adds friction for independent features        |
+| Shadow Observer agent    | SKIP    | You ARE the observer                          |
+| Python orchestration     | SKIP    | Manual is correct at your scale               |
+| AuditService (fictional) | SKIP    | Use existing ApplicatorAuditLog model         |
 
 ---
 

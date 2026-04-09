@@ -8,31 +8,32 @@ Configure these in GitHub: **Settings → Branches → Add branch protection rul
 
 ### Main Branch (`main`)
 
-| Setting | Value |
-|---------|-------|
-| Branch name pattern | `main` |
-| Require a pull request before merging | ❌ (solo dev) |
-| Require status checks to pass | ✅ |
-| Required checks | `lint`, `test-frontend`, `test-backend` |
-| Require branches to be up to date | ✅ |
-| Do not allow force pushes | ✅ |
-| Allow deletions | ❌ |
+| Setting                               | Value                                   |
+| ------------------------------------- | --------------------------------------- |
+| Branch name pattern                   | `main`                                  |
+| Require a pull request before merging | ❌ (solo dev)                           |
+| Require status checks to pass         | ✅                                      |
+| Required checks                       | `lint`, `test-frontend`, `test-backend` |
+| Require branches to be up to date     | ✅                                      |
+| Do not allow force pushes             | ✅                                      |
+| Allow deletions                       | ❌                                      |
 
 ### Production Branch (`production`)
 
-| Setting | Value |
-|---------|-------|
-| Branch name pattern | `production` |
-| Require a pull request before merging | ✅ |
-| Require approvals | 0 (self-review) |
-| Require status checks to pass | ✅ |
-| Required checks | ALL checks |
-| Do not allow force pushes | ✅ |
-| Allow deletions | ❌ |
+| Setting                               | Value           |
+| ------------------------------------- | --------------- |
+| Branch name pattern                   | `production`    |
+| Require a pull request before merging | ✅              |
+| Require approvals                     | 0 (self-review) |
+| Require status checks to pass         | ✅              |
+| Required checks                       | ALL checks      |
+| Do not allow force pushes             | ✅              |
+| Allow deletions                       | ❌              |
 
 ## Auto-Merge Setup
 
 Enable auto-merge in **Settings → General → Pull Requests**:
+
 - ✅ Allow auto-merge
 - ✅ Automatically delete head branches
 

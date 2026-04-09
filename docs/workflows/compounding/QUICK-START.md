@@ -7,6 +7,7 @@ Get started with your new compounding engineering workflow in 5 minutes!
 ### 10 Specialized Agents
 
 **7 Implementation Agents** (write code):
+
 1. `testing-specialist` - Creates tests
 2. `priority-integration` - Handles Priority API
 3. `frontend-ui` - Builds React components
@@ -16,6 +17,7 @@ Get started with your new compounding engineering workflow in 5 minutes!
 7. `security-audit` - Security reviews
 
 **3 Reviewer Agents** (review quality):
+
 1. `ala-code-reviewer` - Code quality & patterns
 2. `priority-api-reviewer` - Priority integration correctness
 3. `medical-safety-reviewer` - Patient safety & data integrity
@@ -23,6 +25,7 @@ Get started with your new compounding engineering workflow in 5 minutes!
 ### MCP-as-a-Judge Tools
 
 Quality gates that validate your work:
+
 - `set_coding_task` - Start with planning
 - `judge_coding_plan` - Validate design
 - `judge_code_change` - Review implementation
@@ -32,6 +35,7 @@ Quality gates that validate your work:
 ### Knowledge Capture System
 
 Directories for learning loops:
+
 - `docs/learnings/` - Bug fixes and production errors
 - `docs/patterns/` - Successful patterns
 - `docs/architecture/adr/` - Architectural decisions
@@ -43,6 +47,7 @@ Let's walk through a simple feature to see how it all works:
 ### Example: Add "Treatment Notes" Field
 
 **Step 1: Start with Planning**
+
 ```
 You: "I need to add a notes field where nurses can add comments during treatment"
 
@@ -51,6 +56,7 @@ Claude: "I'll use set_coding_task to plan this feature"
 ```
 
 **Step 2: Get Plan Approval**
+
 ```
 Claude: "Let me create a detailed plan and validate it"
 [Researches patterns, designs solution, calls judge_coding_plan]
@@ -60,6 +66,7 @@ Next: Implement the changes
 ```
 
 **Step 3: Parallel Implementation**
+
 ```
 You: "Use database-specialist and frontend-ui in parallel"
 
@@ -69,6 +76,7 @@ You: "Use database-specialist and frontend-ui in parallel"
 ```
 
 **Step 4: Quality Review**
+
 ```
 Claude: "Implementation done. Running reviews..."
 
@@ -78,6 +86,7 @@ Claude: "Implementation done. Running reviews..."
 ```
 
 **Step 5: Testing**
+
 ```
 Claude: "Use testing-specialist to add tests"
 
@@ -86,6 +95,7 @@ Claude: "Use testing-specialist to add tests"
 ```
 
 **Step 6: Complete & Learn**
+
 ```
 [judge_coding_task_completion: Final approval ✅]
 
@@ -97,6 +107,7 @@ Claude: "Task complete! Documenting what we learned..."
 ## Simple Commands to Try Right Now
 
 ### For Implementation
+
 ```
 "Add export button to treatment history"
 → Automatically triggers frontend-ui agent
@@ -109,6 +120,7 @@ Claude: "Task complete! Documenting what we learned..."
 ```
 
 ### For Review
+
 ```
 "Review this code before I commit"
 → Triggers appropriate reviewer agents
@@ -121,6 +133,7 @@ Claude: "Task complete! Documenting what we learned..."
 ```
 
 ### For Full Workflow
+
 ```
 "Add nurse tracking to treatments using the full workflow"
 → Goes through all quality gates
@@ -150,6 +163,7 @@ Each feature flows through all three lanes before it's done.
 After you fix a bug or complete a feature, the system learns:
 
 ### Bug Fix Learning Loop
+
 ```
 Bug Fixed
   ↓
@@ -163,6 +177,7 @@ Future bugs in this category: PREVENTED ✅
 ```
 
 ### This Makes Each Task Easier
+
 - First time: Takes full time
 - Second similar task: Reuses patterns, goes faster
 - Third similar task: Even faster, reviewers auto-catch issues
@@ -171,6 +186,7 @@ Future bugs in this category: PREVENTED ✅
 ## When to Use What
 
 ### Use Full Workflow For:
+
 - New features
 - Database schema changes
 - Priority API integration
@@ -178,11 +194,13 @@ Future bugs in this category: PREVENTED ✅
 - Anything affecting patient safety
 
 ### Use Abbreviated Workflow For:
+
 - Bug fixes (set_coding_task + implementation + review)
 - Simple UI changes
 - Configuration updates
 
 ### Skip Workflow For:
+
 - Typo fixes
 - Documentation updates
 - Console.log debugging
@@ -191,6 +209,7 @@ Future bugs in this category: PREVENTED ✅
 ## Your Enhanced CLAUDE.md
 
 Your `CLAUDE.md` now has a whole new section with:
+
 - **Decision Log**: Why we chose PostgreSQL, Priority API, etc.
 - **Known Pitfalls**: Common mistakes and how to avoid them
 - **Testing Patterns**: What test strategies work
@@ -208,12 +227,14 @@ Your `CLAUDE.md` now has a whole new section with:
 ## Pro Tips
 
 **Parallel is Faster**:
+
 ```
 "Use database-specialist and frontend-ui in parallel"
 → Both agents work simultaneously
 ```
 
 **Be Specific for Auto-Selection**:
+
 ```
 "Fix Priority OData query"
 → Auto-triggers priority-integration agent
@@ -223,6 +244,7 @@ Your `CLAUDE.md` now has a whole new section with:
 ```
 
 **Review Before Committing**:
+
 ```
 "Review this code with all applicable reviewers"
 → Gets thorough quality check before commit
@@ -239,6 +261,7 @@ Your `CLAUDE.md` now has a whole new section with:
 ## What Success Looks Like
 
 After a few weeks, you should see:
+
 - ✅ Faster implementation of similar features
 - ✅ Fewer bugs making it to production
 - ✅ Growing pattern library you reference

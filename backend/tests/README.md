@@ -40,6 +40,7 @@ tests/
 ### 1. Unit Tests (`tests/services/`, `tests/models/`)
 
 **Priority Service Tests** (`priorityService.test.ts`)
+
 - ✅ Priority API connection testing
 - ✅ User site access validation
 - ✅ Order filtering and date handling
@@ -48,6 +49,7 @@ tests/
 - ✅ Test data vs real API logic
 
 **Applicator Service Tests** (`applicatorService.test.ts`)
+
 - ✅ 5-scenario validation logic
 - ✅ Priority API integration
 - ✅ Applicator import workflows
@@ -55,6 +57,7 @@ tests/
 - ✅ Medical workflow constraints
 
 **User Model Tests** (`User.test.ts`)
+
 - ✅ Database schema validation
 - ✅ Authentication code generation
 - ✅ Code verification logic
@@ -64,6 +67,7 @@ tests/
 ### 2. Controller Tests (`tests/controllers/`)
 
 **Authentication Controller** (`authController.test.ts`)
+
 - ✅ Verification code request/verify flow
 - ✅ Priority API integration
 - ✅ JWT token generation
@@ -71,6 +75,7 @@ tests/
 - ✅ Error handling and security
 
 **Treatment Controller** (`treatmentController.test.ts`)
+
 - ✅ CRUD operations
 - ✅ Applicator management
 - ✅ Treatment completion workflows
@@ -80,6 +85,7 @@ tests/
 ### 3. Integration Tests (`tests/integration/`)
 
 **API Integration** (`api.integration.test.ts`)
+
 - ✅ Full authentication workflows
 - ✅ Treatment creation to completion
 - ✅ Medical applicator validation
@@ -90,6 +96,7 @@ tests/
 ## Medical Application Testing Features
 
 ### Priority API Integration Testing
+
 - Mock Priority API responses
 - Test data vs real API switching
 - Error handling and fallbacks
@@ -97,6 +104,7 @@ tests/
 - User authentication and site access
 
 ### Medical Workflow Validation
+
 - 5-scenario applicator validation
 - Treatment type constraints (insertion/removal)
 - Seed quantity calculations
@@ -104,6 +112,7 @@ tests/
 - Medical data integrity
 
 ### Security Testing
+
 - JWT authentication
 - Input sanitization
 - SQL injection prevention
@@ -113,6 +122,7 @@ tests/
 ## Running Tests
 
 ### All Tests
+
 ```bash
 npm test                    # Run all tests
 npm run test:coverage       # Run with coverage report
@@ -121,6 +131,7 @@ npm run test:verbose       # Run with detailed output
 ```
 
 ### Category-Specific Tests
+
 ```bash
 npm run test:unit          # Unit tests only
 npm run test:integration   # Integration tests only
@@ -130,6 +141,7 @@ npm run test:models        # Database model tests
 ```
 
 ### Medical Domain Tests
+
 ```bash
 npm run test:priority      # Priority API service tests
 npm run test:applicator    # Applicator validation tests
@@ -140,6 +152,7 @@ npm run test:medical      # All medical workflow tests
 ```
 
 ### CI/CD and Debugging
+
 ```bash
 npm run test:ci           # CI/CD optimized run
 npm run test:debug        # Debug mode with verbose output
@@ -148,6 +161,7 @@ npm run test:debug        # Debug mode with verbose output
 ## Test Configuration
 
 ### Jest Configuration (`jest.config.js`)
+
 - TypeScript support with ts-jest
 - In-memory SQLite database
 - Mock setup and teardown
@@ -155,6 +169,7 @@ npm run test:debug        # Debug mode with verbose output
 - 30-second timeout for medical workflows
 
 ### Environment Variables
+
 ```bash
 NODE_ENV=test
 JWT_SECRET=test-jwt-secret-key
@@ -167,6 +182,7 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 ## Mock Data and Fixtures
 
 ### Test Data Structure
+
 - **Medical Sites**: Hospital configurations
 - **Treatment Orders**: Priority API order format
 - **Applicators**: Medical device data
@@ -174,6 +190,7 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 - **Validation Scenarios**: 5-scenario applicator validation
 
 ### Priority API Mocking
+
 - Successful API responses
 - Error scenarios (timeouts, rate limits)
 - Test data vs real API switching
@@ -190,18 +207,21 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 ## Medical Compliance Features
 
 ### Data Integrity Testing
+
 - Medical record consistency
 - Treatment workflow validation
 - Audit trail verification
 - Patient data protection
 
 ### Error Recovery Testing
+
 - Priority API outages
 - Database connection failures
 - Network timeouts
 - Data corruption scenarios
 
 ### Security Compliance
+
 - Authentication bypass prevention
 - Input validation
 - SQL injection protection
@@ -211,6 +231,7 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 ## Best Practices
 
 ### Test Writing Guidelines
+
 1. **Descriptive Test Names**: Clear medical context
 2. **Isolation**: Each test is independent
 3. **Realistic Data**: Medical-accurate test scenarios
@@ -218,6 +239,7 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 5. **Performance**: Consider medical workflow timing
 
 ### Mock Strategy
+
 1. **External Services**: Always mock Priority API
 2. **Database**: Use in-memory SQLite
 3. **Time-Sensitive**: Mock date/time functions
@@ -225,6 +247,7 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 5. **File System**: Mock test data loading
 
 ### Medical Domain Testing
+
 1. **Validation Logic**: Test all 5 applicator scenarios
 2. **Workflow States**: Test treatment progression
 3. **Data Relationships**: Test patient-treatment-applicator links
@@ -234,6 +257,7 @@ BYPASS_PRIORITY_EMAILS=test@example.com,test@bypass.com
 ## Continuous Integration
 
 ### Pre-commit Testing
+
 ```bash
 npm run lint               # ESLint checks
 npm run build             # TypeScript compilation
@@ -241,12 +265,14 @@ npm run test:unit         # Fast unit tests
 ```
 
 ### CI Pipeline Testing
+
 ```bash
 npm run test:ci           # Full test suite with coverage
 npm run test:integration  # Integration tests
 ```
 
 ### Coverage Reporting
+
 - HTML reports in `coverage/` directory
 - LCOV format for CI integration
 - Console output for quick feedback
@@ -257,30 +283,35 @@ npm run test:integration  # Integration tests
 ### Common Issues
 
 **Test Database Connection**
+
 ```bash
 # Check SQLite memory database
 # Tests should use in-memory DB, not PostgreSQL
 ```
 
 **Priority API Mocking**
+
 ```bash
 # Ensure mocks are properly reset between tests
 # Check mock implementation in helpers/mockHelpers.ts
 ```
 
 **TypeScript Compilation**
+
 ```bash
 npm run build             # Check for TypeScript errors
 npm run test:debug        # Run tests with debugging
 ```
 
 **Test Isolation**
+
 ```bash
 # Each test should clean up after itself
 # Check beforeEach/afterEach hooks
 ```
 
 ### Debug Commands
+
 ```bash
 npm run test:debug        # Verbose output with stack traces
 npm run test:verbose      # Detailed test information
@@ -290,6 +321,7 @@ npm run test -- --runInBand # Run tests serially
 ## Contributing to Tests
 
 ### Adding New Tests
+
 1. Follow existing test structure
 2. Use medical-accurate test data
 3. Include error scenarios
@@ -297,12 +329,14 @@ npm run test -- --runInBand # Run tests serially
 5. Update coverage targets if needed
 
 ### Modifying Existing Tests
+
 1. Ensure backward compatibility
 2. Update related integration tests
 3. Maintain coverage levels
 4. Document changes in test descriptions
 
 ### Test Data Management
+
 1. Add new fixtures to `fixtures/testData.ts`
 2. Update mock helpers as needed
 3. Ensure test data reflects real medical workflows

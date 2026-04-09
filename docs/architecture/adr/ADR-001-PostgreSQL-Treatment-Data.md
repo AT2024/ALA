@@ -7,6 +7,7 @@
 ## Context
 
 The ALA Medical Treatment Tracking System needs a reliable database to store:
+
 - Treatment records and progress tracking
 - Applicator validation history
 - User authentication and authorization data
@@ -14,6 +15,7 @@ The ALA Medical Treatment Tracking System needs a reliable database to store:
 - Synchronized data from Priority ERP
 
 Key requirements:
+
 - ACID compliance for medical data integrity
 - Support for complex queries and joins
 - Reliable transaction handling
@@ -76,6 +78,7 @@ We chose **PostgreSQL** as the primary database for the ALA system.
 ## Alternatives Considered
 
 ### Option 1: MySQL/MariaDB
+
 - **Pros**:
   - Similar features to PostgreSQL
   - Wide adoption
@@ -87,6 +90,7 @@ We chose **PostgreSQL** as the primary database for the ALA system.
 - **Why not chosen**: PostgreSQL's superior JSON support and stricter data integrity
 
 ### Option 2: MongoDB (NoSQL)
+
 - **Pros**:
   - Flexible schema
   - Easy to scale horizontally
@@ -98,6 +102,7 @@ We chose **PostgreSQL** as the primary database for the ALA system.
 - **Why not chosen**: Medical data requires ACID compliance and strong integrity guarantees
 
 ### Option 3: SQLite
+
 - **Pros**:
   - Simple, embedded
   - No server required
@@ -109,6 +114,7 @@ We chose **PostgreSQL** as the primary database for the ALA system.
 - **Why not chosen**: Production system needs proper database server
 
 ### Option 4: Microsoft SQL Server
+
 - **Pros**:
   - Enterprise features
   - Tight Microsoft integration
@@ -122,6 +128,7 @@ We chose **PostgreSQL** as the primary database for the ALA system.
 ## Implementation Details
 
 ### Database Schema Highlights
+
 ```sql
 -- Treatments table with proper constraints
 CREATE TABLE treatments (
@@ -146,16 +153,17 @@ FOR EACH ROW EXECUTE FUNCTION create_audit_log();
 ```
 
 ### Sequelize Configuration
+
 ```typescript
 const sequelize = new Sequelize(DATABASE_URL, {
-  dialect: 'postgres',
+  dialect: "postgres",
   logging: false,
   pool: {
     max: 5,
     min: 0,
     acquire: 30000,
-    idle: 10000
-  }
+    idle: 10000,
+  },
 });
 ```
 
@@ -181,6 +189,7 @@ const sequelize = new Sequelize(DATABASE_URL, {
 This decision has proven sound over months of development. PostgreSQL's reliability and ACID compliance have been crucial for maintaining medical data integrity. The JSON support has been valuable for storing flexible Priority API responses.
 
 Future considerations:
+
 - Monitor performance as treatment data grows
 - Consider read replicas if query load increases
 - Evaluate partitioning for large tables

@@ -32,6 +32,7 @@ That's it. No confusion. No multiple scripts. **One command.**
 ### Automated Disk Space Management
 
 Both production and staging deployment scripts automatically:
+
 - **Monitor disk usage** before deployment (warns if > 85%)
 - **Clean up after successful deployment**:
   - `docker image prune -f` - Removes dangling images (`<none>` tagged)
@@ -40,6 +41,7 @@ Both production and staging deployment scripts automatically:
 - **Preserve**: Active containers, volumes (postgres-data), and tagged images for both environments
 
 **Impact**:
+
 - Production deployments: Saves 1-3GB per deployment
 - Staging deployments: Saves 200-500MB per deployment
 - Total: 1-3.5GB freed per full deployment cycle
@@ -49,6 +51,7 @@ This prevents disk space issues that previously required manual intervention. Th
 See [../../deployment/README.md](../../deployment/README.md) for complete documentation.
 
 ## Environment Details
+
 - **VM IP**: 20.217.84.100 (ATM-ISR-Docker resource group)
 - **SSH Access**: `ssh azureuser@20.217.84.100`
 - **Production URL**: https://ala-app.israelcentral.cloudapp.azure.com
@@ -70,6 +73,7 @@ For current deployment, use `cd ~/ala-improved/deployment && ./deploy` as shown 
 ---
 
 ### Old Automated Deployment (DEPRECATED)
+
 ```bash
 # OLD METHOD - DO NOT USE
 # Deploy with HTTPS enabled
@@ -79,6 +83,7 @@ ssh azureuser@20.217.84.100 "cd ala-improved && bash deployment/azure/deploy-htt
 ## HTTP Deployment
 
 ### Manual HTTP Deployment
+
 ```bash
 # Connect to Azure VM
 ssh azureuser@20.217.84.100
@@ -106,6 +111,7 @@ docker-compose -f deployment/azure/docker-compose.azure.yml --env-file deploymen
 This setup provides trusted SSL certificates via Let's Encrypt with automatic renewal.
 
 #### Prerequisites
+
 1. Configure Azure DNS name label in Azure Portal:
    - Navigate to VM → Configuration → DNS name label
    - Set label (e.g., "ala-app")
@@ -116,6 +122,7 @@ This setup provides trusted SSL certificates via Let's Encrypt with automatic re
    - HTTPS (443): For secure traffic
 
 #### Automated Setup
+
 ```bash
 # 1. SSH to Azure VM
 ssh azureuser@20.217.84.100
@@ -166,7 +173,9 @@ chmod 644 ~/ala-improved/ssl-certs/certs/*.crt
 ```
 
 #### Certificate Auto-Renewal
+
 The certificate expires every 90 days but renews automatically:
+
 ```bash
 # Verify auto-renewal is configured (should show cron job)
 crontab -l | grep acme.sh
@@ -182,6 +191,7 @@ openssl x509 -in ~/ala-improved/ssl-certs/certs/certificate.crt -noout -dates
 ```
 
 #### Verification
+
 ```bash
 # 1. Verify SSL certificate is trusted
 openssl s_client -connect ala-app.israelcentral.cloudapp.azure.com:443 -servername ala-app.israelcentral.cloudapp.azure.com </dev/null 2>/dev/null | grep "Verify return code"
@@ -199,7 +209,9 @@ curl -I http://ala-app.israelcentral.cloudapp.azure.com
 ```
 
 #### Migrating to Custom Domain
+
 When ready to use a custom domain (e.g., `ala.alphataumedical.com`):
+
 - See [DOMAIN-MIGRATION-GUIDE.md](DOMAIN-MIGRATION-GUIDE.md) for complete migration steps
 - Process takes ~10 minutes with zero downtime
 - No code changes required - only DNS and certificate updates
@@ -211,12 +223,14 @@ When ready to use a custom domain (e.g., `ala.alphataumedical.com`):
 **Warning**: Self-signed certificates show browser warnings and should only be used for development.
 
 #### Automated HTTPS Deployment
+
 ```bash
 # Deploy with self-signed SSL certificate generation
 ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/scripts/deploy-https.sh"
 ```
 
 #### Manual HTTPS Deployment
+
 ```bash
 # Connect to Azure VM
 ssh azureuser@20.217.84.100
@@ -237,6 +251,7 @@ docker-compose -f deployment/azure/docker-compose.https.azure.yml --env-file dep
 ## Container Management
 
 ### Monitoring Commands
+
 ```bash
 # View running containers with formatted output
 ssh azureuser@20.217.84.100 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
@@ -249,6 +264,7 @@ ssh azureuser@20.217.84.100 "docker-compose -f deployment/azure/docker-compose.h
 ```
 
 ### Health Checks
+
 ```bash
 # HTTPS health check (production)
 curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
@@ -263,12 +279,14 @@ ssh azureuser@20.217.84.100 "docker ps && curl -s localhost:5000/api/health"
 ## Recovery & Monitoring
 
 ### Automatic Recovery
+
 ```bash
 # Run recovery script (preserves data)
 ssh azureuser@20.217.84.100 "~/ala-improved/deployment/azure/recover.sh"
 ```
 
 ### Continuous Monitoring
+
 ```bash
 # Start monitoring with auto-recovery
 ssh azureuser@20.217.84.100 "nohup ~/ala-improved/deployment/scripts/monitor-auto.sh > monitor.log 2>&1 &"
@@ -283,6 +301,7 @@ ssh azureuser@20.217.84.100 "pkill -f monitor-auto.sh"
 ## Troubleshooting
 
 ### HTTPS Certificate Issues
+
 ```bash
 # Regenerate SSL certificates
 ssh azureuser@20.217.84.100 "cd ~/ala-improved && rm -rf ssl-certs && bash scripts/generate-ssl-cert.sh 20.217.84.100"
@@ -295,6 +314,7 @@ ssh azureuser@20.217.84.100 "docker exec ala-frontend-azure nginx -t"
 ```
 
 ### HTTP to HTTPS Redirect Issues
+
 ```bash
 # Check nginx configuration
 ssh azureuser@20.217.84.100 "docker exec ala-frontend-azure cat /etc/nginx/conf.d/default.conf | grep -A5 'listen 80'"
@@ -306,6 +326,7 @@ ssh azureuser@20.217.84.100 "cat ~/ala-improved/deployment/azure/.env.azure | gr
 ### Container Startup Issues
 
 #### HTTP Version
+
 ```bash
 # Clean restart for HTTP
 ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azure/docker-compose.azure.yml down"
@@ -314,6 +335,7 @@ ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azu
 ```
 
 #### HTTPS Version
+
 ```bash
 # Clean restart for HTTPS
 ssh azureuser@20.217.84.100 "cd ala-improved && docker-compose -f deployment/azure/docker-compose.https.azure.yml down"
@@ -322,6 +344,7 @@ ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/script
 ```
 
 ### Database Container Recovery
+
 ```bash
 # Recreate database container with proper configuration
 ssh azureuser@20.217.84.100 "docker run -d \
@@ -341,6 +364,7 @@ ssh azureuser@20.217.84.100 "docker restart ala-api-azure"
 ```
 
 ### Script Line Ending Issues
+
 ```bash
 # Fix Windows line endings on deployment scripts
 ssh azureuser@20.217.84.100 "sed -i 's/\r$//' ~/ala-improved/deployment/scripts/*.sh ~/ala-improved/deployment/azure/*.sh"
@@ -349,6 +373,7 @@ ssh azureuser@20.217.84.100 "sed -i 's/\r$//' ~/ala-improved/deployment/scripts/
 ## Emergency Recovery
 
 ### Version Rollback
+
 ```bash
 # Rollback to stable version
 git fetch --tags && git checkout v1.0-working-production-2025-09-10
@@ -358,6 +383,7 @@ ssh azureuser@20.217.84.100 "cd ala-improved && ~/ala-improved/deployment/script
 ```
 
 ### Database Access
+
 ```bash
 # Direct database access for debugging
 ssh azureuser@20.217.84.100 "docker exec -it ala-db-azure psql -U ala_user -d ala_production"
@@ -365,15 +391,15 @@ ssh azureuser@20.217.84.100 "docker exec -it ala-db-azure psql -U ala_user -d al
 
 ## Deployment Files Reference
 
-| File | Purpose |
-|------|---------|
-| `deployment/azure/docker-compose.azure.yml` | HTTP container configuration |
-| `deployment/azure/docker-compose.https.azure.yml` | HTTPS container configuration |
-| `deployment/azure/.env.azure` | Production environment variables (never commit!) |
-| `deployment/scripts/deploy.sh` | Automated deployment with rollback |
-| `deployment/scripts/deploy-https.sh` | HTTPS deployment with SSL setup |
-| `deployment/azure/recover.sh` | Container recovery script |
-| `deployment/scripts/monitor-auto.sh` | Health monitoring with auto-recovery |
+| File                                              | Purpose                                          |
+| ------------------------------------------------- | ------------------------------------------------ |
+| `deployment/azure/docker-compose.azure.yml`       | HTTP container configuration                     |
+| `deployment/azure/docker-compose.https.azure.yml` | HTTPS container configuration                    |
+| `deployment/azure/.env.azure`                     | Production environment variables (never commit!) |
+| `deployment/scripts/deploy.sh`                    | Automated deployment with rollback               |
+| `deployment/scripts/deploy-https.sh`              | HTTPS deployment with SSL setup                  |
+| `deployment/azure/recover.sh`                     | Container recovery script                        |
+| `deployment/scripts/monitor-auto.sh`              | Health monitoring with auto-recovery             |
 
 ## Security Notes
 
