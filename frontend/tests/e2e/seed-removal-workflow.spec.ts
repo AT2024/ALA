@@ -1,5 +1,5 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
-import { format } from 'date-fns';
+import { test, expect, Page, BrowserContext } from "@playwright/test";
+import { format } from "date-fns";
 
 /**
  * Comprehensive E2E Test for Source Removal Workflow
@@ -15,33 +15,33 @@ import { format } from 'date-fns';
 // Test data fixtures
 const TEST_DATA = {
   USER: {
-    email: 'test@example.com',
-    verificationCode: '123456'
+    email: "test@example.com",
+    verificationCode: "123456",
   },
   PATIENT: {
-    id: 'TEST-001',
-    site: 'Test Hospital'
+    id: "TEST-001",
+    site: "Test Hospital",
   },
   APPLICATORS: [
     {
-      serialNumber: 'AP001-A1',
-      applicatorType: 'Standard',
+      serialNumber: "AP001-A1",
+      applicatorType: "Standard",
       seedQuantity: 25,
-      usageType: 'full'
+      usageType: "full",
     },
     {
-      serialNumber: 'AP002-A2',
-      applicatorType: 'Large',
+      serialNumber: "AP002-A2",
+      applicatorType: "Large",
       seedQuantity: 50,
-      usageType: 'full'
+      usageType: "full",
     },
     {
-      serialNumber: 'AP003-A3',
-      applicatorType: 'Small',
+      serialNumber: "AP003-A3",
+      applicatorType: "Small",
       seedQuantity: 10,
-      usageType: 'faulty'
-    }
-  ]
+      usageType: "faulty",
+    },
+  ],
 };
 
 // Page Object Model for better maintainability
@@ -75,11 +75,15 @@ class SeedRemovalPage {
 
   // Helper methods
   async getApplicatorCheckbox(serialNumber: string) {
-    return this.page.locator(`[data-testid="applicator-checkbox-${serialNumber}"]`);
+    return this.page.locator(
+      `[data-testid="applicator-checkbox-${serialNumber}"]`,
+    );
   }
 
   async getApplicatorComments(serialNumber: string) {
-    return this.page.locator(`[data-testid="applicator-comments-${serialNumber}"]`);
+    return this.page.locator(
+      `[data-testid="applicator-comments-${serialNumber}"]`,
+    );
   }
 
   async getProgressBar() {
@@ -95,15 +99,21 @@ class AuthenticationHelper {
   constructor(private page: Page) {}
 
   async login() {
-    await this.page.goto('/');
+    await this.page.goto("/");
 
     // Fill authentication form
-    await this.page.fill('[data-testid="identifier-input"]', TEST_DATA.USER.email);
+    await this.page.fill(
+      '[data-testid="identifier-input"]',
+      TEST_DATA.USER.email,
+    );
     await this.page.click('[data-testid="request-code-button"]');
 
     // Wait for verification code input
     await expect(this.page.locator('[data-testid="code-input"]')).toBeVisible();
-    await this.page.fill('[data-testid="code-input"]', TEST_DATA.USER.verificationCode);
+    await this.page.fill(
+      '[data-testid="code-input"]',
+      TEST_DATA.USER.verificationCode,
+    );
     await this.page.click('[data-testid="verify-code-button"]');
 
     // Wait for successful authentication
@@ -116,17 +126,23 @@ class TreatmentSetupHelper {
 
   async createRemovalTreatment() {
     // Navigate to treatment selection
-    await this.page.goto('/treatment/select');
+    await this.page.goto("/treatment/select");
 
     // Create or select a removal treatment
     await this.page.click('[data-testid="treatment-type-removal"]');
-    await this.page.fill('[data-testid="patient-id-input"]', TEST_DATA.PATIENT.id);
-    await this.page.selectOption('[data-testid="site-select"]', TEST_DATA.PATIENT.site);
+    await this.page.fill(
+      '[data-testid="patient-id-input"]',
+      TEST_DATA.PATIENT.id,
+    );
+    await this.page.selectOption(
+      '[data-testid="site-select"]',
+      TEST_DATA.PATIENT.site,
+    );
 
     // Set insertion date (simulate treatment from yesterday for removal workflow)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const insertionDate = format(yesterday, 'yyyy-MM-dd');
+    const insertionDate = format(yesterday, "yyyy-MM-dd");
     await this.page.fill('[data-testid="insertion-date-input"]', insertionDate);
 
     await this.page.click('[data-testid="create-treatment-button"]');
@@ -137,31 +153,31 @@ class TreatmentSetupHelper {
 
   async setupApplicators() {
     // Mock API response for available applicators
-    await this.page.route('**/api/priority/applicators', async route => {
+    await this.page.route("**/api/priority/applicators", async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
           success: true,
-          applicators: TEST_DATA.APPLICATORS.map(app => ({
+          applicators: TEST_DATA.APPLICATORS.map((app) => ({
             serialNumber: app.serialNumber,
             applicatorType: app.applicatorType,
             seedQuantity: app.seedQuantity,
-            patientId: TEST_DATA.PATIENT.id
-          }))
-        })
+            patientId: TEST_DATA.PATIENT.id,
+          })),
+        }),
       });
     });
 
     // Mock treatment service API calls
-    await this.page.route('**/api/treatments/*/applicators', async route => {
+    await this.page.route("**/api/treatments/*/applicators", async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
           success: true,
-          applicators: TEST_DATA.APPLICATORS
-        })
+          applicators: TEST_DATA.APPLICATORS,
+        }),
       });
     });
   }
@@ -175,9 +191,11 @@ class BarcodeScanner {
     // Since we can't actually scan barcodes in E2E tests, we'll simulate the scanner callback
     await this.page.evaluate((serial) => {
       // Trigger the same function that would be called by the scanner
-      window.dispatchEvent(new CustomEvent('barcode-scanned', {
-        detail: { serialNumber: serial }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("barcode-scanned", {
+          detail: { serialNumber: serial },
+        }),
+      );
     }, serialNumber);
   }
 
@@ -196,7 +214,7 @@ class PDFExportHelper {
 
   async exportRemovalReport() {
     // Set up download handler
-    const downloadPromise = this.page.waitForEvent('download');
+    const downloadPromise = this.page.waitForEvent("download");
 
     // Click export PDF button
     await this.page.click('[data-testid="export-pdf-button"]');
@@ -221,7 +239,7 @@ class PDFExportHelper {
 }
 
 // Main test suite
-test.describe('Source Removal Workflow', () => {
+test.describe("Source Removal Workflow", () => {
   let authHelper: AuthenticationHelper;
   let treatmentHelper: TreatmentSetupHelper;
   let seedRemovalPage: SeedRemovalPage;
@@ -244,88 +262,106 @@ test.describe('Source Removal Workflow', () => {
     await treatmentHelper.createRemovalTreatment();
   });
 
-  test('should display treatment information correctly', async () => {
+  test("should display treatment information correctly", async () => {
     // Verify treatment information is displayed
     await expect(seedRemovalPage.treatmentInfoSection).toBeVisible();
 
     // Check patient ID
-    await expect(seedRemovalPage.page.locator('text=' + TEST_DATA.PATIENT.id)).toBeVisible();
+    await expect(
+      seedRemovalPage.page.locator("text=" + TEST_DATA.PATIENT.id),
+    ).toBeVisible();
 
     // Check treatment type
-    await expect(seedRemovalPage.page.locator('text=removal')).toBeVisible();
+    await expect(seedRemovalPage.page.locator("text=removal")).toBeVisible();
 
     // Check days since insertion calculation
-    await expect(seedRemovalPage.page.locator('text=1 day')).toBeVisible();
+    await expect(seedRemovalPage.page.locator("text=1 day")).toBeVisible();
   });
 
-  test('should show initial progress state', async () => {
+  test("should show initial progress state", async () => {
     // Verify initial progress display
     await expect(seedRemovalPage.progressDisplay).toBeVisible();
 
     // Check that progress shows 0 removed initially
-    await expect(seedRemovalPage.page.locator('text=Removed: 0')).toBeVisible();
+    await expect(seedRemovalPage.page.locator("text=Removed: 0")).toBeVisible();
 
     // Verify applicator groups are displayed
     await expect(seedRemovalPage.applicatorGroupsSection).toBeVisible();
   });
 
-  test('should remove applicators and update progress', async () => {
+  test("should remove applicators and update progress", async () => {
     // Get initial progress
     const initialProgress = await seedRemovalPage.progressDisplay.textContent();
 
     // Remove first applicator (25 seeds)
     const firstApplicator = TEST_DATA.APPLICATORS[0];
-    const checkbox = await seedRemovalPage.getApplicatorCheckbox(firstApplicator.serialNumber);
+    const checkbox = await seedRemovalPage.getApplicatorCheckbox(
+      firstApplicator.serialNumber,
+    );
     await checkbox.check();
 
     // Verify progress updated
-    await expect(seedRemovalPage.page.locator('text=Removed: 25')).toBeVisible();
+    await expect(
+      seedRemovalPage.page.locator("text=Removed: 25"),
+    ).toBeVisible();
 
     // Remove second applicator (50 seeds)
     const secondApplicator = TEST_DATA.APPLICATORS[1];
-    const secondCheckbox = await seedRemovalPage.getApplicatorCheckbox(secondApplicator.serialNumber);
+    const secondCheckbox = await seedRemovalPage.getApplicatorCheckbox(
+      secondApplicator.serialNumber,
+    );
     await secondCheckbox.check();
 
     // Verify cumulative progress
-    await expect(seedRemovalPage.page.locator('text=Removed: 75')).toBeVisible();
+    await expect(
+      seedRemovalPage.page.locator("text=Removed: 75"),
+    ).toBeVisible();
   });
 
-  test('should handle individual source removal', async () => {
+  test("should handle individual source removal", async () => {
     // Click individual source removal button multiple times
     for (let i = 1; i <= 5; i++) {
       await seedRemovalPage.individualSourceButton.click();
 
       // Verify individual source counter updates
-      await expect(seedRemovalPage.page.locator(`text=Individual sources removed: ${i}`)).toBeVisible();
+      await expect(
+        seedRemovalPage.page.locator(`text=Individual sources removed: ${i}`),
+      ).toBeVisible();
     }
 
     // Verify progress includes individual sources
-    await expect(seedRemovalPage.page.locator('text=Removed: 5')).toBeVisible();
+    await expect(seedRemovalPage.page.locator("text=Removed: 5")).toBeVisible();
   });
 
-  test('should add and save removal comments', async () => {
+  test("should add and save removal comments", async () => {
     const applicator = TEST_DATA.APPLICATORS[0];
-    const testComment = 'Applicator removed successfully with no complications';
+    const testComment = "Applicator removed successfully with no complications";
 
     // Add comment to applicator
-    const commentsField = await seedRemovalPage.getApplicatorComments(applicator.serialNumber);
+    const commentsField = await seedRemovalPage.getApplicatorComments(
+      applicator.serialNumber,
+    );
     await commentsField.fill(testComment);
 
     // Trigger save (blur event)
     await commentsField.blur();
 
     // Mark applicator as removed
-    const checkbox = await seedRemovalPage.getApplicatorCheckbox(applicator.serialNumber);
+    const checkbox = await seedRemovalPage.getApplicatorCheckbox(
+      applicator.serialNumber,
+    );
     await checkbox.check();
 
     // Verify comment is saved and visible
     await expect(commentsField).toHaveValue(testComment);
   });
 
-  test('should complete treatment when all sources are removed', async () => {
+  test("should complete treatment when all sources are removed", async () => {
     // Remove all applicators
     for (const applicator of TEST_DATA.APPLICATORS) {
-      const checkbox = await seedRemovalPage.getApplicatorCheckbox(applicator.serialNumber);
+      const checkbox = await seedRemovalPage.getApplicatorCheckbox(
+        applicator.serialNumber,
+      );
       await checkbox.check();
     }
 
@@ -339,39 +375,51 @@ test.describe('Source Removal Workflow', () => {
     await expect(seedRemovalPage.page).toHaveURL(/.*\/treatment\/select/);
   });
 
-  test('should allow completion with missing sources', async () => {
+  test("should allow completion with missing sources", async () => {
     // Remove only some applicators (partial removal)
-    const checkbox = await seedRemovalPage.getApplicatorCheckbox(TEST_DATA.APPLICATORS[0].serialNumber);
+    const checkbox = await seedRemovalPage.getApplicatorCheckbox(
+      TEST_DATA.APPLICATORS[0].serialNumber,
+    );
     await checkbox.check();
 
     // Verify button text changes for partial completion
-    await expect(seedRemovalPage.completeTreatmentButton).toHaveText(/Complete with Missing Sources/);
+    await expect(seedRemovalPage.completeTreatmentButton).toHaveText(
+      /Complete with Missing Sources/,
+    );
 
     // Should still be able to complete
     await expect(seedRemovalPage.completeTreatmentButton).toBeEnabled();
   });
 
-  test('should export PDF report correctly', async () => {
+  test("should export PDF report correctly", async () => {
     // Remove some applicators first
-    const checkbox1 = await seedRemovalPage.getApplicatorCheckbox(TEST_DATA.APPLICATORS[0].serialNumber);
+    const checkbox1 = await seedRemovalPage.getApplicatorCheckbox(
+      TEST_DATA.APPLICATORS[0].serialNumber,
+    );
     await checkbox1.check();
 
-    const checkbox2 = await seedRemovalPage.getApplicatorCheckbox(TEST_DATA.APPLICATORS[1].serialNumber);
+    const checkbox2 = await seedRemovalPage.getApplicatorCheckbox(
+      TEST_DATA.APPLICATORS[1].serialNumber,
+    );
     await checkbox2.check();
 
     // Export PDF
     const download = await pdfHelper.exportRemovalReport();
 
     // Verify PDF properties
-    expect(download.suggestedFilename()).toMatch(/Treatment_Report_TEST-001_.*\.pdf/);
+    expect(download.suggestedFilename()).toMatch(
+      /Treatment_Report_TEST-001_.*\.pdf/,
+    );
 
     // Verify PDF content structure
     await pdfHelper.verifyPDFContent(download);
   });
 
-  test('should handle applicator group removal', async () => {
+  test("should handle applicator group removal", async () => {
     // Find applicator group with multiple applicators
-    const groupButton = seedRemovalPage.page.locator('[data-testid="remove-applicator-group"]').first();
+    const groupButton = seedRemovalPage.page
+      .locator('[data-testid="remove-applicator-group"]')
+      .first();
 
     // Click group removal button
     await groupButton.click();
@@ -380,65 +428,98 @@ test.describe('Source Removal Workflow', () => {
     const progressBefore = await seedRemovalPage.progressDisplay.textContent();
 
     // Progress should update to reflect group removal
-    await expect(seedRemovalPage.progressDisplay).not.toHaveText(progressBefore || '');
+    await expect(seedRemovalPage.progressDisplay).not.toHaveText(
+      progressBefore || "",
+    );
   });
 
-  test('should validate progress calculations', async () => {
+  test("should validate progress calculations", async () => {
     // Calculate expected totals
-    const expectedTotalSources = TEST_DATA.APPLICATORS.reduce((sum, app) => sum + app.seedQuantity, 0);
+    const expectedTotalSources = TEST_DATA.APPLICATORS.reduce(
+      (sum, app) => sum + app.seedQuantity,
+      0,
+    );
 
     // Verify total sources display
-    await expect(seedRemovalPage.page.locator(`text=/ ${expectedTotalSources}`)).toBeVisible();
+    await expect(
+      seedRemovalPage.page.locator(`text=/ ${expectedTotalSources}`),
+    ).toBeVisible();
 
     // Remove applicators one by one and verify calculations
     let removedSources = 0;
     for (const applicator of TEST_DATA.APPLICATORS) {
-      const checkbox = await seedRemovalPage.getApplicatorCheckbox(applicator.serialNumber);
+      const checkbox = await seedRemovalPage.getApplicatorCheckbox(
+        applicator.serialNumber,
+      );
       await checkbox.check();
 
       removedSources += applicator.seedQuantity;
 
       // Verify running total
-      await expect(seedRemovalPage.page.locator(`text=Removed: ${removedSources}`)).toBeVisible();
+      await expect(
+        seedRemovalPage.page.locator(`text=Removed: ${removedSources}`),
+      ).toBeVisible();
 
       // Verify percentage calculation
-      const expectedPercentage = Math.round((removedSources / expectedTotalSources) * 100);
+      const expectedPercentage = Math.round(
+        (removedSources / expectedTotalSources) * 100,
+      );
       // Note: Exact percentage matching might vary due to individual sources, so we check for approximate values
     }
   });
 
-  test('should handle reset of individual sources', async () => {
+  test("should handle reset of individual sources", async () => {
     // Add individual sources
     for (let i = 0; i < 3; i++) {
       await seedRemovalPage.individualSourceButton.click();
     }
 
     // Verify individual sources counter
-    await expect(seedRemovalPage.page.locator('text=Individual sources removed: 3')).toBeVisible();
+    await expect(
+      seedRemovalPage.page.locator("text=Individual sources removed: 3"),
+    ).toBeVisible();
 
     // Reset individual sources
-    await seedRemovalPage.page.locator('[data-testid="reset-individual-seeds"]').click();
+    await seedRemovalPage.page
+      .locator('[data-testid="reset-individual-seeds"]')
+      .click();
 
     // Verify reset
-    await expect(seedRemovalPage.page.locator('text=Individual sources removed:')).not.toBeVisible();
+    await expect(
+      seedRemovalPage.page.locator("text=Individual sources removed:"),
+    ).not.toBeVisible();
   });
 
-  test('should display applicator details correctly', async () => {
+  test("should display applicator details correctly", async () => {
     // Verify each applicator displays correct information
     for (const applicator of TEST_DATA.APPLICATORS) {
-      await expect(seedRemovalPage.page.locator(`text=${applicator.serialNumber}`)).toBeVisible();
-      await expect(seedRemovalPage.page.locator(`text=Sources: ${applicator.seedQuantity}`)).toBeVisible();
+      await expect(
+        seedRemovalPage.page.locator(`text=${applicator.serialNumber}`),
+      ).toBeVisible();
+      await expect(
+        seedRemovalPage.page.locator(
+          `text=Sources: ${applicator.seedQuantity}`,
+        ),
+      ).toBeVisible();
 
       // Check usage type display
-      const expectedUsageText = applicator.usageType === 'full' ? 'Full Use' :
-                               applicator.usageType === 'faulty' ? 'Faulty' : 'No Use';
-      await expect(seedRemovalPage.page.locator(`text=${expectedUsageText}`)).toBeVisible();
+      const expectedUsageText =
+        applicator.usageType === "full"
+          ? "Full Use"
+          : applicator.usageType === "faulty"
+            ? "Faulty"
+            : "No Use";
+      await expect(
+        seedRemovalPage.page.locator(`text=${expectedUsageText}`),
+      ).toBeVisible();
     }
   });
 
-  test('should maintain progress consistency across page refreshes', async () => {
+  test("should maintain progress consistency across page refreshes", async () => {
     // Remove some applicators
-    const checkbox1 = await seedRemovalPage.getApplicatorCheckbox(TEST_DATA.APPLICATORS[0].serialNumber);
+    const checkbox1 = await seedRemovalPage.getApplicatorCheckbox(
+      TEST_DATA.APPLICATORS[0].serialNumber,
+    );
     await checkbox1.check();
 
     // Get current progress
@@ -448,18 +529,24 @@ test.describe('Source Removal Workflow', () => {
     await seedRemovalPage.page.reload();
 
     // Verify progress is maintained (assuming proper persistence)
-    await expect(seedRemovalPage.progressDisplay).toHaveText(progressText || '');
+    await expect(seedRemovalPage.progressDisplay).toHaveText(
+      progressText || "",
+    );
   });
 });
 
 // Cross-browser compatibility test group
-test.describe('Cross-Browser Compatibility', () => {
-  test('should work consistently across different browsers', async ({ browserName }) => {
+test.describe("Cross-Browser Compatibility", () => {
+  test("should work consistently across different browsers", async ({
+    browserName,
+  }) => {
     // This test will automatically run on different browsers based on playwright.config.ts
-    test.info().annotations.push({ type: 'browser', description: browserName });
+    test.info().annotations.push({ type: "browser", description: browserName });
 
     // Basic functionality test for each browser
-    const page = test.info().annotations.find(a => a.type === 'browser')?.description;
+    const page = test
+      .info()
+      .annotations.find((a) => a.type === "browser")?.description;
     console.log(`Running source removal test on ${page}`);
 
     // Test basic page load and functionality
@@ -468,9 +555,9 @@ test.describe('Cross-Browser Compatibility', () => {
 });
 
 // Mobile responsiveness tests
-test.describe('Mobile Responsiveness', () => {
-  test('should work on mobile devices', async ({ page, isMobile }) => {
-    test.skip(!isMobile, 'This test is only for mobile viewports');
+test.describe("Mobile Responsiveness", () => {
+  test("should work on mobile devices", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "This test is only for mobile viewports");
 
     // Setup as before
     const authHelper = new AuthenticationHelper(page);
@@ -491,17 +578,17 @@ test.describe('Mobile Responsiveness', () => {
 });
 
 // Error handling tests
-test.describe('Error Handling', () => {
-  test('should handle API failures gracefully', async ({ page }) => {
+test.describe("Error Handling", () => {
+  test("should handle API failures gracefully", async ({ page }) => {
     const authHelper = new AuthenticationHelper(page);
     const treatmentHelper = new TreatmentSetupHelper(page);
 
     // Setup API failure scenarios
-    await page.route('**/api/treatments/*/applicators', route => {
+    await page.route("**/api/treatments/*/applicators", (route) => {
       route.fulfill({
         status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Internal server error' })
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Internal server error" }),
       });
     });
 
@@ -509,10 +596,12 @@ test.describe('Error Handling', () => {
     await treatmentHelper.createRemovalTreatment();
 
     // Verify error handling
-    await expect(page.locator('text=Failed to fetch applicators')).toBeVisible();
+    await expect(
+      page.locator("text=Failed to fetch applicators"),
+    ).toBeVisible();
   });
 
-  test('should handle network failures', async ({ page, context }) => {
+  test("should handle network failures", async ({ page, context }) => {
     // Simulate offline condition
     await context.setOffline(true);
 
@@ -522,13 +611,15 @@ test.describe('Error Handling', () => {
     await authHelper.login();
 
     // Verify offline handling
-    await expect(page.locator('text=Network error')).toBeVisible();
+    await expect(page.locator("text=Network error")).toBeVisible();
   });
 });
 
 // Performance tests
-test.describe('Performance', () => {
-  test('should complete removal workflow within acceptable time limits', async ({ page }) => {
+test.describe("Performance", () => {
+  test("should complete removal workflow within acceptable time limits", async ({
+    page,
+  }) => {
     const startTime = Date.now();
 
     const authHelper = new AuthenticationHelper(page);
@@ -541,7 +632,9 @@ test.describe('Performance', () => {
 
     // Complete full workflow
     for (const applicator of TEST_DATA.APPLICATORS) {
-      const checkbox = await seedRemovalPage.getApplicatorCheckbox(applicator.serialNumber);
+      const checkbox = await seedRemovalPage.getApplicatorCheckbox(
+        applicator.serialNumber,
+      );
       await checkbox.check();
     }
 

@@ -4,7 +4,7 @@
  * Provides reusable mock factories for testing offline services.
  */
 
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 // ============================================================================
 // Network Status Mock
@@ -22,7 +22,9 @@ export interface MockNetworkStatus {
 /**
  * Create a mock for networkStatus service
  */
-export const createNetworkStatusMock = (initialOnline = true): MockNetworkStatus => ({
+export const createNetworkStatusMock = (
+  initialOnline = true,
+): MockNetworkStatus => ({
   isOnline: initialOnline,
   offlineStartTime: initialOnline ? null : new Date(),
   lastOnline: initialOnline ? new Date() : null,
@@ -72,7 +74,12 @@ export interface MockClockService {
  * Create a mock for clockService
  */
 export const createClockServiceMock = (): MockClockService => ({
-  sync: vi.fn().mockResolvedValue({ success: true, offset: 0, roundTrip: 50, serverTime: new Date() }),
+  sync: vi.fn().mockResolvedValue({
+    success: true,
+    offset: 0,
+    roundTrip: 50,
+    serverTime: new Date(),
+  }),
   getAdjustedTime: vi.fn(() => new Date()),
   getAdjustedISOString: vi.fn(() => new Date().toISOString()),
   getAdjustedTimestamp: vi.fn(() => Date.now()),
@@ -80,7 +87,7 @@ export const createClockServiceMock = (): MockClockService => ({
   isClockReliable: vi.fn(() => true),
   needsSync: vi.fn(() => false),
   getLastSyncTime: vi.fn(() => new Date()),
-  getStatusMessage: vi.fn(() => 'Clock synchronized'),
+  getStatusMessage: vi.fn(() => "Clock synchronized"),
 });
 
 // ============================================================================
@@ -156,7 +163,7 @@ export const createOfflineDbMock = (): MockOfflineDb => ({
     conflictCount: 0,
     estimatedSizeBytes: 0,
   }),
-  checkDataIntegrity: vi.fn().mockResolvedValue({ status: 'ok' }),
+  checkDataIntegrity: vi.fn().mockResolvedValue({ status: "ok" }),
   updatePendingChangesBackup: vi.fn().mockResolvedValue(undefined),
   clearAll: vi.fn().mockResolvedValue(undefined),
   close: vi.fn(),

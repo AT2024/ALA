@@ -2,157 +2,173 @@
  * Tests for Phase 1: Email Service & Verification Code Fix
  */
 
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcryptjs";
 
 // Test configuration - use generic test values, not real emails
-const TEST_PDF_RECIPIENT = 'test-pdf-recipient@test.example.com';
-const TEST_SENDER_ADDRESS = 'test@test.azurecomm.net';
-const TEST_CONNECTION_STRING = 'endpoint=https://test.communication.azure.com/;accesskey=testkey';
+const TEST_PDF_RECIPIENT = "test-pdf-recipient@test.example.com";
+const TEST_SENDER_ADDRESS = "test@test.azurecomm.net";
+const TEST_CONNECTION_STRING =
+  "endpoint=https://test.communication.azure.com/;accesskey=testkey";
 
 // Set environment variables BEFORE any imports that depend on them
-process.env.NODE_ENV = 'test';
+process.env.NODE_ENV = "test";
 process.env.AZURE_COMMUNICATION_CONNECTION_STRING = TEST_CONNECTION_STRING;
 process.env.AZURE_EMAIL_SENDER_ADDRESS = TEST_SENDER_ADDRESS;
 process.env.PDF_RECIPIENT_EMAIL = TEST_PDF_RECIPIENT;
 
 // Mock Azure Communication Services before importing emailService
-jest.mock('@azure/communication-email', () => ({
+jest.mock("@azure/communication-email", () => ({
   EmailClient: jest.fn().mockImplementation(() => ({
     beginSend: jest.fn().mockResolvedValue({
       pollUntilDone: jest.fn().mockResolvedValue({
-        status: 'Succeeded',
-        id: 'test-message-id'
-      })
-    })
+        status: "Succeeded",
+        id: "test-message-id",
+      }),
+    }),
   })),
   KnownEmailSendStatus: {
-    Succeeded: 'Succeeded',
-    Failed: 'Failed'
-  }
+    Succeeded: "Succeeded",
+    Failed: "Failed",
+  },
 }));
 
 // Mock the logger
-jest.mock('../../../src/utils/logger', () => ({
+jest.mock("../../../src/utils/logger", () => ({
   info: jest.fn(),
   warn: jest.fn(),
-  error: jest.fn()
+  error: jest.fn(),
 }));
 
 // Import after setting up mocks and env vars
-import emailService, { sendVerificationCode, sendSignedPdf, isEmailConfigured, getPdfRecipientEmail } from '../../../src/services/emailService';
-import logger from '../../../src/utils/logger';
+import emailService, {
+  sendVerificationCode,
+  sendSignedPdf,
+  isEmailConfigured,
+  getPdfRecipientEmail,
+} from "../../../src/services/emailService";
+import logger from "../../../src/utils/logger";
 
-describe('EmailService', () => {
+describe("EmailService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('Configuration', () => {
-    it('should have email configuration functions available', () => {
+  describe("Configuration", () => {
+    it("should have email configuration functions available", () => {
       expect(isEmailConfigured).toBeDefined();
       expect(getPdfRecipientEmail).toBeDefined();
     });
 
-    it('should have clinic recipient email configured from env var', () => {
+    it("should have clinic recipient email configured from env var", () => {
       const recipient = getPdfRecipientEmail();
       expect(recipient).toBe(TEST_PDF_RECIPIENT);
     });
 
-    it('should report email as configured when env vars are set', () => {
+    it("should report email as configured when env vars are set", () => {
       expect(isEmailConfigured()).toBe(true);
     });
   });
 
-  describe('sendVerificationCode', () => {
-    it('should be a function', () => {
-      expect(typeof sendVerificationCode).toBe('function');
+  describe("sendVerificationCode", () => {
+    it("should be a function", () => {
+      expect(typeof sendVerificationCode).toBe("function");
     });
 
-    it('should return true when sending verification code', async () => {
-      const result = await sendVerificationCode('test@example.com', '123456');
+    it("should return true when sending verification code", async () => {
+      const result = await sendVerificationCode("test@example.com", "123456");
       expect(result).toBe(true);
     });
 
-    it('should log verification code in dev/test mode', async () => {
-      await sendVerificationCode('test@example.com', '654321');
+    it("should log verification code in dev/test mode", async () => {
+      await sendVerificationCode("test@example.com", "654321");
 
       // In test mode, it logs instead of sending
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('[DEV MODE]')
+        expect.stringContaining("[DEV MODE]"),
       );
     });
 
-    it('should handle 6-digit codes correctly', async () => {
-      const code = '123456';
-      const result = await sendVerificationCode('user@example.com', code);
+    it("should handle 6-digit codes correctly", async () => {
+      const code = "123456";
+      const result = await sendVerificationCode("user@example.com", code);
       expect(result).toBe(true);
     });
   });
 
-  describe('sendSignedPdf', () => {
+  describe("sendSignedPdf", () => {
     const mockSignatureDetails = {
-      type: 'hospital_auto' as const,
-      signerName: 'Dr. Test',
-      signerEmail: 'dr.test@hospital.com',
-      signerPosition: 'doctor',
-      signedAt: new Date('2024-01-15T10:30:00Z')
+      type: "hospital_auto" as const,
+      signerName: "Dr. Test",
+      signerEmail: "dr.test@hospital.com",
+      signerPosition: "doctor",
+      signedAt: new Date("2024-01-15T10:30:00Z"),
     };
 
-    it('should be a function', () => {
-      expect(typeof sendSignedPdf).toBe('function');
+    it("should be a function", () => {
+      expect(typeof sendSignedPdf).toBe("function");
     });
 
-    it('should return true when sending PDF', async () => {
-      const pdfBuffer = Buffer.from('fake pdf content');
+    it("should return true when sending PDF", async () => {
+      const pdfBuffer = Buffer.from("fake pdf content");
       const result = await sendSignedPdf(
         null,
         pdfBuffer,
-        'treatment-123',
-        mockSignatureDetails
+        "treatment-123",
+        mockSignatureDetails,
       );
       expect(result).toBe(true);
     });
 
-    it('should use default recipient when toEmail is null', async () => {
-      const pdfBuffer = Buffer.from('test pdf');
-      await sendSignedPdf(null, pdfBuffer, 'treatment-456', mockSignatureDetails);
+    it("should use default recipient when toEmail is null", async () => {
+      const pdfBuffer = Buffer.from("test pdf");
+      await sendSignedPdf(
+        null,
+        pdfBuffer,
+        "treatment-456",
+        mockSignatureDetails,
+      );
 
       // In test mode, it logs the recipient from env var
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining(TEST_PDF_RECIPIENT)
+        expect.stringContaining(TEST_PDF_RECIPIENT),
       );
     });
 
-    it('should handle hospital_auto signature type', async () => {
-      const pdfBuffer = Buffer.from('test');
-      const result = await sendSignedPdf(null, pdfBuffer, 'treatment-789', {
+    it("should handle hospital_auto signature type", async () => {
+      const pdfBuffer = Buffer.from("test");
+      const result = await sendSignedPdf(null, pdfBuffer, "treatment-789", {
         ...mockSignatureDetails,
-        type: 'hospital_auto'
+        type: "hospital_auto",
       });
       expect(result).toBe(true);
     });
 
-    it('should handle alphatau_verified signature type', async () => {
-      const pdfBuffer = Buffer.from('test');
-      const result = await sendSignedPdf(null, pdfBuffer, 'treatment-abc', {
+    it("should handle alphatau_verified signature type", async () => {
+      const pdfBuffer = Buffer.from("test");
+      const result = await sendSignedPdf(null, pdfBuffer, "treatment-abc", {
         ...mockSignatureDetails,
-        type: 'alphatau_verified'
+        type: "alphatau_verified",
       });
       expect(result).toBe(true);
     });
 
-    it('should log signature details in dev mode', async () => {
-      const pdfBuffer = Buffer.from('pdf content');
-      await sendSignedPdf(null, pdfBuffer, 'treatment-def', mockSignatureDetails);
+    it("should log signature details in dev mode", async () => {
+      const pdfBuffer = Buffer.from("pdf content");
+      await sendSignedPdf(
+        null,
+        pdfBuffer,
+        "treatment-def",
+        mockSignatureDetails,
+      );
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Dr. Test')
+        expect.stringContaining("Dr. Test"),
       );
     });
   });
 
-  describe('Default Export', () => {
-    it('should export all functions', () => {
+  describe("Default Export", () => {
+    it("should export all functions", () => {
       expect(emailService.sendVerificationCode).toBeDefined();
       expect(emailService.sendSignedPdf).toBeDefined();
       expect(emailService.isEmailConfigured).toBeDefined();
@@ -161,14 +177,15 @@ describe('EmailService', () => {
   });
 });
 
-describe('User.generateVerificationCode (Fixed)', () => {
+describe("User.generateVerificationCode (Fixed)", () => {
   // We'll test the User model's verification code generation
   // This requires setting up the database, so we'll test the logic conceptually
 
-  describe('Verification Code Generation Logic', () => {
-    it('should generate 6-digit numeric codes', () => {
+  describe("Verification Code Generation Logic", () => {
+    it("should generate 6-digit numeric codes", () => {
       // Test the generation logic
-      const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+      const generateCode = () =>
+        Math.floor(100000 + Math.random() * 900000).toString();
 
       for (let i = 0; i < 100; i++) {
         const code = generateCode();
@@ -178,8 +195,9 @@ describe('User.generateVerificationCode (Fixed)', () => {
       }
     });
 
-    it('should NOT generate hardcoded 123456', () => {
-      const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+    it("should NOT generate hardcoded 123456", () => {
+      const generateCode = () =>
+        Math.floor(100000 + Math.random() * 900000).toString();
 
       // Generate 1000 codes and check none are 123456
       // (statistically, the chance of getting 123456 is 1/900000)
@@ -195,8 +213,9 @@ describe('User.generateVerificationCode (Fixed)', () => {
       // but not impossible, so we just check diversity
     });
 
-    it('should produce unique codes (with high probability)', () => {
-      const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+    it("should produce unique codes (with high probability)", () => {
+      const generateCode = () =>
+        Math.floor(100000 + Math.random() * 900000).toString();
 
       const codes = new Set<string>();
       for (let i = 0; i < 100; i++) {
@@ -208,9 +227,9 @@ describe('User.generateVerificationCode (Fixed)', () => {
     });
   });
 
-  describe('Code Hashing', () => {
-    it('should hash codes with bcrypt', async () => {
-      const code = '123456';
+  describe("Code Hashing", () => {
+    it("should hash codes with bcrypt", async () => {
+      const code = "123456";
       const hashedCode = await bcrypt.hash(code, 10);
 
       // Hashed code should look like bcrypt format
@@ -218,20 +237,20 @@ describe('User.generateVerificationCode (Fixed)', () => {
       expect(hashedCode).not.toBe(code);
     });
 
-    it('should verify hashed codes correctly', async () => {
-      const code = '654321';
+    it("should verify hashed codes correctly", async () => {
+      const code = "654321";
       const hashedCode = await bcrypt.hash(code, 10);
 
       const isValid = await bcrypt.compare(code, hashedCode);
       expect(isValid).toBe(true);
 
-      const isInvalid = await bcrypt.compare('000000', hashedCode);
+      const isInvalid = await bcrypt.compare("000000", hashedCode);
       expect(isInvalid).toBe(false);
     });
   });
 
-  describe('Expiration Logic', () => {
-    it('should set expiration 10 minutes in future', () => {
+  describe("Expiration Logic", () => {
+    it("should set expiration 10 minutes in future", () => {
       const beforeGen = new Date();
 
       // Simulate expiration setting
@@ -243,32 +262,33 @@ describe('User.generateVerificationCode (Fixed)', () => {
       const minExpected = new Date(beforeGen.getTime() + 10 * 60 * 1000);
       const maxExpected = new Date(afterGen.getTime() + 10 * 60 * 1000);
 
-      expect(expiration.getTime()).toBeGreaterThanOrEqual(minExpected.getTime() - 1000);
-      expect(expiration.getTime()).toBeLessThanOrEqual(maxExpected.getTime() + 1000);
+      expect(expiration.getTime()).toBeGreaterThanOrEqual(
+        minExpected.getTime() - 1000,
+      );
+      expect(expiration.getTime()).toBeLessThanOrEqual(
+        maxExpected.getTime() + 1000,
+      );
     });
   });
 });
 
-describe('Integration Considerations', () => {
-  it('should handle email service gracefully when not configured', async () => {
+describe("Integration Considerations", () => {
+  it("should handle email service gracefully when not configured", async () => {
     // The email service returns true in dev mode even without real config
-    const result = await sendVerificationCode('test@test.com', '123456');
+    const result = await sendVerificationCode("test@test.com", "123456");
     expect(result).toBe(true);
   });
 
-  it('should not throw when sending PDF in dev mode', async () => {
-    const pdfBuffer = Buffer.from('test content');
-    await expect(sendSignedPdf(
-      null,
-      pdfBuffer,
-      'test-treatment',
-      {
-        type: 'hospital_auto',
-        signerName: 'Test',
-        signerEmail: 'test@test.com',
-        signerPosition: 'doctor',
-        signedAt: new Date()
-      }
-    )).resolves.toBe(true);
+  it("should not throw when sending PDF in dev mode", async () => {
+    const pdfBuffer = Buffer.from("test content");
+    await expect(
+      sendSignedPdf(null, pdfBuffer, "test-treatment", {
+        type: "hospital_auto",
+        signerName: "Test",
+        signerEmail: "test@test.com",
+        signerPosition: "doctor",
+        signedAt: new Date(),
+      }),
+    ).resolves.toBe(true);
   });
 });

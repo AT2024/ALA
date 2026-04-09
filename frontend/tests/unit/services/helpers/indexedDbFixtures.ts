@@ -5,7 +5,10 @@
  * and offlineValidationService.
  */
 
-import { APPLICATOR_STATUSES, ApplicatorStatus } from '../../../../../shared/applicatorStatuses';
+import {
+  APPLICATOR_STATUSES,
+  ApplicatorStatus,
+} from "../../../../../shared/applicatorStatuses";
 
 // ============================================================================
 // Treatment Fixtures
@@ -13,7 +16,7 @@ import { APPLICATOR_STATUSES, ApplicatorStatus } from '../../../../../shared/app
 
 export interface MockTreatment {
   id: string;
-  type: 'insertion' | 'removal';
+  type: "insertion" | "removal";
   subjectId: string;
   patientName?: string;
   site: string;
@@ -24,7 +27,7 @@ export interface MockTreatment {
   seedQuantity?: number;
   activityPerSeed?: number;
   version: number;
-  syncStatus: 'synced' | 'pending' | 'conflict';
+  syncStatus: "synced" | "pending" | "conflict";
   downloadedAt: string;
   expiresAt: string;
   serverVersion: number;
@@ -36,25 +39,27 @@ let treatmentCounter = 0;
  * Create a mock treatment for testing
  * Matches the OfflineTreatment interface from indexedDbService
  */
-export const createMockTreatment = (overrides: Partial<MockTreatment> = {}): MockTreatment => {
+export const createMockTreatment = (
+  overrides: Partial<MockTreatment> = {},
+): MockTreatment => {
   treatmentCounter++;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
   return {
     id: `treatment-${treatmentCounter}`,
-    type: 'insertion',
+    type: "insertion",
     subjectId: `SUBJ-${treatmentCounter}`,
     patientName: `Test Patient ${treatmentCounter}`,
-    site: 'Site A',
+    site: "Site A",
     date: now.toISOString(),
     isComplete: false,
-    userId: 'test-user',
+    userId: "test-user",
     surgeon: `Dr. Surgeon ${treatmentCounter}`,
     seedQuantity: 5,
     activityPerSeed: 0.5,
     version: 1,
-    syncStatus: 'synced',
+    syncStatus: "synced",
     downloadedAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     serverVersion: 1,
@@ -65,7 +70,9 @@ export const createMockTreatment = (overrides: Partial<MockTreatment> = {}): Moc
 /**
  * Create an expired treatment
  */
-export const createExpiredTreatment = (overrides: Partial<MockTreatment> = {}): MockTreatment => {
+export const createExpiredTreatment = (
+  overrides: Partial<MockTreatment> = {},
+): MockTreatment => {
   const now = new Date();
   const expiredAt = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
 
@@ -78,7 +85,9 @@ export const createExpiredTreatment = (overrides: Partial<MockTreatment> = {}): 
 /**
  * Create a treatment expiring soon
  */
-export const createExpiringSoonTreatment = (hoursUntilExpiry: number = 1): MockTreatment => {
+export const createExpiringSoonTreatment = (
+  hoursUntilExpiry: number = 1,
+): MockTreatment => {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + hoursUntilExpiry * 60 * 60 * 1000);
 
@@ -104,7 +113,7 @@ export interface MockApplicator {
   comments: string;
   position: number;
   version: number;
-  syncStatus: 'synced' | 'pending' | 'conflict';
+  syncStatus: "synced" | "pending" | "conflict";
   lastSyncedAt: string | null;
 }
 
@@ -113,25 +122,27 @@ let applicatorCounter = 0;
 /**
  * Create a mock applicator for testing
  */
-export const createMockApplicator = (overrides: Partial<MockApplicator> = {}): MockApplicator => {
+export const createMockApplicator = (
+  overrides: Partial<MockApplicator> = {},
+): MockApplicator => {
   applicatorCounter++;
   const now = new Date();
   const expirationDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
 
   return {
     id: `applicator-${applicatorCounter}`,
-    treatmentId: 'treatment-1',
-    serialNumber: `SN-${applicatorCounter.toString().padStart(6, '0')}`,
+    treatmentId: "treatment-1",
+    serialNumber: `SN-${applicatorCounter.toString().padStart(6, "0")}`,
     catalogNumber: `CAT-${applicatorCounter}`,
     lotNumber: `LOT-${applicatorCounter}`,
     expirationDate: expirationDate.toISOString(),
     status: null,
     statusChangedAt: null,
     statusChangedBy: null,
-    comments: '',
+    comments: "",
     position: applicatorCounter,
     version: 1,
-    syncStatus: 'synced',
+    syncStatus: "synced",
     lastSyncedAt: now.toISOString(),
     ...overrides,
   };
@@ -142,13 +153,13 @@ export const createMockApplicator = (overrides: Partial<MockApplicator> = {}): M
  */
 export const createApplicatorWithStatus = (
   status: ApplicatorStatus,
-  overrides: Partial<MockApplicator> = {}
+  overrides: Partial<MockApplicator> = {},
 ): MockApplicator => {
   const now = new Date();
   return createMockApplicator({
     status,
     statusChangedAt: now.toISOString(),
-    statusChangedBy: 'test-user',
+    statusChangedBy: "test-user",
     ...overrides,
   });
 };
@@ -158,26 +169,40 @@ export const createApplicatorWithStatus = (
  */
 export const createApplicatorSet = (
   treatmentId: string,
-  count: number = 5
+  count: number = 5,
 ): MockApplicator[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockApplicator({
       treatmentId,
       position: index + 1,
-    })
+    }),
   );
 };
 
 /**
  * Create applicators in various states for workflow testing
  */
-export const createWorkflowApplicators = (treatmentId: string): MockApplicator[] => {
+export const createWorkflowApplicators = (
+  treatmentId: string,
+): MockApplicator[] => {
   return [
     createMockApplicator({ treatmentId, status: null, position: 1 }),
-    createApplicatorWithStatus(APPLICATOR_STATUSES.SEALED, { treatmentId, position: 2 }),
-    createApplicatorWithStatus(APPLICATOR_STATUSES.OPENED, { treatmentId, position: 3 }),
-    createApplicatorWithStatus(APPLICATOR_STATUSES.LOADED, { treatmentId, position: 4 }),
-    createApplicatorWithStatus(APPLICATOR_STATUSES.INSERTED, { treatmentId, position: 5 }),
+    createApplicatorWithStatus(APPLICATOR_STATUSES.SEALED, {
+      treatmentId,
+      position: 2,
+    }),
+    createApplicatorWithStatus(APPLICATOR_STATUSES.OPENED, {
+      treatmentId,
+      position: 3,
+    }),
+    createApplicatorWithStatus(APPLICATOR_STATUSES.LOADED, {
+      treatmentId,
+      position: 4,
+    }),
+    createApplicatorWithStatus(APPLICATOR_STATUSES.INSERTED, {
+      treatmentId,
+      position: 5,
+    }),
   ];
 };
 
@@ -187,16 +212,16 @@ export const createWorkflowApplicators = (treatmentId: string): MockApplicator[]
 
 export interface MockPendingChange {
   id?: number;
-  entityType: 'applicator' | 'treatment' | 'comment';
+  entityType: "applicator" | "treatment" | "comment";
   entityId: string;
-  changeType: 'status_change' | 'comment_add' | 'comment_update';
+  changeType: "status_change" | "comment_add" | "comment_update";
   previousValue: string | null;
   newValue: string;
   createdAt: string;
   attemptCount: number;
   lastAttemptAt: string | null;
   lastError: string | null;
-  status: 'pending' | 'syncing' | 'failed' | 'requires_intervention';
+  status: "pending" | "syncing" | "failed" | "requires_intervention";
   metadata: Record<string, unknown>;
 }
 
@@ -206,22 +231,22 @@ let pendingChangeCounter = 0;
  * Create a mock pending change
  */
 export const createMockPendingChange = (
-  overrides: Partial<MockPendingChange> = {}
+  overrides: Partial<MockPendingChange> = {},
 ): MockPendingChange => {
   pendingChangeCounter++;
   const now = new Date();
 
   return {
-    entityType: 'applicator',
+    entityType: "applicator",
     entityId: `applicator-${pendingChangeCounter}`,
-    changeType: 'status_change',
+    changeType: "status_change",
     previousValue: null,
     newValue: APPLICATOR_STATUSES.SEALED,
     createdAt: now.toISOString(),
     attemptCount: 0,
     lastAttemptAt: null,
     lastError: null,
-    status: 'pending',
+    status: "pending",
     metadata: {},
     ...overrides,
   };
@@ -231,8 +256,8 @@ export const createMockPendingChange = (
  * Create a failed pending change
  */
 export const createFailedPendingChange = (
-  error: string = 'Network error',
-  attemptCount: number = 3
+  error: string = "Network error",
+  attemptCount: number = 3,
 ): MockPendingChange => {
   const now = new Date();
 
@@ -240,7 +265,7 @@ export const createFailedPendingChange = (
     attemptCount,
     lastAttemptAt: now.toISOString(),
     lastError: error,
-    status: 'failed',
+    status: "failed",
   });
 };
 
@@ -250,8 +275,8 @@ export const createFailedPendingChange = (
 export const createInterventionRequiredChange = (): MockPendingChange => {
   return createMockPendingChange({
     attemptCount: 5,
-    lastError: 'Conflict detected',
-    status: 'requires_intervention',
+    lastError: "Conflict detected",
+    status: "requires_intervention",
   });
 };
 
@@ -261,14 +286,14 @@ export const createInterventionRequiredChange = (): MockPendingChange => {
 
 export interface MockConflict {
   id?: number;
-  entityType: 'applicator' | 'treatment';
+  entityType: "applicator" | "treatment";
   entityId: string;
   localValue: string;
   serverValue: string;
-  conflictType: 'concurrent_update' | 'stale_version' | 'deleted_on_server';
+  conflictType: "concurrent_update" | "stale_version" | "deleted_on_server";
   detectedAt: string;
   requiresAdmin: boolean;
-  resolution: 'pending' | 'use_local' | 'use_server' | 'merged';
+  resolution: "pending" | "use_local" | "use_server" | "merged";
   resolvedAt: string | null;
   resolvedBy: string | null;
 }
@@ -278,19 +303,21 @@ let conflictCounter = 0;
 /**
  * Create a mock conflict
  */
-export const createMockConflict = (overrides: Partial<MockConflict> = {}): MockConflict => {
+export const createMockConflict = (
+  overrides: Partial<MockConflict> = {},
+): MockConflict => {
   conflictCounter++;
   const now = new Date();
 
   return {
-    entityType: 'applicator',
+    entityType: "applicator",
     entityId: `applicator-${conflictCounter}`,
     localValue: APPLICATOR_STATUSES.LOADED,
     serverValue: APPLICATOR_STATUSES.INSERTED,
-    conflictType: 'concurrent_update',
+    conflictType: "concurrent_update",
     detectedAt: now.toISOString(),
     requiresAdmin: false,
-    resolution: 'pending',
+    resolution: "pending",
     resolvedAt: null,
     resolvedBy: null,
     ...overrides,
@@ -302,7 +329,7 @@ export const createMockConflict = (overrides: Partial<MockConflict> = {}): MockC
  */
 export const createAdminConflict = (): MockConflict => {
   return createMockConflict({
-    conflictType: 'stale_version',
+    conflictType: "stale_version",
     requiresAdmin: true,
   });
 };
@@ -329,34 +356,34 @@ export const resetFixtureCounters = (): void => {
  * Sample PHI data for encryption testing
  */
 export const PHI_TEST_DATA = {
-  patientName: 'John Doe',
-  subjectId: 'SUBJ-12345',
-  surgeon: 'Dr. Jane Smith',
-  serialNumber: 'SN-000001',
-  comments: 'Patient tolerated procedure well',
-  notes: 'Follow-up scheduled in 2 weeks',
+  patientName: "John Doe",
+  subjectId: "SUBJ-12345",
+  surgeon: "Dr. Jane Smith",
+  serialNumber: "SN-000001",
+  comments: "Patient tolerated procedure well",
+  notes: "Follow-up scheduled in 2 weeks",
 };
 
 /**
  * Unicode PHI data for encryption edge case testing
  */
 export const UNICODE_PHI_TEST_DATA = {
-  patientName: 'יוסי כהן', // Hebrew
-  subjectId: 'מזהה-12345',
-  surgeon: 'ד״ר מרים לוי',
-  serialNumber: 'SN-000002',
-  comments: 'הערות בעברית',
-  notes: 'הערות נוספות',
+  patientName: "יוסי כהן", // Hebrew
+  subjectId: "מזהה-12345",
+  surgeon: "ד״ר מרים לוי",
+  serialNumber: "SN-000002",
+  comments: "הערות בעברית",
+  notes: "הערות נוספות",
 };
 
 /**
  * Long PHI data for testing boundary conditions
  */
 export const LONG_PHI_TEST_DATA = {
-  patientName: 'A'.repeat(200),
-  subjectId: 'B'.repeat(100),
-  surgeon: 'C'.repeat(150),
-  serialNumber: 'SN-' + 'D'.repeat(50),
-  comments: 'E'.repeat(1000),
-  notes: 'F'.repeat(500),
+  patientName: "A".repeat(200),
+  subjectId: "B".repeat(100),
+  surgeon: "C".repeat(150),
+  serialNumber: "SN-" + "D".repeat(50),
+  comments: "E".repeat(1000),
+  notes: "F".repeat(500),
 };

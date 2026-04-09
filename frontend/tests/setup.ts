@@ -1,18 +1,18 @@
-import { expect, afterEach, vi, beforeAll } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
+import { expect, afterEach, vi, beforeAll } from "vitest";
+import { cleanup } from "@testing-library/react";
+import * as matchers from "@testing-library/jest-dom/matchers";
 
 // ============================================================================
 // 1. IndexedDB Mock (fake-indexeddb)
 // ============================================================================
-import 'fake-indexeddb/auto';
+import "fake-indexeddb/auto";
 
 // ============================================================================
 // 2. Web Crypto API (Node.js webcrypto)
 // ============================================================================
-import { webcrypto } from 'crypto';
+import { webcrypto } from "crypto";
 
-Object.defineProperty(globalThis, 'crypto', {
+Object.defineProperty(globalThis, "crypto", {
   value: webcrypto,
   writable: true,
   configurable: true,
@@ -36,35 +36,39 @@ const originalAddEventListener = window.addEventListener.bind(window);
 const originalRemoveEventListener = window.removeEventListener.bind(window);
 
 // Override addEventListener for network events
-vi.spyOn(window, 'addEventListener').mockImplementation((type: string, listener: EventListenerOrEventListenerObject) => {
-  if (type === 'online' || type === 'offline') {
-    networkEventListeners[type].add(listener as EventListener);
-    return;
-  }
-  originalAddEventListener(type, listener as EventListener);
-});
+vi.spyOn(window, "addEventListener").mockImplementation(
+  (type: string, listener: EventListenerOrEventListenerObject) => {
+    if (type === "online" || type === "offline") {
+      networkEventListeners[type].add(listener as EventListener);
+      return;
+    }
+    originalAddEventListener(type, listener as EventListener);
+  },
+);
 
 // Override removeEventListener for network events
-vi.spyOn(window, 'removeEventListener').mockImplementation((type: string, listener: EventListenerOrEventListenerObject) => {
-  if (type === 'online' || type === 'offline') {
-    networkEventListeners[type].delete(listener as EventListener);
-    return;
-  }
-  originalRemoveEventListener(type, listener as EventListener);
-});
+vi.spyOn(window, "removeEventListener").mockImplementation(
+  (type: string, listener: EventListenerOrEventListenerObject) => {
+    if (type === "online" || type === "offline") {
+      networkEventListeners[type].delete(listener as EventListener);
+      return;
+    }
+    originalRemoveEventListener(type, listener as EventListener);
+  },
+);
 
 /**
  * Simulate a network status change event
  * @param online - true for online, false for offline
  */
 export const simulateNetworkEvent = (online: boolean): void => {
-  Object.defineProperty(navigator, 'onLine', {
+  Object.defineProperty(navigator, "onLine", {
     value: online,
     writable: true,
     configurable: true,
   });
-  const eventType = online ? 'online' : 'offline';
-  networkEventListeners[eventType].forEach(listener => {
+  const eventType = online ? "online" : "offline";
+  networkEventListeners[eventType].forEach((listener) => {
     listener(new Event(eventType));
   });
 };
@@ -80,7 +84,7 @@ export const resetNetworkListeners = (): void => {
 // ============================================================================
 // 5. Mock window.matchMedia
 // ============================================================================
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -110,7 +114,7 @@ global.IntersectionObserver = class IntersectionObserver {
 // ============================================================================
 // 7. Mock navigator.onLine (configurable per test)
 // ============================================================================
-Object.defineProperty(navigator, 'onLine', {
+Object.defineProperty(navigator, "onLine", {
   writable: true,
   configurable: true,
   value: true,
@@ -119,9 +123,11 @@ Object.defineProperty(navigator, 'onLine', {
 // ============================================================================
 // 8. Mock btoa/atob for encryption tests (jsdom compatible)
 // ============================================================================
-if (typeof globalThis.btoa === 'undefined') {
-  globalThis.btoa = (str: string) => Buffer.from(str, 'binary').toString('base64');
-  globalThis.atob = (str: string) => Buffer.from(str, 'base64').toString('binary');
+if (typeof globalThis.btoa === "undefined") {
+  globalThis.btoa = (str: string) =>
+    Buffer.from(str, "binary").toString("base64");
+  globalThis.atob = (str: string) =>
+    Buffer.from(str, "base64").toString("binary");
 }
 
 // ============================================================================
@@ -155,7 +161,7 @@ afterEach(async () => {
   resetNetworkListeners();
 
   // Reset navigator.onLine to default
-  Object.defineProperty(navigator, 'onLine', {
+  Object.defineProperty(navigator, "onLine", {
     value: true,
     writable: true,
     configurable: true,

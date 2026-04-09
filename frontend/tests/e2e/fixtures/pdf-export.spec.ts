@@ -1,13 +1,18 @@
-import { test, expect, Download } from '@playwright/test';
-import { format } from 'date-fns';
-import { MockDataGenerator, APIMockHelper, WaitHelpers, AssertionHelpers } from '../utils/test-helpers';
+import { test, expect, Download } from "@playwright/test";
+import { format } from "date-fns";
+import {
+  MockDataGenerator,
+  APIMockHelper,
+  WaitHelpers,
+  AssertionHelpers,
+} from "../utils/test-helpers";
 
 /**
  * PDF Export Functionality Tests
  * Tests comprehensive PDF generation for seed removal reports
  */
 
-test.describe('PDF Export Functionality', () => {
+test.describe("PDF Export Functionality", () => {
   let mockHelper: APIMockHelper;
   let testData: ReturnType<typeof MockDataGenerator.generateRemovalScenario>;
 
@@ -17,18 +22,21 @@ test.describe('PDF Export Functionality', () => {
 
     // Setup comprehensive mocks
     await mockHelper.mockSuccessfulAuthentication();
-    await mockHelper.mockTreatmentAPIs(testData.treatment, testData.applicators);
+    await mockHelper.mockTreatmentAPIs(
+      testData.treatment,
+      testData.applicators,
+    );
     await mockHelper.mockPriorityAPI(testData.applicators);
 
     // Navigate to seed removal page
-    await page.goto('/treatment/seed-removal');
+    await page.goto("/treatment/seed-removal");
     await WaitHelpers.waitForTreatmentLoad(page, testData.treatment.id);
 
     // Process some applicators to have data for export
     await processApplicators(page, testData.applicators.slice(0, 2));
   });
 
-  test('should generate complete treatment PDF report', async ({ page }) => {
+  test("should generate complete treatment PDF report", async ({ page }) => {
     const downloadPromise = WaitHelpers.waitForPDFDownload(page);
 
     // Trigger PDF export
@@ -37,7 +45,10 @@ test.describe('PDF Export Functionality', () => {
     const download = await downloadPromise;
 
     // Verify PDF file properties
-    await AssertionHelpers.assertPDFContent(download, testData.treatment.subjectId);
+    await AssertionHelpers.assertPDFContent(
+      download,
+      testData.treatment.subjectId,
+    );
 
     // Verify filename format
     const filename = download.suggestedFilename();
@@ -45,17 +56,23 @@ test.describe('PDF Export Functionality', () => {
 
     // Verify file size (should contain substantial content)
     const filePath = await download.path();
-    const fs = require('fs');
+    const fs = require("fs");
     const stats = fs.statSync(filePath!);
     expect(stats.size).toBeGreaterThan(50000); // At least 50KB for comprehensive report
   });
 
-  test('should include all required treatment information in PDF', async ({ page }) => {
+  test("should include all required treatment information in PDF", async ({
+    page,
+  }) => {
     // Before exporting, capture current treatment state
-    const treatmentInfo = await page.locator('[data-testid="treatment-info"]').textContent();
-    const progressInfo = await page.locator('[data-testid="removal-progress"]').textContent();
+    const treatmentInfo = await page
+      .locator('[data-testid="treatment-info"]')
+      .textContent();
+    const progressInfo = await page
+      .locator('[data-testid="removal-progress"]')
+      .textContent();
 
-    const downloadPromise = page.waitForEvent('download');
+    const downloadPromise = page.waitForEvent("download");
     await page.click('[data-testid="export-pdf-button"]');
     const download = await downloadPromise;
 
@@ -64,15 +81,19 @@ test.describe('PDF Export Functionality', () => {
 
     // For comprehensive PDF content verification, we'd typically use a PDF parsing library
     // Here we verify the export process completed without errors
-    await expect(page.locator('text=PDF generated successfully')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=PDF generated successfully")).toBeVisible({
+      timeout: 5000,
+    });
   });
 
-  test('should generate PDF with applicator removal details', async ({ page }) => {
+  test("should generate PDF with applicator removal details", async ({
+    page,
+  }) => {
     // Add removal comments to applicators
     const commentsTestData = [
-      'Removed completely, no complications',
-      'Partial removal due to tissue adhesion',
-      'Standard removal procedure followed'
+      "Removed completely, no complications",
+      "Partial removal due to tissue adhesion",
+      "Standard removal procedure followed",
     ];
 
     for (let i = 0; i < testData.applicators.length; i++) {
@@ -80,17 +101,21 @@ test.describe('PDF Export Functionality', () => {
       const comment = commentsTestData[i];
 
       // Add removal comment
-      const commentsField = page.locator(`[data-testid="applicator-comments-${applicator.serialNumber}"]`);
+      const commentsField = page.locator(
+        `[data-testid="applicator-comments-${applicator.serialNumber}"]`,
+      );
       await commentsField.fill(comment);
       await commentsField.blur(); // Trigger save
 
       // Mark as removed
-      const checkbox = page.locator(`[data-testid="applicator-checkbox-${applicator.serialNumber}"]`);
+      const checkbox = page.locator(
+        `[data-testid="applicator-checkbox-${applicator.serialNumber}"]`,
+      );
       await checkbox.check();
     }
 
     // Export PDF with complete removal data
-    const downloadPromise = page.waitForEvent('download');
+    const downloadPromise = page.waitForEvent("download");
     await page.click('[data-testid="export-pdf-button"]');
     const download = await downloadPromise;
 
@@ -99,38 +124,50 @@ test.describe('PDF Export Functionality', () => {
     expect(filename).toContain(testData.treatment.subjectId);
 
     // Verify export success notification
-    await expect(page.locator('text=PDF report exported successfully')).toBeVisible();
+    await expect(
+      page.locator("text=PDF report exported successfully"),
+    ).toBeVisible();
   });
 
-  test('should handle PDF export with partial removal data', async ({ page }) => {
+  test("should handle PDF export with partial removal data", async ({
+    page,
+  }) => {
     // Remove only some applicators (partial treatment)
     const partialApplicators = testData.applicators.slice(0, 1);
 
     for (const applicator of partialApplicators) {
-      const checkbox = page.locator(`[data-testid="applicator-checkbox-${applicator.serialNumber}"]`);
+      const checkbox = page.locator(
+        `[data-testid="applicator-checkbox-${applicator.serialNumber}"]`,
+      );
       await checkbox.check();
     }
 
     // Add some individual seed removals
-    const individualSeedButton = page.locator('[data-testid="remove-individual-seed"]');
+    const individualSeedButton = page.locator(
+      '[data-testid="remove-individual-seed"]',
+    );
     for (let i = 0; i < 5; i++) {
       await individualSeedButton.click();
     }
 
     // Export PDF with partial data
-    const downloadPromise = page.waitForEvent('download');
+    const downloadPromise = page.waitForEvent("download");
     await page.click('[data-testid="export-pdf-button"]');
     const download = await downloadPromise;
 
     // Verify partial data export
     expect(download.suggestedFilename()).toBeTruthy();
-    await expect(page.locator('text=PDF exported with current progress')).toBeVisible();
+    await expect(
+      page.locator("text=PDF exported with current progress"),
+    ).toBeVisible();
   });
 
-  test('should generate PDF with correct timestamp and formatting', async ({ page }) => {
+  test("should generate PDF with correct timestamp and formatting", async ({
+    page,
+  }) => {
     const exportTime = new Date();
 
-    const downloadPromise = page.waitForEvent('download');
+    const downloadPromise = page.waitForEvent("download");
     await page.click('[data-testid="export-pdf-button"]');
     const download = await downloadPromise;
 
@@ -145,21 +182,21 @@ test.describe('PDF Export Functionality', () => {
       const fileDate = timestampStr.substring(0, 8); // YYYYMMDD
       const fileTime = timestampStr.substring(9, 15); // HHMMSS
 
-      const expectedDate = format(exportTime, 'yyyyMMdd');
+      const expectedDate = format(exportTime, "yyyyMMdd");
       expect(fileDate).toBe(expectedDate);
 
       // Time should be within reasonable range (allowing for test execution time)
-      const expectedTimePrefix = format(exportTime, 'HHmm');
+      const expectedTimePrefix = format(exportTime, "HHmm");
       expect(fileTime.substring(0, 4)).toBe(expectedTimePrefix);
     }
   });
 
-  test('should handle multiple PDF exports', async ({ page }) => {
+  test("should handle multiple PDF exports", async ({ page }) => {
     const downloadPromises: Promise<Download>[] = [];
 
     // Generate multiple PDFs quickly
     for (let i = 0; i < 3; i++) {
-      downloadPromises.push(page.waitForEvent('download'));
+      downloadPromises.push(page.waitForEvent("download"));
       await page.click('[data-testid="export-pdf-button"]');
       await page.waitForTimeout(100); // Small delay between clicks
     }
@@ -170,7 +207,7 @@ test.describe('PDF Export Functionality', () => {
     expect(downloads).toHaveLength(3);
 
     // Verify each download has unique filename
-    const filenames = downloads.map(d => d.suggestedFilename());
+    const filenames = downloads.map((d) => d.suggestedFilename());
     const uniqueFilenames = new Set(filenames);
     expect(uniqueFilenames.size).toBe(3);
 
@@ -180,13 +217,13 @@ test.describe('PDF Export Functionality', () => {
     }
   });
 
-  test('should export PDF with summary statistics', async ({ page }) => {
+  test("should export PDF with summary statistics", async ({ page }) => {
     // Create comprehensive removal scenario
     const stats = {
       totalApplicators: testData.applicators.length,
       removedApplicators: 2,
       individualSeeds: 7,
-      totalSeedsRemoved: 0
+      totalSeedsRemoved: 0,
     };
 
     // Remove specific applicators
@@ -194,12 +231,16 @@ test.describe('PDF Export Functionality', () => {
       const applicator = testData.applicators[i];
       stats.totalSeedsRemoved += applicator.seedQuantity;
 
-      const checkbox = page.locator(`[data-testid="applicator-checkbox-${applicator.serialNumber}"]`);
+      const checkbox = page.locator(
+        `[data-testid="applicator-checkbox-${applicator.serialNumber}"]`,
+      );
       await checkbox.check();
     }
 
     // Add individual seeds
-    const individualSeedButton = page.locator('[data-testid="remove-individual-seed"]');
+    const individualSeedButton = page.locator(
+      '[data-testid="remove-individual-seed"]',
+    );
     for (let i = 0; i < stats.individualSeeds; i++) {
       await individualSeedButton.click();
     }
@@ -207,28 +248,32 @@ test.describe('PDF Export Functionality', () => {
     stats.totalSeedsRemoved += stats.individualSeeds;
 
     // Verify progress display matches our calculations
-    await expect(page.locator(`text=Removed: ${stats.totalSeedsRemoved}`)).toBeVisible();
+    await expect(
+      page.locator(`text=Removed: ${stats.totalSeedsRemoved}`),
+    ).toBeVisible();
 
     // Export PDF with statistics
-    const downloadPromise = page.waitForEvent('download');
+    const downloadPromise = page.waitForEvent("download");
     await page.click('[data-testid="export-pdf-button"]');
     const download = await downloadPromise;
 
     // Verify export includes statistical summary
     expect(download.suggestedFilename()).toBeTruthy();
-    await expect(page.locator('text=PDF exported with removal statistics')).toBeVisible();
+    await expect(
+      page.locator("text=PDF exported with removal statistics"),
+    ).toBeVisible();
   });
 
-  test('should handle PDF export errors gracefully', async ({ page }) => {
+  test("should handle PDF export errors gracefully", async ({ page }) => {
     // Mock PDF generation failure
-    await page.route('**/api/pdf/export', route => {
+    await page.route("**/api/pdf/export", (route) => {
       route.fulfill({
         status: 500,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
           success: false,
-          message: 'PDF generation failed'
-        })
+          message: "PDF generation failed",
+        }),
       });
     });
 
@@ -236,45 +281,55 @@ test.describe('PDF Export Functionality', () => {
     await page.click('[data-testid="export-pdf-button"]');
 
     // Verify error handling
-    await expect(page.locator('text=Failed to generate PDF report')).toBeVisible();
-    await expect(page.locator('text=Please try again')).toBeVisible();
+    await expect(
+      page.locator("text=Failed to generate PDF report"),
+    ).toBeVisible();
+    await expect(page.locator("text=Please try again")).toBeVisible();
 
     // Verify retry mechanism
     await page.click('[data-testid="retry-pdf-export"]');
-    await expect(page.locator('text=Retrying PDF generation')).toBeVisible();
+    await expect(page.locator("text=Retrying PDF generation")).toBeVisible();
   });
 
-  test('should export PDF with different removal scenarios', async ({ page }) => {
+  test("should export PDF with different removal scenarios", async ({
+    page,
+  }) => {
     const scenarios = [
       {
-        name: 'Complete Removal',
+        name: "Complete Removal",
         setup: async () => {
           // Remove all applicators
           for (const applicator of testData.applicators) {
-            const checkbox = page.locator(`[data-testid="applicator-checkbox-${applicator.serialNumber}"]`);
+            const checkbox = page.locator(
+              `[data-testid="applicator-checkbox-${applicator.serialNumber}"]`,
+            );
             await checkbox.check();
           }
-        }
+        },
       },
       {
-        name: 'Partial with Individual Seeds',
+        name: "Partial with Individual Seeds",
         setup: async () => {
           // Remove some applicators and individual seeds
-          const checkbox = page.locator(`[data-testid="applicator-checkbox-${testData.applicators[0].serialNumber}"]`);
+          const checkbox = page.locator(
+            `[data-testid="applicator-checkbox-${testData.applicators[0].serialNumber}"]`,
+          );
           await checkbox.check();
 
-          const individualButton = page.locator('[data-testid="remove-individual-seed"]');
+          const individualButton = page.locator(
+            '[data-testid="remove-individual-seed"]',
+          );
           for (let i = 0; i < 10; i++) {
             await individualButton.click();
           }
-        }
+        },
       },
       {
-        name: 'No Removal',
+        name: "No Removal",
         setup: async () => {
           // Export with no removals (baseline report)
-        }
-      }
+        },
+      },
     ];
 
     for (const scenario of scenarios) {
@@ -286,7 +341,7 @@ test.describe('PDF Export Functionality', () => {
       await scenario.setup();
 
       // Export PDF
-      const downloadPromise = page.waitForEvent('download');
+      const downloadPromise = page.waitForEvent("download");
       await page.click('[data-testid="export-pdf-button"]');
       const download = await downloadPromise;
 
@@ -298,19 +353,21 @@ test.describe('PDF Export Functionality', () => {
     }
   });
 
-  test('should maintain PDF quality across different data volumes', async ({ page }) => {
+  test("should maintain PDF quality across different data volumes", async ({
+    page,
+  }) => {
     // Test with large number of applicators
     const largeApplicatorSet = MockDataGenerator.generateTestApplicators(20);
 
     // Mock large dataset
-    await page.route('**/api/treatments/*/applicators', route => {
+    await page.route("**/api/treatments/*/applicators", (route) => {
       route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
           success: true,
-          applicators: largeApplicatorSet
-        })
+          applicators: largeApplicatorSet,
+        }),
       });
     });
 
@@ -320,16 +377,22 @@ test.describe('PDF Export Functionality', () => {
     // Process multiple applicators
     for (let i = 0; i < 10; i++) {
       const applicator = largeApplicatorSet[i];
-      const checkbox = page.locator(`[data-testid="applicator-checkbox-${applicator.serialNumber}"]`);
+      const checkbox = page.locator(
+        `[data-testid="applicator-checkbox-${applicator.serialNumber}"]`,
+      );
       await checkbox.check();
 
       // Add detailed comments for PDF content
-      const commentsField = page.locator(`[data-testid="applicator-comments-${applicator.serialNumber}"]`);
-      await commentsField.fill(`Detailed removal notes for applicator ${i + 1}: Standard procedure followed with no complications. Patient tolerance good.`);
+      const commentsField = page.locator(
+        `[data-testid="applicator-comments-${applicator.serialNumber}"]`,
+      );
+      await commentsField.fill(
+        `Detailed removal notes for applicator ${i + 1}: Standard procedure followed with no complications. Patient tolerance good.`,
+      );
     }
 
     // Export large dataset PDF
-    const downloadPromise = page.waitForEvent('download', { timeout: 30000 }); // Longer timeout for large PDF
+    const downloadPromise = page.waitForEvent("download", { timeout: 30000 }); // Longer timeout for large PDF
     await page.click('[data-testid="export-pdf-button"]');
     const download = await downloadPromise;
 
@@ -338,7 +401,7 @@ test.describe('PDF Export Functionality', () => {
 
     // Check file size is appropriate for large dataset
     const filePath = await download.path();
-    const fs = require('fs');
+    const fs = require("fs");
     const stats = fs.statSync(filePath!);
     expect(stats.size).toBeGreaterThan(100000); // At least 100KB for large dataset
   });
@@ -347,7 +410,9 @@ test.describe('PDF Export Functionality', () => {
 // Helper function to process applicators
 async function processApplicators(page: any, applicators: any[]) {
   for (const applicator of applicators) {
-    const checkbox = page.locator(`[data-testid="applicator-checkbox-${applicator.serialNumber}"]`);
+    const checkbox = page.locator(
+      `[data-testid="applicator-checkbox-${applicator.serialNumber}"]`,
+    );
     await checkbox.check();
 
     // Add a small delay to simulate realistic user interaction
@@ -355,6 +420,9 @@ async function processApplicators(page: any, applicators: any[]) {
   }
 
   // Wait for progress to update
-  const totalSeeds = applicators.reduce((sum, app) => sum + app.seedQuantity, 0);
+  const totalSeeds = applicators.reduce(
+    (sum, app) => sum + app.seedQuantity,
+    0,
+  );
   await WaitHelpers.waitForProgressUpdate(page, totalSeeds);
 }

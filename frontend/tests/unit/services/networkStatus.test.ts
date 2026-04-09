@@ -5,8 +5,8 @@
  * Target: 100% code coverage
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { simulateNetworkEvent, resetNetworkListeners } from '../../setup';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { simulateNetworkEvent, resetNetworkListeners } from "../../setup";
 
 // ============================================================================
 // Test Setup
@@ -14,11 +14,11 @@ import { simulateNetworkEvent, resetNetworkListeners } from '../../setup';
 
 // We need to test the class directly, not the singleton
 // Import the class for fresh instances in each test
-let NetworkStatusService: typeof import('../../../src/services/networkStatus').NetworkStatusService;
+let NetworkStatusService: typeof import("../../../src/services/networkStatus").NetworkStatusService;
 
 beforeEach(async () => {
   // Reset network state
-  Object.defineProperty(navigator, 'onLine', {
+  Object.defineProperty(navigator, "onLine", {
     value: true,
     writable: true,
     configurable: true,
@@ -28,7 +28,7 @@ beforeEach(async () => {
 
   // Re-import to get a fresh module
   vi.resetModules();
-  const module = await import('../../../src/services/networkStatus');
+  const module = await import("../../../src/services/networkStatus");
   NetworkStatusService = module.NetworkStatusService;
 });
 
@@ -40,58 +40,79 @@ afterEach(() => {
 // Constructor & SSR Tests
 // ============================================================================
 
-describe('NetworkStatusService', () => {
-  describe('Constructor & Initialization', () => {
-    it('should initialize with navigator.onLine = true', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+describe("NetworkStatusService", () => {
+  describe("Constructor & Initialization", () => {
+    it("should initialize with navigator.onLine = true", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.isOnline).toBe(true);
     });
 
-    it('should initialize with navigator.onLine = false', () => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    it("should initialize with navigator.onLine = false", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.isOnline).toBe(false);
     });
 
-    it('should set lastOnlineTime when starting online', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should set lastOnlineTime when starting online", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const before = new Date();
       const service = new NetworkStatusService();
       const after = new Date();
 
       expect(service.lastOnline).not.toBeNull();
-      expect(service.lastOnline!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(service.lastOnline!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(service.lastOnline!.getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
+      expect(service.lastOnline!.getTime()).toBeLessThanOrEqual(
+        after.getTime(),
+      );
     });
 
-    it('should set offlineSince when starting offline', () => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    it("should set offlineSince when starting offline", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const before = new Date();
       const service = new NetworkStatusService();
       const after = new Date();
 
       expect(service.offlineStartTime).not.toBeNull();
-      expect(service.offlineStartTime!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(service.offlineStartTime!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(service.offlineStartTime!.getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
+      expect(service.offlineStartTime!.getTime()).toBeLessThanOrEqual(
+        after.getTime(),
+      );
     });
 
-    it('should default to online when navigator is undefined (SSR)', () => {
+    it("should default to online when navigator is undefined (SSR)", () => {
       // Save original navigator
       const originalNavigator = globalThis.navigator;
 
       // Temporarily remove navigator
-      Object.defineProperty(globalThis, 'navigator', {
+      Object.defineProperty(globalThis, "navigator", {
         value: undefined,
         configurable: true,
       });
 
       // Re-evaluate the default value logic
-      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      const isOnline =
+        typeof navigator !== "undefined" ? navigator.onLine : true;
       expect(isOnline).toBe(true);
 
       // Restore navigator
-      Object.defineProperty(globalThis, 'navigator', {
+      Object.defineProperty(globalThis, "navigator", {
         value: originalNavigator,
         configurable: true,
       });
@@ -102,40 +123,58 @@ describe('NetworkStatusService', () => {
   // State Getters Tests
   // ============================================================================
 
-  describe('State Getters', () => {
-    it('isOnline should return current status', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+  describe("State Getters", () => {
+    it("isOnline should return current status", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.isOnline).toBe(true);
     });
 
-    it('offlineStartTime should return null when online', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("offlineStartTime should return null when online", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.offlineStartTime).toBeNull();
     });
 
-    it('offlineStartTime should return Date when offline', () => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    it("offlineStartTime should return Date when offline", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.offlineStartTime).toBeInstanceOf(Date);
     });
 
-    it('lastOnline should return last online timestamp', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("lastOnline should return last online timestamp", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.lastOnline).toBeInstanceOf(Date);
     });
 
-    it('offlineDurationMs should return 0 when online', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("offlineDurationMs should return 0 when online", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       expect(service.offlineDurationMs).toBe(0);
     });
 
-    it('offlineDurationMs should calculate correctly when offline', () => {
+    it("offlineDurationMs should calculate correctly when offline", () => {
       vi.useFakeTimers();
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
 
       // Advance time by 5 seconds
@@ -145,8 +184,11 @@ describe('NetworkStatusService', () => {
       vi.useRealTimers();
     });
 
-    it('offlineDurationMs should return 0 when offlineSince is null', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("offlineDurationMs should return 0 when offlineSince is null", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       // Even if we somehow have _isOnline = false but offlineSince = null
       // The getter checks both conditions
@@ -158,18 +200,21 @@ describe('NetworkStatusService', () => {
   // Subscribe/Unsubscribe Tests
   // ============================================================================
 
-  describe('Subscribe/Unsubscribe', () => {
-    it('should add listener and return unsubscribe function', () => {
+  describe("Subscribe/Unsubscribe", () => {
+    it("should add listener and return unsubscribe function", () => {
       const service = new NetworkStatusService();
       const listener = vi.fn();
 
       const unsubscribe = service.subscribe(listener);
 
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof unsubscribe).toBe("function");
     });
 
-    it('should call listener when status changes online to offline', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should call listener when status changes online to offline", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       const listener = vi.fn();
 
@@ -179,8 +224,11 @@ describe('NetworkStatusService', () => {
       expect(listener).toHaveBeenCalledWith(false);
     });
 
-    it('should call listener when status changes offline to online', () => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    it("should call listener when status changes offline to online", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       const listener = vi.fn();
 
@@ -190,8 +238,11 @@ describe('NetworkStatusService', () => {
       expect(listener).toHaveBeenCalledWith(true);
     });
 
-    it('should remove listener when unsubscribe is called', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should remove listener when unsubscribe is called", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       const listener = vi.fn();
 
@@ -209,12 +260,15 @@ describe('NetworkStatusService', () => {
       expect(listener.mock.calls.length).toBe(callCount);
     });
 
-    it('should not crash when listener throws an error', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should not crash when listener throws an error", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
 
       const errorListener = vi.fn(() => {
-        throw new Error('Listener error');
+        throw new Error("Listener error");
       });
       const normalListener = vi.fn();
 
@@ -235,9 +289,12 @@ describe('NetworkStatusService', () => {
   // Network Events & setOnline Tests
   // ============================================================================
 
-  describe('Network Events & setOnline', () => {
-    it('should not notify listeners if status unchanged', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+  describe("Network Events & setOnline", () => {
+    it("should not notify listeners if status unchanged", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       const listener = vi.fn();
 
@@ -250,8 +307,11 @@ describe('NetworkStatusService', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it('should update lastOnlineTime when going online', () => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    it("should update lastOnlineTime when going online", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
 
       const before = new Date();
@@ -259,12 +319,19 @@ describe('NetworkStatusService', () => {
       const after = new Date();
 
       expect(service.lastOnline).not.toBeNull();
-      expect(service.lastOnline!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(service.lastOnline!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(service.lastOnline!.getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
+      expect(service.lastOnline!.getTime()).toBeLessThanOrEqual(
+        after.getTime(),
+      );
     });
 
-    it('should clear offlineSince when going online', () => {
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    it("should clear offlineSince when going online", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
 
       expect(service.offlineStartTime).not.toBeNull();
@@ -274,8 +341,11 @@ describe('NetworkStatusService', () => {
       expect(service.offlineStartTime).toBeNull();
     });
 
-    it('should set offlineSince when going offline', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should set offlineSince when going offline", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
 
       expect(service.offlineStartTime).toBeNull();
@@ -285,8 +355,12 @@ describe('NetworkStatusService', () => {
       const after = new Date();
 
       expect(service.offlineStartTime).not.toBeNull();
-      expect(service.offlineStartTime!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(service.offlineStartTime!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(service.offlineStartTime!.getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
+      expect(service.offlineStartTime!.getTime()).toBeLessThanOrEqual(
+        after.getTime(),
+      );
     });
   });
 
@@ -294,15 +368,21 @@ describe('NetworkStatusService', () => {
   // checkNetwork Tests
   // ============================================================================
 
-  describe('checkNetwork', () => {
-    it('should sync with navigator.onLine when status changed', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+  describe("checkNetwork", () => {
+    it("should sync with navigator.onLine when status changed", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       const listener = vi.fn();
       service.subscribe(listener);
 
       // Change navigator.onLine directly (simulating external change)
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      Object.defineProperty(navigator, "onLine", {
+        value: false,
+        configurable: true,
+      });
 
       // Call checkNetwork to sync
       const result = service.checkNetwork();
@@ -312,8 +392,11 @@ describe('NetworkStatusService', () => {
       expect(listener).toHaveBeenCalledWith(false);
     });
 
-    it('should return current status when unchanged', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should return current status when unchanged", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
       const listener = vi.fn();
       service.subscribe(listener);
@@ -325,8 +408,11 @@ describe('NetworkStatusService', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it('should return current status when navigator is undefined', () => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    it("should return current status when navigator is undefined", () => {
+      Object.defineProperty(navigator, "onLine", {
+        value: true,
+        configurable: true,
+      });
       const service = new NetworkStatusService();
 
       // checkNetwork should work even with the service already initialized
@@ -340,11 +426,12 @@ describe('NetworkStatusService', () => {
   // Singleton Export Test
   // ============================================================================
 
-  describe('Singleton', () => {
-    it('should export a singleton instance', async () => {
-      const { networkStatus } = await import('../../../src/services/networkStatus');
+  describe("Singleton", () => {
+    it("should export a singleton instance", async () => {
+      const { networkStatus } =
+        await import("../../../src/services/networkStatus");
       expect(networkStatus).toBeDefined();
-      expect(typeof networkStatus.isOnline).toBe('boolean');
+      expect(typeof networkStatus.isOnline).toBe("boolean");
     });
   });
 });

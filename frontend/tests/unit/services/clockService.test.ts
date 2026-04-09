@@ -5,8 +5,8 @@
  * Target: 100% code coverage
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createNetworkStatusMock, createApiMock } from './helpers/testMocks';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createNetworkStatusMock, createApiMock } from "./helpers/testMocks";
 
 // ============================================================================
 // Mocks
@@ -14,13 +14,13 @@ import { createNetworkStatusMock, createApiMock } from './helpers/testMocks';
 
 // Mock networkStatus
 const mockNetworkStatus = createNetworkStatusMock();
-vi.mock('../../../src/services/networkStatus', () => ({
+vi.mock("../../../src/services/networkStatus", () => ({
   networkStatus: mockNetworkStatus,
 }));
 
 // Mock api
 const mockApi = createApiMock();
-vi.mock('../../../src/services/api', () => ({
+vi.mock("../../../src/services/api", () => ({
   default: mockApi,
 }));
 
@@ -28,7 +28,7 @@ vi.mock('../../../src/services/api', () => ({
 // Test Setup
 // ============================================================================
 
-let ClockService: typeof import('../../../src/services/clockService').ClockService;
+let ClockService: typeof import("../../../src/services/clockService").ClockService;
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -42,7 +42,7 @@ beforeEach(async () => {
   mockApi.get.mockReset();
 
   // Re-import for fresh instance
-  const module = await import('../../../src/services/clockService');
+  const module = await import("../../../src/services/clockService");
   ClockService = module.ClockService;
 });
 
@@ -55,14 +55,14 @@ afterEach(() => {
 // Constructor & Auto-Sync Tests
 // ============================================================================
 
-describe('ClockService', () => {
-  describe('Constructor & Auto-Sync', () => {
-    it('should subscribe to networkStatus on construction', () => {
+describe("ClockService", () => {
+  describe("Constructor & Auto-Sync", () => {
+    it("should subscribe to networkStatus on construction", () => {
       new ClockService();
       expect(mockNetworkStatus.subscribe).toHaveBeenCalled();
     });
 
-    it('should auto-sync when online AND needsSync', async () => {
+    it("should auto-sync when online AND needsSync", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -75,10 +75,10 @@ describe('ClockService', () => {
       // Simulate coming online (triggers auto-sync because never synced)
       await subscribeCallback(true);
 
-      expect(mockApi.get).toHaveBeenCalledWith('/time');
+      expect(mockApi.get).toHaveBeenCalledWith("/time");
     });
 
-    it('should not auto-sync when online but recently synced', async () => {
+    it("should not auto-sync when online but recently synced", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -105,7 +105,7 @@ describe('ClockService', () => {
       expect(service.needsSync()).toBe(false);
     });
 
-    it('should not auto-sync when offline', async () => {
+    it("should not auto-sync when offline", async () => {
       mockNetworkStatus.isOnline = false;
 
       const service = new ClockService();
@@ -117,7 +117,7 @@ describe('ClockService', () => {
       expect(mockApi.get).not.toHaveBeenCalled();
     });
 
-    it('shouldResync should return true if never synced', () => {
+    it("shouldResync should return true if never synced", () => {
       const service = new ClockService();
       expect(service.needsSync()).toBe(true);
     });
@@ -127,13 +127,19 @@ describe('ClockService', () => {
   // sync() Method Tests
   // ============================================================================
 
-  describe('sync() Method', () => {
-    it('should return failure if already syncing (concurrent guard)', async () => {
+  describe("sync() Method", () => {
+    it("should return failure if already syncing (concurrent guard)", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Create a slow API response
       mockApi.get.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ data: { timestamp: new Date().toISOString() } }), 100))
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () => resolve({ data: { timestamp: new Date().toISOString() } }),
+              100,
+            ),
+          ),
       );
 
       const service = new ClockService();
@@ -150,7 +156,7 @@ describe('ClockService', () => {
       await firstSync;
     });
 
-    it('should return failure if offline', async () => {
+    it("should return failure if offline", async () => {
       mockNetworkStatus.isOnline = false;
 
       const service = new ClockService();
@@ -160,11 +166,11 @@ describe('ClockService', () => {
       expect(mockApi.get).not.toHaveBeenCalled();
     });
 
-    it('should calculate offset correctly', async () => {
+    it("should calculate offset correctly", async () => {
       vi.useFakeTimers();
       mockNetworkStatus.isOnline = true;
 
-      const serverTime = new Date('2025-01-01T12:00:00.000Z');
+      const serverTime = new Date("2025-01-01T12:00:00.000Z");
 
       // Mock API to return server time with simulated network delay
       mockApi.get.mockImplementation(async () => {
@@ -177,13 +183,13 @@ describe('ClockService', () => {
 
       expect(result.success).toBe(true);
       expect(result.serverTime).toEqual(serverTime);
-      expect(typeof result.offset).toBe('number');
+      expect(typeof result.offset).toBe("number");
       expect(result.roundTrip).toBeGreaterThanOrEqual(0);
 
       vi.useRealTimers();
     });
 
-    it('should set lastSyncTime on success', async () => {
+    it("should set lastSyncTime on success", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -198,9 +204,9 @@ describe('ClockService', () => {
       expect(service.getLastSyncTime()).toBeInstanceOf(Date);
     });
 
-    it('should log warning for large offset (>5 min)', async () => {
+    it("should log warning for large offset (>5 min)", async () => {
       mockNetworkStatus.isOnline = true;
-      const consoleSpy = vi.spyOn(console, 'warn');
+      const consoleSpy = vi.spyOn(console, "warn");
 
       // Server time 10 minutes ahead
       const serverTime = new Date(Date.now() + 10 * 60 * 1000);
@@ -212,12 +218,14 @@ describe('ClockService', () => {
       await service.sync();
 
       expect(consoleSpy).toHaveBeenCalled();
-      expect(consoleSpy.mock.calls[0][0]).toContain('[ClockService] Large clock offset detected');
+      expect(consoleSpy.mock.calls[0][0]).toContain(
+        "[ClockService] Large clock offset detected",
+      );
     });
 
-    it('should log info for normal offset (<5 min)', async () => {
+    it("should log info for normal offset (<5 min)", async () => {
       mockNetworkStatus.isOnline = true;
-      const consoleSpy = vi.spyOn(console, 'log');
+      const consoleSpy = vi.spyOn(console, "log");
 
       // Server time 1 second ahead (small offset)
       const serverTime = new Date(Date.now() + 1000);
@@ -229,14 +237,18 @@ describe('ClockService', () => {
       await service.sync();
 
       expect(consoleSpy).toHaveBeenCalled();
-      expect(consoleSpy.mock.calls.some(call => call[0].includes('[ClockService] Clock synced'))).toBe(true);
+      expect(
+        consoleSpy.mock.calls.some((call) =>
+          call[0].includes("[ClockService] Clock synced"),
+        ),
+      ).toBe(true);
     });
 
-    it('should handle API error gracefully', async () => {
+    it("should handle API error gracefully", async () => {
       mockNetworkStatus.isOnline = true;
-      const consoleSpy = vi.spyOn(console, 'error');
+      const consoleSpy = vi.spyOn(console, "error");
 
-      mockApi.get.mockRejectedValue(new Error('Network error'));
+      mockApi.get.mockRejectedValue(new Error("Network error"));
 
       const service = new ClockService();
       const result = await service.sync();
@@ -245,9 +257,9 @@ describe('ClockService', () => {
       expect(consoleSpy).toHaveBeenCalled();
     });
 
-    it('should return current offset on failure', async () => {
+    it("should return current offset on failure", async () => {
       mockNetworkStatus.isOnline = true;
-      mockApi.get.mockRejectedValue(new Error('Network error'));
+      mockApi.get.mockRejectedValue(new Error("Network error"));
 
       const service = new ClockService();
       const result = await service.sync();
@@ -255,9 +267,9 @@ describe('ClockService', () => {
       expect(result.offset).toBe(0); // Initial offset is 0
     });
 
-    it('should reset syncInProgress in finally block', async () => {
+    it("should reset syncInProgress in finally block", async () => {
       mockNetworkStatus.isOnline = true;
-      mockApi.get.mockRejectedValue(new Error('Network error'));
+      mockApi.get.mockRejectedValue(new Error("Network error"));
 
       const service = new ClockService();
 
@@ -273,7 +285,7 @@ describe('ClockService', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should return correct roundTrip time', async () => {
+    it("should return correct roundTrip time", async () => {
       vi.useFakeTimers();
       mockNetworkStatus.isOnline = true;
 
@@ -295,8 +307,8 @@ describe('ClockService', () => {
   // Time Adjustment Tests
   // ============================================================================
 
-  describe('Time Adjustment', () => {
-    it('getAdjustedTime should return Date with offset', async () => {
+  describe("Time Adjustment", () => {
+    it("getAdjustedTime should return Date with offset", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 5 seconds ahead
@@ -312,7 +324,7 @@ describe('ClockService', () => {
       expect(adjusted).toBeInstanceOf(Date);
     });
 
-    it('getAdjustedISOString should return ISO string', async () => {
+    it("getAdjustedISOString should return ISO string", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -322,11 +334,11 @@ describe('ClockService', () => {
       await service.sync();
 
       const isoString = service.getAdjustedISOString();
-      expect(typeof isoString).toBe('string');
+      expect(typeof isoString).toBe("string");
       expect(isoString).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
-    it('getAdjustedTimestamp should return milliseconds', async () => {
+    it("getAdjustedTimestamp should return milliseconds", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -336,11 +348,11 @@ describe('ClockService', () => {
       await service.sync();
 
       const timestamp = service.getAdjustedTimestamp();
-      expect(typeof timestamp).toBe('number');
+      expect(typeof timestamp).toBe("number");
       expect(timestamp).toBeGreaterThan(0);
     });
 
-    it('getOffset should return current offset', async () => {
+    it("getOffset should return current offset", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -354,10 +366,10 @@ describe('ClockService', () => {
       await service.sync();
 
       // After sync, offset should be a number (could be 0 if times match)
-      expect(typeof service.getOffset()).toBe('number');
+      expect(typeof service.getOffset()).toBe("number");
     });
 
-    it('all time methods should be consistent with each other', async () => {
+    it("all time methods should be consistent with each other", async () => {
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
         data: { timestamp: new Date().toISOString() },
@@ -371,8 +383,12 @@ describe('ClockService', () => {
       const adjustedISOString = service.getAdjustedISOString();
 
       // All should represent roughly the same time (within 100ms tolerance)
-      expect(Math.abs(adjustedTime.getTime() - adjustedTimestamp)).toBeLessThan(100);
-      expect(new Date(adjustedISOString).getTime() - adjustedTimestamp).toBeLessThan(100);
+      expect(Math.abs(adjustedTime.getTime() - adjustedTimestamp)).toBeLessThan(
+        100,
+      );
+      expect(
+        new Date(adjustedISOString).getTime() - adjustedTimestamp,
+      ).toBeLessThan(100);
     });
   });
 
@@ -380,13 +396,13 @@ describe('ClockService', () => {
   // Status Methods Tests
   // ============================================================================
 
-  describe('Status Methods', () => {
-    it('isClockReliable should return false if never synced', () => {
+  describe("Status Methods", () => {
+    it("isClockReliable should return false if never synced", () => {
       const service = new ClockService();
       expect(service.isClockReliable()).toBe(false);
     });
 
-    it('isClockReliable should return false if offset > 5 min', async () => {
+    it("isClockReliable should return false if offset > 5 min", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 10 minutes ahead
@@ -401,7 +417,7 @@ describe('ClockService', () => {
       expect(service.isClockReliable()).toBe(false);
     });
 
-    it('isClockReliable should return true if offset within 5 min', async () => {
+    it("isClockReliable should return true if offset within 5 min", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 1 second ahead (within 5 min)
@@ -416,12 +432,12 @@ describe('ClockService', () => {
       expect(service.isClockReliable()).toBe(true);
     });
 
-    it('needsSync should return true if never synced', () => {
+    it("needsSync should return true if never synced", () => {
       const service = new ClockService();
       expect(service.needsSync()).toBe(true);
     });
 
-    it('needsSync should return true if elapsed > 1 hour', async () => {
+    it("needsSync should return true if elapsed > 1 hour", async () => {
       vi.useFakeTimers();
       mockNetworkStatus.isOnline = true;
       mockApi.get.mockResolvedValue({
@@ -446,13 +462,13 @@ describe('ClockService', () => {
   // formatOffset & getStatusMessage Tests
   // ============================================================================
 
-  describe('formatOffset & getStatusMessage', () => {
+  describe("formatOffset & getStatusMessage", () => {
     it('getStatusMessage should show "Clock not synchronized" if never synced', () => {
       const service = new ClockService();
-      expect(service.getStatusMessage()).toBe('Clock not synchronized');
+      expect(service.getStatusMessage()).toBe("Clock not synchronized");
     });
 
-    it('getStatusMessage should show clock skew for large offset', async () => {
+    it("getStatusMessage should show clock skew for large offset", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 10 minutes ahead
@@ -465,7 +481,7 @@ describe('ClockService', () => {
       await service.sync();
 
       const message = service.getStatusMessage();
-      expect(message).toContain('Clock skew detected');
+      expect(message).toContain("Clock skew detected");
     });
 
     it('getStatusMessage should show "Clock synchronized" for recent sync', async () => {
@@ -477,7 +493,7 @@ describe('ClockService', () => {
       const service = new ClockService();
       await service.sync();
 
-      expect(service.getStatusMessage()).toBe('Clock synchronized');
+      expect(service.getStatusMessage()).toBe("Clock synchronized");
     });
 
     it('getStatusMessage should show "Clock synced X min ago" for older syncs', async () => {
@@ -494,13 +510,13 @@ describe('ClockService', () => {
       vi.advanceTimersByTime(5 * 60 * 1000);
 
       const message = service.getStatusMessage();
-      expect(message).toContain('Clock synced');
-      expect(message).toContain('min ago');
+      expect(message).toContain("Clock synced");
+      expect(message).toContain("min ago");
 
       vi.useRealTimers();
     });
 
-    it('formatOffset should show ms for small offsets', async () => {
+    it("formatOffset should show ms for small offsets", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 500ms ahead
@@ -517,7 +533,7 @@ describe('ClockService', () => {
       expect(service.getOffset()).toBeDefined();
     });
 
-    it('formatOffset should show seconds for medium offsets', async () => {
+    it("formatOffset should show seconds for medium offsets", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 30 seconds ahead
@@ -533,7 +549,7 @@ describe('ClockService', () => {
       expect(Math.abs(service.getOffset())).toBeGreaterThan(0);
     });
 
-    it('formatOffset should show minutes for large offsets', async () => {
+    it("formatOffset should show minutes for large offsets", async () => {
       mockNetworkStatus.isOnline = true;
 
       // Server is 10 minutes ahead
@@ -546,7 +562,7 @@ describe('ClockService', () => {
       await service.sync();
 
       const message = service.getStatusMessage();
-      expect(message).toContain('min');
+      expect(message).toContain("min");
     });
   });
 
@@ -554,11 +570,12 @@ describe('ClockService', () => {
   // Singleton Export Test
   // ============================================================================
 
-  describe('Singleton', () => {
-    it('should export a singleton instance', async () => {
-      const { clockService } = await import('../../../src/services/clockService');
+  describe("Singleton", () => {
+    it("should export a singleton instance", async () => {
+      const { clockService } =
+        await import("../../../src/services/clockService");
       expect(clockService).toBeDefined();
-      expect(typeof clockService.isClockReliable).toBe('function');
+      expect(typeof clockService.isClockReliable).toBe("function");
     });
   });
 });

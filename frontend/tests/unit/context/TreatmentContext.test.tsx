@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { TreatmentProvider, useTreatment } from '@/context/TreatmentContext';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
+import { TreatmentProvider, useTreatment } from "@/context/TreatmentContext";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
@@ -9,36 +9,38 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   </BrowserRouter>
 );
 
-describe('TreatmentContext', () => {
+describe("TreatmentContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  describe('useTreatment hook', () => {
-    it('should throw error when used outside TreatmentProvider', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  describe("useTreatment hook", () => {
+    it("should throw error when used outside TreatmentProvider", () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       expect(() => {
         renderHook(() => useTreatment());
-      }).toThrow('useTreatment must be used within a TreatmentProvider');
+      }).toThrow("useTreatment must be used within a TreatmentProvider");
 
       consoleSpy.mockRestore();
     });
 
-    it('should provide treatment context when used within TreatmentProvider', () => {
+    it("should provide treatment context when used within TreatmentProvider", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
-      expect(result.current).toHaveProperty('currentTreatment');
-      expect(result.current).toHaveProperty('applicators');
-      expect(result.current).toHaveProperty('setTreatment');
-      expect(result.current).toHaveProperty('addApplicator');
-      expect(result.current).toHaveProperty('progressStats');
+      expect(result.current).toHaveProperty("currentTreatment");
+      expect(result.current).toHaveProperty("applicators");
+      expect(result.current).toHaveProperty("setTreatment");
+      expect(result.current).toHaveProperty("addApplicator");
+      expect(result.current).toHaveProperty("progressStats");
     });
   });
 
-  describe('Initial state', () => {
-    it('should start with null treatment and empty applicators', () => {
+  describe("Initial state", () => {
+    it("should start with null treatment and empty applicators", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       expect(result.current.currentTreatment).toBeNull();
@@ -48,26 +50,26 @@ describe('TreatmentContext', () => {
       expect(result.current.currentApplicator).toBeNull();
     });
 
-    it('should initialize procedure type from localStorage', () => {
-      localStorage.setItem('procedureType', 'insertion');
+    it("should initialize procedure type from localStorage", () => {
+      localStorage.setItem("procedureType", "insertion");
 
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
-      expect(result.current.procedureType).toBe('insertion');
+      expect(result.current.procedureType).toBe("insertion");
     });
   });
 
-  describe('setTreatment', () => {
-    it('should set current treatment and clear applicators', () => {
+  describe("setTreatment", () => {
+    it("should set current treatment and clear applicators", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       const mockTreatment = {
-        id: '1',
-        type: 'insertion' as const,
-        subjectId: 'PATIENT-001',
-        patientName: 'Patient Test-001',
-        site: 'Test Site',
-        date: '2025-10-09',
+        id: "1",
+        type: "insertion" as const,
+        subjectId: "PATIENT-001",
+        patientName: "Patient Test-001",
+        site: "Test Site",
+        date: "2025-10-09",
         isComplete: false,
         seedQuantity: 100,
       };
@@ -83,18 +85,18 @@ describe('TreatmentContext', () => {
     });
   });
 
-  describe('Applicator management', () => {
+  describe("Applicator management", () => {
     const mockApplicator = {
-      id: '1',
-      serialNumber: 'APP-001',
+      id: "1",
+      serialNumber: "APP-001",
       seedQuantity: 25,
-      usageType: 'full' as const,
-      insertionTime: '2025-10-09T10:00:00Z',
+      usageType: "full" as const,
+      insertionTime: "2025-10-09T10:00:00Z",
       insertedSeedsQty: 25,
-      patientId: 'PATIENT-001',
+      patientId: "PATIENT-001",
     };
 
-    it('should add applicator to list', () => {
+    it("should add applicator to list", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
@@ -105,7 +107,7 @@ describe('TreatmentContext', () => {
       expect(result.current.applicators[0]).toEqual(mockApplicator);
     });
 
-    it('should add available applicator without duplicates', () => {
+    it("should add available applicator without duplicates", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
@@ -116,7 +118,7 @@ describe('TreatmentContext', () => {
       expect(result.current.availableApplicators).toHaveLength(1);
     });
 
-    it('should process full use applicator and remove from available list', () => {
+    it("should process full use applicator and remove from available list", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
@@ -133,10 +135,10 @@ describe('TreatmentContext', () => {
       expect(result.current.availableApplicators).toHaveLength(0);
     });
 
-    it('should process no-use applicator and keep in available list', () => {
+    it("should process no-use applicator and keep in available list", () => {
       const noUseApplicator = {
         ...mockApplicator,
-        usageType: 'none' as const,
+        usageType: "none" as const,
         insertedSeedsQty: 0,
       };
 
@@ -151,7 +153,7 @@ describe('TreatmentContext', () => {
       expect(result.current.availableApplicators).toHaveLength(1);
     });
 
-    it('should update applicator data', () => {
+    it("should update applicator data", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
@@ -159,13 +161,13 @@ describe('TreatmentContext', () => {
       });
 
       act(() => {
-        result.current.updateApplicator('1', { comments: 'Updated comment' });
+        result.current.updateApplicator("1", { comments: "Updated comment" });
       });
 
-      expect(result.current.applicators[0].comments).toBe('Updated comment');
+      expect(result.current.applicators[0].comments).toBe("Updated comment");
     });
 
-    it('should remove applicator from list', () => {
+    it("should remove applicator from list", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
@@ -175,36 +177,36 @@ describe('TreatmentContext', () => {
       expect(result.current.applicators).toHaveLength(1);
 
       act(() => {
-        result.current.removeApplicator('1');
+        result.current.removeApplicator("1");
       });
 
       expect(result.current.applicators).toHaveLength(0);
     });
   });
 
-  describe('Progress calculations', () => {
+  describe("Progress calculations", () => {
     const mockTreatment = {
-      id: '1',
-      type: 'insertion' as const,
-      subjectId: 'PATIENT-001',
-      patientName: 'Patient Test-001',
-      site: 'Test Site',
-      date: '2025-10-09',
+      id: "1",
+      type: "insertion" as const,
+      subjectId: "PATIENT-001",
+      patientName: "Patient Test-001",
+      site: "Test Site",
+      date: "2025-10-09",
       isComplete: false,
       seedQuantity: 100,
     };
 
-    it('should calculate applicator progress', () => {
+    it("should calculate applicator progress", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       const applicator1 = {
-        id: '1',
-        serialNumber: 'APP-001',
+        id: "1",
+        serialNumber: "APP-001",
         seedQuantity: 25,
-        usageType: 'full' as const,
-        insertionTime: '2025-10-09T10:00:00Z',
+        usageType: "full" as const,
+        insertionTime: "2025-10-09T10:00:00Z",
         insertedSeedsQty: 25,
-        patientId: 'PATIENT-001',
+        patientId: "PATIENT-001",
       };
 
       act(() => {
@@ -217,17 +219,17 @@ describe('TreatmentContext', () => {
       expect(progress.total).toBeGreaterThan(0);
     });
 
-    it('should calculate seed progress', () => {
+    it("should calculate seed progress", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       const applicator1 = {
-        id: '1',
-        serialNumber: 'APP-001',
+        id: "1",
+        serialNumber: "APP-001",
         seedQuantity: 25,
-        usageType: 'full' as const,
-        insertionTime: '2025-10-09T10:00:00Z',
+        usageType: "full" as const,
+        insertionTime: "2025-10-09T10:00:00Z",
         insertedSeedsQty: 25,
-        patientId: 'PATIENT-001',
+        patientId: "PATIENT-001",
       };
 
       act(() => {
@@ -240,35 +242,35 @@ describe('TreatmentContext', () => {
       expect(progress.total).toBe(100);
     });
 
-    it('should calculate usage type distribution', () => {
+    it("should calculate usage type distribution", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
         result.current.processApplicator({
-          id: '1',
-          serialNumber: 'APP-001',
+          id: "1",
+          serialNumber: "APP-001",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
+          patientId: "PATIENT-001",
         });
         result.current.processApplicator({
-          id: '2',
-          serialNumber: 'APP-002',
+          id: "2",
+          serialNumber: "APP-002",
           seedQuantity: 25,
-          usageType: 'faulty' as const,
-          insertionTime: '2025-10-09T10:15:00Z',
+          usageType: "faulty" as const,
+          insertionTime: "2025-10-09T10:15:00Z",
           insertedSeedsQty: 20,
-          patientId: 'PATIENT-001',
+          patientId: "PATIENT-001",
         });
         result.current.processApplicator({
-          id: '3',
-          serialNumber: 'APP-003',
+          id: "3",
+          serialNumber: "APP-003",
           seedQuantity: 25,
-          usageType: 'none' as const,
-          insertionTime: '2025-10-09T10:30:00Z',
+          usageType: "none" as const,
+          insertionTime: "2025-10-09T10:30:00Z",
           insertedSeedsQty: 0,
-          patientId: 'PATIENT-001',
+          patientId: "PATIENT-001",
         });
       });
 
@@ -278,26 +280,26 @@ describe('TreatmentContext', () => {
       expect(distribution.none).toBe(1);
     });
 
-    it('should calculate actual total seeds correctly', () => {
+    it("should calculate actual total seeds correctly", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
         result.current.setTreatment(mockTreatment);
         result.current.addAvailableApplicator({
-          id: '1',
-          serialNumber: 'APP-001',
+          id: "1",
+          serialNumber: "APP-001",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
+          patientId: "PATIENT-001",
         });
         result.current.addAvailableApplicator({
-          id: '2',
-          serialNumber: 'APP-002',
+          id: "2",
+          serialNumber: "APP-002",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
+          patientId: "PATIENT-001",
         });
       });
 
@@ -305,36 +307,36 @@ describe('TreatmentContext', () => {
       expect(totalSeeds).toBe(50);
     });
 
-    it('should calculate actual inserted seeds excluding no-use applicators', () => {
+    it("should calculate actual inserted seeds excluding no-use applicators", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
         result.current.processApplicator({
-          id: '1',
-          serialNumber: 'APP-001',
+          id: "1",
+          serialNumber: "APP-001",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
           insertedSeedsQty: 25,
-          patientId: 'PATIENT-001',
+          patientId: "PATIENT-001",
         });
         result.current.processApplicator({
-          id: '2',
-          serialNumber: 'APP-002',
+          id: "2",
+          serialNumber: "APP-002",
           seedQuantity: 25,
-          usageType: 'faulty' as const,
-          insertionTime: '2025-10-09T10:15:00Z',
+          usageType: "faulty" as const,
+          insertionTime: "2025-10-09T10:15:00Z",
           insertedSeedsQty: 20,
-          patientId: 'PATIENT-001',
+          patientId: "PATIENT-001",
         });
         result.current.processApplicator({
-          id: '3',
-          serialNumber: 'APP-003',
+          id: "3",
+          serialNumber: "APP-003",
           seedQuantity: 25,
-          usageType: 'none' as const,
-          insertionTime: '2025-10-09T10:30:00Z',
+          usageType: "none" as const,
+          insertionTime: "2025-10-09T10:30:00Z",
           insertedSeedsQty: 0,
-          patientId: 'PATIENT-001',
+          patientId: "PATIENT-001",
         });
       });
 
@@ -343,46 +345,46 @@ describe('TreatmentContext', () => {
     });
   });
 
-  describe('Removal workflow', () => {
+  describe("Removal workflow", () => {
     const mockRemovalTreatment = {
-      id: '2',
-      type: 'removal' as const,
-      subjectId: 'PATIENT-001',
-      patientName: 'Patient Test-001',
-      site: 'Test Site',
-      date: '2025-10-15',
+      id: "2",
+      type: "removal" as const,
+      subjectId: "PATIENT-001",
+      patientName: "Patient Test-001",
+      site: "Test Site",
+      date: "2025-10-15",
       isComplete: false,
       seedQuantity: 100,
     };
 
-    it('should group applicators by seed count', () => {
+    it("should group applicators by seed count", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
         result.current.setTreatment(mockRemovalTreatment);
         result.current.addApplicator({
-          id: '1',
-          serialNumber: 'APP-001',
+          id: "1",
+          serialNumber: "APP-001",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
+          patientId: "PATIENT-001",
         });
         result.current.addApplicator({
-          id: '2',
-          serialNumber: 'APP-002',
+          id: "2",
+          serialNumber: "APP-002",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:15:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:15:00Z",
+          patientId: "PATIENT-001",
         });
         result.current.addApplicator({
-          id: '3',
-          serialNumber: 'APP-003',
+          id: "3",
+          serialNumber: "APP-003",
           seedQuantity: 20,
-          usageType: 'faulty' as const,
-          insertionTime: '2025-10-09T10:30:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "faulty" as const,
+          insertionTime: "2025-10-09T10:30:00Z",
+          patientId: "PATIENT-001",
         });
       });
 
@@ -394,19 +396,19 @@ describe('TreatmentContext', () => {
       expect(groups[1].totalApplicators).toBe(1);
     });
 
-    it('should track removal progress with individual seeds', () => {
+    it("should track removal progress with individual seeds", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
         result.current.setTreatment(mockRemovalTreatment);
         result.current.addApplicator({
-          id: '1',
-          serialNumber: 'APP-001',
+          id: "1",
+          serialNumber: "APP-001",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
           isRemoved: true,
-          patientId: 'PATIENT-001',
+          patientId: "PATIENT-001",
         });
         result.current.setIndividualSeedsRemoved(10);
       });
@@ -417,27 +419,27 @@ describe('TreatmentContext', () => {
     });
   });
 
-  describe('clearTreatment', () => {
-    it('should reset all treatment data', () => {
+  describe("clearTreatment", () => {
+    it("should reset all treatment data", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 
       act(() => {
         result.current.setTreatment({
-          id: '1',
-          type: 'insertion' as const,
-          subjectId: 'PATIENT-001',
-          patientName: 'Patient Test-001',
-          site: 'Test Site',
-          date: '2025-10-09',
+          id: "1",
+          type: "insertion" as const,
+          subjectId: "PATIENT-001",
+          patientName: "Patient Test-001",
+          site: "Test Site",
+          date: "2025-10-09",
           isComplete: false,
         });
         result.current.addApplicator({
-          id: '1',
-          serialNumber: 'APP-001',
+          id: "1",
+          serialNumber: "APP-001",
           seedQuantity: 25,
-          usageType: 'full' as const,
-          insertionTime: '2025-10-09T10:00:00Z',
-          patientId: 'PATIENT-001',
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
+          patientId: "PATIENT-001",
         });
         result.current.setIndividualSeedsRemoved(10);
       });
