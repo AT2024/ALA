@@ -14,8 +14,8 @@
  *   requirements=SRS-AUTH-001,SRS-SCAN-003
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 interface RequirementMapping {
   files: string[];
@@ -40,7 +40,7 @@ function buildReverseIndex(mapping: MappingFile): Map<string, Set<string>> {
   for (const [reqId, reqMapping] of Object.entries(mapping.requirements)) {
     // Index implementation files
     for (const file of reqMapping.files) {
-      const normalizedPath = file.replace(/\\/g, '/');
+      const normalizedPath = file.replace(/\\/g, "/");
       if (!reverseIndex.has(normalizedPath)) {
         reverseIndex.set(normalizedPath, new Set());
       }
@@ -49,7 +49,7 @@ function buildReverseIndex(mapping: MappingFile): Map<string, Set<string>> {
 
     // Index test files
     for (const testFile of reqMapping.tests) {
-      const normalizedPath = testFile.replace(/\\/g, '/');
+      const normalizedPath = testFile.replace(/\\/g, "/");
       if (!reverseIndex.has(normalizedPath)) {
         reverseIndex.set(normalizedPath, new Set());
       }
@@ -63,24 +63,27 @@ function buildReverseIndex(mapping: MappingFile): Map<string, Set<string>> {
 // Find requirements affected by changed files
 function findAffectedRequirements(
   changedFiles: string[],
-  reverseIndex: Map<string, Set<string>>
+  reverseIndex: Map<string, Set<string>>,
 ): Set<string> {
   const affectedRequirements = new Set<string>();
 
   for (const file of changedFiles) {
-    const normalizedPath = file.replace(/\\/g, '/').trim();
+    const normalizedPath = file.replace(/\\/g, "/").trim();
 
     // Direct match
     const directMatch = reverseIndex.get(normalizedPath);
     if (directMatch) {
-      directMatch.forEach(req => affectedRequirements.add(req));
+      directMatch.forEach((req) => affectedRequirements.add(req));
     }
 
     // Pattern matching for directory-level changes
     // e.g., if backend/src/services/priorityService.ts changes, match it
     for (const [mappedPath, reqs] of reverseIndex.entries()) {
-      if (normalizedPath.endsWith(mappedPath) || mappedPath.endsWith(normalizedPath)) {
-        reqs.forEach(req => affectedRequirements.add(req));
+      if (
+        normalizedPath.endsWith(mappedPath) ||
+        mappedPath.endsWith(normalizedPath)
+      ) {
+        reqs.forEach((req) => affectedRequirements.add(req));
       }
     }
   }
@@ -89,7 +92,9 @@ function findAffectedRequirements(
 }
 
 // Categorize requirements by type
-function categorizeRequirements(requirements: Set<string>): Record<string, string[]> {
+function categorizeRequirements(
+  requirements: Set<string>,
+): Record<string, string[]> {
   const categories: Record<string, string[]> = {};
 
   for (const req of requirements) {
@@ -120,59 +125,69 @@ function main(): void {
   let changedFiles: string[] = [];
   if (args.length > 0) {
     // Files can be passed as single space-separated string or multiple arguments
-    changedFiles = args.flatMap(arg => arg.split(/\s+/).filter(f => f.trim()));
+    changedFiles = args.flatMap((arg) =>
+      arg.split(/\s+/).filter((f) => f.trim()),
+    );
   }
 
   // Read requirement mapping
-  const mappingPath = path.resolve(__dirname, '../../docs/srs/requirement-mapping.json');
+  const mappingPath = path.resolve(
+    __dirname,
+    "../../docs/srs/requirement-mapping.json",
+  );
 
   if (!fs.existsSync(mappingPath)) {
-    console.error(`Error: Requirement mapping file not found at ${mappingPath}`);
-    console.log('has_changes=false');
+    console.error(
+      `Error: Requirement mapping file not found at ${mappingPath}`,
+    );
+    console.log("has_changes=false");
     process.exit(1);
   }
 
-  const mappingContent = fs.readFileSync(mappingPath, 'utf-8');
+  const mappingContent = fs.readFileSync(mappingPath, "utf-8");
   const mapping: MappingFile = JSON.parse(mappingContent);
 
   // Build reverse index
   const reverseIndex = buildReverseIndex(mapping);
 
   // Find affected requirements
-  const affectedRequirements = findAffectedRequirements(changedFiles, reverseIndex);
+  const affectedRequirements = findAffectedRequirements(
+    changedFiles,
+    reverseIndex,
+  );
 
   // Output results in GitHub Actions format
   if (affectedRequirements.size === 0) {
-    console.log('has_changes=false');
-    console.log('requirements=');
+    console.log("has_changes=false");
+    console.log("requirements=");
 
     // Also output human-readable summary to stderr
-    console.error('\n--- SRS Change Detection Summary ---');
+    console.error("\n--- SRS Change Detection Summary ---");
     console.error(`Changed files analyzed: ${changedFiles.length}`);
-    console.error('Affected requirements: None');
-    console.error('No SRS documentation update needed.');
+    console.error("Affected requirements: None");
+    console.error("No SRS documentation update needed.");
   } else {
-    const requirementsList = Array.from(affectedRequirements).sort().join(',');
-    console.log('has_changes=true');
+    const requirementsList = Array.from(affectedRequirements).sort().join(",");
+    console.log("has_changes=true");
     console.log(`requirements=${requirementsList}`);
 
     // Human-readable summary to stderr
     const categories = categorizeRequirements(affectedRequirements);
-    console.error('\n--- SRS Change Detection Summary ---');
+    console.error("\n--- SRS Change Detection Summary ---");
     console.error(`Changed files analyzed: ${changedFiles.length}`);
     console.error(`Affected requirements: ${affectedRequirements.size}`);
-    console.error('\nBy category:');
+    console.error("\nBy category:");
     for (const [category, reqs] of Object.entries(categories).sort()) {
-      console.error(`  ${category}: ${reqs.join(', ')}`);
+      console.error(`  ${category}: ${reqs.join(", ")}`);
     }
 
     // List changed files that matched
-    console.error('\nMatched files:');
+    console.error("\nMatched files:");
     for (const file of changedFiles) {
-      const normalizedPath = file.replace(/\\/g, '/').trim();
+      const normalizedPath = file.replace(/\\/g, "/").trim();
       const matches = reverseIndex.get(normalizedPath);
       if (matches && matches.size > 0) {
-        console.error(`  ${file} -> ${Array.from(matches).join(', ')}`);
+        console.error(`  ${file} -> ${Array.from(matches).join(", ")}`);
       }
     }
   }

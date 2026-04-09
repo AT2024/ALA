@@ -1,7 +1,9 @@
 # Docker Swarm Operations Guide
+
 # ALA Medical Application
 
 ## Table of Contents
+
 1. [Daily Operations](#daily-operations)
 2. [Zero-Downtime Deployment](#zero-downtime-deployment)
 3. [Monitoring & Health Checks](#monitoring--health-checks)
@@ -30,6 +32,7 @@ cd ~/ala-improved/deployment
 ```
 
 **What happens during deployment:**
+
 1. Pulls latest code from GitHub
 2. Builds new Docker images with timestamp version
 3. Starts new API replica (users still use old replicas)
@@ -71,12 +74,12 @@ Useful for promoting from test/staging or rolling back to known good version.
 
 ```yaml
 deploy:
-  replicas: 2                    # Run 2 copies of each service
+  replicas: 2 # Run 2 copies of each service
   update_config:
-    parallelism: 1               # Update 1 replica at a time
-    delay: 30s                   # Wait 30s between updates
-    order: start-first           # KEY: Start new before stopping old
-    failure_action: rollback     # Auto-rollback on failure
+    parallelism: 1 # Update 1 replica at a time
+    delay: 30s # Wait 30s between updates
+    order: start-first # KEY: Start new before stopping old
+    failure_action: rollback # Auto-rollback on failure
 ```
 
 **Update sequence for API service:**
@@ -99,6 +102,7 @@ Done:    2 replicas running new version, ZERO downtime!
 ```
 
 **At any point during deployment:**
+
 - At least 2 replicas are running
 - Users are load-balanced across healthy replicas
 - If new replica fails health check → automatic rollback
@@ -107,24 +111,28 @@ Done:    2 replicas running new version, ZERO downtime!
 ### Restart Policy (Local vs Azure Parity Gap #5)
 
 **Azure Swarm restart policy** (in docker-stack.yml):
+
 ```yaml
 restart_policy:
-  condition: on-failure     # Only restart if container fails
-  delay: 5s                 # Wait 5s between restarts
-  max_attempts: 3           # Maximum 3 restart attempts
-  window: 120s              # Reset counter after 120s window
+  condition: on-failure # Only restart if container fails
+  delay: 5s # Wait 5s between restarts
+  max_attempts: 3 # Maximum 3 restart attempts
+  window: 120s # Reset counter after 120s window
 ```
 
 **Local Docker Compose restart policy** (in docker-compose.yml):
+
 ```yaml
-restart: always             # Always restart, no limit
+restart: always # Always restart, no limit
 ```
 
 **Why the difference?**
+
 - **Azure (Production)**: Uses circuit breaker pattern - if a container fails 3 times in 2 minutes, stop retrying to prevent cascading failures and allow investigation
 - **Local (Development)**: Always restart for convenience during development cycles
 
 **Impact:**
+
 - In production, persistent failures will be surfaced instead of silently restarting
 - Check `docker service ps ala_api` to see failed task history
 - After fixing the issue, services will resume normal operation
@@ -142,6 +150,7 @@ docker service ls
 ```
 
 **Expected output:**
+
 ```
 NAME           REPLICAS   IMAGE                    PORTS
 ala_api        2/2        ala-api:latest          *:5000->5000/tcp
@@ -163,12 +172,14 @@ docker service ps ala_frontend
 ```
 
 **Output shows:**
+
 - Task ID (unique identifier for each replica)
 - Node (which VM it's running on)
 - Desired state vs current state
 - Error messages if failed
 
 **Example output:**
+
 ```
 NAME            IMAGE              NODE      DESIRED STATE   CURRENT STATE
 ala_api.1       ala-api:latest    ALAapp    Running         Running 2 minutes ago
@@ -205,6 +216,7 @@ curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 ```
 
 **Expected response:**
+
 ```json
 {
   "status": "ok",
@@ -239,6 +251,7 @@ docker service ps ala_api --format 'table {{.Name}}\t{{.Image}}\t{{.CurrentState
 ```
 
 **Look for**:
+
 - "Failed" in CurrentState column
 - Error messages like "task: non-zero exit (1)"
 - Recent timestamps (within last few minutes)
@@ -253,6 +266,7 @@ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
 ```
 
 **Expected**:
+
 - All containers show latest version tag
 - Status shows "(healthy)"
 - No containers in "restarting" or "unhealthy" state
@@ -260,6 +274,7 @@ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
 #### 4. Test Application
 
 **Best real-world verification:**
+
 1. Open application in browser: https://ala-app.israelcentral.cloudapp.azure.com
 2. Log in with test account
 3. Verify new features work
@@ -272,11 +287,13 @@ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
 **Situation**: Service shows old tag (e.g., `cors-fixed`) but app works fine
 
 **What happened**:
+
 - Latest deployment failed and rolled back
 - Service stayed on previous successful tag
 - That "old tag" may contain recent code from earlier deployment
 
 **How to verify**:
+
 ```bash
 # Check when image was actually built
 docker image inspect ala-frontend:cors-fixed --format '{{.Created}}'
@@ -289,6 +306,7 @@ docker exec $(docker ps -q --filter name=ala_frontend.1) \
 ```
 
 **Action**:
+
 - If app works correctly: Not urgent, fix deployment issue when convenient
 - If features missing: Investigate error, fix, and redeploy immediately
 
@@ -311,17 +329,20 @@ docker service inspect ala_api --pretty
 ### Automatic Rollback
 
 **Swarm automatically rolls back if:**
+
 - New replica fails health checks
 - New replica crashes repeatedly
 - Update timeout exceeded
 
 **What happens:**
+
 1. Swarm detects failure
 2. Stops rolling out new version
 3. Reverts to previous version
 4. Logs error message
 
 **Check rollback logs:**
+
 ```bash
 docker service ps ala_api | grep -i failed
 ```
@@ -385,6 +406,7 @@ docker-compose up -d
 **Symptom:** `docker service ls` shows `0/2` replicas
 
 **Diagnosis:**
+
 ```bash
 # Check recent tasks
 docker service ps ala_api
@@ -397,6 +419,7 @@ docker service inspect ala_api
 ```
 
 **Common causes:**
+
 1. **Health check failing**: Check `/api/health` endpoint manually
 2. **Database not running**: Start database first
 3. **Image not found**: Check `docker images` for correct image tag
@@ -404,6 +427,7 @@ docker service inspect ala_api
 5. **Network issue**: Verify `ala-network` exists
 
 **Fix:**
+
 ```bash
 # Restart service
 docker service update --force ala_api
@@ -418,6 +442,7 @@ docker stack deploy -c docker-stack.yml ala
 **Symptom:** One replica running, one replica constantly restarting
 
 **Diagnosis:**
+
 ```bash
 # Check which replica is failing
 docker service ps ala_api
@@ -427,11 +452,13 @@ docker service logs ala_api | grep ERROR
 ```
 
 **Common causes:**
+
 1. **Resource exhaustion**: VM running out of memory/CPU
 2. **Port already in use**: Second replica can't bind to port
 3. **Health check failing intermittently**: Timing issue
 
 **Fix:**
+
 ```bash
 # Check VM resources
 free -h
@@ -451,6 +478,7 @@ docker service scale ala_api=2
 **Symptom:** Deployment starts but never completes
 
 **Diagnosis:**
+
 ```bash
 # Check deployment progress
 docker service ps ala_api
@@ -460,11 +488,13 @@ docker service ps ala_api | grep -E "Preparing|Starting"
 ```
 
 **Common causes:**
+
 1. **Image pull timeout**: Large images take time to pull
 2. **Health check timeout**: New container fails health check
 3. **Resource limits**: Not enough memory/CPU to start new container
 
 **Fix:**
+
 ```bash
 # Cancel stuck deployment
 docker service update --rollback ala_api
@@ -478,6 +508,7 @@ docker service update --force ala_api
 **Symptom:** API logs show "Cannot connect to database"
 
 **Diagnosis:**
+
 ```bash
 # Check if database is running
 docker ps | grep ala-db
@@ -490,6 +521,7 @@ docker exec $(docker ps -q --filter name=ala_api) ping -c 3 ala-db
 ```
 
 **Fix:**
+
 ```bash
 # Restart database
 cd ~/ala-improved/deployment
@@ -507,6 +539,7 @@ docker service update --force ala_api
 **Symptom:** Frontend shows "Certificate expired" or HTTPS not working
 
 **Diagnosis:**
+
 ```bash
 # Check certificate expiry
 docker exec $(docker ps -q --filter name=ala_frontend) \
@@ -518,6 +551,7 @@ ls -lh ~/ala-improved/ssl-certs/private/private.key
 ```
 
 **Fix:**
+
 ```bash
 # Renew certificates (if expired)
 # See certificate renewal documentation
@@ -707,24 +741,28 @@ docker service logs ala_api | grep -E "ERROR|WARNING|UNAUTHORIZED"
 ## Best Practices
 
 ### Daily Operations
+
 - ✅ Deploy during low-traffic windows (if possible, though not required)
 - ✅ Monitor logs for 10 minutes after deployment
 - ✅ Keep last 3 versions of images (for easy rollback)
 - ✅ Backup database before major changes
 
 ### Monthly Maintenance
+
 - ✅ Review and clean old Docker images: `docker image prune -a`
 - ✅ Check disk space: `df -h`
 - ✅ Review logs for errors: `docker service logs ala_api | grep ERROR`
 - ✅ Verify backups are working: restore to test environment
 
 ### Monitoring
+
 - ✅ Set up health check monitoring (external service)
 - ✅ Alert on service count != 2/2
 - ✅ Alert on database connection failures
 - ✅ Monitor disk space (database growth)
 
 ### Security
+
 - ✅ Keep Docker up to date: `sudo apt update && sudo apt upgrade docker-ce`
 - ✅ Rotate secrets regularly (JWT_SECRET, POSTGRES_PASSWORD)
 - ✅ Review access logs for unauthorized access attempts
@@ -767,16 +805,19 @@ docker-compose up -d                        # Fallback to Compose
 ## Support & Contact
 
 **For deployment issues:**
+
 - Check this guide first
 - Review logs: `docker service logs`
 - Check troubleshooting section
 
 **For emergency:**
+
 - Complete system down → Follow emergency procedures
 - Security incident → Scale down first, investigate second
 - Database corruption → Restore from backup
 
 **Documentation:**
+
 - Migration guide: [SWARM_MIGRATION.md](SWARM_MIGRATION.md)
 - Stack configuration: [docker-stack.yml](docker-stack.yml)
 - Database config: [docker-compose.db.yml](docker-compose.db.yml)

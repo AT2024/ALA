@@ -14,17 +14,22 @@
  * Treatment type enum - all supported treatment types
  */
 export type TreatmentType =
-  | 'insertion'
-  | 'removal'
-  | 'pancreas_insertion'
-  | 'prostate_insertion'
-  | 'skin_insertion';
+  | "insertion"
+  | "removal"
+  | "pancreas_insertion"
+  | "prostate_insertion"
+  | "skin_insertion";
 
 /**
  * Treatment indication type from Priority SIBD_INDICATION field
  * Used to determine applicator workflow (pancreas/prostate use 3-stage, skin uses 2-stage)
  */
-export type TreatmentIndication = 'pancreas' | 'prostate' | 'skin' | string | null;
+export type TreatmentIndication =
+  | "pancreas"
+  | "prostate"
+  | "skin"
+  | string
+  | null;
 
 /**
  * Canonical Treatment interface
@@ -84,7 +89,7 @@ export interface ContinuationEligibility {
  * Treatment filter parameters for querying treatments
  */
 export interface TreatmentFilterParams {
-  type?: 'insertion' | 'removal';
+  type?: "insertion" | "removal";
   subjectId?: string;
   site?: string;
   date?: string;

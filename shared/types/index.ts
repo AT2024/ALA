@@ -14,7 +14,7 @@ export type {
   TreatmentFilterParams,
   ProgressStats,
   RemovalProgress,
-} from './treatment.types';
+} from "./treatment.types";
 
 // Applicator types
 export type {
@@ -24,10 +24,10 @@ export type {
   ApplicatorSummary,
   UsageType,
   AttachmentSyncStatus,
-} from './applicator.types';
+} from "./applicator.types";
 
 // Re-export applicator status types from the main file
-export type { ApplicatorStatus } from '../applicatorStatuses';
+export type { ApplicatorStatus } from "../applicatorStatuses";
 export {
   APPLICATOR_STATUSES,
   ALL_STATUSES,
@@ -53,4 +53,4 @@ export {
   getStatusEmoji,
   getStatusColors,
   getListItemColor,
-} from '../applicatorStatuses';
+} from "../applicatorStatuses";

@@ -25,21 +25,25 @@ That's it. Everything else is automated.
 ## Common Operations
 
 ### View Logs
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose logs -f"
 ```
 
 ### Check Status
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose ps"
 ```
 
 ### Health Check
+
 ```bash
 curl https://ala-app.israelcentral.cloudapp.azure.com/api/health
 ```
 
 ### Restart Service
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose restart api"
 ```
@@ -54,11 +58,13 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose rest
 ## Emergency Recovery
 
 ### Rollback to Previous Version
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved && git checkout <commit-hash> && cd deployment && ./deploy"
 ```
 
 ### Restore from Backup
+
 ```bash
 ssh azureuser@20.217.84.100
 cd ~/ala-improved/backups
@@ -67,6 +73,7 @@ cat backup-YYYYMMDD-HHMMSS.sql | docker exec -i ala-db psql -U ala_user ala_prod
 ```
 
 ### Full System Reset
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose down && docker system prune -f && ./deploy"
 ```
@@ -81,18 +88,22 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose down
 ## Troubleshooting
 
 ### Deployment Failed
+
 The deploy script automatically rolls back on failure. Check logs:
+
 ```bash
 ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && docker-compose logs --tail=50"
 ```
 
 ### Container Unhealthy
+
 ```bash
 ssh azureuser@20.217.84.100 "docker ps"  # Check status
 ssh azureuser@20.217.84.100 "docker logs ala-api --tail=20"  # Check logs
 ```
 
 ### Database Issues
+
 ```bash
 ssh azureuser@20.217.84.100 "docker exec -it ala-db psql -U ala_user ala_production"
 ```
@@ -100,6 +111,7 @@ ssh azureuser@20.217.84.100 "docker exec -it ala-db psql -U ala_user ala_product
 ## First-Time Setup
 
 If setting up a new server, see [README.md](README.md) for complete first-time setup instructions including:
+
 - Docker installation
 - Git repository cloning
 - Environment configuration
@@ -110,6 +122,7 @@ If setting up a new server, see [README.md](README.md) for complete first-time s
 **"Deployment should be boring"** - DHH
 
 The simplified deployment system prioritizes:
+
 - **Simplicity**: One command, no confusion
 - **Safety**: Automatic backups and rollbacks
 - **Reliability**: Health checks before declaring success

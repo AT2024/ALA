@@ -27,9 +27,9 @@
 export function computeHashNode(data: Record<string, unknown>): string {
   // Dynamic import to avoid bundling crypto in frontend
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const crypto = require('crypto');
+  const crypto = require("crypto");
   const normalized = JSON.stringify(data, Object.keys(data).sort());
-  return crypto.createHash('sha256').update(normalized).digest('hex');
+  return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
 /**
@@ -39,13 +39,15 @@ export function computeHashNode(data: Record<string, unknown>): string {
  * @param data - Object to hash
  * @returns Promise resolving to hex-encoded SHA-256 hash
  */
-export async function computeHashWeb(data: Record<string, unknown>): Promise<string> {
+export async function computeHashWeb(
+  data: Record<string, unknown>,
+): Promise<string> {
   const normalized = JSON.stringify(data, Object.keys(data).sort());
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(normalized);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**

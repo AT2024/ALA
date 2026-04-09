@@ -144,6 +144,7 @@ cd ~/ala-improved/deployment
 ```
 
 **What it does**:
+
 1. Pulls latest code from current git branch
 2. Builds images with parallel builds (fast)
 3. Tags images as `staging` and `staging-tested-TIMESTAMP`
@@ -152,6 +153,7 @@ cd ~/ala-improved/deployment
 6. Reports staging URL
 
 **Output**:
+
 ```
 🧪 STAGING DEPLOYMENT - Test Environment Only
 ✅ Prerequisites OK
@@ -175,6 +177,7 @@ cd ~/ala-improved/deployment
 ```
 
 **What it does**:
+
 1. Confirms production deployment (type "yes")
 2. Backs up production database
 3. Tags staging images as production
@@ -183,6 +186,7 @@ cd ~/ala-improved/deployment
 6. Rolls back on failure
 
 **Confirmation prompt**:
+
 ```
 ⚠️  PRODUCTION DEPLOYMENT - Image Promotion
 This will:

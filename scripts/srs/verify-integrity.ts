@@ -20,8 +20,8 @@
  *   2 - Warnings only (non-critical)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 interface VerificationResult {
   errors: string[];
@@ -46,25 +46,29 @@ interface ParsedRequirement {
 }
 
 interface MappingFile {
-  requirements: Record<string, { files: string[]; tests: string[]; description: string }>;
+  requirements: Record<
+    string,
+    { files: string[]; tests: string[]; description: string }
+  >;
 }
 
 // Parse command line arguments
 function parseArgs(): { strict: boolean; fix: boolean } {
   const args = process.argv.slice(2);
   return {
-    strict: args.includes('--strict'),
-    fix: args.includes('--fix'),
+    strict: args.includes("--strict"),
+    fix: args.includes("--fix"),
   };
 }
 
 // Read and parse the traceability matrix
 function parseTraceabilityMatrix(filePath: string): ParsedRequirement[] {
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const content = fs.readFileSync(filePath, "utf-8");
   const requirements: ParsedRequirement[] = [];
 
   // Match requirement rows in tables
-  const rowRegex = /\| (SRS-[A-Z]+-\d+) \| ([^|]+) \| ([^|]*) \| ([^|]+) \| ([^|]+) \| (\w+) \|/g;
+  const rowRegex =
+    /\| (SRS-[A-Z]+-\d+) \| ([^|]+) \| ([^|]*) \| ([^|]+) \| ([^|]+) \| (\w+) \|/g;
 
   let match;
   while ((match = rowRegex.exec(content)) !== null) {
@@ -89,7 +93,7 @@ function parseHazardAnalysis(filePath: string): Set<string> {
     return hazards;
   }
 
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const content = fs.readFileSync(filePath, "utf-8");
 
   // Match hazard IDs (HAZ-001, HAZ-002, etc.)
   const hazardRegex = /HAZ-\d{3}/g;
@@ -107,20 +111,20 @@ function parseMappingFile(filePath: string): MappingFile | null {
     return null;
   }
 
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const content = fs.readFileSync(filePath, "utf-8");
   return JSON.parse(content);
 }
 
 // Verify all requirements have code mappings
 function verifyCodeMappings(
   requirements: ParsedRequirement[],
-  mapping: MappingFile | null
+  mapping: MappingFile | null,
 ): { missing: string[]; orphaned: string[] } {
   const missing: string[] = [];
   const orphaned: string[] = [];
 
   const mappedReqs = new Set(Object.keys(mapping?.requirements || {}));
-  const matrixReqs = new Set(requirements.map(r => r.id));
+  const matrixReqs = new Set(requirements.map((r) => r.id));
 
   // Find requirements in matrix without mapping
   for (const req of matrixReqs) {
@@ -142,17 +146,17 @@ function verifyCodeMappings(
 // Verify hazard linkages
 function verifyHazardLinkages(
   requirements: ParsedRequirement[],
-  validHazards: Set<string>
+  validHazards: Set<string>,
 ): string[] {
   const errors: string[] = [];
 
   for (const req of requirements) {
-    if (!req.hazardId || req.hazardId === '-') {
+    if (!req.hazardId || req.hazardId === "-") {
       continue;
     }
 
     // Handle multiple hazards (e.g., "HAZ-001, HAZ-003")
-    const hazardIds = req.hazardId.split(',').map(h => h.trim());
+    const hazardIds = req.hazardId.split(",").map((h) => h.trim());
 
     for (const hazardId of hazardIds) {
       if (!validHazards.has(hazardId)) {
@@ -171,10 +175,12 @@ function verifyTestCases(requirements: ParsedRequirement[]): string[] {
 
   for (const req of requirements) {
     // Check test case format (TC-XXXX-NNN)
-    const expectedTestCase = req.id.replace('SRS-', 'TC-');
+    const expectedTestCase = req.id.replace("SRS-", "TC-");
 
     if (req.testCase !== expectedTestCase) {
-      errors.push(`${req.id}: Test case mismatch. Expected "${expectedTestCase}", found "${req.testCase}"`);
+      errors.push(
+        `${req.id}: Test case mismatch. Expected "${expectedTestCase}", found "${req.testCase}"`,
+      );
     }
 
     // Check for duplicate test cases
@@ -188,17 +194,25 @@ function verifyTestCases(requirements: ParsedRequirement[]): string[] {
 }
 
 // Verify statistics accuracy
-function verifyStatistics(content: string, requirements: ParsedRequirement[]): string[] {
+function verifyStatistics(
+  content: string,
+  requirements: ParsedRequirement[],
+): string[] {
   const errors: string[] = [];
 
   // Count actual statuses
   const statusCounts = {
-    implemented: requirements.filter(r => r.status.toLowerCase() === 'implemented').length,
-    verify: requirements.filter(r => r.status.toLowerCase() === 'verify').length,
-    pending: requirements.filter(r => r.status.toLowerCase() === 'pending').length,
+    implemented: requirements.filter(
+      (r) => r.status.toLowerCase() === "implemented",
+    ).length,
+    verify: requirements.filter((r) => r.status.toLowerCase() === "verify")
+      .length,
+    pending: requirements.filter((r) => r.status.toLowerCase() === "pending")
+      .length,
   };
 
-  const total = statusCounts.implemented + statusCounts.verify + statusCounts.pending;
+  const total =
+    statusCounts.implemented + statusCounts.verify + statusCounts.pending;
 
   // Extract claimed statistics from content
   const totalMatch = content.match(/\*\*TOTAL\*\* \| \*\*(\d+)\*\*/);
@@ -207,26 +221,36 @@ function verifyStatistics(content: string, requirements: ParsedRequirement[]): s
   const pendingMatch = content.match(/\*\*Pending Implementation\*\*: (\d+)/);
 
   if (totalMatch && parseInt(totalMatch[1]) !== total) {
-    errors.push(`Statistics mismatch: Total claimed ${totalMatch[1]}, actual ${total}`);
+    errors.push(
+      `Statistics mismatch: Total claimed ${totalMatch[1]}, actual ${total}`,
+    );
   }
 
   if (implMatch && parseInt(implMatch[1]) !== statusCounts.implemented) {
-    errors.push(`Statistics mismatch: Implemented claimed ${implMatch[1]}, actual ${statusCounts.implemented}`);
+    errors.push(
+      `Statistics mismatch: Implemented claimed ${implMatch[1]}, actual ${statusCounts.implemented}`,
+    );
   }
 
   if (verifyMatch && parseInt(verifyMatch[1]) !== statusCounts.verify) {
-    errors.push(`Statistics mismatch: Verify claimed ${verifyMatch[1]}, actual ${statusCounts.verify}`);
+    errors.push(
+      `Statistics mismatch: Verify claimed ${verifyMatch[1]}, actual ${statusCounts.verify}`,
+    );
   }
 
   if (pendingMatch && parseInt(pendingMatch[1]) !== statusCounts.pending) {
-    errors.push(`Statistics mismatch: Pending claimed ${pendingMatch[1]}, actual ${statusCounts.pending}`);
+    errors.push(
+      `Statistics mismatch: Pending claimed ${pendingMatch[1]}, actual ${statusCounts.pending}`,
+    );
   }
 
   return errors;
 }
 
 // Verify requirement ID sequence
-function verifyRequirementSequence(requirements: ParsedRequirement[]): string[] {
+function verifyRequirementSequence(
+  requirements: ParsedRequirement[],
+): string[] {
   const warnings: string[] = [];
   const categorySequences: Record<string, number[]> = {};
 
@@ -249,7 +273,7 @@ function verifyRequirementSequence(requirements: ParsedRequirement[]): string[] 
     for (let i = 0; i < sorted.length - 1; i++) {
       if (sorted[i + 1] - sorted[i] > 1) {
         warnings.push(
-          `Gap in ${category} sequence: SRS-${category}-${sorted[i].toString().padStart(3, '0')} to SRS-${category}-${sorted[i + 1].toString().padStart(3, '0')}`
+          `Gap in ${category} sequence: SRS-${category}-${sorted[i].toString().padStart(3, "0")} to SRS-${category}-${sorted[i + 1].toString().padStart(3, "0")}`,
         );
       }
     }
@@ -273,10 +297,10 @@ function verify(): VerificationResult {
     },
   };
 
-  const basePath = path.resolve(__dirname, '../../docs/srs');
-  const matrixPath = path.join(basePath, 'traceability-matrix.md');
-  const hazardPath = path.join(basePath, 'hazard-analysis.md');
-  const mappingPath = path.join(basePath, 'requirement-mapping.json');
+  const basePath = path.resolve(__dirname, "../../docs/srs");
+  const matrixPath = path.join(basePath, "traceability-matrix.md");
+  const hazardPath = path.join(basePath, "hazard-analysis.md");
+  const mappingPath = path.join(basePath, "requirement-mapping.json");
 
   // Check file existence
   if (!fs.existsSync(matrixPath)) {
@@ -285,7 +309,7 @@ function verify(): VerificationResult {
   }
 
   // Parse files
-  const matrixContent = fs.readFileSync(matrixPath, 'utf-8');
+  const matrixContent = fs.readFileSync(matrixPath, "utf-8");
   const requirements = parseTraceabilityMatrix(matrixPath);
   const validHazards = parseHazardAnalysis(hazardPath);
   const mapping = parseMappingFile(mappingPath);
@@ -296,14 +320,22 @@ function verify(): VerificationResult {
   // Verify hazard linkages
   const hazardErrors = verifyHazardLinkages(requirements, validHazards);
   result.errors.push(...hazardErrors);
-  result.stats.requirementsWithHazards = requirements.filter(r => r.hazardId && r.hazardId !== '-').length;
-  result.info.push(`Requirements with hazard links: ${result.stats.requirementsWithHazards}`);
+  result.stats.requirementsWithHazards = requirements.filter(
+    (r) => r.hazardId && r.hazardId !== "-",
+  ).length;
+  result.info.push(
+    `Requirements with hazard links: ${result.stats.requirementsWithHazards}`,
+  );
 
   // Verify test cases
   const testErrors = verifyTestCases(requirements);
   result.errors.push(...testErrors);
-  result.stats.requirementsWithTests = requirements.filter(r => r.testCase && r.testCase !== '-').length;
-  result.info.push(`Requirements with test cases: ${result.stats.requirementsWithTests}`);
+  result.stats.requirementsWithTests = requirements.filter(
+    (r) => r.testCase && r.testCase !== "-",
+  ).length;
+  result.info.push(
+    `Requirements with test cases: ${result.stats.requirementsWithTests}`,
+  );
 
   // Verify code mappings
   if (mapping) {
@@ -312,13 +344,17 @@ function verify(): VerificationResult {
     result.stats.orphanedTests = orphaned.length;
 
     if (missing.length > 0) {
-      result.warnings.push(`Requirements without code mapping: ${missing.join(', ')}`);
+      result.warnings.push(
+        `Requirements without code mapping: ${missing.join(", ")}`,
+      );
     }
     if (orphaned.length > 0) {
-      result.warnings.push(`Orphaned mappings (not in matrix): ${orphaned.join(', ')}`);
+      result.warnings.push(
+        `Orphaned mappings (not in matrix): ${orphaned.join(", ")}`,
+      );
     }
   } else {
-    result.warnings.push('Requirement mapping file not found');
+    result.warnings.push("Requirement mapping file not found");
   }
 
   // Verify statistics
@@ -334,17 +370,17 @@ function verify(): VerificationResult {
 
 // Print results and exit with appropriate code
 function printResults(result: VerificationResult, strict: boolean): number {
-  console.log('\n=== SRS Integrity Verification Report ===\n');
+  console.log("\n=== SRS Integrity Verification Report ===\n");
 
   // Print info
-  console.log('Summary:');
+  console.log("Summary:");
   for (const info of result.info) {
     console.log(`  ${info}`);
   }
   console.log();
 
   // Print stats
-  console.log('Statistics:');
+  console.log("Statistics:");
   console.log(`  Total Requirements: ${result.stats.totalRequirements}`);
   console.log(`  With Test Cases: ${result.stats.requirementsWithTests}`);
   console.log(`  With Hazard Links: ${result.stats.requirementsWithHazards}`);
@@ -372,21 +408,21 @@ function printResults(result: VerificationResult, strict: boolean): number {
 
   // Determine exit code
   if (result.errors.length > 0) {
-    console.log('RESULT: FAILED - Integrity errors found');
+    console.log("RESULT: FAILED - Integrity errors found");
     return 1;
   }
 
   if (result.warnings.length > 0 && strict) {
-    console.log('RESULT: FAILED - Warnings found (strict mode)');
+    console.log("RESULT: FAILED - Warnings found (strict mode)");
     return 2;
   }
 
   if (result.warnings.length > 0) {
-    console.log('RESULT: PASSED with warnings');
+    console.log("RESULT: PASSED with warnings");
     return 0;
   }
 
-  console.log('RESULT: PASSED - All integrity checks passed');
+  console.log("RESULT: PASSED - All integrity checks passed");
   return 0;
 }
 
@@ -395,7 +431,9 @@ function main(): void {
   const { strict, fix } = parseArgs();
 
   if (fix) {
-    console.log('Note: --fix mode not yet implemented. Running verification only.');
+    console.log(
+      "Note: --fix mode not yet implemented. Running verification only.",
+    );
   }
 
   const result = verify();

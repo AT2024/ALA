@@ -17,8 +17,8 @@
  *   Creates backup at docs/srs/traceability-matrix.md.bak
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 interface UpdateOptions {
   requirements: string[];
@@ -54,16 +54,16 @@ function parseArgs(): UpdateOptions {
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
-      case '--requirements':
-        options.requirements = args[++i]?.split(',').map(r => r.trim()) || [];
+      case "--requirements":
+        options.requirements = args[++i]?.split(",").map((r) => r.trim()) || [];
         break;
-      case '--test-results':
+      case "--test-results":
         options.testResultsPath = args[++i];
         break;
-      case '--commit-range':
+      case "--commit-range":
         options.commitRange = args[++i];
         break;
-      case '--dry-run':
+      case "--dry-run":
         options.dryRun = true;
         break;
     }
@@ -77,7 +77,7 @@ function readTraceabilityMatrix(filePath: string): string {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Traceability matrix not found at ${filePath}`);
   }
-  return fs.readFileSync(filePath, 'utf-8');
+  return fs.readFileSync(filePath, "utf-8");
 }
 
 // Parse test results from Jest/Vitest output
@@ -90,7 +90,7 @@ function parseTestResults(testResultsPath: string): Map<string, TestResult> {
   }
 
   try {
-    const content = fs.readFileSync(testResultsPath, 'utf-8');
+    const content = fs.readFileSync(testResultsPath, "utf-8");
     const json = JSON.parse(content);
 
     // Support Jest and Vitest result formats
@@ -106,7 +106,7 @@ function parseTestResults(testResultsPath: string): Map<string, TestResult> {
           results.set(reqId, {
             requirementId: reqId,
             testCase: `TC-${match[1]}`,
-            passed: test.status === 'passed',
+            passed: test.status === "passed",
             duration: test.duration,
           });
         }
@@ -123,12 +123,12 @@ function parseTestResults(testResultsPath: string): Map<string, TestResult> {
 function updateRequirementStatus(
   content: string,
   reqId: string,
-  testResults: Map<string, TestResult>
+  testResults: Map<string, TestResult>,
 ): string {
   // Find the row for this requirement
   const rowRegex = new RegExp(
     `(\\| ${reqId} \\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|)\\s*(\\w+)\\s*\\|`,
-    'g'
+    "g",
   );
 
   return content.replace(rowRegex, (match, prefix, currentStatus) => {
@@ -136,7 +136,7 @@ function updateRequirementStatus(
 
     // Only update if we have test results
     if (testResult) {
-      const newStatus = testResult.passed ? 'Implemented' : 'Verify';
+      const newStatus = testResult.passed ? "Implemented" : "Verify";
       return `${prefix} ${newStatus} |`;
     }
 
@@ -148,14 +148,15 @@ function updateRequirementStatus(
 function addRevisionEntry(
   content: string,
   commitRange: string | undefined,
-  requirements: string[]
+  requirements: string[],
 ): string {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const version = extractNextVersion(content);
-  const description = `Auto-update: ${requirements.length} requirements affected by ${commitRange || 'merge to main'}`;
+  const description = `Auto-update: ${requirements.length} requirements affected by ${commitRange || "merge to main"}`;
 
   // Find the revision history table and add a new row
-  const revisionTableRegex = /(## 4\. Revision History\s*\n\s*\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|\s*\n\|[-|]+\|)/;
+  const revisionTableRegex =
+    /(## 4\. Revision History\s*\n\s*\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|\s*\n\|[-|]+\|)/;
 
   return content.replace(revisionTableRegex, (match) => {
     return `${match}\n| ${version} | ${today} | Claude Code | ${description} |`;
@@ -166,13 +167,14 @@ function addRevisionEntry(
 function extractNextVersion(content: string): string {
   const versionMatch = content.match(/\| (\d+\.\d+) \| \d{4}-\d{2}-\d{2}/g);
   if (versionMatch && versionMatch.length > 0) {
-    const lastVersion = versionMatch[versionMatch.length - 1].match(/\| (\d+\.\d+)/)?.[1];
+    const lastVersion =
+      versionMatch[versionMatch.length - 1].match(/\| (\d+\.\d+)/)?.[1];
     if (lastVersion) {
-      const [major, minor] = lastVersion.split('.').map(Number);
+      const [major, minor] = lastVersion.split(".").map(Number);
       return `${major}.${minor + 1}`;
     }
   }
-  return '1.1';
+  return "1.1";
 }
 
 // Recalculate statistics from the matrix content
@@ -180,7 +182,8 @@ function recalculateStatistics(content: string): CategoryStats {
   const stats: CategoryStats = {};
 
   // Find all requirement rows
-  const rowRegex = /\| (SRS-([A-Z]+)-\d+) \|[^|]+\|[^|]+\|[^|]+\|[^|]+\|\s*(\w+)\s*\|/g;
+  const rowRegex =
+    /\| (SRS-([A-Z]+)-\d+) \|[^|]+\|[^|]+\|[^|]+\|[^|]+\|\s*(\w+)\s*\|/g;
 
   let match;
   while ((match = rowRegex.exec(content)) !== null) {
@@ -191,11 +194,11 @@ function recalculateStatistics(content: string): CategoryStats {
       stats[category] = { implemented: 0, verify: 0, pending: 0 };
     }
 
-    if (status === 'implemented') {
+    if (status === "implemented") {
       stats[category].implemented++;
-    } else if (status === 'verify') {
+    } else if (status === "verify") {
       stats[category].verify++;
-    } else if (status === 'pending') {
+    } else if (status === "pending") {
       stats[category].pending++;
     }
   }
@@ -204,7 +207,10 @@ function recalculateStatistics(content: string): CategoryStats {
 }
 
 // Update the statistics section in the content
-function updateStatisticsSection(content: string, stats: CategoryStats): string {
+function updateStatisticsSection(
+  content: string,
+  stats: CategoryStats,
+): string {
   // Calculate totals
   let totalImplemented = 0;
   let totalVerify = 0;
@@ -226,21 +232,21 @@ function updateStatisticsSection(content: string, stats: CategoryStats): string 
   // Update the coverage section
   content = content.replace(
     /\*\*Implemented\*\*: \d+ \(\d+\.\d+%\)/,
-    `**Implemented**: ${totalImplemented} (${implementedPercent}%)`
+    `**Implemented**: ${totalImplemented} (${implementedPercent}%)`,
   );
   content = content.replace(
     /\*\*Needs Verification\*\*: \d+ \(\d+\.\d+%\)/,
-    `**Needs Verification**: ${totalVerify} (${verifyPercent}%)`
+    `**Needs Verification**: ${totalVerify} (${verifyPercent}%)`,
   );
   content = content.replace(
     /\*\*Pending Implementation\*\*: \d+ \(\d+\.\d+%\)/,
-    `**Pending Implementation**: ${totalPending} (${pendingPercent}%)`
+    `**Pending Implementation**: ${totalPending} (${pendingPercent}%)`,
   );
 
   // Update total row
   content = content.replace(
     /\| \*\*TOTAL\*\* \| \*\*\d+\*\* \| \*\*\d+\*\* \| \*\*\d+\*\* \| \*\*\d+\*\* \|/,
-    `| **TOTAL** | **${total}** | **${totalImplemented}** | **${totalVerify}** | **${totalPending}** |`
+    `| **TOTAL** | **${total}** | **${totalImplemented}** | **${totalVerify}** | **${totalPending}** |`,
   );
 
   return content;
@@ -251,14 +257,17 @@ async function main(): Promise<void> {
   const options = parseArgs();
 
   if (options.requirements.length === 0) {
-    console.log('No requirements specified. Nothing to update.');
+    console.log("No requirements specified. Nothing to update.");
     return;
   }
 
-  const matrixPath = path.resolve(__dirname, '../../docs/srs/traceability-matrix.md');
+  const matrixPath = path.resolve(
+    __dirname,
+    "../../docs/srs/traceability-matrix.md",
+  );
 
   console.log(`\n--- SRS Traceability Matrix Update ---`);
-  console.log(`Requirements to update: ${options.requirements.join(', ')}`);
+  console.log(`Requirements to update: ${options.requirements.join(", ")}`);
   console.log(`Matrix file: ${matrixPath}`);
   console.log(`Dry run: ${options.dryRun}`);
 
@@ -284,7 +293,11 @@ async function main(): Promise<void> {
   }
 
   // Add revision history entry
-  content = addRevisionEntry(content, options.commitRange, options.requirements);
+  content = addRevisionEntry(
+    content,
+    options.commitRange,
+    options.requirements,
+  );
 
   // Recalculate and update statistics
   const stats = recalculateStatistics(content);
@@ -292,18 +305,20 @@ async function main(): Promise<void> {
 
   // Output or save
   if (options.dryRun) {
-    console.log('\n--- Dry Run Output ---');
-    console.log('Statistics:');
+    console.log("\n--- Dry Run Output ---");
+    console.log("Statistics:");
     for (const [category, counts] of Object.entries(stats)) {
       const total = counts.implemented + counts.verify + counts.pending;
-      console.log(`  ${category}: ${total} total (${counts.implemented} impl, ${counts.verify} verify, ${counts.pending} pending)`);
+      console.log(
+        `  ${category}: ${total} total (${counts.implemented} impl, ${counts.verify} verify, ${counts.pending} pending)`,
+      );
     }
   } else {
     fs.writeFileSync(matrixPath, content);
     console.log(`\nTraceability matrix updated successfully.`);
 
     // Log statistics
-    console.log('\nUpdated Statistics:');
+    console.log("\nUpdated Statistics:");
     let totalAll = 0;
     let totalImpl = 0;
     for (const [category, counts] of Object.entries(stats)) {
@@ -312,7 +327,9 @@ async function main(): Promise<void> {
       totalImpl += counts.implemented;
       console.log(`  ${category}: ${counts.implemented}/${total} implemented`);
     }
-    console.log(`  TOTAL: ${totalImpl}/${totalAll} (${((totalImpl / totalAll) * 100).toFixed(1)}%)`);
+    console.log(
+      `  TOTAL: ${totalImpl}/${totalAll} (${((totalImpl / totalAll) * 100).toFixed(1)}%)`,
+    );
   }
 }
 

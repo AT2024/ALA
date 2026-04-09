@@ -1,4 +1,5 @@
 # Docker Swarm Migration Guide
+
 # ALA Medical Application
 
 ## Overview
@@ -6,17 +7,20 @@
 This guide walks through the complete migration from Docker Compose to Docker Swarm for zero-downtime deployments.
 
 **Current State:**
+
 - Production running on Azure VM with Docker Compose
 - `./deploy` script works but has ~60 seconds downtime
 - Staging environment broken (blue-green promotion failed)
 
 **Target State:**
+
 - API and Frontend services in Docker Swarm (zero-downtime rolling updates)
 - Database remains in Docker Compose (stability for medical data)
 - Single `./swarm-deploy` command for all future deployments
 - Automatic rollback on health check failures
 
 **Timeline:**
+
 - Phase 1 (30 min): Deploy patient name changes (current deploy method)
 - Phase 2 (15 min): Clean up broken systems
 - Phase 3 (45 min): Swarm migration during scheduled maintenance
@@ -999,6 +1003,7 @@ diff .env .env.production.template
 After completing all phases, verify everything is working:
 
 ### ✅ Phase 1 Validation
+
 - [ ] Patient name field appears in UI
 - [ ] Patient name column exists in database
 - [ ] Treatment tracking shows patient names correctly
@@ -1006,12 +1011,14 @@ After completing all phases, verify everything is working:
 - [ ] Frontend loads without errors
 
 ### ✅ Phase 2 Validation
+
 - [ ] Broken staging files archived to `archive/broken-configs/`
 - [ ] No orphaned staging containers running
 - [ ] Archive README explains why files were removed
 - [ ] Changes committed to Git
 
 ### ✅ Phase 3 Validation
+
 - [ ] Docker Swarm initialized and active
 - [ ] Overlay network `ala-network` exists
 - [ ] Database running in Docker Compose
@@ -1022,6 +1029,7 @@ After completing all phases, verify everything is working:
 - [ ] Browser access works: https://ala-app.israelcentral.cloudapp.azure.com
 
 ### ✅ Phase 4 Validation
+
 - [ ] Test deployment completed with zero downtime
 - [ ] Continuous health checks showed no interruptions
 - [ ] Revert deployment completed with zero downtime
@@ -1030,6 +1038,7 @@ After completing all phases, verify everything is working:
 - [ ] Final health checks pass
 
 ### ✅ Post-Migration Validation
+
 - [ ] `./swarm-deploy` script works
 - [ ] Monthly deployment workflow documented
 - [ ] Monitoring commands tested
@@ -1043,13 +1052,13 @@ After completing all phases, verify everything is working:
 
 **Estimated timeline for each phase:**
 
-| Phase | Duration | Downtime | Can be scheduled? |
-|-------|----------|----------|-------------------|
-| Phase 1: Patient Name Deployment | 30 min | ~60 sec | Yes, any time |
-| Phase 2: Cleanup | 15 min | None | Yes, any time |
-| Phase 3: Swarm Migration | 45 min | ~5 min | Requires maintenance window |
-| Phase 4: Verification | 15 min | None | Immediately after Phase 3 |
-| **Total** | **~2 hours** | **~6 minutes** | - |
+| Phase                            | Duration     | Downtime       | Can be scheduled?           |
+| -------------------------------- | ------------ | -------------- | --------------------------- |
+| Phase 1: Patient Name Deployment | 30 min       | ~60 sec        | Yes, any time               |
+| Phase 2: Cleanup                 | 15 min       | None           | Yes, any time               |
+| Phase 3: Swarm Migration         | 45 min       | ~5 min         | Requires maintenance window |
+| Phase 4: Verification            | 15 min       | None           | Immediately after Phase 3   |
+| **Total**                        | **~2 hours** | **~6 minutes** | -                           |
 
 **Recommended schedule:**
 
@@ -1095,17 +1104,20 @@ Migration is successful when:
 ## Support
 
 **For migration issues:**
+
 - Check troubleshooting section above
 - Review SWARM_OPERATIONS.md for detailed operations guide
 - Check service logs: `docker service logs ala_api`
 - Verify prerequisites: Swarm active, network exists, database running
 
 **For emergency rollback:**
+
 - Follow "Rollback to Pre-Swarm State" section above
 - Restore from backup: `~/ala-improved/backups/backup-pre-swarm-*.sql`
 - Contact: Check Azure VM SSH access, verify backups exist
 
 **Documentation:**
+
 - Operations guide: [SWARM_OPERATIONS.md](SWARM_OPERATIONS.md)
 - Stack configuration: [docker-stack.yml](docker-stack.yml)
 - Database config: [docker-compose.db.yml](docker-compose.db.yml)

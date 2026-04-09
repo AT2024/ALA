@@ -26,11 +26,19 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"  # Exposed for local development tools (VSCode, pgAdmin, etc.)
-                     # Production: Azure firewall blocks external access (only ports 80, 443, 22 allowed)
-                     # For Azure production DB access: ssh -L 5433:localhost:5432 azureuser@20.217.84.100
+      - "5432:5432" # Exposed for local development tools (VSCode, pgAdmin, etc.)
+        # Production: Azure firewall blocks external access (only ports 80, 443, 22 allowed)
+        # For Azure production DB access: ssh -L 5433:localhost:5432 azureuser@20.217.84.100
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-ala_user}", "-d", "${POSTGRES_DB:-ala_production}"]
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "${POSTGRES_USER:-ala_user}",
+          "-d",
+          "${POSTGRES_DB:-ala_production}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +48,7 @@ services:
   # Backend API (Express + TypeScript)
   # ===================================================================
   api:
-    image: ala-api:production  # Tagged for image promotion workflow
+    image: ala-api:production # Tagged for image promotion workflow
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -64,14 +72,22 @@ services:
       AZURE_EMAIL_SENDER_ADDRESS: ${AZURE_EMAIL_SENDER_ADDRESS:-}
       PDF_RECIPIENT_EMAIL: ${PDF_RECIPIENT_EMAIL:-}
     volumes:
-      - uploads-data:/usr/src/app/uploads  # Persistent storage for applicator file uploads
+      - uploads-data:/usr/src/app/uploads # Persistent storage for applicator file uploads
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "5000:5000"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:5000/api/health",
+        ]
       interval: 15s
       timeout: 10s
       retries: 3
@@ -81,7 +97,7 @@ services:
   # Frontend (React + Vite + Nginx)
   # ===================================================================
   frontend:
-    image: ala-frontend:production  # Tagged for image promotion workflow
+    image: ala-frontend:production # Tagged for image promotion workflow
     build:
       context: ..
       dockerfile: frontend/Dockerfile
@@ -93,8 +109,8 @@ services:
     container_name: ala-frontend
     restart: always
     ports:
-      - "80:8080"     # Host 80 → Container 8080 (HTTP redirect to HTTPS)
-      - "443:8443"    # Host 443 → Container 8443 (HTTPS)
+      - "80:8080" # Host 80 → Container 8080 (HTTP redirect to HTTPS)
+      - "443:8443" # Host 443 → Container 8443 (HTTPS)
     # SSL certificates for HTTPS (Let's Encrypt)
     volumes:
       - ~/ala-improved/ssl-certs/certs/fullchain.crt:/etc/ssl/certs/fullchain.crt:ro
@@ -103,7 +119,15 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

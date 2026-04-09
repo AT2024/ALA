@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # ALA Medical Application - Docker Swarm Stack
 # Zero-Downtime Deployment Configuration
@@ -43,11 +43,11 @@ services:
       replicas: 2
       update_config:
         # Rolling update configuration - achieves zero downtime
-        parallelism: 1              # Update 1 replica at a time
-        delay: 30s                  # Wait 30s between updates
-        failure_action: rollback    # Auto-rollback on failure
-        order: start-first          # Start new before stopping old (KEY for zero downtime!)
-        monitor: 30s                # Monitor health for 30s after update
+        parallelism: 1 # Update 1 replica at a time
+        delay: 30s # Wait 30s between updates
+        failure_action: rollback # Auto-rollback on failure
+        order: start-first # Start new before stopping old (KEY for zero downtime!)
+        monitor: 30s # Monitor health for 30s after update
       rollback_config:
         parallelism: 1
         delay: 10s
@@ -60,9 +60,17 @@ services:
         window: 120s
       placement:
         constraints:
-          - node.role == manager     # Run on manager node (single VM setup)
+          - node.role == manager # Run on manager node (single VM setup)
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:5000/api/health",
+        ]
       interval: 15s
       timeout: 10s
       retries: 3
@@ -85,13 +93,16 @@ services:
         source: /home/azureuser/ala-improved/ssl-certs/private/private.key
         target: /etc/ssl/private/private.key
         read_only: true
+      - type: bind
+        source: /home/azureuser/ala-improved/certbot-webroot
+        target: /var/www/certbot
     deploy:
       replicas: 2
       update_config:
         parallelism: 1
         delay: 30s
         failure_action: rollback
-        order: start-first          # Zero downtime: new container before old removed
+        order: start-first # Zero downtime: new container before old removed
         monitor: 30s
       rollback_config:
         parallelism: 1
@@ -107,7 +118,15 @@ services:
         constraints:
           - node.role == manager
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

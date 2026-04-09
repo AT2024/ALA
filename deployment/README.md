@@ -88,6 +88,7 @@ cd ~/ala-improved/deployment
 ```
 
 That's it. The script automatically:
+
 - ✅ Backs up the database
 - ✅ Pulls latest code
 - ✅ Builds containers
@@ -162,12 +163,14 @@ docker-compose up
 ## What Happened to Staging/Blue-Green?
 
 **Archived in `archive/broken-configs/`:**
+
 - `deploy-staging` - Staging environment broken, couldn't run
 - `promote-to-production` - Image promotion fundamentally flawed
 - Blue-green deployment files - Caused October 27, 2025 production outage
 - Staging configs, nginx configs, azure configs
 
 **Why archived?**
+
 1. Image promotion doesn't work when staging/production have different build-time configs
 2. Testing deployment infrastructure on production is dangerous (learned the hard way)
 3. Docker Swarm rolling updates are simpler and more reliable than blue-green
@@ -213,6 +216,7 @@ docker-compose exec -T db psql -U ala_user ala_production < ../backups/backup-TI
 ### Swarm Troubleshooting
 
 After Swarm migration, see [SWARM_OPERATIONS.md](SWARM_OPERATIONS.md) for comprehensive troubleshooting:
+
 - Service won't start
 - Service stuck at 1/2 replicas
 - Deployment hangs
@@ -227,6 +231,7 @@ After Swarm migration, see [SWARM_OPERATIONS.md](SWARM_OPERATIONS.md) for compre
 ### Why So Simple?
 
 **The Problem (Before):**
+
 - 5+ deployment scripts
 - 7+ environment files
 - Staging/blue-green infrastructure that broke production
@@ -235,6 +240,7 @@ After Swarm migration, see [SWARM_OPERATIONS.md](SWARM_OPERATIONS.md) for compre
 - 30+ minutes to understand deployment
 
 **The Solution (Now):**
+
 - 1 deployment script (`./deploy` or `./swarm-deploy`)
 - 1 docker-compose file (or Swarm: docker-stack.yml + docker-compose.db.yml)
 - 1 environment template
@@ -242,6 +248,7 @@ After Swarm migration, see [SWARM_OPERATIONS.md](SWARM_OPERATIONS.md) for compre
 - 5 minutes to understand deployment
 
 **The Result:**
+
 - Deployments that work
 - Zero-downtime for worldwide users (with Swarm)
 - Time spent building features, not maintaining infrastructure

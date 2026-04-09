@@ -77,12 +77,14 @@ An image tag like `cors-fixed` can be updated with new code while keeping the sa
 ### Timeline
 
 **November 12, 16:44** - Deploy with tag `cors-fixed`
+
 - Pancreas combined treatment feature code included
 - Deployment succeeds
 - Tag: `cors-fixed`
 - Code: Pancreas feature ✅
 
 **November 13, 14:01** - Try to deploy with tag `20251113-140140`
+
 - API deployment succeeds → tag updates
 - Frontend deployment fails (SSL cert path mismatch)
 - Frontend rolls back to `cors-fixed`
@@ -90,6 +92,7 @@ An image tag like `cors-fixed` can be updated with new code while keeping the sa
 - Code: **Still has pancreas feature from Nov 12** ✅
 
 **Result**:
+
 - Application works perfectly
 - New features are live
 - Tag just didn't update (cosmetic issue)
@@ -172,6 +175,7 @@ docker service ps ala_frontend --format 'table {{.Name}}\t{{.Image}}\t{{.Current
 ### Tags Matter For:
 
 1. **Rollback Operations**
+
    ```bash
    # Need to revert to specific version
    docker service update ala_frontend --image ala-frontend:20251112-143955
@@ -273,6 +277,7 @@ Document deployments with actual versions and outcomes:
 ### Q: Tag shows old version but app works fine - is this a problem?
 
 **A**: No! Functionality is what matters. The old tag may contain recent code from a previous deployment. Verify with:
+
 - Image creation date (should be recent)
 - Asset file timestamps in container
 - Browser console asset hashes
@@ -280,6 +285,7 @@ Document deployments with actual versions and outcomes:
 ### Q: How do I know if latest code is actually deployed?
 
 **A**: Multi-point verification:
+
 1. Check service tags (should match deployment version)
 2. Check for failed tasks (no recent failures)
 3. Test application features (do new features work?)
@@ -288,6 +294,7 @@ Document deployments with actual versions and outcomes:
 ### Q: Should I always fix tag mismatches?
 
 **A**: Depends:
+
 - **If app works correctly**: Not urgent, fix when convenient
 - **If features are missing**: Yes, investigate and redeploy
 - **If audit trail needed**: Yes, redeploy with fixed config for proper versioning
@@ -295,6 +302,7 @@ Document deployments with actual versions and outcomes:
 ### Q: Can I manually update service tags?
 
 **A**: Yes, but not recommended:
+
 ```bash
 # Possible but avoid
 docker service update ala_frontend --image ala-frontend:20251113-140140
@@ -324,6 +332,7 @@ Tag shows old version after deployment?
 ## Summary
 
 **Remember**:
+
 1. **Tags are labels** - convenient for tracking, not the source of truth
 2. **Container content is truth** - what code is actually running
 3. **Verify functionality first** - does the app work?

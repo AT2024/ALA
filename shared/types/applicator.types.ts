@@ -13,18 +13,23 @@
  * Status workflow is managed by shared/applicatorStatuses.ts
  */
 
-import type { ApplicatorStatus } from '../applicatorStatuses';
+import type { ApplicatorStatus } from "../applicatorStatuses";
 
 /**
  * Legacy usage type - kept for backwards compatibility
  * New code should use ApplicatorStatus from applicatorStatuses.ts
  */
-export type UsageType = 'full' | 'faulty' | 'none';
+export type UsageType = "full" | "faulty" | "none";
 
 /**
  * Attachment sync status for files stored in Priority ERP
  */
-export type AttachmentSyncStatus = 'pending' | 'syncing' | 'synced' | 'failed' | null;
+export type AttachmentSyncStatus =
+  | "pending"
+  | "syncing"
+  | "synced"
+  | "failed"
+  | null;
 
 /**
  * Canonical Applicator interface
@@ -103,7 +108,13 @@ export interface ApplicatorGroup {
 export interface ApplicatorValidationResult {
   isValid: boolean;
   message?: string;
-  scenario?: 'valid' | 'already_scanned' | 'wrong_treatment' | 'no_use' | 'not_allowed' | 'expired';
+  scenario?:
+    | "valid"
+    | "already_scanned"
+    | "wrong_treatment"
+    | "no_use"
+    | "not_allowed"
+    | "expired";
   applicator?: Applicator;
 }
 
