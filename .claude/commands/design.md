@@ -1,3 +1,9 @@
+---
+description: Start a Design Log Entry
+model: opus
+effort: high
+---
+
 # Start a Design Log Entry
 
 Before implementing significant changes, create a design log entry.
@@ -12,6 +18,7 @@ Before implementing significant changes, create a design log entry.
 ## What Requires a Design Log?
 
 A "significant change" that needs a design log entry:
+
 - Database schema changes (migrations, new tables, column modifications)
 - API contract changes (new endpoints, breaking changes, auth modifications)
 - Azure infrastructure changes (Docker config, networking, environment variables)
@@ -27,22 +34,28 @@ A "significant change" that needs a design log entry:
 **Author**: [name]
 
 ## Context
+
 [Why is this change needed?]
 
 ## Design Questions
+
 - [ ] Question 1?
 - [ ] Question 2?
 
 ## Proposed Solution
+
 [Options with pros/cons]
 
 ## Decision
+
 [Selected approach and rationale]
 
 ## Implementation Notes
+
 [Key files and changes]
 
 ## Results
+
 > Added after implementation
 ```
 

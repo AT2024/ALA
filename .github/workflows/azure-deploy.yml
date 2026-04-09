@@ -14,22 +14,22 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - production  # Only deploy to production from production branch
+      - production # Only deploy to production from production branch
   workflow_dispatch:
     inputs:
       skip_backup:
-        description: 'Skip database backup (not recommended)'
+        description: "Skip database backup (not recommended)"
         required: false
         default: false
         type: boolean
       skip_staging_check:
-        description: 'Skip staging verification (emergency only)'
+        description: "Skip staging verification (emergency only)"
         required: false
         default: false
         type: boolean
 
 env:
-  AZURE_VM_IP: '20.217.84.100'
+  AZURE_VM_IP: "20.217.84.100"
 
 jobs:
   # =================================================================
@@ -71,12 +71,12 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: pre-deployment-checks
-    environment: production  # Require manual approval for production
+    environment: production # Require manual approval for production
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Create Production Backup
         if: ${{ !inputs.skip_backup }}
         uses: appleboy/ssh-action@v1.0.0
@@ -160,7 +160,7 @@ jobs:
 
             echo "✅ Production deployment completed!"
             echo "[$(date -Iseconds)] PRODUCTION DEPLOYMENT: Completed successfully" >> production-deployment.log
-      
+
       - name: Verify Production Deployment
         uses: appleboy/ssh-action@v1.0.0
         with:

@@ -18,16 +18,19 @@ Run the test suite and build verification for the ALA project.
 2. Run the appropriate tests:
 
 **For backend:**
+
 ```bash
 cd backend && npm test
 ```
 
 **For frontend:**
+
 ```bash
 cd frontend && npm test
 ```
 
 3. After tests pass, verify build:
+
 ```bash
 cd backend && npm run build
 cd frontend && npm run build
@@ -38,6 +41,7 @@ cd frontend && npm run build
 ## TDD Reminder
 
 Per the Development Standards in settings.md:
+
 - Bug fixes: Write failing test FIRST
 - New features: Define test cases before implementation
 - Medical safety changes: MANDATORY tests before code
@@ -45,6 +49,7 @@ Per the Development Standards in settings.md:
 ## On Failure
 
 If tests or build fail:
+
 1. Report the specific failure
 2. Do NOT proceed with commits
 3. Fix the issue or ask for guidance

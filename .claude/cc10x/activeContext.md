@@ -17,11 +17,11 @@ Sequelize model instances with bidirectional associations (Treatment ↔ Applica
 
 ## Files to Fix
 
-| File | Line | Function |
-|------|------|----------|
-| `treatmentController.ts` | 122 | `getTreatments()` |
-| `treatmentController.ts` | 134 | `getTreatmentById()` |
-| `treatmentController.ts` | 686 | `getRemovalCandidates()` |
+| File                     | Line | Function                 |
+| ------------------------ | ---- | ------------------------ |
+| `treatmentController.ts` | 122  | `getTreatments()`        |
+| `treatmentController.ts` | 134  | `getTreatmentById()`     |
+| `treatmentController.ts` | 686  | `getRemovalCandidates()` |
 
 ## Pattern to Use
 
@@ -30,7 +30,7 @@ Sequelize model instances with bidirectional associations (Treatment ↔ Applica
 res.json(model.toJSON());
 
 // For array (mixed types from DB/Priority)
-res.json(items.map(t => typeof t.toJSON === 'function' ? t.toJSON() : t));
+res.json(items.map((t) => (typeof t.toJSON === "function" ? t.toJSON() : t)));
 ```
 
 ## Plan Location
@@ -38,4 +38,5 @@ res.json(items.map(t => typeof t.toJSON === 'function' ? t.toJSON() : t));
 `C:\Users\amitaik\.claude\plans\warm-enchanting-horizon.md`
 
 ## Last Updated
+
 2026-01-14

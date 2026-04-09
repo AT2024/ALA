@@ -10,13 +10,13 @@ Parse $ARGUMENTS to launch an analysis agent.
 
 ## Task Types and Agents
 
-| Task | Agent | Command |
-|------|-------|---------|
-| test | testing-specialist | npm test |
-| lint | ala-code-reviewer | npm run lint && npm run typecheck |
-| review | ala-code-reviewer | git diff analysis |
-| security | security-audit | dependency and auth analysis |
-| coverage | testing-specialist | npm run test:coverage |
+| Task     | Agent              | Command                           |
+| -------- | ------------------ | --------------------------------- |
+| test     | testing-specialist | npm test                          |
+| lint     | ala-code-reviewer  | npm run lint && npm run typecheck |
+| review   | ala-code-reviewer  | git diff analysis                 |
+| security | security-audit     | dependency and auth analysis      |
+| coverage | testing-specialist | npm run test:coverage             |
 
 ## Execution Steps
 

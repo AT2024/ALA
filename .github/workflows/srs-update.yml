@@ -10,20 +10,20 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend/src/**'
-      - 'frontend/src/**'
-      - 'package*.json'
+      - "backend/src/**"
+      - "frontend/src/**"
+      - "package*.json"
   workflow_dispatch:
     inputs:
       force_full_update:
-        description: 'Force full traceability update (ignores change detection)'
+        description: "Force full traceability update (ignores change detection)"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
       dry_run:
-        description: 'Dry run - preview changes without creating PR'
+        description: "Dry run - preview changes without creating PR"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 permissions:
@@ -31,7 +31,7 @@ permissions:
   pull-requests: write
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
   # =================================================================
@@ -55,7 +55,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Get Changed Files
         id: changes
@@ -143,7 +143,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install Backend Dependencies
         run: |
@@ -194,7 +194,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Download Test Results
         uses: actions/download-artifact@v4

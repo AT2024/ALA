@@ -30,7 +30,7 @@ on:
       - develop
   schedule:
     # Weekly scan on Saturdays at 2 AM UTC to catch new vulnerabilities
-    - cron: '0 2 * * 6'
+    - cron: "0 2 * * 6"
   workflow_dispatch:
 
 jobs:
@@ -52,12 +52,12 @@ jobs:
       matrix:
         # CodeQL supports: 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
         # Our stack: TypeScript/JavaScript in backend and frontend
-        language: ['javascript-typescript']
+        language: ["javascript-typescript"]
         include:
           - language: javascript-typescript
             build-mode: none
             # Paths to analyze (will be refined by codeql-config.yml)
-            source-root: '.'
+            source-root: "."
 
     steps:
       - name: Checkout repository

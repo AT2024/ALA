@@ -12,6 +12,15 @@
             "command": "npx prettier --write \"${FILE_PATH}\" 2>/dev/null || true"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if echo \"${FILE_PATH}\" | grep -qE \"backend/src/models/.*\\.ts$\"; then echo \"⚠️ MODEL FILE CHANGED: Remember to create a migration file in backend/src/migrations/ for any new or modified columns.\"; fi'"
+          }
+        ]
       }
     ]
   }

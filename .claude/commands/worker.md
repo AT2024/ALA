@@ -9,6 +9,7 @@ Parse $ARGUMENTS for worktree management using `./scripts/setup-parallel-worker.
 ## Actions
 
 ### create <name> [--quick]
+
 1. Get current branch: `git branch --show-current`
 2. Build command: `./scripts/setup-parallel-worker.sh create --branch <branch> --name <name>`
 3. If `--quick` is present: add `--skip-install` (fast mode, may break dev server)
@@ -16,11 +17,13 @@ Parse $ARGUMENTS for worktree management using `./scripts/setup-parallel-worker.
 5. Execute and report results
 
 ### remove <name>
+
 Execute: `./scripts/setup-parallel-worker.sh remove --name <name> --force`
 
 Note: `--force` required for non-interactive execution.
 
 ### list
+
 Execute: `./scripts/setup-parallel-worker.sh list`
 
 ## Error Handling
