@@ -485,19 +485,19 @@ describe("Priority Service", () => {
   });
 
   describe("updateApplicatorInPriority", () => {
-    test("should update applicator in Priority system", async () => {
-      mockAxiosInstance.post.mockResolvedValue({ data: { success: true } });
+    test("should GET+PATCH applicator in Priority via SIBD_APPUSELISTTEXT_SUBFORM", async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { value: [{ KLINE: 42, SERNUMTEXT: "APP001-2025-001" }] },
+      });
+      mockAxiosInstance.patch.mockResolvedValue({ status: 200 });
 
       const applicatorData = {
         serialNumber: "APP001-2025-001",
         treatmentId: "SO25000015",
-        patientId: "PAT-2025-015",
-        site: "100078",
         insertionTime: "2025-07-10T10:30:00Z",
         usageType: "Full use",
         insertedSeedsQty: 25,
         comments: "Test applicator",
-        date: "2025-07-10",
       };
 
       const result =
@@ -507,15 +507,13 @@ describe("Priority Service", () => {
       expect(result.message).toBe(
         "Applicator data saved to Priority successfully",
       );
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        "/ORDERS('SO25000015')/SIBD_APPLICATUSELIST_SUBFORM",
+      expect(mockAxiosInstance.patch).toHaveBeenCalledWith(
+        "/ORDERS('SO25000015')/SIBD_APPUSELISTTEXT_SUBFORM(KLINE=42)",
         {
-          SERNUM: "APP001-2025-001",
-          PARTNAME: "Standard Applicator",
-          ALPH_USETIME: "2025-07-10T10:30:00Z",
-          ALPH_USETYPE: "Full use",
-          ALPH_INSERTED: 25,
-          FREE1: "Test applicator",
+          INSERTEDSEEDSQTY: 25,
+          USINGTYPE: "Full use",
+          INSERTIONCOMMENTS: "Test applicator",
+          INSERTIONDATE: "2025-07-10T10:30:00Z",
         },
       );
     });
@@ -535,15 +533,13 @@ describe("Priority Service", () => {
       expect(result.message).toBe(
         "Applicator data saved locally (Priority saving disabled)",
       );
-      expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+      expect(mockAxiosInstance.get).not.toHaveBeenCalled();
 
-      // Reset environment variable
       delete process.env.ENABLE_PRIORITY_APPLICATOR_SAVE;
     });
 
-    test("should handle API error in development mode", async () => {
-      process.env.NODE_ENV = "development";
-      mockAxiosInstance.post.mockRejectedValue(new Error("API error"));
+    test("should return failure when applicator not found in Priority", async () => {
+      mockAxiosInstance.get.mockResolvedValue({ data: { value: [] } });
 
       const applicatorData = {
         serialNumber: "APP001-2025-001",
@@ -553,17 +549,15 @@ describe("Priority Service", () => {
       const result =
         await priorityService.updateApplicatorInPriority(applicatorData);
 
-      expect(result.success).toBe(true);
-      expect(result.message).toBe(
-        "Applicator data saved locally (Priority save simulated in development)",
-      );
-
-      // Reset environment variable
-      process.env.NODE_ENV = "test";
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("not found");
     });
 
-    test("should continue with local save when API fails in production", async () => {
-      mockAxiosInstance.post.mockRejectedValue(new Error("API error"));
+    test("should continue with local save when PATCH fails in production", async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { value: [{ KLINE: 42, SERNUMTEXT: "APP001-2025-001" }] },
+      });
+      mockAxiosInstance.patch.mockRejectedValue(new Error("API error"));
 
       const applicatorData = {
         serialNumber: "APP001-2025-001",

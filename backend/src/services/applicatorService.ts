@@ -687,7 +687,7 @@ export const applicatorService = {
       // Map our usage types to Priority expected values
       const priorityUsageType = this.mapUsageTypeToPriority(usageTypeToSync);
 
-      // Update Priority SIBD_APPLICATUSELIST table
+      // Update Priority SIBD_APPUSELISTTEXT_SUBFORM table
       // Note: treatment.subjectId contains the Priority ORDNAME (e.g., "SO25000015") for old treatments
       // where priorityId was not set during creation
       const priorityUpdateData = {

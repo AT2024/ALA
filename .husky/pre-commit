@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # Run lint-staged to lint only staged files
-npx lint-staged
+npx lint-staged --config package.json
 
 # Run affected tests on staged files
 echo "Running tests on affected files..."

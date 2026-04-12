@@ -293,7 +293,7 @@ export const getOrdersForSiteAndDate = asyncHandler(
   },
 );
 
-// @desc    Get order details using SIBD_APPLICATUSELIST_SUBFORM
+// @desc    Get order details using SIBD_APPUSELISTTEXT_SUBFORM
 // @route   GET /api/proxy/priority/orders/:orderId/subform
 // @access  Private
 export const getOrderSubform = asyncHandler(

@@ -177,15 +177,15 @@ describe("Priority Service - syncApplicatorUsageToPriority", () => {
     );
   });
 
-  test("should simulate success in development mode on API error", async () => {
+  test("should return failure on API error regardless of environment", async () => {
     process.env.NODE_ENV = "development";
     mockAxiosInstance.get.mockRejectedValueOnce(new Error("API error"));
 
     const result =
       await priorityService.syncApplicatorUsageToPriority(baseSyncData);
 
-    expect(result.success).toBe(true);
-    expect(result.message).toContain("simulated");
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("not found");
   });
 
   test("should return failure in production on API error", async () => {

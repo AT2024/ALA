@@ -2050,15 +2050,53 @@ export const priorityService = {
   },
 
   /**
-   * Update applicator data in Priority using ORDERS subform
+   * Find an applicator's KLINE in SIBD_APPUSELISTTEXT_SUBFORM by serial number.
+   * Handles combined orders (e.g. "SO25000275+SO25000274") by trying each.
+   * Returns { kline, orderId } or null if not found.
+   */
+  async findApplicatorKline(
+    serialNumber: string,
+    orderId: string,
+  ): Promise<{ kline: number; orderId: string } | null> {
+    const orderIds = orderId.includes("+") ? orderId.split("+") : [orderId];
+
+    for (const singleOrderId of orderIds) {
+      try {
+        const getResponse = await priorityApi.get(
+          `/ORDERS('${singleOrderId}')/SIBD_APPUSELISTTEXT_SUBFORM`,
+          {
+            params: {
+              $filter: `SERNUMTEXT eq '${serialNumber}'`,
+              $select: "KLINE,SERNUMTEXT",
+            },
+          },
+        );
+
+        const rows = getResponse.data?.value || [];
+        if (rows.length > 0) {
+          logger.info(
+            `Found applicator ${serialNumber} at KLINE=${rows[0].KLINE} in order ${singleOrderId}`,
+          );
+          return { kline: rows[0].KLINE, orderId: singleOrderId };
+        }
+      } catch (err: any) {
+        logger.warn(
+          `Error looking up applicator in order ${singleOrderId}: ${err.message}`,
+        );
+      }
+    }
+
+    return null;
+  },
+
+  /**
+   * Update applicator usage data in Priority via GET+PATCH on SIBD_APPUSELISTTEXT_SUBFORM.
+   * Finds the row by serial number, then PATCHes usage fields.
+   * Returns success:true even on Priority failure so local save is not blocked.
    */
   async updateApplicatorInPriority(applicatorData: any) {
     try {
-      // Check if Priority applicator saving is enabled
-      const enablePrioritySaving =
-        process.env.ENABLE_PRIORITY_APPLICATOR_SAVE !== "false";
-
-      if (!enablePrioritySaving) {
+      if (process.env.ENABLE_PRIORITY_APPLICATOR_SAVE === "false") {
         logger.info(`Priority applicator saving disabled via configuration`);
         return {
           success: true,
@@ -2066,33 +2104,54 @@ export const priorityService = {
         };
       }
 
+      const orderId = applicatorData.treatmentId;
+      const serialNumber = applicatorData.serialNumber;
+
       logger.info(
-        `Saving applicator ${applicatorData.serialNumber} to Priority via ORDERS subform`,
+        `Saving applicator ${serialNumber} to Priority order ${orderId}`,
       );
 
-      // Prepare data for Priority subform - using the ORDERS/${orderName}/SIBD_APPLICATUSELIST_SUBFORM endpoint
-      const priorityUpdateData = {
-        SERNUM: applicatorData.serialNumber,
-        PARTNAME: "Standard Applicator", // Default part name
-        ALPH_USETIME: applicatorData.insertionTime,
-        ALPH_USETYPE: applicatorData.usageType,
-        ALPH_INSERTED: applicatorData.insertedSeedsQty,
-        FREE1: applicatorData.comments || "",
-      };
+      const found = await this.findApplicatorKline(serialNumber, orderId);
+      if (!found) {
+        logger.warn(
+          `Applicator ${serialNumber} not found in Priority order(s) ${orderId}`,
+        );
+        return {
+          success: false,
+          message: `Applicator ${serialNumber} not found in Priority order ${orderId}`,
+        };
+      }
 
-      logger.info(`Prepared Priority subform data:`, priorityUpdateData);
+      const { kline, orderId: resolvedOrderId } = found;
 
-      // Send data to Priority using the ORDERS subform endpoint
-      const orderName = applicatorData.treatmentId;
+      // PATCH usage data using KLINE as key
+      const priorityUpdateData: Record<string, any> = {};
+      if (applicatorData.insertedSeedsQty !== undefined) {
+        priorityUpdateData.INSERTEDSEEDSQTY = applicatorData.insertedSeedsQty;
+      }
+      if (applicatorData.usageType) {
+        priorityUpdateData.USINGTYPE = applicatorData.usageType;
+      }
+      if (applicatorData.comments) {
+        priorityUpdateData.INSERTIONCOMMENTS = applicatorData.comments;
+      }
+      if (applicatorData.insertionTime) {
+        priorityUpdateData.INSERTIONDATE = applicatorData.insertionTime;
+      }
+
       logger.info(
-        `Sending applicator data to Priority ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`,
-      );
-
-      await priorityApi.post(
-        `/ORDERS('${orderName}')/SIBD_APPLICATUSELIST_SUBFORM`,
+        `Patching applicator ${serialNumber} at KLINE=${kline}:`,
         priorityUpdateData,
       );
-      logger.info(`Successfully saved applicator record to Priority subform`);
+
+      await priorityApi.patch(
+        `/ORDERS('${resolvedOrderId}')/SIBD_APPUSELISTTEXT_SUBFORM(KLINE=${kline})`,
+        priorityUpdateData,
+      );
+
+      logger.info(
+        `Successfully saved applicator ${serialNumber} to Priority order ${resolvedOrderId}`,
+      );
 
       return {
         success: true,
@@ -2108,17 +2167,7 @@ export const priorityService = {
         url: error.config?.url,
       });
 
-      // In development mode, simulate success to allow local testing
-      if (process.env.NODE_ENV === "development") {
-        logger.info(`Development mode: Simulating successful Priority update`);
-        return {
-          success: true,
-          message:
-            "Applicator data saved locally (Priority save simulated in development)",
-        };
-      }
-
-      // In production, don't throw error - log it but return success so local save works
+      // In production, don't throw - log warning so local save still works
       logger.warn(`Priority save failed but continuing with local save`);
       return {
         success: true,
@@ -2143,7 +2192,6 @@ export const priorityService = {
     insertionDate: string;
   }): Promise<{ success: boolean; message: string }> {
     try {
-      // Check if Priority applicator saving is enabled
       if (process.env.ENABLE_PRIORITY_APPLICATOR_SAVE === "false") {
         logger.info(
           `Priority applicator sync disabled via ENABLE_PRIORITY_APPLICATOR_SAVE`,
@@ -2154,65 +2202,41 @@ export const priorityService = {
         };
       }
 
-      // Handle combined orders (e.g. "SO26000055+SO26000056")
-      const orderIds = data.orderId.split("+");
+      logger.info(
+        `Syncing applicator ${data.serialNumber} usage to Priority order ${data.orderId}`,
+      );
 
-      for (const orderId of orderIds) {
-        logger.info(
-          `Syncing applicator ${data.serialNumber} usage to Priority order ${orderId}`,
-        );
-
-        // Find the applicator row by serial number
-        const getResponse = await priorityApi.get(
-          `/ORDERS('${orderId}')/SIBD_APPUSELISTTEXT_SUBFORM`,
-          {
-            params: {
-              $filter: `SERNUMTEXT eq '${data.serialNumber}'`,
-              $select: "KLINE,SERNUMTEXT",
-            },
-          },
-        );
-
-        const rows = getResponse.data?.value || [];
-        if (rows.length === 0) {
-          logger.info(
-            `Applicator ${data.serialNumber} not found in order ${orderId}, trying next`,
-          );
-          continue;
-        }
-
-        const kline = rows[0].KLINE;
-        logger.info(
-          `Found applicator ${data.serialNumber} at KLINE=${kline} in order ${orderId}, patching usage`,
-        );
-
-        await priorityApi.patch(
-          `/ORDERS('${orderId}')/SIBD_APPUSELISTTEXT_SUBFORM(KLINE=${kline})`,
-          {
-            INSERTEDSEEDSQTY: data.seedsInserted,
-            USINGTYPE: data.usageType,
-            INSERTIONCOMMENTS: data.comments,
-            INSERTEDREPORTEDBY: data.reportedBy,
-            INSERTIONDATE: data.insertionDate,
-          },
-        );
-
-        logger.info(
-          `Successfully synced applicator ${data.serialNumber} usage to Priority order ${orderId}`,
+      const found = await this.findApplicatorKline(
+        data.serialNumber,
+        data.orderId,
+      );
+      if (!found) {
+        logger.warn(
+          `Applicator ${data.serialNumber} not found in any Priority order: ${data.orderId}`,
         );
         return {
-          success: true,
-          message: `Applicator usage synced to Priority order ${orderId}`,
+          success: false,
+          message: `Applicator ${data.serialNumber} not found in Priority orders ${data.orderId}`,
         };
       }
 
-      // Not found in any order
-      logger.warn(
-        `Applicator ${data.serialNumber} not found in any Priority order: ${data.orderId}`,
+      await priorityApi.patch(
+        `/ORDERS('${found.orderId}')/SIBD_APPUSELISTTEXT_SUBFORM(KLINE=${found.kline})`,
+        {
+          INSERTEDSEEDSQTY: data.seedsInserted,
+          USINGTYPE: data.usageType,
+          INSERTIONCOMMENTS: data.comments,
+          INSERTEDREPORTEDBY: data.reportedBy,
+          INSERTIONDATE: data.insertionDate,
+        },
+      );
+
+      logger.info(
+        `Successfully synced applicator ${data.serialNumber} usage to Priority order ${found.orderId}`,
       );
       return {
-        success: false,
-        message: `Applicator ${data.serialNumber} not found in Priority orders ${data.orderId}`,
+        success: true,
+        message: `Applicator usage synced to Priority order ${found.orderId}`,
       };
     } catch (error: any) {
       logger.error(`Error syncing applicator usage to Priority: ${error}`);
@@ -2223,17 +2247,6 @@ export const priorityService = {
         data: error.response?.data,
         url: error.config?.url,
       });
-
-      // In development mode, simulate success to allow local testing
-      if (process.env.NODE_ENV === "development") {
-        logger.info(
-          `Development mode: Simulating successful Priority usage sync`,
-        );
-        return {
-          success: true,
-          message: "Applicator usage sync simulated in development mode",
-        };
-      }
 
       return {
         success: false,
@@ -2776,9 +2789,9 @@ export const priorityService = {
   },
 
   /**
-   * Upload file attachment to applicator in Priority from Buffer (in-memory)
-   * Uses the correct Priority API format with composite key and data URL
-   * No local file storage needed - files go directly to Priority ERP
+   * Upload file attachment to applicator in Priority from Buffer (in-memory).
+   * Finds applicator by serial number via findApplicatorKline, then PATCHes EXTFILENAME.
+   * No local file storage needed - files go directly to Priority ERP.
    */
   async uploadApplicatorAttachmentFromBuffer(
     serialNumber: string,
@@ -2786,11 +2799,7 @@ export const priorityService = {
     zipBuffer: Buffer,
   ): Promise<{ success: boolean; message: string }> {
     try {
-      // Check if Priority saving is enabled
-      const enablePrioritySaving =
-        process.env.ENABLE_PRIORITY_APPLICATOR_SAVE !== "false";
-
-      if (!enablePrioritySaving) {
+      if (process.env.ENABLE_PRIORITY_APPLICATOR_SAVE === "false") {
         logger.info(`Priority attachment saving disabled via configuration`);
         return {
           success: true,
@@ -2799,65 +2808,18 @@ export const priorityService = {
       }
 
       logger.info(
-        `Uploading attachment buffer for applicator ${serialNumber} to Priority`,
+        `Uploading attachment for applicator ${serialNumber} to Priority order ${orderId}`,
       );
 
-      // Step 1: Handle combined pancreas orders (format: "SO25000275+SO25000274")
-      const orderIds = orderId.includes("+") ? orderId.split("+") : [orderId];
-      logger.info(
-        `Uploading attachment for applicator ${serialNumber} to ${orderIds.length} order(s): ${orderIds.join(", ")}`,
-      );
-
-      // Try each order until we find the applicator
-      let applicator: any = null;
-      let foundInOrderId = ""; // Track which base order ID we found the applicator in
-
-      for (const singleOrderId of orderIds) {
-        try {
-          const getEndpoint = `/ORDERS('${singleOrderId}')/SIBD_APPLICATUSELIST_SUBFORM?$filter=SERNUM eq '${serialNumber}'`;
-          logger.info(`Trying order ${singleOrderId}: ${getEndpoint}`);
-
-          const applicatorResponse = await priorityApi.get(getEndpoint);
-
-          if (
-            applicatorResponse.data.value &&
-            applicatorResponse.data.value.length > 0
-          ) {
-            applicator = applicatorResponse.data.value[0];
-            foundInOrderId = singleOrderId; // Store the base order ID for PATCH endpoint
-            logger.info(
-              `Found applicator ${serialNumber} in order ${singleOrderId}`,
-            );
-            break;
-          }
-        } catch (err: any) {
-          logger.warn(
-            `Applicator not found in order ${singleOrderId}: ${err.message}`,
-          );
-        }
-      }
-
-      if (!applicator) {
+      // Step 1: Find the applicator row
+      const found = await this.findApplicatorKline(serialNumber, orderId);
+      if (!found) {
         throw new Error(
-          `Applicator ${serialNumber} not found in any Priority order: ${orderIds.join(", ")}`,
+          `Applicator ${serialNumber} not found in any Priority order: ${orderId}`,
         );
       }
 
-      // Validate composite key fields exist
-      if (!applicator.ORDNAME || applicator.SIBD_REPPRODPAL === undefined) {
-        logger.error(
-          `Missing composite key fields. ORDNAME: ${applicator.ORDNAME}, SIBD_REPPRODPAL: ${applicator.SIBD_REPPRODPAL}`,
-        );
-        throw new Error(
-          `Invalid applicator record - missing ORDNAME or SIBD_REPPRODPAL fields`,
-        );
-      }
-
-      logger.info(
-        `Found applicator: ORDNAME=${applicator.ORDNAME}, SIBD_REPPRODPAL=${applicator.SIBD_REPPRODPAL}`,
-      );
-
-      // Step 2: Convert buffer to data URL format (no file read needed)
+      // Step 2: Convert buffer to data URL format
       const base64Zip = zipBuffer.toString("base64");
       const dataUrl = `data:application/zip;base64,${base64Zip}`;
 
@@ -2865,19 +2827,13 @@ export const priorityService = {
         `Prepared ZIP buffer: ${(zipBuffer.length / 1024).toFixed(2)} KB`,
       );
 
-      // Step 3: Build PATCH endpoint with composite key
-      // Path uses BASE order ID (foundInOrderId), composite key uses FULL ORDNAME (with LOAD suffix)
-      const patchEndpoint = `/ORDERS('${foundInOrderId}')/SIBD_APPLICATUSELIST_SUBFORM(ORDNAME='${applicator.ORDNAME}',SIBD_REPPRODPAL=${applicator.SIBD_REPPRODPAL})`;
-
-      // Step 4: Send PATCH request with data URL format
-      // NOTE: Do NOT include SUFFIX field - it doesn't exist in Priority SIBD_APPLICATUSELIST schema
-      // The data URL format already contains the MIME type (application/zip) which Priority uses
+      // Step 3: PATCH attachment using KLINE key
+      const patchEndpoint = `/ORDERS('${found.orderId}')/SIBD_APPUSELISTTEXT_SUBFORM(KLINE=${found.kline})`;
       const requestBody = {
         EXTFILENAME: dataUrl,
       };
 
-      logger.info(`Sending PATCH to: ${patchEndpoint}`);
-      logger.info(`Request body fields: EXTFILENAME length=${dataUrl.length}`);
+      logger.info(`Sending attachment PATCH to: ${patchEndpoint}`);
 
       const response = await priorityApi.patch(patchEndpoint, requestBody);
 
@@ -2897,21 +2853,14 @@ export const priorityService = {
       };
     } catch (error: any) {
       logger.error(`Error uploading attachment to Priority: ${error.message}`);
-      // Log detailed error info including full response data for debugging
-      const errorData = error.response?.data;
-      logger.error(
-        `Priority API Error Response Data: ${JSON.stringify(errorData, null, 2)}`,
-      );
       logger.error(`Error details:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        responseData: JSON.stringify(errorData),
-        requestUrl: error.config?.url,
+        data: error.response?.data,
+        url: error.config?.url,
       });
 
-      // Always return failure when Priority upload fails
-      // Use ENABLE_PRIORITY_APPLICATOR_SAVE=false to skip Priority uploads entirely (checked at start of function)
       return {
         success: false,
         message: `Failed to upload attachment to Priority: ${error.message}`,
