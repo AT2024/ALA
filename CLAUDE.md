@@ -73,3 +73,16 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **Database Isolation**: Each worker gets its own PostgreSQL database (`ala_worker_<name>`), copied from main. Changes in workers don't affect main database.
 - **Rules**: See "Parallel Worktree Isolation Rules" in [settings.md](.claude/settings.md)
 - **Guide**: [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md)
+
+<!-- TOKEN_OPTIMIZER:MODEL_ROUTING -->
+
+## Model & Thinking Routing (by Token Optimizer)
+
+Based on last 30 days: 76% Opus, 5% Sonnet, 19% Haiku.
+
+- Simple edits, grep, formatting: Sonnet, no extended thinking
+- Architecture, debugging, synthesis: Opus with thinking
+- Subagents for data gathering: Haiku
+- WARNING: 76% Opus is likely overkill. Route simple tasks to Sonnet.
+  <!-- updated 2026-04-12T18:52 -->
+  <!-- /TOKEN_OPTIMIZER:MODEL_ROUTING -->

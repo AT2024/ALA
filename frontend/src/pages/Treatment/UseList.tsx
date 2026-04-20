@@ -644,9 +644,7 @@ const UseList = () => {
                       >
                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                           <div className="flex items-center justify-between">
-                            <span>
-                              {applicator.serialNumber}
-                            </span>
+                            <span>{applicator.serialNumber}</span>
                             {applicator.package_label && (
                               <span className="ml-2 inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 border border-purple-300">
                                 {applicator.package_label}
