@@ -11,7 +11,6 @@ import {
 } from "../utils/priorityDataTransformer";
 import {
   ApplicatorStatus,
-  GENERIC_TRANSITIONS,
   PANC_PROS_TRANSITIONS,
   SKIN_TRANSITIONS,
   ALL_STATUSES,
@@ -923,12 +922,12 @@ export const applicatorService = {
       if (lowerIndication === "pancreas" || lowerIndication === "prostate") {
         return PANC_PROS_TRANSITIONS;
       }
-      return GENERIC_TRANSITIONS;
+      return SKIN_TRANSITIONS;
     }
 
     // Fallback: Legacy keyword detection from treatmentType
     if (!treatmentType) {
-      return GENERIC_TRANSITIONS;
+      return SKIN_TRANSITIONS;
     }
 
     const lowerType = treatmentType.toLowerCase();
@@ -943,8 +942,9 @@ export const applicatorService = {
       return PANC_PROS_TRANSITIONS;
     }
 
-    // Default to generic transitions for unknown treatment types
-    return GENERIC_TRANSITIONS;
+    // Default to skin's 2-stage workflow for unknown types — safest of the
+    // three since it disallows OPENED/LOADED (pancreas/prostate-only states).
+    return SKIN_TRANSITIONS;
   },
 
   /**
@@ -952,8 +952,8 @@ export const applicatorService = {
    * Implements 8-state workflow with strict transition rules
    * Uses treatment-specific transitions from @shared/applicatorStatuses:
    * - PANC_PROS_TRANSITIONS for pancreas/prostate workflow (3-stage)
-   * - SKIN_TRANSITIONS for skin workflow (2-stage)
-   * - GENERIC_TRANSITIONS for fallback/unknown treatment types
+   * - SKIN_TRANSITIONS for skin workflow (2-stage), also used as the safe
+   *   fallback for unknown/unclassified treatments (no SIBD_INDICATION)
    *
    * @param currentStatus - Current applicator status
    * @param newStatus - Requested new status

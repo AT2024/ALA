@@ -16,7 +16,6 @@ import {
   isTerminalStatus,
   PANC_PROS_TRANSITIONS,
   SKIN_TRANSITIONS,
-  GENERIC_TRANSITIONS,
 } from "../../../shared/applicatorStatuses";
 import { offlineDb } from "./indexedDbService";
 
@@ -65,7 +64,9 @@ function getTransitionsForTreatmentType(
     case "skin":
       return SKIN_TRANSITIONS;
     default:
-      return GENERIC_TRANSITIONS;
+      // "generic" = unknown indication → default to skin's 2-stage workflow,
+      // matching the online fallback in applicatorStatus.ts.
+      return SKIN_TRANSITIONS;
   }
 }
 

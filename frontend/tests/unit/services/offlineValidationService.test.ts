@@ -61,13 +61,15 @@ afterEach(() => {
 // ============================================================================
 
 describe("isValidOfflineStatusTransition", () => {
-  describe("Valid Transitions", () => {
-    it("null → OPENED should be allowed (null treated as SEALED, SEALED → OPENED is valid)", () => {
-      // Implementation treats null as implicitly SEALED
-      // SEALED → OPENED is a valid transition in all treatment types
+  // These tests pass "panc_pros" explicitly because they exercise the 3-stage
+  // workflow (SEALED → OPENED → LOADED → INSERTED). The default/"generic" path
+  // routes through SKIN_TRANSITIONS, which skips OPENED/LOADED entirely.
+  describe("Valid Transitions (panc_pros)", () => {
+    it("null → OPENED should be allowed (null treated as SEALED, SEALED → OPENED is valid in panc_pros)", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         null,
         APPLICATOR_STATUSES.OPENED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -79,6 +81,7 @@ describe("isValidOfflineStatusTransition", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.SEALED,
         APPLICATOR_STATUSES.OPENED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -89,6 +92,7 @@ describe("isValidOfflineStatusTransition", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.OPENED,
         APPLICATOR_STATUSES.LOADED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -99,6 +103,7 @@ describe("isValidOfflineStatusTransition", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.OPENED,
         APPLICATOR_STATUSES.FAULTY,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -111,6 +116,7 @@ describe("isValidOfflineStatusTransition", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.OPENED,
         APPLICATOR_STATUSES.DISPOSED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -121,6 +127,7 @@ describe("isValidOfflineStatusTransition", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.LOADED,
         APPLICATOR_STATUSES.INSERTED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -128,21 +135,11 @@ describe("isValidOfflineStatusTransition", () => {
       expect(result.warningLevel).toBe("warning");
     });
 
-    it("LOADED → FAULTY should be allowed WITH confirmation", () => {
-      const result = offlineValidationService.isValidOfflineStatusTransition(
-        APPLICATOR_STATUSES.LOADED,
-        APPLICATOR_STATUSES.FAULTY,
-      );
-
-      expect(result.allowed).toBe(true);
-      expect(result.requiresConfirmation).toBe(true);
-    });
-
     it("LOADED → DEPLOYMENT_FAILURE should be allowed without confirmation", () => {
-      // In GENERIC_TRANSITIONS, LOADED can go to INSERTED, FAULTY, or DEPLOYMENT_FAILURE
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.LOADED,
         APPLICATOR_STATUSES.DEPLOYMENT_FAILURE,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(true);
@@ -150,15 +147,55 @@ describe("isValidOfflineStatusTransition", () => {
     });
   });
 
+  // The default ("generic") path now routes through SKIN_TRANSITIONS — skin's
+  // 2-stage workflow (SEALED → INSERTED/FAULTY, no OPENED/LOADED). This
+  // matches the online fallback so offline/online behavior stays identical
+  // for orders with no SIBD_INDICATION.
+  describe("Default (unknown indication → skin 2-stage)", () => {
+    it("SEALED → INSERTED is allowed (skin direct-insertion)", () => {
+      const result = offlineValidationService.isValidOfflineStatusTransition(
+        APPLICATOR_STATUSES.SEALED,
+        APPLICATOR_STATUSES.INSERTED,
+      );
+      expect(result.allowed).toBe(true);
+    });
+
+    it("SEALED → FAULTY is allowed (skin)", () => {
+      const result = offlineValidationService.isValidOfflineStatusTransition(
+        APPLICATOR_STATUSES.SEALED,
+        APPLICATOR_STATUSES.FAULTY,
+      );
+      expect(result.allowed).toBe(true);
+    });
+
+    it("SEALED → OPENED is NOT allowed under skin fallback", () => {
+      const result = offlineValidationService.isValidOfflineStatusTransition(
+        APPLICATOR_STATUSES.SEALED,
+        APPLICATOR_STATUSES.OPENED,
+      );
+      expect(result.allowed).toBe(false);
+    });
+
+    it("explicit 'generic' treatmentType also routes to skin 2-stage", () => {
+      const result = offlineValidationService.isValidOfflineStatusTransition(
+        APPLICATOR_STATUSES.SEALED,
+        APPLICATOR_STATUSES.OPENED,
+        "generic",
+      );
+      expect(result.allowed).toBe(false);
+    });
+  });
+
   // ============================================================================
   // isValidOfflineStatusTransition Tests - Invalid Transitions
   // ============================================================================
 
-  describe("Invalid Transitions", () => {
+  describe("Invalid Transitions (panc_pros)", () => {
     it("SEALED → LOADED should NOT be allowed (skips OPENED)", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.SEALED,
         APPLICATOR_STATUSES.LOADED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(false);
@@ -166,10 +203,11 @@ describe("isValidOfflineStatusTransition", () => {
       expect(result.message).toContain("is not allowed");
     });
 
-    it("SEALED → INSERTED should NOT be allowed", () => {
+    it("SEALED → INSERTED should NOT be allowed in panc_pros (must go through OPENED → LOADED)", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.SEALED,
         APPLICATOR_STATUSES.INSERTED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(false);
@@ -179,6 +217,7 @@ describe("isValidOfflineStatusTransition", () => {
       const result = offlineValidationService.isValidOfflineStatusTransition(
         APPLICATOR_STATUSES.OPENED,
         APPLICATOR_STATUSES.INSERTED,
+        "panc_pros",
       );
 
       expect(result.allowed).toBe(false);
