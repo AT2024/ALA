@@ -16,7 +16,6 @@ import {
   // Transitions
   PANC_PROS_TRANSITIONS,
   SKIN_TRANSITIONS,
-  GENERIC_TRANSITIONS,
   // Labels and colors
   STATUS_LABELS,
   STATUS_COLORS,
@@ -46,7 +45,6 @@ export {
   // Transitions
   PANC_PROS_TRANSITIONS,
   SKIN_TRANSITIONS,
-  GENERIC_TRANSITIONS,
   // Labels and colors
   STATUS_LABELS,
   STATUS_COLORS,
@@ -220,10 +218,9 @@ export const getTransitionsForTreatment = (
   if (isPancreasOrProstate(treatmentContext)) {
     return PANC_PROS_TRANSITIONS;
   }
-  if (isSkin(treatmentContext)) {
-    return SKIN_TRANSITIONS;
-  }
-  return GENERIC_TRANSITIONS;
+  // Skin's 2-stage workflow is the safe default for unknown/unclassified
+  // treatments: it disallows pancreas/prostate-only states (OPENED, LOADED).
+  return SKIN_TRANSITIONS;
 };
 
 /**
