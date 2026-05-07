@@ -50,6 +50,7 @@ const UseList = () => {
     isPancreasOrProstate,
     setTreatment,
     clearTreatment,
+    getActualInsertedSeeds,
   } = useTreatment();
   const { isOnline } = useOffline();
 
@@ -190,9 +191,10 @@ const UseList = () => {
     notUsedApplicators: processedApplicators.filter(
       (app) => app.usageType === "none",
     ).length,
-    totalDartSeedsInserted: processedApplicators
-      .filter((app) => app.status === "INSERTED")
-      .reduce((sum, app) => sum + app.seedQuantity, 0),
+    // Count actual seeds inserted, including partial inserts from FAULTY applicators.
+    // Mirrors TreatmentContext.getActualInsertedSeeds: 'full' uses seedQuantity,
+    // 'faulty' uses insertedSeedsQty (the actual number deployed before the fault).
+    totalDartSeedsInserted: getActualInsertedSeeds(),
     seedsInsertedBy: currentTreatment?.surgeon || "Unknown",
   };
 

@@ -457,9 +457,19 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
   };
 
   const getActualInsertedSeeds = () => {
-    // Only count seeds from processed applicators based on usage type
+    // Count actual seeds inserted, honoring partial counts when present.
+    // 'full': prefer insertedSeedsQty (allows partial INSERTED); fall back to
+    // seedQuantity for legacy records that don't carry insertedSeedsQty.
+    // 'faulty': always use insertedSeedsQty (defaults to 0 if absent).
     return processedApplicators.reduce((sum, app) => {
-      if (app.usageType === "full") return sum + app.seedQuantity;
+      if (app.usageType === "full") {
+        return (
+          sum +
+          (typeof app.insertedSeedsQty === "number"
+            ? app.insertedSeedsQty
+            : app.seedQuantity)
+        );
+      }
       if (app.usageType === "faulty") return sum + (app.insertedSeedsQty || 0);
       return sum; // 'none' type contributes 0 seeds
     }, 0);

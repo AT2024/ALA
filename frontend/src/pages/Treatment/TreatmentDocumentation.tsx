@@ -1819,7 +1819,8 @@ const TreatmentDocumentation = () => {
                       Inserted Sources Qty.
                     </label>
                     {requiresComment(formData.status) ||
-                    formData.usingType === "Faulty" ? (
+                    formData.usingType === "Faulty" ||
+                    formData.status === "INSERTED" ? (
                       <input
                         type="number"
                         id="insertedSeedsQty"
