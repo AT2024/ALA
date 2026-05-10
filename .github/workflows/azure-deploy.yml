@@ -22,55 +22,19 @@ on:
         required: false
         default: false
         type: boolean
-      skip_staging_check:
-        description: "Skip staging verification (emergency only)"
-        required: false
-        default: false
-        type: boolean
 
 env:
   AZURE_VM_IP: "20.217.84.100"
 
 jobs:
   # =================================================================
-  # Pre-deployment Safety Checks
-  # =================================================================
-  pre-deployment-checks:
-    name: Pre-deployment Safety Checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Verify Production Branch
-        run: |
-          if [[ "${{ github.ref_name }}" != "production" ]]; then
-            echo "❌ Production deployment must be from 'production' branch"
-            echo "Current branch: ${{ github.ref_name }}"
-            exit 1
-          fi
-          echo "✅ Deploying from production branch"
-
-      - name: Check Staging Health (unless skipped)
-        if: ${{ !inputs.skip_staging_check }}
-        run: |
-          echo "🔍 Checking staging environment health..."
-          if curl -f http://${{ env.AZURE_VM_IP }}:5010/api/health; then
-            echo "✅ Staging environment is healthy"
-          else
-            echo "⚠️ Staging environment is not accessible"
-            echo "Consider fixing staging before production deployment"
-            exit 1
-          fi
-
-  # =================================================================
   # Production Deployment
   # =================================================================
+  # Branch is enforced by `on: push: branches: [production]`.
+  # Approval is enforced by the `production` GitHub Environment.
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: pre-deployment-checks
     environment: production # Require manual approval for production
 
     steps:
