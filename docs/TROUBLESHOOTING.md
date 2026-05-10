@@ -398,20 +398,150 @@ ssh azureuser@20.217.84.100 "cat ~/ala-improved/deployment/azure/.env.azure | gr
 
 #### Line Ending Errors (Windows)
 
+Two distinct flavors of this problem — both are CRLF-vs-LF, but they live in
+different places.
+
+**A) Shell scripts on the VM fail with `bash: $'\r': command not found`**
+
+Scripts edited on Windows ended up on the VM with CRLF endings.
+
 ```bash
-# Fix Windows line endings on all scripts
+# Strip CRLF from VM-side scripts in place
 ssh azureuser@20.217.84.100 "sed -i 's/\r$//' \
   ~/ala-improved/deployment/scripts/*.sh \
   ~/ala-improved/deployment/azure/*.sh"
 ```
 
-#### Permission Denied
+**B) `git status` shows 50+ files as modified but `git diff` is silent**
+
+Symptom on a Windows clone:
+
+```text
+M  backend/src/...
+M  frontend/src/...
+... (~50 files)
+
+warning: in the working copy of '<file>', LF will be replaced by CRLF the
+next time Git touches it.
+```
+
+Yet `git diff -w` returns empty — content is identical, only line endings
+differ. Root cause: the repo's `.gitattributes` mandates LF (`* text=auto`,
+code files have `text eol=lf`), but git's Windows default `core.autocrlf=true`
+fights it on every checkout.
+
+```bash
+# One-time per Windows clone
+git config --local core.autocrlf false
+
+# If the index is already polluted with CRLF (it was, pre-2026-05-10),
+# normalize once and commit:
+git add --renormalize .
+git commit -m "chore: renormalize line endings"
+git checkout-index --force --all   # rewrite working tree to LF
+```
+
+The repo was renormalized in commit `e9e750a` on 2026-05-10. Future clones on
+Windows still need the local `core.autocrlf` config above — git's global
+default re-applies on every fresh clone.
+
+#### Permission Denied (script not executable on VM)
 
 ```bash
 # Make scripts executable
 ssh azureuser@20.217.84.100 "chmod +x \
   ~/ala-improved/deployment/scripts/*.sh \
   ~/ala-improved/deployment/azure/*.sh"
+```
+
+### Azure VM Access Issues
+
+#### SSH connection times out
+
+Symptom: `ssh azureuser@20.217.84.100` hangs and eventually fails with
+`Connection timed out`. The HTTPS app endpoint
+(`https://ala-app.israelcentral.cloudapp.azure.com`) is reachable.
+
+**Root cause**: the VM's NSG denies inbound tcp/22 from public internet. The
+default rule `DenyAllInbound` (priority 65500) catches anything not explicitly
+allowed. Your current public IP isn't on the allow list.
+
+**Diagnosis** (from your local machine):
+
+```bash
+# Quick TCP probe — succeeds if open, hangs ~8 s if blocked
+bash -c "</dev/tcp/20.217.84.100/22" && echo OPEN || echo BLOCKED
+
+# Confirm your current public IP — what to allowlist
+curl -s https://api.ipify.org
+```
+
+**Fix**: add a temporary NSG inbound rule for your current IP.
+
+1. Azure Portal → search "Virtual machines" → click the ALA VM.
+2. Left sidebar → **Networking** → **Add inbound port rule**.
+3. Source = **IP Addresses**, Source IP = `<your IP>/32`,
+   Destination port = `22`, Protocol = **TCP**, Action = **Allow**,
+   Priority = anything below 65500 (e.g. `100`–`410`),
+   Name = e.g. `Temp-SSH-MyLaptop`.
+4. Save. Wait ~30 s for NSG propagation.
+
+**Watch for shadowing**: if Azure shows a warning triangle next to your new
+rule in the NSG list, another rule with a _lower_ priority number is
+intercepting the same traffic first. Hover the triangle for the exact
+shadowing rule, then either lower your rule's priority below it or delete
+the conflicting rule. Common pitfalls:
+
+- Wrong port on first save (e.g. `8080` instead of `22`).
+- Existing rule on tcp/22 that targets a different source IP/range.
+
+After deploying, **delete the temp NSG rule** to restore the original posture.
+
+#### "Permission denied (publickey)" — no key authorized on VM
+
+Symptom: TCP/22 is reachable but every SSH attempt returns
+`Permission denied (publickey,password)`. You may have no SSH key locally
+either (e.g., new laptop, or the original key was on an old machine).
+
+**Fix** — bootstrap a key via the Azure VM Agent (no SSH needed):
+
+1. Generate a fresh ed25519 keypair locally if you don't have one:
+
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/ala_ci_deploy -C "ala-ci-deploy" -N ""
+   ```
+
+2. Azure Portal → VM → **Help** → **Reset password** (despite the name, it
+   handles SSH keys too).
+3. Mode: **Add SSH public key**.
+4. Username: `azureuser`.
+5. SSH public key: paste contents of `~/.ssh/ala_ci_deploy.pub`.
+6. Click **Update**. Wait ~30 s for the VM agent to apply.
+
+7. Verify:
+
+   ```bash
+   ssh -i ~/.ssh/ala_ci_deploy -o IdentitiesOnly=yes \
+       azureuser@20.217.84.100 "whoami && hostname"
+   ```
+
+This works because the Azure VM Agent runs as root inside the VM and writes
+to `~/azureuser/.ssh/authorized_keys` on behalf of Azure Resource Manager.
+
+#### CI deploy (`azure-deploy.yml`) fails with SSH timeout
+
+GH-hosted runners run on Azure-public IP space and hit the same NSG block
+described above. **The current `appleboy/ssh-action` workflow cannot run
+end-to-end** without either allowlisting GitHub's IP ranges (broad — weakens
+security for a medical app) or moving away from SSH-from-CI entirely.
+
+The right long-term fix is documented in
+[deployment/CI_ARCHITECTURE.md](deployment/CI_ARCHITECTURE.md): build images
+in CI, push to GHCR, have the VM pull. Until that ships, deploys are manual:
+
+```bash
+ssh -i ~/.ssh/ala_ci_deploy azureuser@20.217.84.100 \
+    "cd ~/ala-improved/deployment && ./swarm-deploy"
 ```
 
 ### Docker Swarm Deployment Issues

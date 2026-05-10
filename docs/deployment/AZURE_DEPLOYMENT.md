@@ -1,18 +1,71 @@
 # Azure VM Production Deployment Guide
 
-⚠️ **UPDATED October 2025** - Deployment system radically simplified from 1,500+ lines to 120 lines
+⚠️ **UPDATED May 2026** — CI deploy is currently architecturally blocked
+(see [CI_ARCHITECTURE.md](CI_ARCHITECTURE.md)). Production deploys are
+**manual via `swarm-deploy`** until the build-push-pull pipeline ships.
 
-## Quick Deployment (Current Method)
+## Deploying when CI is unavailable (current state)
 
-The deployment system has been radically simplified to **one command**:
+The canonical zero-downtime deploy is `swarm-deploy`. It does a Docker Swarm
+rolling update with two replicas per service, so users in active sessions
+don't see downtime.
+
+```bash
+# Prereqs (one-time per laptop):
+#   - NSG inbound rule for tcp/22 from your current IP (Azure Portal → VM →
+#     Networking → Add inbound port rule). Delete the rule after deploy.
+#   - SSH key authorized on VM (use Azure Portal → VM → Help → Reset password
+#     → "Add SSH public key" if you have no working SSH yet).
+
+ssh -i ~/.ssh/ala_ci_deploy azureuser@20.217.84.100 \
+    "cd ~/ala-improved/deployment && ./swarm-deploy"
+```
+
+If either prereq is missing, see
+[../TROUBLESHOOTING.md#azure-vm-access-issues](../TROUBLESHOOTING.md#azure-vm-access-issues).
+
+### Production environment specifics
+
+- **VM**: `20.217.84.100` (hostname `ALAapp`)
+- **SSH user**: `azureuser`, home at `/home/azureuser`
+- **Project root on VM**: `~/ala-improved`
+- **Deploy script**: `~/ala-improved/deployment/swarm-deploy`
+- **Public app**: <https://ala-app.israelcentral.cloudapp.azure.com>
+- **Public health**: <https://ala-app.israelcentral.cloudapp.azure.com/api/health>
+- **Swarm services**: `ala_api` (2 replicas, port 5000), `ala_frontend`
+  (2 replicas, ports 80→8080 and 443→8443)
+- **Database container** (`ala-db`): runs outside the swarm stack — must be
+  up before swarm-deploy runs.
+
+### Verify after deploy
+
+```bash
+curl -sk https://ala-app.israelcentral.cloudapp.azure.com/api/health
+ssh azureuser@20.217.84.100 \
+    "cd ~/ala-improved && git log -1 --oneline && docker service ls --filter name=ala"
+```
+
+### Rollback
+
+The swarm-deploy script auto-rolls-back on health failure. To roll back
+manually:
+
+```bash
+ssh azureuser@20.217.84.100 \
+    "docker service rollback ala_api && docker service rollback ala_frontend"
+```
+
+## Older path: `./deploy` (~60 s downtime)
+
+The pre-Swarm path uses `docker-compose down/up` and incurs a brief outage.
+Kept for emergencies; prefer `swarm-deploy` whenever Swarm is healthy on the
+VM.
 
 ```bash
 ssh azureuser@20.217.84.100
 cd ~/ala-improved/deployment
 ./deploy
 ```
-
-That's it. No confusion. No multiple scripts. **One command.**
 
 ## What It Does Automatically
 
