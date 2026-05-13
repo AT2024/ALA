@@ -1,4 +1,5 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import path from "node:path";
 import { readSessionKeys, TREATMENT_KEYS } from "./utils/sessionStorageProbe";
 
 /**
@@ -10,97 +11,62 @@ import { readSessionKeys, TREATMENT_KEYS } from "./utils/sessionStorageProbe";
  *   A5  Logout clears the four treatment-related sessionStorage keys
  *
  * Runs against https://ala-app.israelcentral.cloudapp.azure.com via
- *   PLAYWRIGHT_BASE_URL=https://… playwright test production-smoke.spec.ts
+ * `npm run test:e2e:prod`. **Non-interactive** — relies on storageState
+ * captured by `auth.setup.ts` (run once with `npm run test:e2e:prod:setup`).
  *
- * Operator-driven: the email-code step uses `page.pause()` so the human
- * watching the browser can enter the 6-digit code that lands in their
- * inbox. After entering the code and clicking Verify in the page, click
- * "Resume" in the Playwright Inspector toolbar to continue.
+ * If the saved state is stale (cookie expired), the first test fails fast
+ * with a clear instruction to re-run setup.
  *
- * No production data is mutated: the test logs in, switches to Test Mode
- * (admin Position 99 only — uses simulated Priority data with an orange
- * banner), reads pages, logs out.
+ * No production data is mutated: the test switches to Test Mode, reads
+ * pages, and logs out. No order is created or modified.
  */
 
-const ADMIN_EMAIL = "amitaik@alphatau.com";
+// All tests in this file start already-authenticated by loading the saved
+// admin storageState. Each test gets its own context, so we keep them in
+// serial mode to share the session-flow state (Test Mode toggle, then
+// treatment selection, then logout).
+test.use({
+  storageState: path.join(
+    __dirname,
+    "..",
+    "..",
+    "playwright",
+    ".auth",
+    "admin.json",
+  ),
+});
 
-// Serial execution: every step depends on the previous one (single session,
-// one human login).
 test.describe.configure({ mode: "serial" });
 
 test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
-  // Reuse one browser context across all tests in this file so the session
-  // (cookies + sessionStorage) survives between `test()` blocks. Playwright's
-  // default gives each test a fresh context — which would force re-login.
-  let sharedPage: Page;
+  test.setTimeout(60_000);
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ ignoreHTTPSErrors: true });
-    sharedPage = await context.newPage();
-  });
-
-  test.afterAll(async () => {
-    await sharedPage?.context().close();
-  });
-
-  test.setTimeout(5 * 60 * 1000); // human-in-the-loop
-
-  test("admin can log in via email code (manual)", async () => {
-    const page = sharedPage;
-    await page.goto("/");
-
-    // Login form uses data-testid attributes — see seed-removal-workflow.spec.ts
-    await page.getByTestId("identifier-input").fill(ADMIN_EMAIL);
-    await page.getByTestId("request-code-button").click();
-
-    // LoginPage.tsx shows a success message for 1.5 s then navigates to /verify.
-    // VerificationPage.tsx has data-testid="code-input" and "verify-code-button".
-    // Wait for that navigation before handing control to the operator, otherwise
-    // the Inspector pause pops while the page is still on /login and it looks
-    // like nothing happened.
-    await page.waitForURL(/\/verify/, { timeout: 20_000 });
-    await expect(page.getByTestId("code-input")).toBeVisible({
-      timeout: 10_000,
+  test.beforeAll(async ({ request }) => {
+    // Quick auth-still-valid check. /api/auth/validate-token is protected:
+    // returns 200 if the HttpOnly cookie in our storageState is still good,
+    // 401 otherwise. Fail fast with an actionable message.
+    const r = await request.post("/api/auth/validate-token", {
+      failOnStatusCode: false,
     });
-
-    console.log("\n========================================");
-    console.log("  PROD SMOKE: a 6-digit code was sent to");
-    console.log(`  ${ADMIN_EMAIL}.`);
-    console.log("");
-    console.log("  Browser is now on the Verification page.");
-    console.log("  1. Check your email for the 6-digit code.");
-    console.log("  2. Type it into the 'Verification Code' field");
-    console.log("     in the browser, then click 'Verify Code'.");
-    console.log("  3. Once the page navigates past /verify,");
-    console.log("     click 'Resume' in the Playwright Inspector");
-    console.log("     toolbar to continue the test.");
-    console.log("========================================\n");
-    await page.pause();
-
-    // After the operator resumes: assert we are past the verification page.
-    // Admin (Position 99) is routed to /mode; other users to /procedure-type.
-    await expect(page).toHaveURL(/\/(mode|procedure-type|treatment)/, {
-      timeout: 30_000,
-    });
-  });
-
-  test("switch to Test Mode", async () => {
-    const page = sharedPage;
-
-    if (page.url().includes("/mode")) {
-      // ModeSelectionPage — Normal vs Test buttons, then Proceed
-      await page
-        .getByRole("button", { name: /test mode/i })
-        .first()
-        .click();
-      await page.getByRole("button", { name: /proceed/i }).click();
-      await expect(page).toHaveURL(/\/procedure-type/, { timeout: 15_000 });
-    } else {
-      // Fallback if backend already had test mode enabled
-      console.log(
-        "  Skipped ModeSelectionPage (already past it); checking banner only.",
+    if (r.status() !== 200) {
+      throw new Error(
+        `Saved auth state at playwright/.auth/admin.json is no longer valid ` +
+          `(POST /api/auth/validate-token returned ${r.status()}). ` +
+          `Re-run: npm run test:e2e:prod:setup`,
       );
     }
+  });
+
+  test("switch to Test Mode (admin only)", async ({ page }) => {
+    await page.goto("/mode-select");
+
+    // ModeSelectionPage — Normal vs Test buttons, then Proceed.
+    await page
+      .getByRole("button", { name: /test mode/i })
+      .first()
+      .click();
+    await page.getByRole("button", { name: /proceed/i }).click();
+    await expect(page).toHaveURL(/\/procedure-type/, { timeout: 15_000 });
 
     // The TestModeBanner component renders this exact text when active.
     await expect(page.getByText(/TEST MODE ACTIVE/i).first()).toBeVisible({
@@ -108,12 +74,12 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
     });
   });
 
-  test("A2: applicator list renders without 50-row truncation cap", async () => {
-    const page = sharedPage;
+  test("A2: applicator list renders without 50-row truncation cap", async ({
+    page,
+  }) => {
+    await page.goto("/procedure-type");
 
-    // Navigate into a treatment flow that exposes the applicator list.
-    // Procedure-type page typically offers Insertion and Removal options.
-    // Either works for surfacing the per-order applicator list.
+    // Enter a treatment flow that surfaces the applicator list (test-mode fixture).
     const insertion = page.getByRole("button", {
       name: /insertion|new\s+treatment/i,
     });
@@ -126,7 +92,7 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
       await insertion.first().click();
     }
 
-    // Wait for any /api/priority/orders response (test-mode mocks this server-side).
+    // Capture /api/priority/orders if the page calls it.
     const ordersResp = await page
       .waitForResponse(
         (r) => r.url().includes("/api/priority/orders") && r.ok(),
@@ -144,8 +110,7 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
             ? body.orders.length
             : null;
       console.log(`A2: /api/priority/orders returned ${orderCount} orders`);
-      // The historical cap from the bug was 50 — the response should not be
-      // exactly that (test-mode fixtures are smaller, real Priority larger).
+      // The historical cap was 50. Response should not be exactly that.
       if (orderCount !== null) {
         expect(orderCount).not.toBe(50);
       }
@@ -161,10 +126,10 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("A3: patient ID maps from REFERENCE with ORDNAME fallback", async () => {
-    const page = sharedPage;
-
-    // Select the first available order (test-mode fixture)
+  test("A3: patient ID maps from REFERENCE with ORDNAME fallback", async ({
+    page,
+  }) => {
+    // Select the first available order if the UI exposes one.
     const orderOption = page.getByRole("option").first();
     if (await orderOption.isVisible().catch(() => false)) {
       await orderOption.click();
@@ -176,8 +141,6 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
       }
     }
 
-    // Read what the app stored as the currently-selected treatment.
-    // The fix in 4554ac4 makes patientId fall back: REFERENCE -> ORDNAME.
     const stored = await page.evaluate(() => {
       const raw = sessionStorage.getItem("currentTreatment");
       return raw ? JSON.parse(raw) : null;
@@ -208,11 +171,9 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
     ).toBeTruthy();
   });
 
-  test("A4: no duplicate seed counts across applicator lists", async () => {
-    const page = sharedPage;
-
-    // Read both lists from sessionStorage and assert there is no serial
-    // appearing in both lists (the duplication source the fix addresses).
+  test("A4: no duplicate seed counts across applicator lists", async ({
+    page,
+  }) => {
     const lists = await page.evaluate(() => {
       const proc = JSON.parse(
         sessionStorage.getItem("processedApplicators") || "[]",
@@ -238,21 +199,17 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
       `A4: processed=${processed.length} available=${available.length} overlap=${overlap.length}`,
     );
 
-    // The 4554ac4 fix dedupes — overlap must be 0. If the test-mode fixture
-    // has empty lists at this stage, the assertion is trivially satisfied,
-    // which is still a meaningful render check.
     expect(
       overlap,
       "applicator serials must not appear in both processed and available lists",
     ).toEqual([]);
   });
 
-  test("A5: logout clears the four treatment sessionStorage keys", async () => {
-    const page = sharedPage;
-
-    // Best-effort: seed at least one key so we know logout actually clears.
-    // If the flow above didn't populate them, this still asserts the post-
-    // logout cleanup ran (all four absent).
+  test("A5: logout clears the four treatment sessionStorage keys", async ({
+    page,
+  }) => {
+    // Seed canary values so we can prove logout cleared them even if the
+    // earlier flow didn't populate every key.
     await page.evaluate(
       (keys: readonly string[]) => {
         for (const k of keys) {
@@ -270,10 +227,8 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
       `pre-logout: every treatment key must be present (got ${JSON.stringify(before)})`,
     ).toBe(true);
 
-    // Find the Logout button in the Layout header
     await page.getByRole("button", { name: /^logout$/i }).click();
 
-    // Wait for redirect to login
     await expect(page).toHaveURL(/\/(login)?\/?$/, { timeout: 15_000 });
 
     const after = await readSessionKeys(page);
