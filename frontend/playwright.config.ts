@@ -2,6 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const IS_LOCAL = BASE_URL.startsWith("http://localhost");
+// When targeting the live Azure deployment, authenticated specs depend on the
+// "setup" project, which captures admin storageState via one human login.
+// Local runs keep the unauthenticated default (existing tests mock auth).
+const IS_PROD = BASE_URL.includes("ala-app.israelcentral");
+const PROD_DEPS = IS_PROD ? ["setup"] : [];
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -44,29 +49,43 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    /* One-time interactive admin login. Writes playwright/.auth/admin.json.
+     * Invoked explicitly via `npm run test:e2e:prod:setup`. Authenticated
+     * specs depend on this project when running against prod. */
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: PROD_DEPS,
     },
 
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
+      dependencies: PROD_DEPS,
     },
 
     {
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
+      dependencies: PROD_DEPS,
     },
 
     /* Test against mobile viewports. */
     {
       name: "Mobile Chrome",
       use: { ...devices["Pixel 5"] },
+      dependencies: PROD_DEPS,
     },
     {
       name: "Mobile Safari",
       use: { ...devices["iPhone 12"] },
+      dependencies: PROD_DEPS,
     },
 
     /* Test against branded browsers. */
