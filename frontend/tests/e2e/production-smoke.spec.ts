@@ -53,19 +53,31 @@ test.describe("Production smoke — verify 4554ac4 fixes are live", () => {
     await page.getByTestId("identifier-input").fill(ADMIN_EMAIL);
     await page.getByTestId("request-code-button").click();
 
+    // LoginPage.tsx shows a success message for 1.5 s then navigates to /verify.
+    // VerificationPage.tsx has data-testid="code-input" and "verify-code-button".
+    // Wait for that navigation before handing control to the operator, otherwise
+    // the Inspector pause pops while the page is still on /login and it looks
+    // like nothing happened.
+    await page.waitForURL(/\/verify/, { timeout: 20_000 });
+    await expect(page.getByTestId("code-input")).toBeVisible({
+      timeout: 10_000,
+    });
+
     console.log("\n========================================");
-    console.log("  PROD SMOKE: a 6-digit code was just sent to");
+    console.log("  PROD SMOKE: a 6-digit code was sent to");
     console.log(`  ${ADMIN_EMAIL}.`);
     console.log("");
-    console.log("  1. Check your email.");
-    console.log("  2. Type the code into the Verification page");
-    console.log("     in the browser and click Verify/Submit.");
-    console.log("  3. Click 'Resume' in the Playwright Inspector");
-    console.log("     (the small toolbar) to continue.");
+    console.log("  Browser is now on the Verification page.");
+    console.log("  1. Check your email for the 6-digit code.");
+    console.log("  2. Type it into the 'Verification Code' field");
+    console.log("     in the browser, then click 'Verify Code'.");
+    console.log("  3. Once the page navigates past /verify,");
+    console.log("     click 'Resume' in the Playwright Inspector");
+    console.log("     toolbar to continue the test.");
     console.log("========================================\n");
     await page.pause();
 
-    // After the operator resumes: assert we are past the login flow.
+    // After the operator resumes: assert we are past the verification page.
     // Admin (Position 99) is routed to /mode; other users to /procedure-type.
     await expect(page).toHaveURL(/\/(mode|procedure-type|treatment)/, {
       timeout: 30_000,
