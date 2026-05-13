@@ -31,48 +31,36 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 
 ## Documentation
 
-- **Design Log**: [DESIGN_LOG.md](DESIGN_LOG.md) - Active design decisions and questions
-- **Design History**: [docs/design-logs/](docs/design-logs/) - Historical design records
-- **Deployment**: [docs/deployment/](docs/deployment/) - Azure VM and local setup
-- **Troubleshooting**: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Common issues and pitfalls
+- **Design Log**: [DESIGN_LOG.md](DESIGN_LOG.md) - Active design decisions
+- **Troubleshooting**: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Common issues
 - **Priority API**: [docs/PRIORITY_INTEGRATION.md](docs/PRIORITY_INTEGRATION.md) - Integration rules
-- **API Reference**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - Endpoints and auth
-- **Testing**: [docs/testing/README.md](docs/testing/README.md) - Test patterns and coverage
-- **Compounding Engineering**: [docs/COMPOUNDING-ENGINEERING-SETUP.md](docs/COMPOUNDING-ENGINEERING-SETUP.md) - Workflow system
-- **Multi-Agent Development**: [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md) - Parallel agent workflow
-- **Agent Behavior**: [.claude/settings.md](.claude/settings.md) - Claude Code guidelines
-
-## Commands
-
-- `/design` - Start a new design log entry (for significant changes)
-- `/azure-check` - Validate Local vs Azure parity before deployment
-- `/spawn` - Launch background agent for analysis (see [settings.md](.claude/settings.md))
-- `/test` - Run tests and verify build passes
-- `/worker create <name>` - Create parallel worktree with isolated database (recommended)
-- `/worker create <name> --skip-install` - Create worktree fast (skips npm install, may break dev server)
-- `/worker remove <name>` - Remove a worktree and its isolated database
-- `/worker list` - List active workers
+- See `docs/` for deployment, testing, API reference, multi-agent workflow, and more.
 
 ## Testing
 
 - **Backend**: `cd backend && npm test`
 - **Frontend**: `cd frontend && npm test`
-- **TDD**: Write failing test before fixing bugs (see [settings.md](.claude/settings.md#test-driven-development))
+- **TDD**: Write failing test before fixing bugs
 
 ## Database Migrations
 
-- **Development**: Auto-sync via `sequelize.sync({ alter: true })` - columns auto-created
-- **Production**: ALWAYS create migration file in `backend/src/migrations/`
-- **Rule**: Any model column addition MUST have a corresponding `.sql` migration file
-- **Apply**: `ssh azureuser@20.217.84.100 "docker exec ala-db psql -U ala_user -d ala_production -c 'SQL_HERE'"`
-- **Design Log**: See [DL-005](docs/design-logs/2026-01-database-migration-process.md) for details
+- **Development**: Auto-sync via `sequelize.sync({ alter: true })`
+- **Production**: ALWAYS create migration in `backend/src/migrations/` (see `.claude/rules/database.md`)
 
 ## Parallel Development
 
-- **Setup**: `/worker create <name>` or `./scripts/setup-parallel-worker.sh create --branch BRANCH --name NAME`
-- **Database Isolation**: Each worker gets its own PostgreSQL database (`ala_worker_<name>`), copied from main. Changes in workers don't affect main database.
-- **Rules**: See "Parallel Worktree Isolation Rules" in [settings.md](.claude/settings.md)
-- **Guide**: [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md)
+- Use `/worker create <name>` for isolated worktrees with dedicated databases
+- See [docs/MULTI_AGENT_WORKFLOW.md](docs/MULTI_AGENT_WORKFLOW.md) for details
+
+## Compact Instructions
+
+When compacting, preserve:
+
+- Active treatment state (patient ID, applicator serial, treatment status)
+- Priority ERP endpoints or OData queries under investigation
+- Pending migration files not yet applied to production
+- Current worktree name and branch if in parallel dev session
+- Any safety validation failures or blocked applicators discovered this session
 
 <!-- TOKEN_OPTIMIZER:MODEL_ROUTING -->
 

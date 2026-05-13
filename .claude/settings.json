@@ -2,6 +2,18 @@
   "enabledPlugins": {
     "code-simplifier@claude-plugins-official": true
   },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)"
+    ]
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -9,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx prettier --write \"${FILE_PATH}\" 2>/dev/null || true"
+            "command": "./frontend/node_modules/.bin/prettier --write \"${FILE_PATH}\" 2>/dev/null || true"
           }
         ]
       },
