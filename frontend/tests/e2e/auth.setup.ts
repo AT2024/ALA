@@ -89,18 +89,18 @@ setup(
     console.log("  Browser is on the Verification page.");
     console.log("  1) Check your email for the 6-digit code.");
     console.log("  2) Type it into the 'Verification Code' field");
-    console.log("     and click 'Verify Code'.");
-    console.log("  3) Wait for the page to navigate to /mode-select");
-    console.log("     (or /procedure-type).");
-    console.log("  4) Click 'Resume' in the Playwright Inspector");
-    console.log("     toolbar to save the auth state.");
+    console.log("     in the browser, then click 'Verify Code'.");
+    console.log("");
+    console.log("  That's it. No Inspector click needed —");
+    console.log("  the test auto-detects post-login navigation");
+    console.log("  and saves the auth state automatically.");
     console.log("========================================\n");
-    await page.pause();
 
-    // Admin (Position 99) is routed to /mode-select after verify;
-    // non-admin users would land on /procedure-type. Accept either.
-    await expect(page).toHaveURL(/\/(mode-select|procedure-type)/, {
-      timeout: 30_000,
+    // Admin (Position 99) is routed to /mode-select after a successful verify;
+    // non-admin users would land on /procedure-type. Either signals login OK.
+    // Generous 5-minute timeout while the operator pulls the code from email.
+    await page.waitForURL(/\/(mode-select|procedure-type)/, {
+      timeout: 5 * 60 * 1000,
     });
 
     await page.context().storageState({ path: AUTH_FILE });
