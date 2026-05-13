@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { readSessionKeys, TREATMENT_KEYS } from "./utils/sessionStorageProbe";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Production Smoke — verifies the four fixes shipped in commit 4554ac4 are
