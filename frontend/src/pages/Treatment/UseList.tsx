@@ -14,6 +14,17 @@ import ConfirmationDialog from "@/components/Dialogs/ConfirmationDialog";
 import SignatureModal from "@/components/Dialogs/SignatureModal";
 import { getStatusColors, APPLICATOR_STATUSES } from "@/utils/applicatorStatus";
 
+export const getEffectiveStatus = (app: {
+  status?: string | null;
+  usageType: string;
+}): string =>
+  app.status ||
+  (app.usageType === "full"
+    ? "INSERTED"
+    : app.usageType === "faulty"
+      ? "FAULTY"
+      : "SEALED");
+
 // Get status color classes based on status for table rows
 // Uses shared STATUS_COLORS from @shared/applicatorStatuses
 const getStatusColor = (status: string | undefined | null): string => {
@@ -58,6 +69,12 @@ const UseList = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Finalization flow state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -182,15 +199,24 @@ const UseList = () => {
             return appTime < earliestTime ? app.insertionTime : earliest;
           }, processedApplicators[0].insertionTime)
         : "",
-    totalApplicatorUse: processedApplicators.filter(
-      (app) => app.usageType === "full" || app.usageType === "faulty",
-    ).length,
-    faultyApplicator: processedApplicators.filter(
-      (app) => app.usageType === "faulty",
-    ).length,
-    notUsedApplicators: processedApplicators.filter(
-      (app) => app.usageType === "none",
-    ).length,
+    totalApplicatorUse: processedApplicators.filter((app) => {
+      const status = getEffectiveStatus(app);
+      return (
+        status === "INSERTED" ||
+        status === "FAULTY" ||
+        status === "DEPLOYMENT_FAILURE"
+      );
+    }).length,
+    faultyApplicator: processedApplicators.filter((app) => {
+      const status = getEffectiveStatus(app);
+      return status === "FAULTY" || status === "DEPLOYMENT_FAILURE";
+    }).length,
+    notUsedApplicators: processedApplicators.filter((app) => {
+      const status = getEffectiveStatus(app);
+      return ["SEALED", "OPENED", "LOADED", "DISPOSED", "DISCHARGED"].includes(
+        status,
+      );
+    }).length,
     // Count actual seeds inserted, including partial inserts from FAULTY applicators.
     // Mirrors TreatmentContext.getActualInsertedSeeds: 'full' uses seedQuantity,
     // 'faulty' uses insertedSeedsQty (the actual number deployed before the fault).
@@ -363,7 +389,15 @@ const UseList = () => {
       <div className="space-y-6">
         {/* Treatment Information */}
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Treatment Information</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-medium">Treatment Information</h2>
+            <span
+              className="font-mono text-sm text-gray-500"
+              aria-label="Current time"
+            >
+              {currentTime.toLocaleTimeString()}
+            </span>
+          </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div>
               <p className="text-sm text-gray-500">Patient ID</p>
@@ -690,15 +724,29 @@ const UseList = () => {
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {applicator.usageType === "full"
-                            ? applicator.seedQuantity
-                            : applicator.usageType === "faulty"
-                              ? applicator.insertedSeedsQty || 0
-                              : 0}
+                          {(() => {
+                            const status = getEffectiveStatus(applicator);
+                            if (status === "INSERTED") {
+                              return (
+                                applicator.insertedSeedsQty ??
+                                applicator.seedQuantity
+                              );
+                            }
+                            if (
+                              status === "FAULTY" ||
+                              status === "DEPLOYMENT_FAILURE"
+                            ) {
+                              return applicator.insertedSeedsQty || 0;
+                            }
+                            return 0;
+                          })()}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-32">
+                        <td className="max-w-xs overflow-hidden px-6 py-4 text-sm text-gray-500">
                           {applicator.comments ? (
-                            <span className="truncate">
+                            <span
+                              className="block truncate"
+                              title={applicator.comments}
+                            >
                               {applicator.comments}
                             </span>
                           ) : (

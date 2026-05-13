@@ -23,6 +23,7 @@ import { treatmentService } from "@/services/treatmentService";
 import { offlineDb, OfflineApplicator } from "@/services/indexedDbService";
 import ProgressTracker from "@/components/ProgressTracker";
 import { generateUUID } from "@/utils/uuid";
+import { deriveUsageType } from "@/utils/usageTypeDerivation";
 import {
   getAllowedNextStatuses,
   getListItemColor,
@@ -793,20 +794,6 @@ const TreatmentDocumentation = () => {
     }));
   };
 
-  // Map form usage type values to interface values
-  const mapUsageType = (formUsageType: string): "full" | "faulty" | "none" => {
-    switch (formUsageType) {
-      case "Full use":
-        return "full";
-      case "Faulty":
-        return "faulty";
-      case "No Use":
-        return "none";
-      default:
-        return "full"; // Default fallback
-    }
-  };
-
   const handleNext = async () => {
     // Use status if available, otherwise fall back to usingType for backward compatibility
     const currentStatus = formData.status || formData.usingType;
@@ -980,7 +967,7 @@ const TreatmentDocumentation = () => {
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
-        usageType: mapUsageType(formData.usingType),
+        usageType: deriveUsageType(formData.status, formData.usingType),
         status: (formData.status || undefined) as ApplicatorStatus | undefined, // 8-state workflow using shared type
         insertionTime: formData.insertionTime,
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
@@ -1808,6 +1795,13 @@ const TreatmentDocumentation = () => {
                         </option>
                       )}
                     </select>
+                    {formData.status === "SEALED" && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Applicator registered but unopened. Status will not sync
+                        to Priority until a terminal status (INSERTED, FAULTY,
+                        DISPOSED, DISCHARGED, DEPLOYMENT FAILURE) is selected.
+                      </p>
+                    )}
                   </div>
 
                   {/* Inserted Sources Qty */}

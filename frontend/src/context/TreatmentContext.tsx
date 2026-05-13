@@ -442,12 +442,21 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
 
   // New functions for actual seed calculations
   const getActualTotalSeeds = () => {
-    const filteredAvailable = getFilteredAvailableApplicators();
-    const availableSeeds = filteredAvailable.reduce(
-      (sum, app) => sum + app.seedQuantity,
-      0,
+    // Deduplicate by serial number across both lists. Non-terminal processed
+    // applicators (SEALED/OPENED/LOADED) can appear in BOTH availableApplicators
+    // and processedApplicators, so a naive sum double-counts their seeds
+    // (e.g. 201 sources from 55 applicators instead of the actual 196 from 54).
+    const processedSerials = new Set(
+      processedApplicators
+        .filter((app) => app.usageType !== "none")
+        .map((app) => app.serialNumber),
     );
-    // Only count processed applicators that are not "No Use" - same logic as getActualInsertedSeeds
+
+    const filteredAvailable = getFilteredAvailableApplicators();
+    const availableSeeds = filteredAvailable
+      .filter((app) => !processedSerials.has(app.serialNumber))
+      .reduce((sum, app) => sum + app.seedQuantity, 0);
+
     const processedSeeds = processedApplicators.reduce((sum, app) => {
       if (app.usageType === "none") return sum; // Exclude "No Use" applicators from total
       return sum + app.seedQuantity;

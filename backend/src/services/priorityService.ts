@@ -1185,12 +1185,16 @@ export const priorityService = {
 
       // Use SIBD_APPUSELISTTEXT_SUBFORM (text/display variant) for reads
       // This returns SERNUMTEXT, PARTNAMETEXT, PARTDESTEXT instead of coded fields
+      // $top: 9999 — Priority OData default-limits subform results; without an
+      // explicit top, large orders (e.g. SO26000072 with 55 applicators) get
+      // truncated and applicators silently disappear from the list.
       const response = await priorityApi.get(
         `/ORDERS('${orderName}')/SIBD_APPUSELISTTEXT_SUBFORM`,
         {
           params: {
             $select:
               "SERNUMTEXT,PARTNAMETEXT,PARTDESTEXT,KLINE,INTDATA2,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,EXTFILENAME,INSERTEDREPORTEDBY,INSERTIONDATE",
+            $top: 9999,
           },
         },
       );
@@ -2380,7 +2384,10 @@ export const priorityService = {
               applicatorType: item.PARTDES || "Unknown Applicator",
               seedQuantity: item.INTDATA2 || 0,
               treatmentId: item.ORDNAME || order.ORDNAME,
-              patientId: order.ORDNAME || "Unknown Patient",
+              // patientId must match Treatment.subjectId (set from order.REFERENCE
+              // at line ~1454). Using ORDNAME caused 0 applicators to match the
+              // current treatment filter in TreatmentContext.
+              patientId: order.REFERENCE || order.ORDNAME || "Unknown Patient",
               usageType: item.USINGTYPE || null,
               usageTime: item.INSERTIONDATE || null,
               insertedSeeds: item.INSERTEDSEEDSQTY || 0,
