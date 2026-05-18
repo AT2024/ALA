@@ -307,6 +307,55 @@ describe("TreatmentContext", () => {
       expect(totalSeeds).toBe(50);
     });
 
+    it("should not double-count a non-terminal applicator present in both available and processed lists", () => {
+      // Regression (#42): a NON-terminal applicator (SEALED/OPENED/LOADED) that
+      // is mid-workflow legitimately appears in BOTH availableApplicators and
+      // processedApplicators. getFilteredAvailableApplicators() only drops
+      // TERMINAL duplicates (INSERTED/FAULTY/...), so without an explicit serial
+      // dedupe in getActualTotalSeeds() a LOADED applicator's seeds are summed
+      // twice (75 reported when only 50 exist). Patient-safety: this tally feeds
+      // the finalization PDF / "Total DaRT Sources".
+      const { result } = renderHook(() => useTreatment(), { wrapper });
+
+      act(() => {
+        result.current.setTreatment(mockTreatment);
+        result.current.addAvailableApplicator({
+          id: "1",
+          serialNumber: "APP-001",
+          seedQuantity: 25,
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:00:00Z",
+          patientId: "PATIENT-001",
+        });
+        result.current.addAvailableApplicator({
+          id: "2",
+          serialNumber: "APP-002",
+          seedQuantity: 25,
+          usageType: "full" as const,
+          insertionTime: "2025-10-09T10:05:00Z",
+          patientId: "PATIENT-001",
+        });
+        // Same serial as an available applicator, tracked as processed but
+        // still NON-terminal (status LOADED) with a non-"none" usage type —
+        // the exact double-count trigger getFilteredAvailableApplicators misses.
+        result.current.setProcessedApplicators([
+          {
+            id: "1",
+            serialNumber: "APP-001",
+            seedQuantity: 25,
+            usageType: "full" as const,
+            status: "LOADED",
+            insertionTime: "2025-10-09T10:00:00Z",
+            patientId: "PATIENT-001",
+          },
+        ]);
+      });
+
+      // APP-001 counted once (via processed), APP-002 once (via available) = 50.
+      // Pre-fix behavior double-counted the LOADED APP-001 → 75.
+      expect(result.current.getActualTotalSeeds()).toBe(50);
+    });
+
     it("should calculate actual inserted seeds excluding no-use applicators", () => {
       const { result } = renderHook(() => useTreatment(), { wrapper });
 

@@ -1191,6 +1191,13 @@ export const priorityService = {
           params: {
             $select:
               "SERNUMTEXT,PARTNAMETEXT,PARTDESTEXT,KLINE,INTDATA2,INSERTEDSEEDSQTY,USINGTYPE,INSERTIONCOMMENTS,EXTFILENAME,INSERTEDREPORTEDBY,INSERTIONDATE",
+            // $top: 9999 — Priority OData default-limits subform results; without
+            // an explicit top, large orders (e.g. SO26000072 with 55 applicators)
+            // get truncated and applicators silently disappear from the list,
+            // corrupting seed tallies (patient-safety). This is a single-order
+            // subform fetch, not paginated listing, so the 500 default does not
+            // apply — we must return every applicator row for the order.
+            $top: 9999,
           },
         },
       );
@@ -1970,7 +1977,8 @@ export const priorityService = {
       return response.data.value.map((order: any) => ({
         id: order.ORDNAME,
         site: order.CUSTNAME,
-        patientId: order.ORDNAME,
+        // REFERENCE-first to stay consistent with Treatment.subjectId mapping.
+        patientId: order.REFERENCE || order.ORDNAME,
         date: order.SIBD_TREATDAY,
       }));
     } catch (error: any) {
@@ -2380,7 +2388,10 @@ export const priorityService = {
               applicatorType: item.PARTDES || "Unknown Applicator",
               seedQuantity: item.INTDATA2 || 0,
               treatmentId: item.ORDNAME || order.ORDNAME,
-              patientId: order.ORDNAME || "Unknown Patient",
+              // patientId must match Treatment.subjectId (set from order.REFERENCE).
+              // Using ORDNAME caused 0 applicators to match the current treatment
+              // filter in TreatmentContext (per-patient filtering broke).
+              patientId: order.REFERENCE || order.ORDNAME || "Unknown Patient",
               usageType: item.USINGTYPE || null,
               usageTime: item.INSERTIONDATE || null,
               insertedSeeds: item.INSERTEDSEEDSQTY || 0,
