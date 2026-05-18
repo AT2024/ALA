@@ -115,6 +115,24 @@ describe("Priority Service", () => {
     });
   });
 
+  describe("getOrderSubform", () => {
+    test("should request applicator subform with $top so large orders are not truncated", async () => {
+      // Regression: Priority OData default-limits subform rows. Without an
+      // explicit $top, orders with many applicators (~55+) were silently
+      // truncated, corrupting seed tallies (patient-safety).
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { value: [] } });
+
+      await priorityService.getOrderSubform("SO26000072");
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        "/ORDERS('SO26000072')/SIBD_APPUSELISTTEXT_SUBFORM",
+        {
+          params: expect.objectContaining({ $top: 9999 }),
+        },
+      );
+    });
+  });
+
   describe("getUserSiteAccess", () => {
     test("should handle test@example.com with test data", async () => {
       // Mock file system to return test data

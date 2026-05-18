@@ -214,6 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem("loginIdentifier");
     sessionStorage.removeItem("priorityUserData");
 
+    // Clear treatment session data so a re-login in the same tab does not
+    // restore stale applicator status from a previous user/session.
+    // Keys must match TreatmentContext.clearTreatment() (single source of truth).
+    sessionStorage.removeItem("currentTreatment");
+    sessionStorage.removeItem("processedApplicators");
+    sessionStorage.removeItem("availableApplicators");
+    sessionStorage.removeItem("individualSeedsRemoved");
+
     // Clear Priority service cache to prevent data leakage between users
     try {
       priorityService.clearCache();
