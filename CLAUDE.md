@@ -58,6 +58,9 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 - **Backend**: `cd backend && npm test`
 - **Frontend**: `cd frontend && npm test`
 - **TDD**: Write failing test before fixing bugs (see [settings.md](.claude/settings.md#test-driven-development))
+- **Real E2E**: use Skill `e2e-testing` + helpers `frontend/tests/e2e/helpers/alaFlow.ts`; full guide [docs/testing/E2E_REAL_TESTING.md](docs/testing/E2E_REAL_TESTING.md). Stale `applicator-workflow`/`seed-removal` specs are NOT reliable.
+- **Auth limiter**: 10 logins/IP/15min, no dev bypass — run E2E `--workers=1`, restart backend to reset (HTTP 429 ≠ regression).
+- **Falsifiability**: a fix isn't verified until reverting it makes the test RED then restoring it GREEN (see [.claude/rules/testing.md](.claude/rules/testing.md)).
 
 ## Database Migrations
 
