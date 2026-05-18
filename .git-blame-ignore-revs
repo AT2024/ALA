@@ -1,0 +1,9 @@
+# Revisions to ignore in `git blame` (line-ending-only / formatting changes).
+# These commits change no logic — skipping them keeps blame attributing
+# lines to their real author.
+#
+# Enable locally (GitHub applies this file automatically):
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# chore: normalize line endings to LF (.gitattributes enforcement)
+30c0522220295cf2a782a040295c1c85f869fda0
