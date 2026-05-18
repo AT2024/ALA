@@ -12,7 +12,14 @@ import {
 import PackageManager from "@/components/PackageManager";
 import ConfirmationDialog from "@/components/Dialogs/ConfirmationDialog";
 import SignatureModal from "@/components/Dialogs/SignatureModal";
-import { getStatusColors, APPLICATOR_STATUSES } from "@/utils/applicatorStatus";
+import {
+  getStatusColors,
+  APPLICATOR_STATUSES,
+  mapStatusToUsageType,
+  getEffectiveStatus,
+  DARK_ROW_STATUSES,
+  getDisplayedInsertedSeeds,
+} from "@/utils/applicatorStatus";
 
 // Get status color classes based on status for table rows
 // Uses shared STATUS_COLORS from @shared/applicatorStatuses
@@ -146,7 +153,15 @@ const UseList = () => {
             comments: app.comments,
             status: app.status || undefined,
             applicatorType: app.applicatorType,
-            insertedSeedsQty: app.insertedSeedsQty || app.seedQuantity,
+            // Only an INSERTED (full) applicator may fall back to seedQuantity
+            // for legacy records missing insertedSeedsQty. A FAULTY applicator
+            // that deployed 0 sources must stay 0 — `0 || seedQuantity` would
+            // otherwise inflate it to the full count (over-counting sources).
+            insertedSeedsQty:
+              getEffectiveStatus(app.status, app.usageType) ===
+              APPLICATOR_STATUSES.INSERTED
+                ? app.insertedSeedsQty || app.seedQuantity
+                : app.insertedSeedsQty || 0,
             attachmentFileCount: app.attachmentFileCount,
             attachmentSyncStatus: app.attachmentSyncStatus,
             catalog: app.catalog,
@@ -182,14 +197,24 @@ const UseList = () => {
             return appTime < earliestTime ? app.insertionTime : earliest;
           }, processedApplicators[0].insertionTime)
         : "",
-    totalApplicatorUse: processedApplicators.filter(
-      (app) => app.usageType === "full" || app.usageType === "faulty",
-    ).length,
+    // Derive counts from the effective status (status-first) so records whose
+    // legacy usageType is stale (e.g. a FAULTY applicator saved as "full")
+    // are still classified correctly without a DB migration.
+    totalApplicatorUse: processedApplicators.filter((app) => {
+      const usage = mapStatusToUsageType(
+        getEffectiveStatus(app.status, app.usageType),
+      );
+      return usage === "full" || usage === "faulty";
+    }).length,
     faultyApplicator: processedApplicators.filter(
-      (app) => app.usageType === "faulty",
+      (app) =>
+        mapStatusToUsageType(getEffectiveStatus(app.status, app.usageType)) ===
+        "faulty",
     ).length,
     notUsedApplicators: processedApplicators.filter(
-      (app) => app.usageType === "none",
+      (app) =>
+        mapStatusToUsageType(getEffectiveStatus(app.status, app.usageType)) ===
+        "none",
     ).length,
     // Count actual seeds inserted, including partial inserts from FAULTY applicators.
     // Mirrors TreatmentContext.getActualInsertedSeeds: 'full' uses seedQuantity,
@@ -617,34 +642,44 @@ const UseList = () => {
                     new Map(
                       sortApplicatorsByStatus(processedApplicators)
                         .filter((app) => {
-                          const status =
-                            app.status ||
-                            (app.usageType === "full"
-                              ? "INSERTED"
-                              : app.usageType === "faulty"
-                                ? "FAULTY"
-                                : "SEALED");
+                          const status = getEffectiveStatus(
+                            app.status,
+                            app.usageType,
+                          );
                           return status.toUpperCase() !== "DISPOSED";
                         })
                         .map((a) => [a.serialNumber, a]),
                     ).values(),
                   ).map((applicator) => {
-                    // Get effective status for color coding (fallback to usageType if status is null)
-                    const effectiveStatus =
-                      applicator.status ||
-                      (applicator.usageType === "full"
-                        ? "INSERTED"
-                        : applicator.usageType === "faulty"
-                          ? "FAULTY"
-                          : "SEALED");
+                    // Effective status drives row color, cell text color and the
+                    // inserted-source count (status-first, usageType fallback).
+                    const effectiveStatus = getEffectiveStatus(
+                      applicator.status,
+                      applicator.usageType,
+                    );
                     const rowColor = getStatusColor(effectiveStatus);
+                    // Dark (bg-gray-900) rows need white cell text — the per-td
+                    // text-gray-* classes otherwise win over the row's text-white.
+                    const isDarkRow =
+                      DARK_ROW_STATUSES.includes(effectiveStatus);
+                    const cellTextClass = isDarkRow
+                      ? "text-white"
+                      : "text-gray-500";
+                    const cellStrongTextClass = isDarkRow
+                      ? "text-white"
+                      : "text-gray-900";
+                    const cellMutedTextClass = isDarkRow
+                      ? "text-gray-300"
+                      : "text-gray-400";
 
                     return (
                       <tr
                         key={applicator.id || applicator.serialNumber}
                         className={`hover:opacity-90 ${rowColor} relative`}
                       >
-                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm font-medium ${cellStrongTextClass}`}
+                        >
                           <div className="flex items-center justify-between">
                             <span>{applicator.serialNumber}</span>
                             {applicator.package_label && (
@@ -654,21 +689,31 @@ const UseList = () => {
                             )}
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm ${cellTextClass}`}
+                        >
                           {applicator.catalog || "N/A"}
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm ${cellTextClass}`}
+                        >
                           {applicator.applicatorType || "N/A"}
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm ${cellTextClass}`}
+                        >
                           {applicator.seedQuantity}
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm ${cellTextClass}`}
+                        >
                           {applicator.seedLength
                             ? `${applicator.seedLength}`
                             : "-"}
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm ${cellTextClass}`}
+                        >
                           {applicator.insertionTime &&
                           !isNaN(new Date(applicator.insertionTime).getTime())
                             ? format(
@@ -689,20 +734,20 @@ const UseList = () => {
                                   : "SEALED")}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                          {applicator.usageType === "full"
-                            ? applicator.seedQuantity
-                            : applicator.usageType === "faulty"
-                              ? applicator.insertedSeedsQty || 0
-                              : 0}
+                        <td
+                          className={`whitespace-nowrap px-6 py-4 text-sm ${cellTextClass}`}
+                        >
+                          {getDisplayedInsertedSeeds(applicator)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-32">
+                        <td
+                          className={`px-6 py-4 text-sm max-w-32 ${cellTextClass}`}
+                        >
                           {applicator.comments ? (
                             <span className="truncate">
                               {applicator.comments}
                             </span>
                           ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className={cellMutedTextClass}>-</span>
                           )}
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm">
@@ -732,7 +777,7 @@ const UseList = () => {
                               </span>
                             </div>
                           ) : (
-                            <span className="text-gray-400">No files</span>
+                            <span className={cellMutedTextClass}>No files</span>
                           )}
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -740,7 +785,11 @@ const UseList = () => {
                             onClick={() =>
                               handleEditApplicator(applicator.serialNumber)
                             }
-                            className="text-primary hover:text-primary/80"
+                            className={
+                              isDarkRow
+                                ? "text-white underline hover:text-gray-200"
+                                : "text-primary hover:text-primary/80"
+                            }
                           >
                             Edit
                           </button>
