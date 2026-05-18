@@ -62,13 +62,15 @@ function parseArgs(): { strict: boolean; fix: boolean } {
 }
 
 // Read and parse the traceability matrix
+// (exported at module bottom for unit testing — regression guard for the
+// status-cell regex).
 function parseTraceabilityMatrix(filePath: string): ParsedRequirement[] {
   const content = fs.readFileSync(filePath, "utf-8");
   const requirements: ParsedRequirement[] = [];
 
   // Match requirement rows in tables
   const rowRegex =
-    /\| (SRS-[A-Z]+-\d+) \| ([^|]+) \| ([^|]*) \| ([^|]+) \| ([^|]+) \| (\w+) \|/g;
+    /\| (SRS-[A-Z]+-\d+) \| ([^|]+) \| ([^|]*) \| ([^|]+) \| ([^|]+) \| (\w+)\s*\|/g;
 
   let match;
   while ((match = rowRegex.exec(content)) !== null) {
