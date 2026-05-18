@@ -726,12 +726,9 @@ const UseList = () => {
                           <span
                             className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 border ${getStatusBadgeColor(applicator.status, applicator.usageType)}`}
                           >
-                            {applicator.status ||
-                              (applicator.usageType === "full"
-                                ? "INSERTED"
-                                : applicator.usageType === "faulty"
-                                  ? "FAULTY"
-                                  : "SEALED")}
+                            {/* Same status-first resolution as rowColor above;
+                                reuse the already-computed effectiveStatus. */}
+                            {effectiveStatus}
                           </span>
                         </td>
                         <td

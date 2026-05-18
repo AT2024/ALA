@@ -216,13 +216,6 @@ export interface UserContext {
   userMetadata?: UserMetadata;
 }
 
-/**
- * Build user context object for Priority API calls
- * Used to pass user information to Priority service methods
- *
- * @param req - Express request with user attached
- * @returns UserContext object for Priority API calls
- */
 /** Alpha Tau admin position code (full access). */
 export const ADMIN_POSITION_CODE = 99;
 
@@ -248,6 +241,13 @@ export function deriveSessionTestMode(
   return Number(req.user?.metadata?.positionCode) === ADMIN_POSITION_CODE;
 }
 
+/**
+ * Build user context object for Priority API calls
+ * Used to pass user information to Priority service methods
+ *
+ * @param req - Express request with user attached
+ * @returns UserContext object for Priority API calls
+ */
 export function buildUserContext(
   req: Request & { user?: RequestUser },
 ): UserContext {

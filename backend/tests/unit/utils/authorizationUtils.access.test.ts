@@ -29,6 +29,8 @@ import {
 // Obviously-fake, professional test data (safe in screenshots/logs).
 const OWNER_ID = "user-owner-001";
 const OTHER_ID = "user-other-002";
+const SITE_A = "CLINIC-NORTH";
+const SITE_B = "CLINIC-SOUTH";
 
 function makeUser(opts: {
   id?: string;
@@ -48,45 +50,41 @@ function makeUser(opts: {
   } as any;
 }
 
-const treatmentOwnedBy = (userId: string) => ({ userId }) as any;
+// A treatment owned by OWNER_ID; access flows hinge on the requesting user.
+const OWNED_TREATMENT = { userId: OWNER_ID } as any;
+// A regular user assigned exactly one site (SITE_A), used by site-access tests.
+const siteUserForA = () => makeUser({ sites: [{ custName: SITE_A }] });
 
 describe("requireTreatmentAccess", () => {
   it("allows the treatment owner (no throw)", () => {
-    const user = makeUser({ id: OWNER_ID, role: "user" });
-    expect(() =>
-      requireTreatmentAccess(treatmentOwnedBy(OWNER_ID), user),
-    ).not.toThrow();
+    const owner = makeUser({ id: OWNER_ID, role: "user" });
+    expect(() => requireTreatmentAccess(OWNED_TREATMENT, owner)).not.toThrow();
   });
 
   it("allows a role=admin user to access a treatment they do not own", () => {
     const admin = makeUser({ id: OTHER_ID, role: "admin" });
-    expect(() =>
-      requireTreatmentAccess(treatmentOwnedBy(OWNER_ID), admin),
-    ).not.toThrow();
+    expect(() => requireTreatmentAccess(OWNED_TREATMENT, admin)).not.toThrow();
   });
 
   it("denies a non-owner, non-admin user with ForbiddenError", () => {
     const intruder = makeUser({ id: OTHER_ID, role: "user" });
-    expect(() =>
-      requireTreatmentAccess(treatmentOwnedBy(OWNER_ID), intruder),
-    ).toThrow(ForbiddenError);
+    expect(() => requireTreatmentAccess(OWNED_TREATMENT, intruder)).toThrow(
+      ForbiddenError,
+    );
   });
 });
 
 describe("hasTreatmentAccess", () => {
   it("returns true for the owner", () => {
     expect(
-      hasTreatmentAccess(
-        treatmentOwnedBy(OWNER_ID),
-        makeUser({ id: OWNER_ID }),
-      ),
+      hasTreatmentAccess(OWNED_TREATMENT, makeUser({ id: OWNER_ID })),
     ).toBe(true);
   });
 
   it("returns true for a role=admin user on any treatment", () => {
     expect(
       hasTreatmentAccess(
-        treatmentOwnedBy(OWNER_ID),
+        OWNED_TREATMENT,
         makeUser({ id: OTHER_ID, role: "admin" }),
       ),
     ).toBe(true);
@@ -95,7 +93,7 @@ describe("hasTreatmentAccess", () => {
   it("returns false for a non-owner, non-admin user", () => {
     expect(
       hasTreatmentAccess(
-        treatmentOwnedBy(OWNER_ID),
+        OWNED_TREATMENT,
         makeUser({ id: OTHER_ID, role: "user" }),
       ),
     ).toBe(false);
@@ -107,7 +105,7 @@ describe("denyIfNoTreatmentAccess", () => {
     const res = { status: jest.fn().mockReturnThis() } as any;
     const result = denyIfNoTreatmentAccess(
       res,
-      treatmentOwnedBy(OWNER_ID),
+      OWNED_TREATMENT,
       makeUser({ id: OWNER_ID }),
     );
     expect(result).toBe(false);
@@ -119,7 +117,7 @@ describe("denyIfNoTreatmentAccess", () => {
     expect(() =>
       denyIfNoTreatmentAccess(
         res,
-        treatmentOwnedBy(OWNER_ID),
+        OWNED_TREATMENT,
         makeUser({ id: OTHER_ID, role: "user" }),
       ),
     ).toThrow(ForbiddenError);
@@ -152,34 +150,30 @@ describe("isAlphaTauAdmin", () => {
 
 describe("hasSiteAccess", () => {
   it("returns false when there is no user", () => {
-    expect(hasSiteAccess(undefined, "CLINIC-NORTH")).toBe(false);
+    expect(hasSiteAccess(undefined, SITE_A)).toBe(false);
   });
 
   it("grants an Alpha Tau admin access to any site", () => {
     const admin = makeUser({ positionCode: 99, sites: [] });
-    expect(hasSiteAccess(admin, "CLINIC-NORTH")).toBe(true);
+    expect(hasSiteAccess(admin, SITE_A)).toBe(true);
   });
 
   it("grants a regular user access to an assigned site", () => {
-    const user = makeUser({ sites: [{ custName: "CLINIC-NORTH" }] });
-    expect(hasSiteAccess(user, "CLINIC-NORTH")).toBe(true);
+    expect(hasSiteAccess(siteUserForA(), SITE_A)).toBe(true);
   });
 
   it("denies a regular user a site that is not assigned to them", () => {
-    const user = makeUser({ sites: [{ custName: "CLINIC-NORTH" }] });
-    expect(hasSiteAccess(user, "CLINIC-SOUTH")).toBe(false);
+    expect(hasSiteAccess(siteUserForA(), SITE_B)).toBe(false);
   });
 });
 
 describe("requireSiteAccess", () => {
   it("does not throw when the user has site access", () => {
-    const user = makeUser({ sites: [{ custName: "CLINIC-NORTH" }] });
-    expect(() => requireSiteAccess(user, "CLINIC-NORTH")).not.toThrow();
+    expect(() => requireSiteAccess(siteUserForA(), SITE_A)).not.toThrow();
   });
 
   it("throws ForbiddenError when the user lacks site access", () => {
-    const user = makeUser({ sites: [{ custName: "CLINIC-NORTH" }] });
-    expect(() => requireSiteAccess(user, "CLINIC-SOUTH")).toThrow(
+    expect(() => requireSiteAccess(siteUserForA(), SITE_B)).toThrow(
       ForbiddenError,
     );
   });
@@ -196,9 +190,9 @@ describe("getUserSiteCodes", () => {
 
   it("returns exactly the assigned site codes for a regular user", () => {
     const user = makeUser({
-      sites: [{ custName: "CLINIC-NORTH" }, { custName: "CLINIC-SOUTH" }],
+      sites: [{ custName: SITE_A }, { custName: SITE_B }],
     });
-    expect(getUserSiteCodes(user)).toEqual(["CLINIC-NORTH", "CLINIC-SOUTH"]);
+    expect(getUserSiteCodes(user)).toEqual([SITE_A, SITE_B]);
   });
 
   it("returns an empty list when a regular user has no assigned sites", () => {
