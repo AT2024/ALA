@@ -716,17 +716,18 @@ export const getRemovalCandidates = asyncHandler(
       throw new Error("Site parameter is required");
     }
 
-    // Build user context for test mode support
-    const userContext = {
-      identifier: req.user?.email || req.user?.id || "",
-      userMetadata: req.user?.metadata,
-    };
+    // Build user context for test mode support (session-derived, admin-only)
+    const userContext = buildUserContext(req);
 
-    // Check for test user FIRST (existing pattern from priorityService)
+    // Two independent test-data signals (matches priorityService):
+    //  1. Legacy dedicated test user (config.testUserEmail). The actual data
+    //     swap still flows through shouldUseTestData(userContext), which gates
+    //     the legacy path on NODE_ENV/ENABLE_TEST_DATA — so in production
+    //     (ENABLE_TEST_DATA=false) this branch cannot serve simulated data.
+    //  2. The new per-session, admin-only signal (never persisted metadata).
     const isTestMode =
       req.user?.email === config.testUserEmail ||
-      (req.user?.metadata?.testModeEnabled === true &&
-        Number(req.user?.metadata?.positionCode) === 99);
+      userContext.userMetadata?.testModeEnabled === true;
 
     if (isTestMode) {
       try {

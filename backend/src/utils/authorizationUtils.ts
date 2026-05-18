@@ -223,12 +223,41 @@ export interface UserContext {
  * @param req - Express request with user attached
  * @returns UserContext object for Priority API calls
  */
+/** Alpha Tau admin position code (full access). */
+export const ADMIN_POSITION_CODE = 99;
+
+/**
+ * Derive whether Test Mode is active for THIS request.
+ *
+ * Test Mode is a deliberate, per-session, admin-only choice. It is NEVER read
+ * from persisted user metadata (a stale DB flag must not silently activate
+ * simulated data in production). The only valid signal is the `X-Test-Mode`
+ * request header, honored only for admin users (POSITIONCODE 99).
+ *
+ * @param req - Express request with user attached
+ * @returns true only when the request explicitly opted into Test Mode AND the
+ *          user is an Alpha Tau admin
+ */
+export function deriveSessionTestMode(
+  req: Request & { user?: RequestUser },
+): boolean {
+  const requested = req.header?.("X-Test-Mode") === "true";
+  if (!requested) {
+    return false;
+  }
+  return Number(req.user?.metadata?.positionCode) === ADMIN_POSITION_CODE;
+}
+
 export function buildUserContext(
   req: Request & { user?: RequestUser },
 ): UserContext {
   return {
     identifier: req.user?.email || req.user?.id || "",
-    userMetadata: req.user?.metadata,
+    userMetadata: {
+      ...req.user?.metadata,
+      // Per-session, admin-only. Overrides any persisted testModeEnabled.
+      testModeEnabled: deriveSessionTestMode(req),
+    },
   };
 }
 
@@ -244,6 +273,7 @@ export function buildUserContextFromUser(
 ): UserContext {
   return {
     identifier: user?.email || user?.id || "",
-    userMetadata: user?.metadata,
+    // No request/header context here, so Test Mode cannot be opted into.
+    userMetadata: { ...user?.metadata, testModeEnabled: false },
   };
 }

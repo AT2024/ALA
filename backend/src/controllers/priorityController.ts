@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import logger from "../utils/logger";
 import priorityService from "../services/priorityService";
+import { buildUserContext } from "../utils/authorizationUtils";
 
 // @desc    Validate user email against Priority PHONEBOOK
 // @route   POST /api/proxy/priority/validate-email
@@ -219,10 +220,7 @@ export const getOrdersForSiteAndDate = asyncHandler(
 
       // Get orders from Priority for the specified site using exact CUSTNAME and date filtering
       // Pass user context with metadata for test mode support
-      const userContext = {
-        identifier: req.user?.email || req.user?.id || "",
-        userMetadata: req.user?.metadata,
-      };
+      const userContext = buildUserContext(req);
       let orders = await priorityService.getOrdersForSiteWithFilter(
         site,
         userContext,
@@ -311,10 +309,7 @@ export const getOrderSubform = asyncHandler(
       logger.info(`Fetching subform data for order: ${orderId}`);
 
       // Get subform data from Priority with user context for test mode support
-      const userContext = {
-        identifier: req.user?.email || req.user?.id || "",
-        userMetadata: req.user?.metadata,
-      };
+      const userContext = buildUserContext(req);
       const subformData = await priorityService.getOrderSubform(
         orderId,
         userContext,
@@ -473,10 +468,7 @@ export const getAvailableApplicators = asyncHandler(
 
       // Get available applicators from Priority service
       // Pass user context with metadata for test mode support
-      const userContext = {
-        identifier: req.user?.email || req.user?.id || "",
-        userMetadata: req.user?.metadata,
-      };
+      const userContext = buildUserContext(req);
       const applicators =
         await priorityService.getAvailableApplicatorsForTreatment(
           site as string,
@@ -579,10 +571,7 @@ export const checkRemovalStatus = asyncHandler(
       }
 
       // Check removal status using Priority service with user context for test mode support
-      const userContext = {
-        identifier: req.user?.email || req.user?.id || "",
-        userMetadata: req.user?.metadata,
-      };
+      const userContext = buildUserContext(req);
       const removalStatus = await priorityService.checkRemovalStatus(
         orderId,
         userContext,
