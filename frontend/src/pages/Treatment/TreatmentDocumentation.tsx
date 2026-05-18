@@ -28,6 +28,7 @@ import {
   getListItemColor,
   getStatusEmoji,
   getStatusLabel,
+  mapStatusToUsageType,
   requiresComment,
   TERMINAL_STATUSES,
   type ApplicatorStatus,
@@ -844,15 +845,8 @@ const TreatmentDocumentation = () => {
         return;
       }
 
-      // Map status to usageType for offline Applicator object
-      const mapStatusToUsageType = (
-        status: string,
-      ): "full" | "faulty" | "none" => {
-        if (status === "INSERTED") return "full";
-        if (status === "FAULTY") return "faulty";
-        return "none";
-      };
-
+      // usageType is derived from status via the shared mapStatusToUsageType
+      // helper so the offline and online save paths cannot diverge.
       const applicatorData = {
         id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         serialNumber: formData.serialNumber,
@@ -918,7 +912,18 @@ const TreatmentDocumentation = () => {
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
         insertionTime: formData.insertionTime,
-        usingType: formData.usingType as "full" | "partial" | "faulty" | "none",
+        // Derive the persisted usageType from the 8-state status (source of
+        // truth), identical to the local-state object below. Sending the raw
+        // legacy formData.usingType here re-introduced the bug where a FAULTY
+        // applicator was stored as "full", over-counting deployed sources in
+        // the DB and on treatment reload / the finalization PDF.
+        usingType: (formData.status
+          ? mapStatusToUsageType(formData.status)
+          : mapUsageType(formData.usingType)) as
+          | "full"
+          | "partial"
+          | "faulty"
+          | "none",
         status: formData.status || undefined, // 8-state workflow status
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,
         comments: formData.comments,
@@ -980,7 +985,13 @@ const TreatmentDocumentation = () => {
         serialNumber: formData.serialNumber,
         applicatorType: formData.applicatorType,
         seedQuantity: parseInt(formData.seedsQty) || 0,
-        usageType: mapUsageType(formData.usingType),
+        // Derive usageType from the 8-state status (source of truth). The legacy
+        // formData.usingType is only a fallback for old records that have no
+        // status — relying on it here previously persisted FAULTY applicators as
+        // usageType "full", over-counting deployed sources.
+        usageType: formData.status
+          ? mapStatusToUsageType(formData.status)
+          : mapUsageType(formData.usingType),
         status: (formData.status || undefined) as ApplicatorStatus | undefined, // 8-state workflow using shared type
         insertionTime: formData.insertionTime,
         insertedSeedsQty: parseInt(formData.insertedSeedsQty) || 0,

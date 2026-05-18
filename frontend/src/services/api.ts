@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getSessionTestMode } from "./sessionTestMode";
 
 // Debug logging (disabled for production)
 const API_DEBUG = false;
@@ -101,6 +102,13 @@ api.interceptors.request.use(
       const error = new Error("This operation requires a network connection.");
       (error as any).code = "OFFLINE_ERROR";
       return Promise.reject(error);
+    }
+
+    // Test Mode is a per-session, admin-only choice. Signal it per-request so
+    // the backend never relies on a persisted flag. Absence of the header =
+    // normal mode (the safe default for the production medical app).
+    if (getSessionTestMode()) {
+      config.headers["X-Test-Mode"] = "true";
     }
 
     return config;

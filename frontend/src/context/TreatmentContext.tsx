@@ -458,11 +458,18 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
 
   const getActualInsertedSeeds = () => {
     // Count actual seeds inserted, honoring partial counts when present.
-    // 'full': prefer insertedSeedsQty (allows partial INSERTED); fall back to
-    // seedQuantity for legacy records that don't carry insertedSeedsQty.
-    // 'faulty': always use insertedSeedsQty (defaults to 0 if absent).
+    // Resolve usage from the EFFECTIVE status (status-first, usageType only as
+    // a legacy fallback) so this safety-critical total stays consistent with
+    // the per-row getDisplayedInsertedSeeds. Reading raw app.usageType here
+    // diverged from the per-row cell whenever status and usageType disagreed
+    // (e.g. a FAULTY applicator with a stale usageType), making the Treatment
+    // Summary "Total DaRT Sources Inserted" wrong on the finalization PDF.
+    // INSERTED: prefer insertedSeedsQty (allows partial); fall back to
+    //   seedQuantity for legacy records that don't carry insertedSeedsQty.
+    // FAULTY: always use insertedSeedsQty (defaults to 0 if absent).
     return processedApplicators.reduce((sum, app) => {
-      if (app.usageType === "full") {
+      const effectiveStatus = getEffectiveStatus(app);
+      if (effectiveStatus === "INSERTED") {
         return (
           sum +
           (typeof app.insertedSeedsQty === "number"
@@ -470,8 +477,9 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
             : app.seedQuantity)
         );
       }
-      if (app.usageType === "faulty") return sum + (app.insertedSeedsQty || 0);
-      return sum; // 'none' type contributes 0 seeds
+      if (effectiveStatus === "FAULTY")
+        return sum + (app.insertedSeedsQty || 0);
+      return sum; // non-deployed statuses contribute 0 seeds
     }, 0);
   };
 

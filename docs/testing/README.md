@@ -1,5 +1,11 @@
 # Testing Patterns
 
+> **Real E2E (Playwright against the live app):** see
+> [E2E_REAL_TESTING.md](E2E_REAL_TESTING.md) — flow, dev login, test-data map,
+> the auth rate-limiter trap, and the mandatory falsifiability check. Use the
+> committed helpers in `frontend/tests/e2e/helpers/`; do not trust the stale
+> `applicator-workflow`/`seed-removal` specs.
+
 ## Critical Path Coverage Required
 
 - Treatment initiation and completion flows

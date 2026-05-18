@@ -270,7 +270,9 @@ export const verifyCode = asyncHandler(async (req: Request, res: Response) => {
       custName: user.metadata?.custName || "",
       sites: user.metadata?.sites || [],
       fullAccess: Number(user.metadata?.positionCode) === 99,
-      testModeEnabled: user.metadata?.testModeEnabled || false,
+      // Test Mode is a per-session choice (chosen on the mode screen), never
+      // persisted/restored. Always start a fresh login in normal mode.
+      testModeEnabled: false,
     },
     // NOTE: Token is NOT included in response body - it's set as HttpOnly cookie only
     // This is an OWASP security best practice to prevent XSS token theft

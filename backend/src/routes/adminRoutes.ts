@@ -1,8 +1,8 @@
 import express from "express";
 import asyncHandler from "express-async-handler";
 import { protect, restrict } from "../middleware/authMiddleware";
-import { User } from "../models";
 import logger from "../utils/logger";
+import { getClientIp } from "../utils/requestUtils";
 
 // Constants for admin access validation
 const ADMIN_POSITION_CODE = 99;
@@ -94,17 +94,25 @@ router.put("/config", (req, res) => {
 });
 
 // Test Mode Management
-// GET /api/admin/test-mode - Get current test mode status for the authenticated user
+//
+// Test Mode is a deliberate, per-session, admin-only choice. It is NEVER
+// persisted: the active signal is the `X-Test-Mode` request header sent by the
+// client for the current session only (see authorizationUtils.deriveSessionTestMode).
+// These endpoints therefore hold NO server state — GET always reports the
+// non-persisted default, and PUT only records an audit-trail entry.
+
+// GET /api/admin/test-mode - No persisted state; always reports the default.
 router.get("/test-mode", (req, res) => {
-  const testModeEnabled = req.user?.metadata?.testModeEnabled || false;
   res.status(200).json({
-    testModeEnabled,
+    testModeEnabled: false,
     userId: req.user?.id,
     email: req.user?.email,
   });
 });
 
-// PUT /api/admin/test-mode - Toggle test mode for the authenticated user
+// PUT /api/admin/test-mode - Audit-only acknowledgement of a per-session mode
+// choice. Does NOT persist anything; the client carries the choice in memory
+// and signals each request via the X-Test-Mode header.
 router.put(
   "/test-mode",
   asyncHandler(async (req, res) => {
@@ -115,37 +123,36 @@ router.put(
       return;
     }
 
-    // Verify admin permission (POSITIONCODE=99)
+    // Verify admin permission. Must match deriveSessionTestMode exactly
+    // (POSITIONCODE 99 only) so the audit trail can never record a test-mode
+    // choice that the enforcement gate would not actually honor.
     const positionCode = Number(req.user?.metadata?.positionCode);
-    if (positionCode !== ADMIN_POSITION_CODE && req.user?.role !== "admin") {
+    if (positionCode !== ADMIN_POSITION_CODE) {
       res
         .status(403)
         .json({ error: "Only admin users (Position 99) can toggle test mode" });
       return;
     }
 
-    // Update user metadata in database
-    const user = await User.findByPk(req.user?.id);
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
-
-    user.metadata = {
-      ...user.metadata,
-      testModeEnabled: enabled,
-    };
-    await user.save();
-
-    // Audit log for security tracking
+    // Audit log for medical compliance / security tracking (no persistence).
+    // Structured WHO/WHAT/WHEN/WHERE payload for SIEM export.
     logger.info(
-      `TEST MODE ${enabled ? "ENABLED" : "DISABLED"} by ${req.user?.email} (user ID: ${req.user?.id})`,
+      `TEST MODE ${enabled ? "ENABLED" : "DISABLED"} for this session by ${req.user?.email}`,
+      {
+        event: "TEST_MODE_SESSION_CHOICE",
+        enabled,
+        userId: req.user?.id,
+        email: req.user?.email,
+        positionCode,
+        clientIp: getClientIp(req),
+        timestamp: new Date().toISOString(),
+      },
     );
 
     res.status(200).json({
       success: true,
       testModeEnabled: enabled,
-      message: `Test mode ${enabled ? "enabled" : "disabled"}`,
+      message: `Test mode ${enabled ? "enabled" : "disabled"} for this session`,
     });
   }),
 );

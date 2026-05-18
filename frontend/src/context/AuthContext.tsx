@@ -12,6 +12,7 @@ import { priorityService } from "@/services/priorityService";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 import { encryptionKeyService } from "@/services/encryptionKeyService";
 import api from "@/services/api";
+import { setSessionTestMode } from "@/services/sessionTestMode";
 
 interface User {
   id: string;
@@ -67,7 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const valid = await authService.validateToken("");
 
           if (valid) {
-            setUser(JSON.parse(storedUser));
+            // Test Mode is per-session and must never survive a reload. Strip
+            // any stale flag from the restored user and reset the in-memory
+            // session signal so the app starts in normal mode.
+            const restoredUser = {
+              ...JSON.parse(storedUser),
+              testModeEnabled: false,
+            };
+            setSessionTestMode(false);
+            setUser(restoredUser);
+
+            // Admins choose mode every session — including after a reload,
+            // which skips the fresh-login routing. Re-ask via the mode screen.
+            if (restoredUser.positionCode === "99") {
+              navigate("/mode-select");
+            }
           } else {
             // Session invalid, clear local storage and cache
             localStorage.removeItem("user");
@@ -192,6 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(null);
     setLoginIdentifier("");
+    setSessionTestMode(false);
 
     // Clear all stored data
     localStorage.removeItem("user");
@@ -250,9 +266,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setTestModeEnabled = useCallback(
     (enabled: boolean) => {
       if (user) {
-        const updatedUser = { ...user, testModeEnabled: enabled };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        // Session-only: drive the in-memory flag (read by the API interceptor)
+        // and the in-memory user (read by the banner). NEVER persisted, so a
+        // page reload resets to normal mode and the admin is re-asked.
+        setSessionTestMode(enabled);
+        setUser({ ...user, testModeEnabled: enabled });
       }
     },
     [user],
