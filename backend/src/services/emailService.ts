@@ -173,6 +173,19 @@ export async function sendSignedPdf(
 ): Promise<boolean> {
   const recipientEmail = toEmail || PDF_RECIPIENT_EMAIL;
 
+  // Test-user short-circuit: never email the configured test user, regardless
+  // of NODE_ENV. The PDF is still generated and stored upstream; we simply
+  // refuse to deliver a treatment record to a fake mailbox.
+  if (
+    recipientEmail &&
+    recipientEmail.toLowerCase() === config.testUserEmail.toLowerCase()
+  ) {
+    logger.info(
+      `[TEST USER] PDF for treatment ${treatmentId} not emailed (recipient=${recipientEmail})`,
+    );
+    return true;
+  }
+
   // In development mode, log the PDF info instead of sending email
   if (!SHOULD_SEND_EMAILS) {
     logger.info(

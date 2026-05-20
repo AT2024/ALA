@@ -165,6 +165,53 @@ describe("EmailService", () => {
         expect.stringContaining("Dr. Test"),
       );
     });
+
+    describe("test-user suppression", () => {
+      it("logs [TEST USER] and skips sending when recipient is config.testUserEmail", async () => {
+        const pdfBuffer = Buffer.from("test pdf");
+
+        const result = await sendSignedPdf(
+          "test@example.com", // matches the default config.testUserEmail
+          pdfBuffer,
+          "treatment-suppress-001",
+          mockSignatureDetails,
+        );
+
+        expect(result).toBe(true);
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.stringContaining("[TEST USER]"),
+        );
+        expect(logger.info).not.toHaveBeenCalledWith(
+          expect.stringContaining("[DEV MODE]"),
+        );
+      });
+
+      it("does not trigger [TEST USER] log for a real recipient", async () => {
+        await sendSignedPdf(
+          "surgeon@example.test",
+          Buffer.from("test pdf"),
+          "treatment-real-001",
+          mockSignatureDetails,
+        );
+
+        expect(logger.info).not.toHaveBeenCalledWith(
+          expect.stringContaining("[TEST USER]"),
+        );
+      });
+
+      it("matches the test user case-insensitively", async () => {
+        await sendSignedPdf(
+          "TEST@Example.COM",
+          Buffer.from("test pdf"),
+          "treatment-suppress-002",
+          mockSignatureDetails,
+        );
+
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.stringContaining("[TEST USER]"),
+        );
+      });
+    });
   });
 
   describe("Default Export", () => {
