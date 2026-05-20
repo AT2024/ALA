@@ -219,10 +219,20 @@ export async function sendSignedPdf(
     second: "2-digit",
   });
 
+  // Extra mailboxes (audit/records distribution) BCC'd on every finalized-PDF
+  // email. Empty list = no BCC. Drop any entry that matches the To: signer so
+  // the same person isn't double-recipient.
+  const bccList = config.pdfAdditionalRecipients.filter(
+    (addr) => addr !== recipientEmail.toLowerCase(),
+  );
+
   const message: EmailMessage = {
     senderAddress: SENDER_ADDRESS,
     recipients: {
       to: [{ address: recipientEmail }],
+      ...(bccList.length > 0 && {
+        bcc: bccList.map((address) => ({ address })),
+      }),
     },
     content: {
       subject: `ALA Medical - Treatment Report ${treatmentId}`,
@@ -299,6 +309,8 @@ This is an automated message from the ALA Medical Treatment Tracking System.
       signatureType: signatureDetails.type,
       signerName: signatureDetails.signerName,
       signerPosition: signatureDetails.signerPosition,
+      // Count only — addresses are PII and stay out of the audit log.
+      bccCount: bccList.length,
     },
   );
 

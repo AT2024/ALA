@@ -48,6 +48,14 @@ export const config = {
   emailConnectionString:
     process.env.AZURE_COMMUNICATION_CONNECTION_STRING || "",
   pdfRecipientEmail: process.env.PDF_RECIPIENT_EMAIL || "",
+  // Comma-separated list of extra mailboxes BCC'd on every finalized-PDF email.
+  // Parsed: trim, lowercase, basic shape check, dedupe. Empty list = no BCC
+  // (preserves pre-feature behavior).
+  pdfAdditionalRecipients: (process.env.PDF_ADDITIONAL_RECIPIENTS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s))
+    .filter((s, i, arr) => arr.indexOf(s) === i),
   emailMaxRetries: parseInt(process.env.EMAIL_MAX_RETRIES || "3", 10),
   emailRetryDelayMs: parseInt(process.env.EMAIL_RETRY_DELAY_MS || "1000", 10),
 
