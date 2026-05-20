@@ -1230,6 +1230,7 @@ export const verifyAndFinalize = asyncHandler(
     }
 
     const treatment = await treatmentService.getTreatmentById(req.params.id);
+    requireTreatmentAccess(treatment, req.user);
 
     // Find pending verification for this treatment
     const verification = await SignatureVerification.findOne({
