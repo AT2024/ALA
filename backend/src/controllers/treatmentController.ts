@@ -1314,7 +1314,7 @@ export const verifyAndFinalize = asyncHandler(
     const signatureDetails: SignatureDetails = {
       type: "alphatau_verified",
       signerName,
-      signerEmail: verification.targetEmail,
+      signerEmail: (verification.targetEmail || "").trim().toLowerCase(),
       signerPosition,
       signedAt: new Date(),
     };
