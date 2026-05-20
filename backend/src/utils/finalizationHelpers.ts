@@ -19,7 +19,7 @@ import {
   DiscrepancyClarification,
   SignatureDetails as PdfSignatureDetails,
 } from "../services/pdfGenerationService";
-import { sendSignedPdf, getPdfRecipientEmail } from "../services/emailService";
+import { sendSignedPdf } from "../services/emailService";
 import logger from "./logger";
 
 /**
@@ -349,8 +349,19 @@ export async function finalizeAndSendPdf(
     emailStatus: "pending",
   });
 
-  // Send PDF to clinic email
-  const recipientEmail = getPdfRecipientEmail();
+  // Send PDF to the email the user actually entered (verifyAndFinalize) or
+  // the surgeon's account email (autoFinalize). Both paths populate
+  // signatureDetails.signerEmail upstream; we normalize at this trust boundary.
+  const recipientEmail =
+    signatureDetails.signerEmail?.trim().toLowerCase() ?? "";
+
+  if (!recipientEmail) {
+    logger.warn(
+      `No recipient email for treatment ${treatment.id} — PDF stored, no email sent`,
+    );
+    return { pdfId: treatmentPdf.id, emailStatus: treatmentPdf.emailStatus };
+  }
+
   try {
     await sendSignedPdf(
       recipientEmail,
