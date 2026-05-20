@@ -9,6 +9,7 @@ import {
   ContinuationEligibility,
   Treatment,
 } from "@/services/treatmentService";
+import { formatTreatmentDate } from "@/utils/dateFormat";
 import PackageManager from "@/components/PackageManager";
 import ConfirmationDialog from "@/components/Dialogs/ConfirmationDialog";
 import SignatureModal from "@/components/Dialogs/SignatureModal";
@@ -17,6 +18,8 @@ import {
   APPLICATOR_STATUSES,
   mapStatusToUsageType,
   getEffectiveStatus,
+  IN_PROGRESS_STATUSES,
+  type ApplicatorStatus,
   DARK_ROW_STATUSES,
   getDisplayedInsertedSeeds,
 } from "@/utils/applicatorStatus";
@@ -413,7 +416,9 @@ const UseList = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500">Date</p>
-              <p className="font-medium">{currentTreatment.date}</p>
+              <p className="font-medium">
+                {formatTreatmentDate(currentTreatment.date)}
+              </p>
             </div>
           </div>
         </div>
@@ -443,7 +448,9 @@ const UseList = () => {
                 <p className="mt-1 text-sm text-primary">
                   This treatment continues from a previous session. Original
                   treatment date:{" "}
-                  <span className="font-medium">{parentTreatment.date}</span>
+                  <span className="font-medium">
+                    {formatTreatmentDate(parentTreatment.date)}
+                  </span>
                 </p>
                 <p className="mt-1 text-xs text-primary">
                   OPENED and LOADED applicators from the original treatment can
@@ -671,6 +678,20 @@ const UseList = () => {
                     const cellMutedTextClass = isDarkRow
                       ? "text-gray-300"
                       : "text-gray-400";
+                    // Applicators carried over from the original (already
+                    // signed) session are shown for continuity. Only those
+                    // with an explicit in-progress status are reusable; the
+                    // rest (terminal or legacy/ambiguous) are read-only here —
+                    // medical record integrity / fail safe.
+                    const inProgressExplicit =
+                      !!applicator.status &&
+                      IN_PROGRESS_STATUSES.includes(
+                        String(
+                          applicator.status,
+                        ).toUpperCase() as ApplicatorStatus,
+                      );
+                    const isInheritedReadOnly =
+                      !!applicator.fromParentTreatment && !inProgressExplicit;
 
                     return (
                       <tr
@@ -737,10 +758,10 @@ const UseList = () => {
                           {getDisplayedInsertedSeeds(applicator)}
                         </td>
                         <td
-                          className={`px-6 py-4 text-sm max-w-32 ${cellTextClass}`}
+                          className={`px-6 py-4 text-sm align-top ${cellTextClass}`}
                         >
                           {applicator.comments ? (
-                            <span className="truncate">
+                            <span className="block max-w-xs whitespace-normal break-words">
                               {applicator.comments}
                             </span>
                           ) : (
@@ -778,18 +799,31 @@ const UseList = () => {
                           )}
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                          <button
-                            onClick={() =>
-                              handleEditApplicator(applicator.serialNumber)
-                            }
-                            className={
-                              isDarkRow
-                                ? "text-white underline hover:text-gray-200"
-                                : "text-primary hover:text-primary/80"
-                            }
-                          >
-                            Edit
-                          </button>
+                          {isInheritedReadOnly ? (
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
+                                isDarkRow
+                                  ? "bg-white/15 text-white"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                              title="Recorded in the original treatment session and cannot be edited here"
+                            >
+                              Previous session
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleEditApplicator(applicator.serialNumber)
+                              }
+                              className={
+                                isDarkRow
+                                  ? "text-white underline hover:text-gray-200"
+                                  : "text-primary hover:text-primary/80"
+                              }
+                            >
+                              Edit
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

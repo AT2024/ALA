@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
+import { formatTreatmentDate } from "@/utils/dateFormat";
 
 // PDF Document Configuration
 const PDF_DOCUMENT_NUMBER = "QSR-4001-01-E";
@@ -83,7 +84,7 @@ export class PDFService {
         "Treatment Type:",
         treatment.type.charAt(0).toUpperCase() + treatment.type.slice(1),
       ],
-      ["Treatment Date:", treatment.date],
+      ["Treatment Date:", formatTreatmentDate(treatment.date)],
       ["Surgeon:", treatment.surgeon || "N/A"],
     ];
 

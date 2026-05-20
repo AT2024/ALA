@@ -31,6 +31,7 @@ import {
   mapStatusToUsageType,
   requiresComment,
   TERMINAL_STATUSES,
+  IN_PROGRESS_STATUSES,
   type ApplicatorStatus,
   type TreatmentContext,
 } from "@/utils/applicatorStatus";
@@ -329,31 +330,26 @@ const TreatmentDocumentation = () => {
       if (response.success) {
         let applicators = response.applicators || [];
 
-        // For continuation treatments:
-        // 1. Filter out TERMINAL applicators (INSERTED, FAULTY, etc.) from available count
-        // 2. Add REUSABLE applicators (OPENED, LOADED) to processedApplicators and availableApplicators
+        // Continuation treatments: carry over the ENTIRE parent applicator set
+        // so the resumed session is continuous ("as if you never left") and
+        // cumulative totals stay accurate. Reuse is allowed ONLY for
+        // applicators with an explicit in-progress status (SEALED/OPENED/
+        // LOADED); terminal or legacy/ambiguous (no status) records are shown
+        // read-only and are NOT offered for re-selection — fail safe.
         if (currentTreatment.parentTreatmentId) {
           try {
             const parentApplicators = await treatmentService.getApplicators(
               currentTreatment.parentTreatmentId,
             );
 
-            // Identify terminal vs reusable applicators
-            // CONSERVATIVE: Only treat as reusable if EXPLICITLY has OPENED or LOADED status
-            const isReusable = (app: any) => {
-              // If status is null/undefined, we cannot determine if it's reusable
-              // This prevents DISPOSED applicators (with null status but usageType='none') from being treated as reusable
-              if (!app.status) {
-                return false;
-              }
-              return ["OPENED", "LOADED"].includes(app.status.toUpperCase());
-            };
+            const isExplicitlyReusable = (app: any): boolean =>
+              !!app.status &&
+              IN_PROGRESS_STATUSES.includes(
+                String(app.status).toUpperCase() as ApplicatorStatus,
+              );
 
-            const reusableApplicators = parentApplicators.filter(isReusable);
-            // Note: terminalApplicators = parentApplicators that are NOT reusable (they're implicitly filtered below)
-
-            // Filter out ALL applicators that exist in parent treatment (both terminal AND reusable)
-            // This prevents duplicates - reusable ones will be added back via inherited mapping with correct status
+            // A parent applicator must not also appear in the fresh Priority
+            // pool — it is represented by the carried-over record below.
             const allParentSerialNumbers = new Set(
               parentApplicators.map((app: any) =>
                 (app.serialNumber || "").toUpperCase(),
@@ -372,38 +368,60 @@ const TreatmentDocumentation = () => {
               `[CONTINUATION] Filtered out ${filteredCount - applicators.length} parent treatment applicators from Priority list`,
             );
 
-            // Add REUSABLE applicators to processedApplicators (UseList) and availableApplicators (Choose from List)
-            if (
-              reusableApplicators.length > 0 &&
-              processedApplicators.length === 0
-            ) {
-              const inherited = reusableApplicators.map((app: any) => ({
-                id: app.id || app.serialNumber,
-                serialNumber: app.serialNumber,
-                applicatorType: app.applicatorType || "",
-                seedQuantity: app.seedQuantity || 0,
-                usageType: "none" as const, // Not yet used in this treatment
-                insertionTime: app.insertionTime || new Date().toISOString(),
-                insertedSeedsQty: 0,
-                comments: "",
-                status: app.status, // Preserve OPENED/LOADED status
-                fromParentTreatment: true,
-                patientId: currentTreatment.subjectId, // Required for getFilteredAvailableApplicators filter
-              }));
+            // Don't clobber anything already hydrated; dedupe by serial.
+            const existingSerials = new Set(
+              processedApplicators.map((a) =>
+                (a.serialNumber || "").toUpperCase(),
+              ),
+            );
 
-              // Add to processedApplicators for UseList display
-              setProcessedApplicators(inherited);
+            const inherited = parentApplicators
+              .filter(
+                (app: any) =>
+                  !existingSerials.has((app.serialNumber || "").toUpperCase()),
+              )
+              .map((app: any) => {
+                const reusable = isExplicitlyReusable(app);
+                return {
+                  id: app.id || app.serialNumber,
+                  serialNumber: app.serialNumber,
+                  applicatorType: app.applicatorType || "",
+                  seedQuantity: app.seedQuantity || 0,
+                  // Reusable: fresh for this session. Read-only history: keep
+                  // the parent's usage so cumulative seed totals stay correct.
+                  usageType: reusable
+                    ? ("none" as const)
+                    : app.usageType || "none",
+                  insertionTime: app.insertionTime || new Date().toISOString(),
+                  insertedSeedsQty: reusable ? 0 : app.insertedSeedsQty || 0,
+                  comments: reusable ? "" : app.comments || "",
+                  // Pass status through (undefined => read-only history row).
+                  status: app.status,
+                  fromParentTreatment: true,
+                  patientId: currentTreatment.subjectId,
+                };
+              });
 
-              // Add to availableApplicators for "Choose from List"
-              inherited.forEach((app: any) => addAvailableApplicator(app));
+            if (inherited.length > 0) {
+              // Merge with any already-hydrated applicators.
+              setProcessedApplicators([...processedApplicators, ...inherited]);
 
+              // Only explicitly-reusable applicators may be re-selected.
+              inherited
+                .filter((app: any) => isExplicitlyReusable(app))
+                .forEach((app: any) => addAvailableApplicator(app));
+
+              const reusableCount = inherited.filter((app: any) =>
+                isExplicitlyReusable(app),
+              ).length;
               console.log(
-                `[CONTINUATION] Added ${inherited.length} reusable applicators (OPENED/LOADED) from parent`,
+                `[CONTINUATION] Carried over ${inherited.length} parent applicators ` +
+                  `(${reusableCount} reusable, ${inherited.length - reusableCount} read-only history)`,
               );
             }
           } catch (err) {
             console.error(
-              "Failed to fetch parent applicators for filtering:",
+              "Failed to fetch parent applicators for continuation:",
               err,
             );
             // Continue with unfiltered applicators if parent fetch fails
