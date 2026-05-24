@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { TERMINAL_STATUSES, ApplicatorStatus } from "@/utils/applicatorStatus";
+import { buildApplicatorSummary } from "@/utils/applicatorSummary";
 import { networkStatus } from "@/services/networkStatus";
 import {
   offlineDb,
@@ -612,43 +613,15 @@ export function TreatmentProvider({ children }: { children: ReactNode }) {
     return type.includes("pancreas") || type.includes("prostate");
   };
 
-  // Get applicator summary by seed quantity (for table views)
-  const getApplicatorSummary = () => {
-    const summaryMap: Record<
-      number,
-      {
-        seedQuantity: number;
-        inserted: number;
-        available: number;
-        loaded: number;
-        packaged: number;
-      }
-    > = {};
-
-    processedApplicators.forEach((app) => {
-      if (!summaryMap[app.seedQuantity]) {
-        summaryMap[app.seedQuantity] = {
-          seedQuantity: app.seedQuantity,
-          inserted: 0,
-          available: 0,
-          loaded: 0,
-          packaged: 0,
-        };
-      }
-
-      const status = getEffectiveStatus(app);
-      const entry = summaryMap[app.seedQuantity];
-
-      if (status === "INSERTED") entry.inserted++;
-      if (["SEALED", "OPENED", "LOADED"].includes(status)) entry.available++;
-      if (status === "LOADED") entry.loaded++;
-      if (app.package_label) entry.packaged++;
-    });
-
-    return Object.values(summaryMap).sort(
-      (a, b) => a.seedQuantity - b.seedQuantity,
+  // Get applicator summary by seed quantity (for table views).
+  // "Available" reflects the patient's expected pool on load and decrements as
+  // applicators reach a terminal state. We use the centralized patient-scoped
+  // filter so the summary matches what "Choose from List" actually offers.
+  const getApplicatorSummary = () =>
+    buildApplicatorSummary(
+      processedApplicators,
+      getFilteredAvailableApplicators(),
     );
-  };
 
   // ==========================================================================
   // Offline Support Functions

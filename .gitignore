@@ -148,3 +148,5 @@ docs/generated/
 test-removal*.js
 test-removal.sh
 test-azure*.js
+
+frontend/test-results-fix-screenshots/

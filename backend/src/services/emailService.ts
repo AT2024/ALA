@@ -159,19 +159,40 @@ export interface SignatureDetails {
 }
 
 /**
+ * Honest outcome of an attempted PDF delivery, so the audit trail never records
+ * a suppressed or dev-skipped email as "sent". A real send failure throws (and
+ * is recorded as "failed" by the caller); this enum covers the non-throw paths.
+ */
+export type EmailSendStatus = "sent" | "suppressed" | "skipped_dev";
+
+/**
  * Send signed PDF email to clinic
  * @param toEmail - Recipient email address (defaults to PDF_RECIPIENT_EMAIL)
  * @param pdfBuffer - PDF file as Buffer
  * @param treatmentId - Treatment ID for reference
  * @param signatureDetails - Signature information
+ * @returns the delivery status ("sent" | "suppressed" | "skipped_dev")
  */
 export async function sendSignedPdf(
   toEmail: string | null,
   pdfBuffer: Buffer,
   treatmentId: string,
   signatureDetails: SignatureDetails,
-): Promise<boolean> {
+): Promise<EmailSendStatus> {
   const recipientEmail = toEmail || PDF_RECIPIENT_EMAIL;
+
+  // Test-user short-circuit: never email the configured test user, regardless
+  // of NODE_ENV. The PDF is still generated and stored upstream; we simply
+  // refuse to deliver a treatment record to a fake mailbox.
+  if (
+    recipientEmail &&
+    recipientEmail.toLowerCase() === config.testUserEmail.toLowerCase()
+  ) {
+    logger.info(
+      `[TEST USER] PDF for treatment ${treatmentId} not emailed (recipient=${recipientEmail})`,
+    );
+    return "suppressed";
+  }
 
   // In development mode, log the PDF info instead of sending email
   if (!SHOULD_SEND_EMAILS) {
@@ -185,7 +206,7 @@ export async function sendSignedPdf(
     logger.info(
       `[DEV MODE] To enable actual email sending, set FORCE_EMAIL_IN_DEV=true`,
     );
-    return true;
+    return "skipped_dev";
   }
 
   if (!SENDER_ADDRESS) {
@@ -206,10 +227,20 @@ export async function sendSignedPdf(
     second: "2-digit",
   });
 
+  // Extra mailboxes (audit/records distribution) BCC'd on every finalized-PDF
+  // email. Empty list = no BCC. Drop any entry that matches the To: signer so
+  // the same person isn't double-recipient.
+  const bccList = config.pdfAdditionalRecipients.filter(
+    (addr) => addr !== recipientEmail.toLowerCase(),
+  );
+
   const message: EmailMessage = {
     senderAddress: SENDER_ADDRESS,
     recipients: {
       to: [{ address: recipientEmail }],
+      ...(bccList.length > 0 && {
+        bcc: bccList.map((address) => ({ address })),
+      }),
     },
     content: {
       subject: `ALA Medical - Treatment Report ${treatmentId}`,
@@ -286,10 +317,15 @@ This is an automated message from the ALA Medical Treatment Tracking System.
       signatureType: signatureDetails.type,
       signerName: signatureDetails.signerName,
       signerPosition: signatureDetails.signerPosition,
+      // Count only — addresses are PII and stay out of the audit log.
+      bccCount: bccList.length,
     },
   );
 
-  return sendEmailWithRetry(message);
+  // sendEmailWithRetry resolves true on success or throws after exhausting
+  // retries (caller records "failed" on throw), so reaching here means sent.
+  await sendEmailWithRetry(message);
+  return "sent";
 }
 
 /**

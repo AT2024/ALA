@@ -20,10 +20,46 @@ import {
   buildUserContext,
 } from "../utils/authorizationUtils";
 import {
+  validateAndNormalizeEmail,
+  ValidationError,
+} from "../utils/inputValidation";
+import {
   mergeApplicatorsForPdf,
   finalizeAndSendPdf,
   SignatureDetails,
 } from "../utils/finalizationHelpers";
+
+// For continuation treatments, include the parent session's applicators so
+// the finalized PDF, email and summary totals are CUMULATIVE across both
+// sessions. Read-only merge — parent records are not copied/written, so the
+// parent treatment remains the single source of truth (audit-clean).
+// `treatment.type` is copied from the parent in createContinuationTreatment,
+// so it is valid for the parent query too.
+async function getCumulativeProcessedApplicators(
+  treatment: Treatment,
+): Promise<Awaited<ReturnType<typeof applicatorService.getApplicators>>> {
+  const own = await applicatorService.getApplicators(
+    treatment.id,
+    treatment.type,
+  );
+  if (!treatment.parentTreatmentId) return own;
+
+  const parent = await applicatorService.getApplicators(
+    treatment.parentTreatmentId,
+    treatment.type,
+  );
+  const ownSerials = new Set(
+    own.map((a: any) => String(a.serialNumber || "").toUpperCase()),
+  );
+  const inheritedFromParent = parent.filter(
+    (a: any) => !ownSerials.has(String(a.serialNumber || "").toUpperCase()),
+  );
+  logger.info(
+    `[CONTINUATION] Cumulative PDF: ${own.length} from continuation + ` +
+      `${inheritedFromParent.length} carried from parent ${treatment.parentTreatmentId}`,
+  );
+  return [...own, ...inheritedFromParent];
+}
 
 // Helper function to get continuation info for PDF generation
 async function getContinuationInfo(
@@ -1089,8 +1125,6 @@ export const getSiteUsersForFinalization = asyncHandler(
 // @access  Private (Position 99 only)
 export const sendFinalizationCode = asyncHandler(
   async (req: Request, res: Response) => {
-    const { targetEmail } = req.body;
-
     // Only Position 99 users can send codes
     if (!isAlphaTauAdmin(req.user)) {
       res.status(403);
@@ -1099,11 +1133,17 @@ export const sendFinalizationCode = asyncHandler(
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!targetEmail || !emailRegex.test(targetEmail)) {
-      res.status(400);
-      throw new Error("Valid email address is required");
+    // Validate, normalize (trim + lowercase), and length-cap the user-supplied
+    // target email at the trust boundary. Downstream code can trust the value.
+    let targetEmail: string;
+    try {
+      targetEmail = validateAndNormalizeEmail(req.body?.targetEmail);
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        res.status(400);
+        throw new Error(err.message);
+      }
+      throw err;
     }
 
     const treatment = await treatmentService.getTreatmentById(req.params.id);
@@ -1198,6 +1238,7 @@ export const verifyAndFinalize = asyncHandler(
     }
 
     const treatment = await treatmentService.getTreatmentById(req.params.id);
+    requireTreatmentAccess(treatment, req.user);
 
     // Find pending verification for this treatment
     const verification = await SignatureVerification.findOne({
@@ -1258,11 +1299,11 @@ export const verifyAndFinalize = asyncHandler(
       targetEmail: verification.targetEmail,
     });
 
-    // Get applicators and merge with unused available applicators
-    let processedApplicators = await applicatorService.getApplicators(
-      treatment.id,
-      treatment.type,
-    );
+    // Get applicators and merge with unused available applicators.
+    // For continuations this also pulls in parent-session applicators so the
+    // PDF/email and totals are cumulative across both sessions.
+    let processedApplicators =
+      await getCumulativeProcessedApplicators(treatment);
 
     if (treatment.type === "removal") {
       processedApplicators = await getRemovalApplicators(
@@ -1282,7 +1323,7 @@ export const verifyAndFinalize = asyncHandler(
     const signatureDetails: SignatureDetails = {
       type: "alphatau_verified",
       signerName,
-      signerEmail: verification.targetEmail,
+      signerEmail: (verification.targetEmail || "").trim().toLowerCase(),
       signerPosition,
       signedAt: new Date(),
     };
@@ -1372,11 +1413,11 @@ export const autoFinalize = asyncHandler(
       effectiveSignerPosition: signerPosition,
     });
 
-    // Get applicators and merge with unused available applicators
-    let processedApplicators = await applicatorService.getApplicators(
-      treatment.id,
-      treatment.type,
-    );
+    // Get applicators and merge with unused available applicators.
+    // For continuations this also pulls in parent-session applicators so the
+    // PDF/email and totals are cumulative across both sessions.
+    let processedApplicators =
+      await getCumulativeProcessedApplicators(treatment);
 
     if (treatment.type === "removal") {
       processedApplicators = await getRemovalApplicators(

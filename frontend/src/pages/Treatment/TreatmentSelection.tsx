@@ -4,6 +4,7 @@ import { format, addDays, subDays } from "date-fns";
 import { Combobox } from "@headlessui/react";
 import { WifiOff } from "lucide-react";
 import Layout from "@/components/Layout";
+import { formatTreatmentDate } from "@/utils/dateFormat";
 import ConfirmationDialog from "@/components/Dialogs/ConfirmationDialog";
 import { useTreatment } from "@/context/TreatmentContext";
 import { useAuth } from "@/context/AuthContext";
@@ -1264,7 +1265,7 @@ const TreatmentSelection = () => {
 
 Time Remaining: ${Math.floor(continuationEligibility?.hoursRemaining || 0)} hours
 Reusable Applicators: ${continuationEligibility?.reusableApplicatorCount || 0}
-Treatment Date: ${existingTreatment?.date || ""}
+Treatment Date: ${formatTreatmentDate(existingTreatment?.date)}
 Surgeon: ${existingTreatment?.surgeon || ""}`}
           type="info"
           confirmText="Continue Treatment"

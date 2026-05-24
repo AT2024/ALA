@@ -7,11 +7,16 @@
 
 import {
   buildRemovalPdfData,
+  finalizeAndSendPdf,
   ApplicatorForPdf,
+  SignatureDetails,
 } from "../../../src/utils/finalizationHelpers";
 import { Treatment } from "../../../src/models";
+import * as emailService from "../../../src/services/emailService";
 
-// Mock the models to avoid database connection
+// Mock the models to avoid database connection. TreatmentPdf.create returns a
+// stub row with mutable fields and a no-op save() so finalizeAndSendPdf can
+// mark statuses without touching Postgres.
 jest.mock("../../../src/models", () => ({
   Treatment: class MockTreatment {
     id = "test-treatment-id";
@@ -23,8 +28,34 @@ jest.mock("../../../src/models", () => ({
     activityPerSeed = 2.8;
     patientName = "Test Patient";
   },
-  TreatmentPdf: {},
+  TreatmentPdf: {
+    create: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+      const row: Record<string, unknown> = {
+        ...data,
+        id: "mock-pdf-id",
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      return Promise.resolve(row);
+    }),
+  },
   SignatureVerification: {},
+}));
+
+// Avoid generating real PDFs in tests — return fixed-shape buffers.
+jest.mock("../../../src/services/pdfGenerationService", () => ({
+  generateTreatmentPdf: jest
+    .fn()
+    .mockResolvedValue(Buffer.from("fake-insertion-pdf")),
+  generateRemovalPdf: jest
+    .fn()
+    .mockResolvedValue(Buffer.from("fake-removal-pdf")),
+}));
+
+// Spy-able email service. sendSignedPdf still has its real null→env fallback,
+// but the helper should now provide an explicit recipient.
+jest.mock("../../../src/services/emailService", () => ({
+  sendSignedPdf: jest.fn().mockResolvedValue(true),
+  getPdfRecipientEmail: jest.fn().mockReturnValue("env-fallback@example.test"),
 }));
 
 describe("finalizationHelpers", () => {
@@ -232,6 +263,57 @@ describe("finalizationHelpers", () => {
       expect(result.treatment.surgeon).toBe(mockTreatment.surgeon);
       expect(result.treatment.site).toBe(mockTreatment.site);
       expect(result.treatment.type).toBe("removal");
+    });
+  });
+
+  describe("finalizeAndSendPdf — recipient routing", () => {
+    const baseTreatment = {
+      id: "test-treatment-routing-001",
+      type: "insertion",
+      subjectId: "ROUTING-001",
+      site: "100078",
+      date: new Date("2026-05-20T09:00:00Z"),
+      surgeon: "Dr. Example",
+      activityPerSeed: 2.8,
+      patientName: "Routing Test Patient",
+    } as unknown as Treatment;
+
+    const baseSignature: SignatureDetails = {
+      type: "alphatau_verified",
+      signerName: "Dr. Example",
+      signerEmail: "surgeon@example.test",
+      signerPosition: "Surgeon",
+      signedAt: new Date("2026-05-20T10:00:00Z"),
+    };
+
+    it("sends the PDF to the signer email, not the env value", async () => {
+      const sendSpy = emailService.sendSignedPdf as jest.Mock;
+
+      await finalizeAndSendPdf(baseTreatment, [], baseSignature);
+
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+      expect(sendSpy).toHaveBeenCalledWith(
+        "surgeon@example.test",
+        expect.any(Buffer),
+        baseTreatment.id,
+        baseSignature,
+      );
+    });
+
+    it("trims and lowercases the signer email before sending", async () => {
+      const sendSpy = emailService.sendSignedPdf as jest.Mock;
+
+      await finalizeAndSendPdf(baseTreatment, [], {
+        ...baseSignature,
+        signerEmail: "  Surgeon@Example.Test  ",
+      });
+
+      expect(sendSpy).toHaveBeenCalledWith(
+        "surgeon@example.test",
+        expect.any(Buffer),
+        baseTreatment.id,
+        expect.objectContaining({ signerEmail: "  Surgeon@Example.Test  " }),
+      );
     });
   });
 });
