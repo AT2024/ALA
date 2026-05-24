@@ -1,9 +1,32 @@
 # Quick Deployment Reference
 
-## One-Command Deployment
+## Deploy from any network (no SSH, no NSG change)
+
+Use this when you're on changing WiFi/IPs and don't want to add an NSG rule for SSH.
+It runs `swarm-deploy` on the VM through Azure's management plane (`az vm run-command`),
+so port 22 stays closed and no NSG edit is needed.
+
+```powershell
+git push origin main           # swarm-deploy pulls origin/main on the VM
+.\deployment\Deploy-Prod.ps1   # runs the deploy via az vm run-command
+```
+
+One-time setup: `winget install --exact --id Microsoft.AzureCLI`, then `az login`.
+
+- **No Azure CLI on this machine?** Open [Azure Cloud Shell](https://shell.azure.com) (Bash) and run:
+  ```bash
+  az vm run-command invoke --subscription "Alpha Tau Medical - Azure Subscription" \
+    -g ATM-ISR-Docker -n ALAapp --command-id RunShellScript \
+    --scripts "runuser -l azureuser -c 'cd ~/ala-improved/deployment && ./swarm-deploy'" \
+    --query "value[0].message" -o tsv
+  ```
+- **Zero setup:** Azure Portal → the VM (ALAapp) → Operations → Run command → `RunShellScript` →
+  paste `runuser -l azureuser -c 'cd ~/ala-improved/deployment && ./swarm-deploy'` → Run.
+
+## One-Command Deployment (SSH — requires your IP allowlisted in the NSG)
 
 ```bash
-ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 ```
 
 That's it. Everything else is automated.
