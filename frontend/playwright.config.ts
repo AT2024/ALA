@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+const IS_LOCAL = BASE_URL.startsWith("http://localhost");
+// When targeting the live Azure deployment, authenticated specs depend on the
+// "setup" project, which captures admin storageState via one human login.
+// Local runs keep the unauthenticated default (existing tests mock auth).
+const IS_PROD = BASE_URL.includes("ala-app.israelcentral");
+const PROD_DEPS = IS_PROD ? ["setup"] : [];
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
@@ -24,7 +32,10 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
+
+    /* Production uses Let's Encrypt; permit self-signed during local docker dev too. */
+    ignoreHTTPSErrors: true,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -38,29 +49,43 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    /* One-time interactive admin login. Writes playwright/.auth/admin.json.
+     * Invoked explicitly via `npm run test:e2e:prod:setup`. Authenticated
+     * specs depend on this project when running against prod. */
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts$/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: PROD_DEPS,
     },
 
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
+      dependencies: PROD_DEPS,
     },
 
     {
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
+      dependencies: PROD_DEPS,
     },
 
     /* Test against mobile viewports. */
     {
       name: "Mobile Chrome",
       use: { ...devices["Pixel 5"] },
+      dependencies: PROD_DEPS,
     },
     {
       name: "Mobile Safari",
       use: { ...devices["iPhone 12"] },
+      dependencies: PROD_DEPS,
     },
 
     /* Test against branded browsers. */
@@ -74,11 +99,13 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  /* Run your local dev server before starting the tests — only when targeting localhost */
+  webServer: IS_LOCAL
+    ? {
+        command: "npm run dev",
+        url: BASE_URL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+      }
+    : undefined,
 });
