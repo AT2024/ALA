@@ -760,10 +760,24 @@ export const applicatorService = {
 
       const priorityUsageType = this.mapUsageTypeToPriority(usageType);
 
+      // Fail-safe (dosimetry): a faulty applicator's inserted-seed count is
+      // operator-entered and cannot be inferred from capacity. A legacy row
+      // with NULL insertedSeedsQty has an UNKNOWN partial count; sending
+      // seedQuantity (capacity) would over-report inserted seeds and clobber
+      // Priority's possibly-correct value. When we don't know, skip rather
+      // than guess. (Non-faulty rows legitimately fall back to capacity.)
+      if (usageType === "faulty" && app.insertedSeedsQty == null) {
+        logger.warn(
+          `Skipping faulty applicator ${app.serialNumber} - insertedSeedsQty is NULL (legacy row); not overwriting Priority with capacity`,
+        );
+        skipped++;
+        continue;
+      }
+
       try {
         // Prefer the per-applicator insertedSeedsQty (operator-entered for
-        // faulty rows, equal to seedQuantity for full-use). Legacy rows
-        // pre-dating the inserted_seeds_qty column have NULL — fall back
+        // faulty rows, equal to seedQuantity for full-use). Legacy non-faulty
+        // rows pre-dating the inserted_seeds_qty column have NULL — fall back
         // to seedQuantity so we don't downgrade their Priority value to 0.
         const seedsInserted = app.insertedSeedsQty ?? app.seedQuantity;
         const result = await priorityService.syncApplicatorUsageToPriority({

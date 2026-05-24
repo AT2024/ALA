@@ -74,6 +74,7 @@ describe("Applicator Service", () => {
           id: "app-2",
           serialNumber: "260116-23/A2",
           seedQuantity: 15,
+          insertedSeedsQty: 3, // faulty with a KNOWN operator-entered count
           status: "FAULTY",
           comments: "",
           insertionTime: new Date("2026-04-09T11:00:00Z"),
@@ -104,6 +105,7 @@ describe("Applicator Service", () => {
         expect.objectContaining({
           orderId: "SO26000055",
           serialNumber: "260116-23/A2",
+          seedsInserted: 3,
           usageType: "Faulty",
         }),
       );
@@ -201,6 +203,43 @@ describe("Applicator Service", () => {
           usageType: "Faulty",
         }),
       );
+    });
+
+    test("faulty applicator with NULL insertedSeedsQty is skipped, not synced with capacity", async () => {
+      // Fail-safe (dosimetry): a legacy faulty row pre-dating the
+      // inserted_seeds_qty column has insertedSeedsQty === null — the partial
+      // count is UNKNOWN locally. Sending seedQuantity (capacity) would
+      // over-report inserted seeds AND overwrite Priority's possibly-correct
+      // value. When we don't know, we must not guess/clobber: skip and warn.
+      const treatmentId = "treatment-faulty-null";
+      mockTreatmentFindByPk.mockResolvedValue({
+        id: treatmentId,
+        priorityId: "SO26000099",
+        subjectId: null,
+      });
+
+      mockApplicatorFindAll.mockResolvedValue([
+        {
+          id: "app-faulty-legacy",
+          serialNumber: "260423-11/A9",
+          seedQuantity: 5,
+          insertedSeedsQty: null, // legacy faulty row, unknown partial count
+          status: "FAULTY",
+          comments: "",
+          insertionTime: new Date("2026-05-20T10:54:00Z"),
+        },
+      ]);
+
+      mockSyncApplicatorUsageToPriority.mockResolvedValue({
+        success: true,
+        message: "Synced",
+      });
+
+      const result =
+        await applicatorService.syncAllApplicatorsUsageToPriority(treatmentId);
+
+      expect(result).toEqual({ synced: 0, failed: 0, skipped: 1 });
+      expect(mockSyncApplicatorUsageToPriority).not.toHaveBeenCalled();
     });
 
     test("should handle no Priority order ID gracefully", async () => {
