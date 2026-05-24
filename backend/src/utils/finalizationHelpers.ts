@@ -359,21 +359,36 @@ export async function finalizeAndSendPdf(
     logger.warn(
       `No recipient email for treatment ${treatment.id} — PDF stored, no email sent`,
     );
+    // Was previously left at the initial "pending" (indistinguishable from
+    // "still in flight" — invisible to any audit query on != "sent"). The PDF
+    // was NOT delivered, so within the emailStatus enum the truthful value is
+    // "failed".
+    treatmentPdf.emailStatus = "failed";
+    await treatmentPdf.save();
     return { pdfId: treatmentPdf.id, emailStatus: treatmentPdf.emailStatus };
   }
 
   try {
-    await sendSignedPdf(
+    const sendStatus = await sendSignedPdf(
       recipientEmail,
       pdfBuffer,
       treatment.id,
       signatureDetails,
     );
-    treatmentPdf.emailSentAt = new Date();
-    treatmentPdf.emailSentTo = recipientEmail;
-    treatmentPdf.emailStatus = "sent";
+    // emailStatus is a DB enum (pending|sent|failed). Map the honest send
+    // outcome to "delivered vs not": only a real send is "sent" (and marks
+    // delivery time/recipient); a suppressed (test user) or dev-skipped email
+    // is NOT delivered, so it records "failed" rather than masquerading as
+    // "sent". The precise reason is kept in the log below, not the enum.
+    treatmentPdf.emailStatus = sendStatus === "sent" ? "sent" : "failed";
+    if (sendStatus === "sent") {
+      treatmentPdf.emailSentAt = new Date();
+      treatmentPdf.emailSentTo = recipientEmail;
+    }
     await treatmentPdf.save();
-    logger.info(`PDF sent to ${recipientEmail} for treatment ${treatment.id}`);
+    logger.info(
+      `PDF email outcome for treatment ${treatment.id}: ${sendStatus} → emailStatus=${treatmentPdf.emailStatus} (recipient=${recipientEmail})`,
+    );
   } catch (emailError: any) {
     logger.error(`Failed to send PDF email: ${emailError.message}`);
     treatmentPdf.emailStatus = "failed";

@@ -159,18 +159,26 @@ export interface SignatureDetails {
 }
 
 /**
+ * Honest outcome of an attempted PDF delivery, so the audit trail never records
+ * a suppressed or dev-skipped email as "sent". A real send failure throws (and
+ * is recorded as "failed" by the caller); this enum covers the non-throw paths.
+ */
+export type EmailSendStatus = "sent" | "suppressed" | "skipped_dev";
+
+/**
  * Send signed PDF email to clinic
  * @param toEmail - Recipient email address (defaults to PDF_RECIPIENT_EMAIL)
  * @param pdfBuffer - PDF file as Buffer
  * @param treatmentId - Treatment ID for reference
  * @param signatureDetails - Signature information
+ * @returns the delivery status ("sent" | "suppressed" | "skipped_dev")
  */
 export async function sendSignedPdf(
   toEmail: string | null,
   pdfBuffer: Buffer,
   treatmentId: string,
   signatureDetails: SignatureDetails,
-): Promise<boolean> {
+): Promise<EmailSendStatus> {
   const recipientEmail = toEmail || PDF_RECIPIENT_EMAIL;
 
   // Test-user short-circuit: never email the configured test user, regardless
@@ -183,7 +191,7 @@ export async function sendSignedPdf(
     logger.info(
       `[TEST USER] PDF for treatment ${treatmentId} not emailed (recipient=${recipientEmail})`,
     );
-    return true;
+    return "suppressed";
   }
 
   // In development mode, log the PDF info instead of sending email
@@ -198,7 +206,7 @@ export async function sendSignedPdf(
     logger.info(
       `[DEV MODE] To enable actual email sending, set FORCE_EMAIL_IN_DEV=true`,
     );
-    return true;
+    return "skipped_dev";
   }
 
   if (!SENDER_ADDRESS) {
@@ -314,7 +322,10 @@ This is an automated message from the ALA Medical Treatment Tracking System.
     },
   );
 
-  return sendEmailWithRetry(message);
+  // sendEmailWithRetry resolves true on success or throws after exhausting
+  // retries (caller records "failed" on throw), so reaching here means sent.
+  await sendEmailWithRetry(message);
+  return "sent";
 }
 
 /**
