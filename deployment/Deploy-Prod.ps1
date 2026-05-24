@@ -77,7 +77,12 @@ if ($LASTEXITCODE -ne 0) {
     az login -o none
     if ($LASTEXITCODE -ne 0) { Write-Err 'az login failed.'; exit 1 }
 }
-$subName = az account show --query name -o tsv
+# Resolve (and verify access to) the TARGET subscription, not whatever is active.
+$subName = az account show --subscription $Subscription --query name -o tsv 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $subName) {
+    Write-Err "Cannot access subscription '$Subscription'. Check 'az login' and your permissions on that subscription."
+    exit 1
+}
 Write-Info "Azure subscription: $subName"
 
 # --- 3. Target VM ----------------------------------------------------------
@@ -125,16 +130,19 @@ if ($rc -ne 0) {
 }
 
 # --- 6. Independent health confirmation over the public URL (any network) --
+# swarm-deploy already verifies health on the VM; this is a belt-and-suspenders
+# public check. Allow ~2 min for nginx/ingress to route to the new replicas.
 Write-Info "Confirming health at $HealthUrl ..."
 $healthy = $false
-for ($i = 1; $i -le 6; $i++) {
+$maxAttempts = 12
+for ($i = 1; $i -le $maxAttempts; $i++) {
     try {
         $resp = Invoke-WebRequest -Uri $HealthUrl -TimeoutSec 10 -UseBasicParsing
         if ($resp.StatusCode -eq 200) { $healthy = $true; break }
     } catch {
-        Write-Info "  attempt $i/6 - not ready yet..."
+        Write-Info "  attempt $i/$maxAttempts - not ready yet..."
     }
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 10
 }
 
 if ($healthy) {

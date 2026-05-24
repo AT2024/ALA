@@ -26,7 +26,7 @@ One-time setup: `winget install --exact --id Microsoft.AzureCLI`, then `az login
 ## One-Command Deployment (SSH — requires your IP allowlisted in the NSG)
 
 ```bash
-ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
+ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./swarm-deploy"
 ```
 
 That's it. Everything else is automated.
