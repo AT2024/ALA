@@ -111,7 +111,7 @@ tools/
 
 # Testing artifacts and reports
 frontend/playwright-report/
-frontend/test-results/
+frontend/test-results*/
 frontend/coverage/
 coverage/
 
