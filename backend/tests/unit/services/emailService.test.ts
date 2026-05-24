@@ -108,7 +108,7 @@ describe("EmailService", () => {
       expect(typeof sendSignedPdf).toBe("function");
     });
 
-    it("should return true when sending PDF", async () => {
+    it("should return skipped_dev when email sending is disabled (test mode)", async () => {
       const pdfBuffer = Buffer.from("fake pdf content");
       const result = await sendSignedPdf(
         null,
@@ -116,7 +116,7 @@ describe("EmailService", () => {
         "treatment-123",
         mockSignatureDetails,
       );
-      expect(result).toBe(true);
+      expect(result).toBe("skipped_dev");
     });
 
     it("should use default recipient when toEmail is null", async () => {
@@ -140,7 +140,7 @@ describe("EmailService", () => {
         ...mockSignatureDetails,
         type: "hospital_auto",
       });
-      expect(result).toBe(true);
+      expect(result).toBe("skipped_dev");
     });
 
     it("should handle alphatau_verified signature type", async () => {
@@ -149,7 +149,7 @@ describe("EmailService", () => {
         ...mockSignatureDetails,
         type: "alphatau_verified",
       });
-      expect(result).toBe(true);
+      expect(result).toBe("skipped_dev");
     });
 
     it("should log signature details in dev mode", async () => {
@@ -177,7 +177,7 @@ describe("EmailService", () => {
           mockSignatureDetails,
         );
 
-        expect(result).toBe(true);
+        expect(result).toBe("suppressed");
         expect(logger.info).toHaveBeenCalledWith(
           expect.stringContaining("[TEST USER]"),
         );
@@ -336,6 +336,6 @@ describe("Integration Considerations", () => {
         signerPosition: "doctor",
         signedAt: new Date(),
       }),
-    ).resolves.toBe(true);
+    ).resolves.toBe("skipped_dev");
   });
 });
