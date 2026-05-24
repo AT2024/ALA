@@ -133,6 +133,69 @@ describe("Priority Service", () => {
     });
   });
 
+  describe("getAvailableApplicatorsForTreatment", () => {
+    test("derives applicator patientId from order ORDNAME, not REFERENCE", async () => {
+      // Regression guard (has broken twice): TreatmentContext filters available
+      // applicators by app.patientId === treatment.subjectId, and subjectId is
+      // persisted from the selected order's ORDNAME at treatment creation. If
+      // patientId is derived from REFERENCE (which points at the PAT-* patient
+      // record, never equal to subjectId) the filter matches 0 applicators and
+      // the scan list renders "Choose from List (0)".
+      const order = {
+        ORDNAME: "SO-TEST-1",
+        REFERENCE: "PAT-DIFFERENT",
+        CUSTNAME: "100078",
+        DETAILS: "Patient Test-1",
+        SIBD_TREATDAY: "2025-07-10T00:00:00Z",
+        CURDATE: "2025-07-10T00:00:00Z",
+      };
+      mockAxiosInstance.get.mockImplementation((url: unknown) => {
+        if (url === "/ORDERS") {
+          return Promise.resolve({ data: { value: [order] } });
+        }
+        if (
+          typeof url === "string" &&
+          url.includes("SIBD_APPUSELISTTEXT_SUBFORM")
+        ) {
+          return Promise.resolve({
+            data: {
+              value: [
+                {
+                  SERNUMTEXT: "S-1",
+                  PARTNAMETEXT: "FLEX-00102-FG",
+                  PARTDESTEXT: "Alpha Flex Applicator",
+                  INTDATA2: 2,
+                  INSERTEDSEEDSQTY: 0,
+                  USINGTYPE: null,
+                  INSERTIONDATE: null,
+                  INSERTIONCOMMENTS: null,
+                },
+              ],
+            },
+          });
+        }
+        // getOrderDetails (seedLength enrichment) + any other GET
+        return Promise.resolve({ data: { value: [] } });
+      });
+
+      const result = await priorityService.getAvailableApplicatorsForTreatment(
+        "100078",
+        "2025-07-10",
+        "real@user.com",
+      );
+
+      expect(result.length).toBeGreaterThan(0);
+      expect(
+        result.every((a: { patientId: string }) => a.patientId === "SO-TEST-1"),
+      ).toBe(true);
+      expect(
+        result.some(
+          (a: { patientId: string }) => a.patientId === "PAT-DIFFERENT",
+        ),
+      ).toBe(false);
+    });
+  });
+
   describe("getUserSiteAccess", () => {
     test("should handle test@example.com with test data", async () => {
       // Mock file system to return test data
