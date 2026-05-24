@@ -16,6 +16,7 @@ import {
   ALL_STATUSES,
 } from "../../../shared/applicatorStatuses";
 import { getFirstOrderId } from "../utils/priorityIdParser";
+import { buildApplicatorAuditReason } from "../utils/applicatorAudit";
 
 export interface ApplicatorValidationResult {
   isValid: boolean;
@@ -1294,7 +1295,13 @@ export const applicatorService = {
             existingApplicator.status,
             transformedData.status,
             userId,
-            transformedData.comments,
+            // Record the dosimetry-critical inserted-seed count in the audit
+            // trail for faulty rows (the mutable row can change later).
+            buildApplicatorAuditReason(
+              transformedData.usageType,
+              transformedData.insertedSeedsQty,
+              transformedData.comments,
+            ),
             requestId,
           );
         }
