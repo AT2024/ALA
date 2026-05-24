@@ -13,6 +13,9 @@ interface ApplicatorAttributes {
   id: string;
   serialNumber: string;
   seedQuantity: number;
+  // Seeds actually inserted from this applicator. Persisted locally
+  // (medical-record value, LOCAL DB wins for safety). NULL on legacy rows.
+  insertedSeedsQty: number | null;
   usageType: "full" | "faulty" | "none";
   status: ApplicatorStatus | null;
   packageLabel: string | null;
@@ -47,6 +50,7 @@ interface ApplicatorAttributes {
 type ApplicatorCreationAttributes = Optional<
   ApplicatorAttributes,
   | "id"
+  | "insertedSeedsQty"
   | "status"
   | "packageLabel"
   | "comments"
@@ -75,6 +79,7 @@ class Applicator
   public id!: string;
   public serialNumber!: string;
   public seedQuantity!: number;
+  public insertedSeedsQty!: number | null;
   public usageType!: "full" | "faulty" | "none";
   public status!: ApplicatorStatus | null;
   public packageLabel!: string | null;
@@ -131,6 +136,14 @@ Applicator.init(
       allowNull: false,
       defaultValue: 0,
       field: "seed_quantity", // Map to database column name
+    },
+    insertedSeedsQty: {
+      // Seeds actually inserted from this applicator. NULL = legacy row
+      // (pre-2026-05-20 migration), value unknown; backfill from Priority
+      // separately. Distinct from 0, which means "explicitly zero seeds."
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "inserted_seeds_qty",
     },
     usageType: {
       type: DataTypes.ENUM("full", "faulty", "none"),

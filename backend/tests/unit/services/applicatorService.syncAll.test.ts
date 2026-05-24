@@ -159,6 +159,50 @@ describe("Applicator Service", () => {
       expect(mockSyncApplicatorUsageToPriority).toHaveBeenCalledTimes(1);
     });
 
+    test("faulty applicator: seedsInserted comes from insertedSeedsQty, not seedQuantity", async () => {
+      // Regression for PDF "Inserted: 0" bug — pre-fix the bulk sync sent
+      // app.seedQuantity (capacity) for every row, overwriting Priority's
+      // correct INSERTEDSEEDSQTY whenever the bulk sync ran. Now it must
+      // send the per-applicator insertedSeedsQty so the local column drives
+      // both the PDF and the Priority record.
+      const treatmentId = "treatment-faulty-insert";
+      mockTreatmentFindByPk.mockResolvedValue({
+        id: treatmentId,
+        priorityId: "SO26000072",
+        subjectId: null,
+      });
+
+      mockApplicatorFindAll.mockResolvedValue([
+        {
+          id: "app-faulty",
+          serialNumber: "260423-11/A8",
+          seedQuantity: 5,
+          insertedSeedsQty: 2,
+          status: "FAULTY",
+          comments: "partial insertion before fault",
+          insertionTime: new Date("2026-05-20T10:54:00Z"),
+        },
+      ]);
+
+      mockSyncApplicatorUsageToPriority.mockResolvedValue({
+        success: true,
+        message: "Synced",
+      });
+
+      const result =
+        await applicatorService.syncAllApplicatorsUsageToPriority(treatmentId);
+
+      expect(result).toEqual({ synced: 1, failed: 0, skipped: 0 });
+      expect(mockSyncApplicatorUsageToPriority).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: "SO26000072",
+          serialNumber: "260423-11/A8",
+          seedsInserted: 2,
+          usageType: "Faulty",
+        }),
+      );
+    });
+
     test("should handle no Priority order ID gracefully", async () => {
       // Arrange
       const treatmentId = "treatment-003";

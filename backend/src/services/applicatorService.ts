@@ -761,10 +761,15 @@ export const applicatorService = {
       const priorityUsageType = this.mapUsageTypeToPriority(usageType);
 
       try {
+        // Prefer the per-applicator insertedSeedsQty (operator-entered for
+        // faulty rows, equal to seedQuantity for full-use). Legacy rows
+        // pre-dating the inserted_seeds_qty column have NULL — fall back
+        // to seedQuantity so we don't downgrade their Priority value to 0.
+        const seedsInserted = app.insertedSeedsQty ?? app.seedQuantity;
         const result = await priorityService.syncApplicatorUsageToPriority({
           orderId,
           serialNumber: app.serialNumber,
-          seedsInserted: app.seedQuantity,
+          seedsInserted,
           usageType: priorityUsageType,
           comments: app.comments || "",
           reportedBy: "ALA System",
