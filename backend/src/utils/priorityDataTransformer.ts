@@ -226,6 +226,46 @@ export const transformPriorityApplicatorData = (
       );
     }
 
+    // Normalize insertedSeedsQty by usageType so the column has a single,
+    // unambiguous meaning everywhere downstream (PDF, Priority sync, totals).
+    // - full   → equals seedQuantity (all seeds inserted by definition)
+    // - none   → 0 (applicator not used)
+    // - faulty → operator-entered value, must be in [0, seedQuantity]
+    const cap = transformedData.seedQuantity ?? 0;
+    if (transformedData.usageType === "full") {
+      if (
+        transformedData.insertedSeedsQty !== undefined &&
+        transformedData.insertedSeedsQty !== cap
+      ) {
+        warnings.push(
+          `insertedSeedsQty (${transformedData.insertedSeedsQty}) ignored for usageType=full; using seedQuantity (${cap})`,
+        );
+      }
+      transformedData.insertedSeedsQty = cap;
+    } else if (transformedData.usageType === "none") {
+      if (
+        transformedData.insertedSeedsQty !== undefined &&
+        transformedData.insertedSeedsQty !== 0
+      ) {
+        warnings.push(
+          `insertedSeedsQty (${transformedData.insertedSeedsQty}) ignored for usageType=none; using 0`,
+        );
+      }
+      transformedData.insertedSeedsQty = 0;
+    } else if (transformedData.usageType === "faulty") {
+      const v = transformedData.insertedSeedsQty ?? 0;
+      if (v < 0 || v > cap) {
+        errors.push(
+          `insertedSeedsQty for faulty applicator must be between 0 and seedQuantity (${cap}); got ${v}`,
+        );
+      }
+      // Always keep the field within [0, cap] — parity with the full/none
+      // branches above, which assign unconditionally. On the error path this
+      // value is not persisted (success:false blocks the write); the clamp is a
+      // defensive invariant so no branch can leave an out-of-range value behind.
+      transformedData.insertedSeedsQty = Math.min(Math.max(v, 0), cap);
+    }
+
     // Transform comments
     if (rawData.comments) {
       transformedData.comments = String(rawData.comments).trim();
