@@ -258,9 +258,12 @@ export const transformPriorityApplicatorData = (
         errors.push(
           `insertedSeedsQty for faulty applicator must be between 0 and seedQuantity (${cap}); got ${v}`,
         );
-      } else {
-        transformedData.insertedSeedsQty = v;
       }
+      // Always keep the field within [0, cap] — parity with the full/none
+      // branches above, which assign unconditionally. On the error path this
+      // value is not persisted (success:false blocks the write); the clamp is a
+      // defensive invariant so no branch can leave an out-of-range value behind.
+      transformedData.insertedSeedsQty = Math.min(Math.max(v, 0), cap);
     }
 
     // Transform comments
