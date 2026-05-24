@@ -2388,10 +2388,13 @@ export const priorityService = {
               applicatorType: item.PARTDES || "Unknown Applicator",
               seedQuantity: item.INTDATA2 || 0,
               treatmentId: item.ORDNAME || order.ORDNAME,
-              // patientId must match Treatment.subjectId (set from order.REFERENCE).
-              // Using ORDNAME caused 0 applicators to match the current treatment
-              // filter in TreatmentContext (per-patient filtering broke).
-              patientId: order.REFERENCE || order.ORDNAME || "Unknown Patient",
+              // patientId must equal Treatment.subjectId so the per-patient filter
+              // in TreatmentContext keeps this applicator. subjectId is persisted
+              // from the selected order's ORDNAME at treatment creation
+              // (TreatmentSelection.tsx), so patientId must be ORDNAME too. Using
+              // REFERENCE here points at the PAT-* patient-reference record, which
+              // never equals subjectId — it filtered every applicator out.
+              patientId: order.ORDNAME || "Unknown Patient",
               usageType: item.USINGTYPE || null,
               usageTime: item.INSERTIONDATE || null,
               insertedSeeds: item.INSERTEDSEEDSQTY || 0,
