@@ -29,6 +29,10 @@ import {
   getStatusEmoji,
   getStatusColors,
   getListItemColor,
+  // Effective status & seed counting
+  mapStatusToUsageType,
+  getEffectiveStatus,
+  getDisplayedInsertedSeeds,
 } from "../../../shared/applicatorStatuses";
 
 // Re-export type separately (required with isolatedModules)
@@ -58,6 +62,10 @@ export {
   getStatusEmoji,
   getStatusColors,
   getListItemColor,
+  // Effective status & seed counting
+  mapStatusToUsageType,
+  getEffectiveStatus,
+  getDisplayedInsertedSeeds,
 };
 
 /**
@@ -329,40 +337,6 @@ export const getStageFilterStatuses = (
 };
 
 /**
- * Map an 8-state workflow status to the legacy 3-state usageType.
- *
- * `usageType` is a legacy field kept for backward compatibility; `status` is the
- * source of truth. This mapping MUST be the only place the translation happens so
- * the online and offline save paths cannot diverge (a divergence previously caused
- * FAULTY applicators to be persisted with usageType "full", over-counting deployed
- * sources). INSERTED → full, FAULTY → faulty, everything else → none.
- */
-export const mapStatusToUsageType = (
-  status: ApplicatorStatus | string | null | undefined,
-): "full" | "faulty" | "none" => {
-  if (status === APPLICATOR_STATUSES.INSERTED) return "full";
-  if (status === APPLICATOR_STATUSES.FAULTY) return "faulty";
-  return "none";
-};
-
-/**
- * Resolve the effective 8-state status for an applicator: prefer the explicit
- * `status`, fall back to the legacy `usageType` only for old records that carry
- * no status. Single source of truth for row color, the inserted-source count
- * and the treatment summary so a stale usageType can never mis-render.
- */
-export const getEffectiveStatus = (
-  status: string | undefined | null,
-  usageType: string | undefined | null,
-): string =>
-  status ||
-  (usageType === "full"
-    ? APPLICATOR_STATUSES.INSERTED
-    : usageType === "faulty"
-      ? APPLICATOR_STATUSES.FAULTY
-      : APPLICATOR_STATUSES.SEALED);
-
-/**
  * Statuses rendered with a dark (bg-gray-900) table row. Cell text must be
  * white on these rows or it is unreadable on the dark background.
  */
@@ -372,30 +346,3 @@ export const DARK_ROW_STATUSES: string[] = [
   APPLICATOR_STATUSES.DISCHARGED,
   APPLICATOR_STATUSES.DEPLOYMENT_FAILURE,
 ];
-
-/**
- * Sources actually deployed for an applicator. Derived from the effective
- * status (not the raw usageType) but mirrors
- * TreatmentContext.getActualInsertedSeeds exactly so the per-row column always
- * sums to "Total DaRT Sources Inserted":
- *   full   → insertedSeedsQty ?? seedQuantity
- *   faulty → insertedSeedsQty || 0
- *   none   → 0
- */
-export const getDisplayedInsertedSeeds = (applicator: {
-  status?: string | null;
-  usageType?: string | null;
-  insertedSeedsQty?: number;
-  seedQuantity?: number;
-}): number => {
-  const usage = mapStatusToUsageType(
-    getEffectiveStatus(applicator.status, applicator.usageType),
-  );
-  if (usage === "full") {
-    return typeof applicator.insertedSeedsQty === "number"
-      ? applicator.insertedSeedsQty
-      : (applicator.seedQuantity ?? 0);
-  }
-  if (usage === "faulty") return applicator.insertedSeedsQty || 0;
-  return 0;
-};
