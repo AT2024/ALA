@@ -1791,6 +1791,14 @@ export const priorityService = {
           data: {
             serialNumber: app.SERNUMTEXT,
             partName: app.PARTNAMETEXT,
+            // INTDATA2 is the true per-applicator seed quantity from the order
+            // subform (the value the applicator list already shows). It must be
+            // carried through so validation keeps the real count instead of
+            // falling back to the PARTS-table lookup. null when absent.
+            seedQuantity:
+              app.INTDATA2 === undefined || app.INTDATA2 === null
+                ? null
+                : Number(app.INTDATA2),
             treatmentId: orderName,
             intendedPatientId: null,
             usageType: app.USINGTYPE,
@@ -1826,6 +1834,9 @@ export const priorityService = {
         data: {
           serialNumber: applicatorData.SERNUMTEXT,
           partName: applicatorData.PARTNAMETEXT,
+          // Direct table has no per-applicator seed quantity (INTDATA2 lives in
+          // the order subform); leave unknown so the caller fails safe.
+          seedQuantity: null as number | null,
           treatmentId: applicatorData.ORD,
           intendedPatientId: applicatorData.REFERENCE,
           usageType: applicatorData.ALPH_USETYPE,
@@ -1847,6 +1858,7 @@ export const priorityService = {
           data: {
             serialNumber: serialNumber,
             partName: "Standard Applicator Type A",
+            seedQuantity: null as number | null,
             treatmentId: null,
             intendedPatientId: null,
             usageType: null,
@@ -1924,12 +1936,15 @@ export const priorityService = {
       });
 
       if (response.data.value.length === 0) {
+        // Fail safe: do NOT fabricate a seed quantity (the old default of 25 was
+        // both arbitrary and an order of magnitude off real values like 2/3/5).
+        // Callers must treat null as "unknown" rather than a usable count.
         logger.warn(
-          `No part details found for ${partName}, using default seedQuantity=25`,
+          `No part details found for ${partName}; seedQuantity unknown (null)`,
         );
         return {
           partDes: partName,
-          seedQuantity: 25,
+          seedQuantity: null as number | null,
         };
       }
 
@@ -1937,17 +1952,19 @@ export const priorityService = {
 
       return {
         partDes: partData.PARTDES || partName,
-        seedQuantity: partData.SBD_SEEDQTY || partData.INTDATA2 || 25,
+        seedQuantity: (partData.SBD_SEEDQTY ?? partData.INTDATA2 ?? null) as
+          | number
+          | null,
       };
     } catch (error: any) {
       logger.error(`Error fetching part details: ${error}`);
 
       logger.warn(
-        `Part details fetch failed for ${partName}, using default seedQuantity=25`,
+        `Part details fetch failed for ${partName}; seedQuantity unknown (null)`,
       );
       return {
         partDes: partName,
-        seedQuantity: 25,
+        seedQuantity: null as number | null,
       };
     }
   },
