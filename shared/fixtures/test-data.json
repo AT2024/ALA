@@ -276,7 +276,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000010')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000010-A1",
+          "SERNUM": "SO25000010/A1",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -288,12 +288,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1715,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A1",
+          "SERNUMTEXT": "SO25000010/A1",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A2",
+          "SERNUM": "SO25000010/A2",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -305,12 +305,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1716,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A2",
+          "SERNUMTEXT": "SO25000010/A2",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A3",
+          "SERNUM": "SO25000010/A3",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -322,12 +322,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1717,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A3",
+          "SERNUMTEXT": "SO25000010/A3",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A4",
+          "SERNUM": "SO25000010/A4",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -339,12 +339,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1718,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A4",
+          "SERNUMTEXT": "SO25000010/A4",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A5",
+          "SERNUM": "SO25000010/A5",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -356,12 +356,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1719,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A5",
+          "SERNUMTEXT": "SO25000010/A5",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A6",
+          "SERNUM": "SO25000010/A6",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -373,12 +373,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1720,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A6",
+          "SERNUMTEXT": "SO25000010/A6",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A7",
+          "SERNUM": "SO25000010/A7",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 0,
@@ -390,12 +390,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1721,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A7",
+          "SERNUMTEXT": "SO25000010/A7",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A8",
+          "SERNUM": "SO25000010/A8",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 0,
@@ -407,12 +407,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1722,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A8",
+          "SERNUMTEXT": "SO25000010/A8",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A9",
+          "SERNUM": "SO25000010/A9",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 0,
@@ -424,12 +424,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1723,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A9",
+          "SERNUMTEXT": "SO25000010/A9",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A10",
+          "SERNUM": "SO25000010/A10",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 0,
@@ -441,12 +441,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1724,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A10",
+          "SERNUMTEXT": "SO25000010/A10",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A11",
+          "SERNUM": "SO25000010/A11",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -458,12 +458,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1725,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A11",
+          "SERNUMTEXT": "SO25000010/A11",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A12",
+          "SERNUM": "SO25000010/A12",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 0,
@@ -475,12 +475,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1726,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A12",
+          "SERNUMTEXT": "SO25000010/A12",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A13",
+          "SERNUM": "SO25000010/A13",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -492,12 +492,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1727,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A13",
+          "SERNUMTEXT": "SO25000010/A13",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A14",
+          "SERNUM": "SO25000010/A14",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 0,
@@ -509,12 +509,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1728,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A14",
+          "SERNUMTEXT": "SO25000010/A14",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000010-A15",
+          "SERNUM": "SO25000010/A15",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 0,
@@ -526,7 +526,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1729,
           "ORDNAME": "SO25000010FLEX",
-          "SERNUMTEXT": "SO25000010-A15",
+          "SERNUMTEXT": "SO25000010/A15",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -536,7 +536,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000015')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000015-A1",
+          "SERNUM": "SO25000015/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -548,12 +548,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1900,
           "ORDNAME": "SO25000015FLEX",
-          "SERNUMTEXT": "SO25000015-A1",
+          "SERNUMTEXT": "SO25000015/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000015-A2",
+          "SERNUM": "SO25000015/A2",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -565,12 +565,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1901,
           "ORDNAME": "SO25000015FLEX",
-          "SERNUMTEXT": "SO25000015-A2",
+          "SERNUMTEXT": "SO25000015/A2",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000015-A3",
+          "SERNUM": "SO25000015/A3",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -582,7 +582,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1902,
           "ORDNAME": "SO25000015FLEX",
-          "SERNUMTEXT": "SO25000015-A3",
+          "SERNUMTEXT": "SO25000015/A3",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -592,7 +592,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000016')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000016-A1",
+          "SERNUM": "SO25000016/A1",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -604,12 +604,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1950,
           "ORDNAME": "SO25000016FLEX",
-          "SERNUMTEXT": "SO25000016-A1",
+          "SERNUMTEXT": "SO25000016/A1",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000016-A2",
+          "SERNUM": "SO25000016/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -621,7 +621,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1951,
           "ORDNAME": "SO25000016FLEX",
-          "SERNUMTEXT": "SO25000016-A2",
+          "SERNUMTEXT": "SO25000016/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         }
@@ -631,7 +631,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-HEAD-001')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "PANC-HEAD-A1",
+          "SERNUM": "PANC-HEAD/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -643,12 +643,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2001,
           "ORDNAME": "PANC-HEAD-001FLEX",
-          "SERNUMTEXT": "PANC-HEAD-A1",
+          "SERNUMTEXT": "PANC-HEAD/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-HEAD-A2",
+          "SERNUM": "PANC-HEAD/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -660,12 +660,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2002,
           "ORDNAME": "PANC-HEAD-001FLEX",
-          "SERNUMTEXT": "PANC-HEAD-A2",
+          "SERNUMTEXT": "PANC-HEAD/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-HEAD-A3",
+          "SERNUM": "PANC-HEAD/A3",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -677,7 +677,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2003,
           "ORDNAME": "PANC-HEAD-001FLEX",
-          "SERNUMTEXT": "PANC-HEAD-A3",
+          "SERNUMTEXT": "PANC-HEAD/A3",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -687,7 +687,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-TAIL-001')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "PANC-TAIL-A1",
+          "SERNUM": "PANC-TAIL/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -699,12 +699,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2011,
           "ORDNAME": "PANC-TAIL-001FLEX",
-          "SERNUMTEXT": "PANC-TAIL-A1",
+          "SERNUMTEXT": "PANC-TAIL/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-TAIL-A2",
+          "SERNUM": "PANC-TAIL/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -716,12 +716,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2012,
           "ORDNAME": "PANC-TAIL-001FLEX",
-          "SERNUMTEXT": "PANC-TAIL-A2",
+          "SERNUMTEXT": "PANC-TAIL/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-TAIL-A3",
+          "SERNUM": "PANC-TAIL/A3",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -733,7 +733,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2013,
           "ORDNAME": "PANC-TAIL-001FLEX",
-          "SERNUMTEXT": "PANC-TAIL-A3",
+          "SERNUMTEXT": "PANC-TAIL/A3",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         }
@@ -743,7 +743,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000011')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000011-A1",
+          "SERNUM": "SO25000011/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -755,12 +755,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1800,
           "ORDNAME": "SO25000011FLEX",
-          "SERNUMTEXT": "SO25000011-A1",
+          "SERNUMTEXT": "SO25000011/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000011-A2",
+          "SERNUM": "SO25000011/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -772,12 +772,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1801,
           "ORDNAME": "SO25000011FLEX",
-          "SERNUMTEXT": "SO25000011-A2",
+          "SERNUMTEXT": "SO25000011/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000011-A3",
+          "SERNUM": "SO25000011/A3",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -789,12 +789,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1802,
           "ORDNAME": "SO25000011FLEX",
-          "SERNUMTEXT": "SO25000011-A3",
+          "SERNUMTEXT": "SO25000011/A3",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000011-A4",
+          "SERNUM": "SO25000011/A4",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -806,12 +806,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1803,
           "ORDNAME": "SO25000011FLEX",
-          "SERNUMTEXT": "SO25000011-A4",
+          "SERNUMTEXT": "SO25000011/A4",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000011-A5",
+          "SERNUM": "SO25000011/A5",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -823,12 +823,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1804,
           "ORDNAME": "SO25000011FLEX",
-          "SERNUMTEXT": "SO25000011-A5",
+          "SERNUMTEXT": "SO25000011/A5",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000011-A6",
+          "SERNUM": "SO25000011/A6",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -840,7 +840,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1805,
           "ORDNAME": "SO25000011FLEX",
-          "SERNUMTEXT": "SO25000011-A6",
+          "SERNUMTEXT": "SO25000011/A6",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         }
@@ -850,7 +850,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000043')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000043-A1",
+          "SERNUM": "SO25000043/A1",
           "PARTNAME": "FLEX-00011-FG",
           "PARTDES": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -862,12 +862,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2066,
           "ORDNAME": "SO25000043FLEX",
-          "SERNUMTEXT": "SO25000043-A1",
+          "SERNUMTEXT": "SO25000043/A1",
           "PARTNAMETEXT": "FLEX-00011-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000043-A2",
+          "SERNUM": "SO25000043/A2",
           "PARTNAME": "FLEX-00011-FG",
           "PARTDES": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -879,12 +879,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2067,
           "ORDNAME": "SO25000043FLEX",
-          "SERNUMTEXT": "SO25000043-A2",
+          "SERNUMTEXT": "SO25000043/A2",
           "PARTNAMETEXT": "FLEX-00011-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000043-A3",
+          "SERNUM": "SO25000043/A3",
           "PARTNAME": "FLEX-00011-FG",
           "PARTDES": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated",
           "INTDATA2": 0,
@@ -896,7 +896,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2068,
           "ORDNAME": "SO25000043FLEX",
-          "SERNUMTEXT": "SO25000043-A3",
+          "SERNUMTEXT": "SO25000043/A3",
           "PARTNAMETEXT": "FLEX-00011-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated"
         }
@@ -906,7 +906,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000042')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000042-A1",
+          "SERNUM": "SO25000042/A1",
           "PARTNAME": "FLEX-00001-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed",
           "INTDATA2": 1,
@@ -918,12 +918,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2062,
           "ORDNAME": "SO25000042FLEX",
-          "SERNUMTEXT": "SO25000042-A1",
+          "SERNUMTEXT": "SO25000042/A1",
           "PARTNAMETEXT": "FLEX-00001-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed"
         },
         {
-          "SERNUM": "SO25000042-A2",
+          "SERNUM": "SO25000042/A2",
           "PARTNAME": "FLEX-00001-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed",
           "INTDATA2": 1,
@@ -935,12 +935,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2063,
           "ORDNAME": "SO25000042FLEX",
-          "SERNUMTEXT": "SO25000042-A2",
+          "SERNUMTEXT": "SO25000042/A2",
           "PARTNAMETEXT": "FLEX-00001-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed"
         },
         {
-          "SERNUM": "SO25000042-A3",
+          "SERNUM": "SO25000042/A3",
           "PARTNAME": "FLEX-00002-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed",
           "INTDATA2": 2,
@@ -952,12 +952,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2064,
           "ORDNAME": "SO25000042FLEX",
-          "SERNUMTEXT": "SO25000042-A3",
+          "SERNUMTEXT": "SO25000042/A3",
           "PARTNAMETEXT": "FLEX-00002-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed"
         },
         {
-          "SERNUM": "SO25000042-A4",
+          "SERNUM": "SO25000042/A4",
           "PARTNAME": "FLEX-00002-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed",
           "INTDATA2": 2,
@@ -969,7 +969,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2065,
           "ORDNAME": "SO25000042FLEX",
-          "SERNUMTEXT": "SO25000042-A4",
+          "SERNUMTEXT": "SO25000042/A4",
           "PARTNAMETEXT": "FLEX-00002-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed"
         }
@@ -979,7 +979,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000012')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000012-A1",
+          "SERNUM": "SO25000012/A1",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -991,12 +991,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1850,
           "ORDNAME": "SO25000012FLEX",
-          "SERNUMTEXT": "SO25000012-A1",
+          "SERNUMTEXT": "SO25000012/A1",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000012-A2",
+          "SERNUM": "SO25000012/A2",
           "PARTNAME": "FLEX-00001-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed",
           "INTDATA2": 1,
@@ -1008,12 +1008,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1851,
           "ORDNAME": "SO25000012FLEX",
-          "SERNUMTEXT": "SO25000012-A2",
+          "SERNUMTEXT": "SO25000012/A2",
           "PARTNAMETEXT": "FLEX-00001-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed"
         },
         {
-          "SERNUM": "SO25000012-A3",
+          "SERNUM": "SO25000012/A3",
           "PARTNAME": "FLEX-00002-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed",
           "INTDATA2": 2,
@@ -1025,12 +1025,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1852,
           "ORDNAME": "SO25000012FLEX",
-          "SERNUMTEXT": "SO25000012-A3",
+          "SERNUMTEXT": "SO25000012/A3",
           "PARTNAMETEXT": "FLEX-00002-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed"
         },
         {
-          "SERNUM": "SO25000012-A4",
+          "SERNUM": "SO25000012/A4",
           "PARTNAME": "FLEX-00011-FG",
           "PARTDES": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1042,7 +1042,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1853,
           "ORDNAME": "SO25000012FLEX",
-          "SERNUMTEXT": "SO25000012-A4",
+          "SERNUMTEXT": "SO25000012/A4",
           "PARTNAMETEXT": "FLEX-00011-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated"
         }
@@ -1052,7 +1052,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000013')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000013-A1",
+          "SERNUM": "SO25000013/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1064,12 +1064,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1870,
           "ORDNAME": "SO25000013FLEX",
-          "SERNUMTEXT": "SO25000013-A1",
+          "SERNUMTEXT": "SO25000013/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000013-A2",
+          "SERNUM": "SO25000013/A2",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1081,12 +1081,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1871,
           "ORDNAME": "SO25000013FLEX",
-          "SERNUMTEXT": "SO25000013-A2",
+          "SERNUMTEXT": "SO25000013/A2",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000013-A3",
+          "SERNUM": "SO25000013/A3",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1098,7 +1098,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1872,
           "ORDNAME": "SO25000013FLEX",
-          "SERNUMTEXT": "SO25000013-A3",
+          "SERNUMTEXT": "SO25000013/A3",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -1108,7 +1108,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000014')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000014-A1",
+          "SERNUM": "SO25000014/A1",
           "PARTNAME": "FLEX-00001-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed",
           "INTDATA2": 1,
@@ -1120,12 +1120,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1890,
           "ORDNAME": "SO25000014FLEX",
-          "SERNUMTEXT": "SO25000014-A1",
+          "SERNUMTEXT": "SO25000014/A1",
           "PARTNAMETEXT": "FLEX-00001-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed"
         },
         {
-          "SERNUM": "SO25000014-A2",
+          "SERNUM": "SO25000014/A2",
           "PARTNAME": "FLEX-00002-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed",
           "INTDATA2": 2,
@@ -1137,12 +1137,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1891,
           "ORDNAME": "SO25000014FLEX",
-          "SERNUMTEXT": "SO25000014-A2",
+          "SERNUMTEXT": "SO25000014/A2",
           "PARTNAMETEXT": "FLEX-00002-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed"
         },
         {
-          "SERNUM": "SO25000014-A3",
+          "SERNUM": "SO25000014/A3",
           "PARTNAME": "FLEX-00011-FG",
           "PARTDES": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1154,12 +1154,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1892,
           "ORDNAME": "SO25000014FLEX",
-          "SERNUMTEXT": "SO25000014-A3",
+          "SERNUMTEXT": "SO25000014/A3",
           "PARTNAMETEXT": "FLEX-00011-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 240 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000014-A4",
+          "SERNUM": "SO25000014/A4",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1171,12 +1171,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1893,
           "ORDNAME": "SO25000014FLEX",
-          "SERNUMTEXT": "SO25000014-A4",
+          "SERNUMTEXT": "SO25000014/A4",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000014-A5",
+          "SERNUM": "SO25000014/A5",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1188,7 +1188,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 1894,
           "ORDNAME": "SO25000014FLEX",
-          "SERNUMTEXT": "SO25000014-A5",
+          "SERNUMTEXT": "SO25000014/A5",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         }
@@ -1198,7 +1198,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000017')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000017-A1",
+          "SERNUM": "SO25000017/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1210,12 +1210,12 @@
           "INSERTIONDATE": "2025-07-01T10:30:00Z",
           "SIBD_REPPRODPAL": 2001,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A1",
+          "SERNUMTEXT": "SO25000017/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A2",
+          "SERNUM": "SO25000017/A2",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1227,12 +1227,12 @@
           "INSERTIONDATE": "2025-07-01T10:35:00Z",
           "SIBD_REPPRODPAL": 2002,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A2",
+          "SERNUMTEXT": "SO25000017/A2",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A3",
+          "SERNUM": "SO25000017/A3",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1244,12 +1244,12 @@
           "INSERTIONDATE": "2025-07-01T10:40:00Z",
           "SIBD_REPPRODPAL": 2003,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A3",
+          "SERNUMTEXT": "SO25000017/A3",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A4",
+          "SERNUM": "SO25000017/A4",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1261,12 +1261,12 @@
           "INSERTIONDATE": "2025-07-01T10:45:00Z",
           "SIBD_REPPRODPAL": 2004,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A4",
+          "SERNUMTEXT": "SO25000017/A4",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A5",
+          "SERNUM": "SO25000017/A5",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1278,12 +1278,12 @@
           "INSERTIONDATE": "2025-07-01T10:50:00Z",
           "SIBD_REPPRODPAL": 2005,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A5",
+          "SERNUMTEXT": "SO25000017/A5",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A6",
+          "SERNUM": "SO25000017/A6",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1295,12 +1295,12 @@
           "INSERTIONDATE": "2025-07-01T10:55:00Z",
           "SIBD_REPPRODPAL": 2006,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A6",
+          "SERNUMTEXT": "SO25000017/A6",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A7",
+          "SERNUM": "SO25000017/A7",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1312,12 +1312,12 @@
           "INSERTIONDATE": "2025-07-01T11:00:00Z",
           "SIBD_REPPRODPAL": 2007,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A7",
+          "SERNUMTEXT": "SO25000017/A7",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A8",
+          "SERNUM": "SO25000017/A8",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1329,12 +1329,12 @@
           "INSERTIONDATE": "2025-07-01T11:05:00Z",
           "SIBD_REPPRODPAL": 2008,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A8",
+          "SERNUMTEXT": "SO25000017/A8",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A9",
+          "SERNUM": "SO25000017/A9",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1346,12 +1346,12 @@
           "INSERTIONDATE": "2025-07-01T11:10:00Z",
           "SIBD_REPPRODPAL": 2009,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A9",
+          "SERNUMTEXT": "SO25000017/A9",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A10",
+          "SERNUM": "SO25000017/A10",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1363,12 +1363,12 @@
           "INSERTIONDATE": "2025-07-01T11:15:00Z",
           "SIBD_REPPRODPAL": 2010,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A10",
+          "SERNUMTEXT": "SO25000017/A10",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000017-A11",
+          "SERNUM": "SO25000017/A11",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1380,7 +1380,7 @@
           "INSERTIONDATE": "2025-07-01T11:20:00Z",
           "SIBD_REPPRODPAL": 2011,
           "ORDNAME": "SO25000017FLEX",
-          "SERNUMTEXT": "SO25000017-A11",
+          "SERNUMTEXT": "SO25000017/A11",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -1390,7 +1390,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000018')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000018-A1",
+          "SERNUM": "SO25000018/A1",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1402,12 +1402,12 @@
           "INSERTIONDATE": "2025-06-25T09:00:00Z",
           "SIBD_REPPRODPAL": 2020,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A1",
+          "SERNUMTEXT": "SO25000018/A1",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A2",
+          "SERNUM": "SO25000018/A2",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1419,12 +1419,12 @@
           "INSERTIONDATE": "2025-06-25T09:05:00Z",
           "SIBD_REPPRODPAL": 2021,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A2",
+          "SERNUMTEXT": "SO25000018/A2",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A3",
+          "SERNUM": "SO25000018/A3",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1436,12 +1436,12 @@
           "INSERTIONDATE": "2025-06-25T09:10:00Z",
           "SIBD_REPPRODPAL": 2022,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A3",
+          "SERNUMTEXT": "SO25000018/A3",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A4",
+          "SERNUM": "SO25000018/A4",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1453,12 +1453,12 @@
           "INSERTIONDATE": "2025-06-25T09:15:00Z",
           "SIBD_REPPRODPAL": 2023,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A4",
+          "SERNUMTEXT": "SO25000018/A4",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A5",
+          "SERNUM": "SO25000018/A5",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1470,12 +1470,12 @@
           "INSERTIONDATE": "2025-06-25T09:20:00Z",
           "SIBD_REPPRODPAL": 2024,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A5",
+          "SERNUMTEXT": "SO25000018/A5",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A6",
+          "SERNUM": "SO25000018/A6",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1487,12 +1487,12 @@
           "INSERTIONDATE": "2025-06-25T09:25:00Z",
           "SIBD_REPPRODPAL": 2025,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A6",
+          "SERNUMTEXT": "SO25000018/A6",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A7",
+          "SERNUM": "SO25000018/A7",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1504,12 +1504,12 @@
           "INSERTIONDATE": "2025-06-25T09:30:00Z",
           "SIBD_REPPRODPAL": 2026,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A7",
+          "SERNUMTEXT": "SO25000018/A7",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000018-A8",
+          "SERNUM": "SO25000018/A8",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1521,7 +1521,7 @@
           "INSERTIONDATE": "2025-06-25T09:35:00Z",
           "SIBD_REPPRODPAL": 2027,
           "ORDNAME": "SO25000018FLEX",
-          "SERNUMTEXT": "SO25000018-A8",
+          "SERNUMTEXT": "SO25000018/A8",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -1531,7 +1531,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('SO25000019')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "SO25000019-A1",
+          "SERNUM": "SO25000019/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1543,12 +1543,12 @@
           "INSERTIONDATE": "2025-06-30T14:00:00Z",
           "SIBD_REPPRODPAL": 2040,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A1",
+          "SERNUMTEXT": "SO25000019/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A2",
+          "SERNUM": "SO25000019/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1560,12 +1560,12 @@
           "INSERTIONDATE": "2025-06-30T14:05:00Z",
           "SIBD_REPPRODPAL": 2041,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A2",
+          "SERNUMTEXT": "SO25000019/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A3",
+          "SERNUM": "SO25000019/A3",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1577,12 +1577,12 @@
           "INSERTIONDATE": "2025-06-30T14:10:00Z",
           "SIBD_REPPRODPAL": 2042,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A3",
+          "SERNUMTEXT": "SO25000019/A3",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A4",
+          "SERNUM": "SO25000019/A4",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1594,12 +1594,12 @@
           "INSERTIONDATE": "2025-06-30T14:15:00Z",
           "SIBD_REPPRODPAL": 2043,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A4",
+          "SERNUMTEXT": "SO25000019/A4",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A5",
+          "SERNUM": "SO25000019/A5",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1611,12 +1611,12 @@
           "INSERTIONDATE": "2025-06-30T14:20:00Z",
           "SIBD_REPPRODPAL": 2044,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A5",
+          "SERNUMTEXT": "SO25000019/A5",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A6",
+          "SERNUM": "SO25000019/A6",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1628,12 +1628,12 @@
           "INSERTIONDATE": "2025-06-30T14:25:00Z",
           "SIBD_REPPRODPAL": 2045,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A6",
+          "SERNUMTEXT": "SO25000019/A6",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A7",
+          "SERNUM": "SO25000019/A7",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1645,12 +1645,12 @@
           "INSERTIONDATE": "2025-06-30T14:30:00Z",
           "SIBD_REPPRODPAL": 2046,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A7",
+          "SERNUMTEXT": "SO25000019/A7",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A8",
+          "SERNUM": "SO25000019/A8",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1662,12 +1662,12 @@
           "INSERTIONDATE": "2025-06-30T14:35:00Z",
           "SIBD_REPPRODPAL": 2047,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A8",
+          "SERNUMTEXT": "SO25000019/A8",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A9",
+          "SERNUM": "SO25000019/A9",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1679,12 +1679,12 @@
           "INSERTIONDATE": "2025-06-30T14:40:00Z",
           "SIBD_REPPRODPAL": 2048,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A9",
+          "SERNUMTEXT": "SO25000019/A9",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         },
         {
-          "SERNUM": "SO25000019-A10",
+          "SERNUM": "SO25000019/A10",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1696,7 +1696,7 @@
           "INSERTIONDATE": "2025-06-30T14:45:00Z",
           "SIBD_REPPRODPAL": 2049,
           "ORDNAME": "SO25000019FLEX",
-          "SERNUMTEXT": "SO25000019-A10",
+          "SERNUMTEXT": "SO25000019/A10",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -1706,7 +1706,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-HEAD-002')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "PANC-HEAD-002-A1",
+          "SERNUM": "PANC-HEAD-002/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1718,12 +1718,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2070,
           "ORDNAME": "PANC-HEAD-002FLEX",
-          "SERNUMTEXT": "PANC-HEAD-002-A1",
+          "SERNUMTEXT": "PANC-HEAD-002/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-HEAD-002-A2",
+          "SERNUM": "PANC-HEAD-002/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1735,12 +1735,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2071,
           "ORDNAME": "PANC-HEAD-002FLEX",
-          "SERNUMTEXT": "PANC-HEAD-002-A2",
+          "SERNUMTEXT": "PANC-HEAD-002/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-HEAD-002-A3",
+          "SERNUM": "PANC-HEAD-002/A3",
           "PARTNAME": "FLEX-00103-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated",
           "INTDATA2": 3,
@@ -1752,7 +1752,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2072,
           "ORDNAME": "PANC-HEAD-002FLEX",
-          "SERNUMTEXT": "PANC-HEAD-002-A3",
+          "SERNUMTEXT": "PANC-HEAD-002/A3",
           "PARTNAMETEXT": "FLEX-00103-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 3 seed, coated"
         }
@@ -1762,7 +1762,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PANC-TAIL-002')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "PANC-TAIL-002-A1",
+          "SERNUM": "PANC-TAIL-002/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1774,12 +1774,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2080,
           "ORDNAME": "PANC-TAIL-002FLEX",
-          "SERNUMTEXT": "PANC-TAIL-002-A1",
+          "SERNUMTEXT": "PANC-TAIL-002/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-TAIL-002-A2",
+          "SERNUM": "PANC-TAIL-002/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1791,12 +1791,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2081,
           "ORDNAME": "PANC-TAIL-002FLEX",
-          "SERNUMTEXT": "PANC-TAIL-002-A2",
+          "SERNUMTEXT": "PANC-TAIL-002/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PANC-TAIL-002-A3",
+          "SERNUM": "PANC-TAIL-002/A3",
           "PARTNAME": "FLEX-00101-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated",
           "INTDATA2": 1,
@@ -1808,7 +1808,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2082,
           "ORDNAME": "PANC-TAIL-002FLEX",
-          "SERNUMTEXT": "PANC-TAIL-002-A3",
+          "SERNUMTEXT": "PANC-TAIL-002/A3",
           "PARTNAMETEXT": "FLEX-00101-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 1 seed, coated"
         }
@@ -1818,7 +1818,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PROST-LEFT-001')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "PROST-LEFT-001-A1",
+          "SERNUM": "PROST-LEFT-001/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1830,12 +1830,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2090,
           "ORDNAME": "PROST-LEFT-001FLEX",
-          "SERNUMTEXT": "PROST-LEFT-001-A1",
+          "SERNUMTEXT": "PROST-LEFT-001/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PROST-LEFT-001-A2",
+          "SERNUM": "PROST-LEFT-001/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1847,12 +1847,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2091,
           "ORDNAME": "PROST-LEFT-001FLEX",
-          "SERNUMTEXT": "PROST-LEFT-001-A2",
+          "SERNUMTEXT": "PROST-LEFT-001/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PROST-LEFT-001-A3",
+          "SERNUM": "PROST-LEFT-001/A3",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1864,7 +1864,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2092,
           "ORDNAME": "PROST-LEFT-001FLEX",
-          "SERNUMTEXT": "PROST-LEFT-001-A3",
+          "SERNUMTEXT": "PROST-LEFT-001/A3",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         }
@@ -1874,7 +1874,7 @@
       "@odata.context": "https://t.eu.priority-connect.online/odata/Priority/tabbtbc6.ini/test24/$metadata#ORDERS('PROST-RIGHT-001')/SIBD_APPLICATUSELIST_SUBFORM",
       "value": [
         {
-          "SERNUM": "PROST-RIGHT-001-A1",
+          "SERNUM": "PROST-RIGHT-001/A1",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1886,12 +1886,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2100,
           "ORDNAME": "PROST-RIGHT-001FLEX",
-          "SERNUMTEXT": "PROST-RIGHT-001-A1",
+          "SERNUMTEXT": "PROST-RIGHT-001/A1",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PROST-RIGHT-001-A2",
+          "SERNUM": "PROST-RIGHT-001/A2",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1903,12 +1903,12 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2101,
           "ORDNAME": "PROST-RIGHT-001FLEX",
-          "SERNUMTEXT": "PROST-RIGHT-001-A2",
+          "SERNUMTEXT": "PROST-RIGHT-001/A2",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         },
         {
-          "SERNUM": "PROST-RIGHT-001-A3",
+          "SERNUM": "PROST-RIGHT-001/A3",
           "PARTNAME": "FLEX-00102-FG",
           "PARTDES": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated",
           "INTDATA2": 2,
@@ -1920,7 +1920,7 @@
           "INSERTIONDATE": null,
           "SIBD_REPPRODPAL": 2102,
           "ORDNAME": "PROST-RIGHT-001FLEX",
-          "SERNUMTEXT": "PROST-RIGHT-001-A3",
+          "SERNUMTEXT": "PROST-RIGHT-001/A3",
           "PARTNAMETEXT": "FLEX-00102-FG",
           "PARTDESTEXT": "Alpha Flex Applicator 140 mm, 20G, 2 seed, coated"
         }

@@ -449,9 +449,9 @@ test.describe("Manual Entry Mode", () => {
       ).toBeVisible();
     }
 
-    // Test A-suffix filtering
+    // Test serial-number search filtering
     await page.fill('[data-testid="a-suffix-filter"]', "1");
-    await expect(page.locator('text=ending with "-A1"')).toBeVisible();
+    await expect(page.locator('text=matching "1"')).toBeVisible();
 
     // Clear filter
     await page.click('[data-testid="clear-filter-button"]');
