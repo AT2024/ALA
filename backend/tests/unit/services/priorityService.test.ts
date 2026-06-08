@@ -212,7 +212,7 @@ describe("Priority Service", () => {
 
       expect(result.found).toBe(true);
       expect(result.fullAccess).toBe(true);
-      expect(result.sites).toHaveLength(3);
+      expect(result.sites).toHaveLength(mockSites.length);
       expect(result.user?.positionCode).toBe(99);
       expect(result.user?.email).toBe("test@example.com");
     });
@@ -253,7 +253,7 @@ describe("Priority Service", () => {
       expect(result.found).toBe(true);
       expect(result.fullAccess).toBe(true);
       expect(result.user?.positionCode).toBe(99);
-      expect(result.sites).toHaveLength(3);
+      expect(result.sites).toHaveLength(mockSites.length);
     });
 
     test("should handle user not found in Priority", async () => {
@@ -408,7 +408,7 @@ describe("Priority Service", () => {
 
       const result = await priorityService.getAllSites();
 
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(mockSites.length);
       expect(result[0]).toEqual({
         custName: "100078",
         custDes: "Main Test Hospital",
