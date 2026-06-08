@@ -647,6 +647,25 @@ export const getTreatmentApplicators = asyncHandler(
       req.params.id,
       treatment.type,
     );
+
+    // Backfill missing per-order seed length. Seed length is an order-level
+    // property (SIBD_SEEDLEN) shared by every applicator in the treatment, but
+    // some rows can be persisted without it (e.g. add-time enrichment failed
+    // while Priority was briefly unreachable), leaving the Treatment
+    // Information column blank for only some applicators. Fetch it once and
+    // fill any gaps so the column is consistent.
+    if (
+      orderIds.length > 0 &&
+      applicators.some((a: any) => a.seedLength == null)
+    ) {
+      const orderSeedLength = await fetchSeedLength(orderIds[0]);
+      if (orderSeedLength != null) {
+        applicators.forEach((a: any) => {
+          if (a.seedLength == null) a.seedLength = orderSeedLength;
+        });
+      }
+    }
+
     res.status(200).json(applicators);
   },
 );
