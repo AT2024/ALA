@@ -15,7 +15,7 @@ const loadTestData = () => {
     const testDataPath =
       process.env.NODE_ENV === "production"
         ? path.join(process.cwd(), "test-data.json")
-        : path.join(__dirname, "../../test-data.json");
+        : path.join(__dirname, "../../../shared/fixtures/test-data.json");
     const testDataContent = fs.readFileSync(testDataPath, "utf8");
     const testData = JSON.parse(testDataContent);
 
@@ -107,7 +107,7 @@ const generateTestDataForDate = (requestedDate: string) => {
     const testDataPath =
       process.env.NODE_ENV === "production"
         ? path.join(process.cwd(), "test-data.json")
-        : path.join(__dirname, "../../test-data.json");
+        : path.join(__dirname, "../../../shared/fixtures/test-data.json");
     const testDataContent = fs.readFileSync(testDataPath, "utf8");
     const baseTestData = JSON.parse(testDataContent);
 
