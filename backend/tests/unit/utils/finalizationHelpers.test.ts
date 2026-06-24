@@ -8,6 +8,7 @@
 import {
   buildRemovalPdfData,
   finalizeAndSendPdf,
+  mergeApplicatorsForPdf,
   ApplicatorForPdf,
   SignatureDetails,
 } from "../../../src/utils/finalizationHelpers";
@@ -59,6 +60,57 @@ jest.mock("../../../src/services/emailService", () => ({
 }));
 
 describe("finalizationHelpers", () => {
+  describe("mergeApplicatorsForPdf field pass-through", () => {
+    // Bugs 3, 4, 5: the merge used to drop status, seedLength and catalog, so the
+    // emailed PDF showed blank Length/Catalog columns and could not resolve the
+    // effective status. The DB records carry these fields; merge must preserve them.
+    it("preserves status, seedLength and catalog for processed applicators", () => {
+      const processed = [
+        {
+          id: "1",
+          serialNumber: "SO25000015/A2",
+          applicatorType: "Alpha Flex Applicator",
+          seedQuantity: 3,
+          usageType: "faulty",
+          status: "FAULTY",
+          insertionTime: "2026-06-01T10:00:00.000Z",
+          insertedSeedsQty: 2,
+          comments: "bent",
+          seedLength: 140,
+          catalog: "FLEX-00019-FG",
+        },
+      ];
+
+      const [row] = mergeApplicatorsForPdf(processed, []);
+
+      expect(row.status).toBe("FAULTY");
+      expect(row.seedLength).toBe(140);
+      expect(row.catalog).toBe("FLEX-00019-FG");
+      expect(row.insertedSeedsQty).toBe(2);
+    });
+
+    it("preserves status, seedLength and catalog for unused (available) applicators", () => {
+      const available = [
+        {
+          id: "9",
+          serialNumber: "SO25000015/A9",
+          applicatorType: "Alpha Flex Applicator",
+          seedQuantity: 5,
+          status: "SEALED",
+          seedLength: 140,
+          catalog: "FLEX-00023-FG",
+        },
+      ];
+
+      const [row] = mergeApplicatorsForPdf([], available);
+
+      expect(row.status).toBe("SEALED");
+      expect(row.seedLength).toBe(140);
+      expect(row.catalog).toBe("FLEX-00023-FG");
+      expect(row.usageType).toBe("sealed");
+    });
+  });
+
   describe("buildRemovalPdfData", () => {
     // Create a mock treatment for testing
     const mockTreatment = {

@@ -23,6 +23,7 @@ import { treatmentService } from "@/services/treatmentService";
 import { offlineDb, OfflineApplicator } from "@/services/indexedDbService";
 import ProgressTracker from "@/components/ProgressTracker";
 import { generateUUID } from "@/utils/uuid";
+import { matchesSerialQuery } from "@/utils/applicatorSearch";
 import {
   getAllowedNextStatuses,
   getListItemColor,
@@ -1374,23 +1375,23 @@ const TreatmentDocumentation = () => {
                   {showApplicatorList ? (
                     /* Applicator List View with A-Suffix Search */
                     <div className="space-y-4">
-                      {/* A-Suffix Filter */}
+                      {/* Serial-number search */}
                       <div>
                         <label
                           htmlFor="aSuffixFilter"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Filter by A-Number (optional)
+                          Search by serial number (optional)
                         </label>
                         <div className="flex gap-2">
                           <input
                             type="text"
                             id="aSuffixFilter"
-                            maxLength={10}
+                            maxLength={30}
                             value={aSuffixQuery}
                             onChange={(e) => setASuffixQuery(e.target.value)}
                             className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base md:text-sm min-h-[44px]"
-                            placeholder="Enter number (e.g., 1, 2, 10) to filter by -A suffix"
+                            placeholder="Search by serial number (e.g., 260423-35/A1)"
                             disabled={loading}
                           />
                           {aSuffixQuery && (
@@ -1405,7 +1406,7 @@ const TreatmentDocumentation = () => {
                         </div>
                         {aSuffixQuery && (
                           <p className="mt-1 text-xs text-primary">
-                            Showing applicators ending with "-A{aSuffixQuery}"
+                            Showing applicators matching "{aSuffixQuery}"
                           </p>
                         )}
                       </div>
@@ -1417,16 +1418,17 @@ const TreatmentDocumentation = () => {
                           const actuallyAvailableApplicators =
                             patientFilteredApplicators;
 
-                          // Then filter by A-suffix if query is provided
-                          const filteredApplicators = aSuffixQuery.trim()
-                            ? actuallyAvailableApplicators.filter((app) =>
-                                app.serialNumber
-                                  ?.toUpperCase()
-                                  .endsWith(
-                                    `-A${aSuffixQuery.trim().toUpperCase()}`,
-                                  ),
-                              )
-                            : actuallyAvailableApplicators;
+                          // Filter by serial-number substring (format-agnostic:
+                          // matches full serial, lot prefix, or A-number for both
+                          // "260423-35/A1" and "SO...-A1" forms). Empty query
+                          // returns the full list.
+                          const filteredApplicators =
+                            actuallyAvailableApplicators.filter((app) =>
+                              matchesSerialQuery(
+                                app.serialNumber,
+                                aSuffixQuery,
+                              ),
+                            );
 
                           return filteredApplicators.length > 0 ? (
                             <div className="space-y-1 p-2">

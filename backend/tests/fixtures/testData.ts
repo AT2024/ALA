@@ -1,68 +1,35 @@
-// Test data fixtures for medical application testing
-export const mockSites = [
-  {
-    custName: "100078",
-    custDes: "Main Test Hospital",
-  },
-  {
-    custName: "100040",
-    custDes: "Test Hospital",
-  },
-  {
-    custName: "100030",
-    custDes: "Regional Medical Center",
-  },
-];
+// Test data fixtures for medical application testing.
+//
+// Sites/orders/applicators are DERIVED from the single source of truth
+// (shared/fixtures/test-data.json via shared/testData) so these mocks cannot
+// drift from the dataset the app actually serves in Test Mode. They previously
+// hardcoded fake "APP001/APP002" applicators with an INTDATA2 of 25 — values
+// that do not exist in the real data and contradicted production seed counts.
+import { testData } from "../../../shared/testData";
 
+export const mockSites = testData.sites as Array<{
+  custName: string;
+  custDes: string;
+}>;
+
+const orderByName = (ordName: string) => {
+  const order = (testData.orders as Array<Record<string, unknown>>).find(
+    (o) => o.ORDNAME === ordName,
+  );
+  if (!order)
+    throw new Error(`Test fixture: order ${ordName} not in test-data`);
+  return order;
+};
+
+// The two orders the unit tests exercise, taken straight from canonical data.
 export const mockOrders = [
-  {
-    ORDNAME: "SO25000015",
-    CUSTNAME: "100078",
-    CUSTDES: "Main Test Hospital",
-    REFERENCE: "PAT-2025-015",
-    CURDATE: "2025-07-10T00:00:00Z",
-    SIBD_TREATDAY: "2025-07-10T00:00:00Z",
-    ORDSTATUSDES: "Open",
-    SBD_SEEDQTY: 20,
-    SBD_PREFACTIV: 2.8,
-    DETAILS: "Patient Main-015",
-  },
-  {
-    ORDNAME: "SO25000010",
-    CUSTNAME: "100030",
-    CUSTDES: "Regional Medical Center",
-    REFERENCE: "PAT-2025-001",
-    CURDATE: "2025-07-10T00:00:00Z",
-    SIBD_TREATDAY: "2025-07-10T00:00:00Z",
-    ORDSTATUSDES: "Waiting for removal",
-    SBD_SEEDQTY: 15,
-    SBD_PREFACTIV: 2.5,
-    DETAILS: "Patient Regional-001",
-  },
+  orderByName("SO25000015"),
+  orderByName("SO25000010"),
 ];
 
-export const mockApplicators = [
-  {
-    SERNUM: "APP001-2025-001",
-    PARTDES: "Standard Applicator Type A",
-    INTDATA2: 25,
-    ORDNAME: "SO25000015",
-    USINGTYPE: "full",
-    INSERTIONDATE: "2025-07-10T10:30:00Z",
-    INSERTEDSEEDSQTY: 25,
-    INSERTIONCOMMENTS: "Test applicator insertion",
-  },
-  {
-    SERNUM: "APP002-2025-001",
-    PARTDES: "Standard Applicator Type B",
-    INTDATA2: 20,
-    ORDNAME: "SO25000015",
-    USINGTYPE: "partial",
-    INSERTIONDATE: "2025-07-10T11:00:00Z",
-    INSERTEDSEEDSQTY: 15,
-    INSERTIONCOMMENTS: "Partial use - technical issue",
-  },
-];
+// Real SO25000015 applicators (serials + INTDATA2 source counts) from canonical
+// data — no fabricated quantities.
+export const mockApplicators = testData.subform_data["SO25000015"].value;
 
 export const mockPriorityUser = {
   EMAIL: "test@example.com",

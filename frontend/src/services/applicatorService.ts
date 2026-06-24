@@ -14,7 +14,7 @@ export interface ApplicatorValidationResult {
   applicatorData?: {
     serialNumber: string;
     applicatorType: string; // PARTDES from Priority
-    seedQuantity: number; // INTDATA2 from Priority
+    seedQuantity: number | null; // INTDATA2 from Priority (null = unknown)
     catalog?: string; // PARTNAME from Priority (catalog number)
     seedLength?: number; // SIBD_SEEDLEN from Priority order
     intendedPatientId?: string;

@@ -102,8 +102,9 @@ COPY --from=build --chown=nodejs:nodejs /usr/src/app/node_modules ./node_modules
 # Copy only necessary files
 COPY --chown=nodejs:nodejs backend/package*.json ./
 
-# Copy test data file for development testing
-COPY --chown=nodejs:nodejs backend/test-data.json ./
+# Copy canonical Test Mode dataset (now lives in shared/) to the working dir,
+# where priorityService.loadTestData() reads it via process.cwd() in production.
+COPY --chown=nodejs:nodejs shared/fixtures/test-data.json ./
 
 # Create assets directory and copy logo from frontend for PDF generation (no file duplication in repo)
 RUN mkdir -p assets

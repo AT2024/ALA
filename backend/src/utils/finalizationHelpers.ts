@@ -20,6 +20,7 @@ import {
   SignatureDetails as PdfSignatureDetails,
 } from "../services/pdfGenerationService";
 import { sendSignedPdf } from "../services/emailService";
+import type { ApplicatorStatus } from "../../../shared/applicatorStatuses";
 import logger from "./logger";
 
 /**
@@ -36,9 +37,17 @@ export interface ApplicatorForPdf {
   applicatorType?: string;
   seedQuantity: number;
   usageType: ApplicatorUsageType;
+  // 8-state workflow status — source of truth for the report's usage/inserted
+  // columns. Must be carried through so the PDF can resolve the effective status
+  // (a stale usageType alone made not-deployed applicators read as "Full use").
+  status?: ApplicatorStatus | null;
   insertionTime: string;
   insertedSeedsQty?: number;
   comments?: string;
+  // SIBD_SEEDLEN (per order) and PARTNAME — without these the PDF Length and
+  // Catalog columns render blank even though the records carry the values.
+  seedLength?: number;
+  catalog?: string;
 }
 
 /**
@@ -92,9 +101,12 @@ export function mergeApplicatorsForPdf(
       applicatorType: a.applicatorType,
       seedQuantity: a.seedQuantity,
       usageType: (a.usageType as ApplicatorUsageType) || "sealed",
+      status: a.status ?? null,
       insertionTime: a.insertionTime || "",
       insertedSeedsQty: a.insertedSeedsQty || 0,
       comments: a.comments || "Not used",
+      seedLength: a.seedLength,
+      catalog: a.catalog,
     }));
 
   // Combine processed applicators (formatted) with unused ones
@@ -106,9 +118,12 @@ export function mergeApplicatorsForPdf(
         applicatorType: app.applicatorType,
         seedQuantity: app.seedQuantity,
         usageType: app.usageType as ApplicatorUsageType,
+        status: app.status ?? null,
         insertionTime: app.insertionTime,
         insertedSeedsQty: app.insertedSeedsQty,
         comments: app.comments,
+        seedLength: app.seedLength,
+        catalog: app.catalog,
       }),
     ),
     ...unusedApplicators,

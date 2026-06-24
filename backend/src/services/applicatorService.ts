@@ -33,7 +33,7 @@ export interface ApplicatorValidationResult {
   applicatorData?: {
     serialNumber: string;
     applicatorType: string; // PARTDES from Priority
-    seedQuantity: number; // INTDATA2 from Priority
+    seedQuantity: number | null; // INTDATA2 from Priority (null = unknown)
     catalog?: string; // PARTNAME from Priority (catalog number)
     seedLength?: number; // SIBD_SEEDLEN from Priority order
     intendedPatientId?: string;
@@ -461,6 +461,26 @@ export const applicatorService = {
           };
         }
 
+        // Fail safe: never hand the UI a fabricated seed count. If Priority did
+        // not provide a real per-applicator quantity (INTDATA2), block instead
+        // of letting validation overwrite the operator's count (previously this
+        // path silently set it to 25).
+        if (
+          priorityApplicator.seedQuantity === null ||
+          priorityApplicator.seedQuantity === undefined
+        ) {
+          logger.warn(
+            `Validation blocked for ${serialNumber}: seed quantity unavailable from Priority`,
+          );
+          return {
+            isValid: false,
+            scenario: "error",
+            message:
+              "Seed quantity is unavailable from Priority for this applicator, so it cannot be validated automatically. Please verify the applicator in Priority.",
+            requiresConfirmation: false,
+          };
+        }
+
         // All checks passed - applicator is valid
         return {
           isValid: true,
@@ -500,7 +520,7 @@ export const applicatorService = {
     data?: {
       serialNumber: string;
       applicatorType: string; // PARTDES
-      seedQuantity: number; // INTDATA2
+      seedQuantity: number | null; // INTDATA2 (null = unknown -> caller fails safe)
       catalog?: string; // PARTNAME (catalog number)
       seedLength?: number; // SIBD_SEEDLEN from order
       intendedPatientId?: string;
@@ -563,12 +583,19 @@ export const applicatorService = {
         }
       }
 
+      // Seed quantity is the per-applicator INTDATA2 from the order subform —
+      // the value the applicator list already shows. We deliberately do NOT
+      // fall back to the PARTS-table count (which used to default to a bogus
+      // 25): if INTDATA2 is unknown, leave it null and let validateApplicator
+      // fail safe rather than overwrite the operator's count with a guess.
+      const seedQuantity = applicatorData.data.seedQuantity ?? null;
+
       return {
         found: true,
         data: {
           serialNumber: applicatorData.data.serialNumber,
           applicatorType: partDetails.partDes || applicatorData.data.partName,
-          seedQuantity: partDetails.seedQuantity || 0,
+          seedQuantity,
           catalog: catalog || null, // PARTNAME with subform fallback
           seedLength, // SIBD_SEEDLEN from order
           intendedPatientId: applicatorData.data.intendedPatientId,

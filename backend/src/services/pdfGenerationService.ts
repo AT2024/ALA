@@ -2,6 +2,11 @@ import PDFDocument from "pdfkit";
 import * as fs from "fs";
 import * as path from "path";
 import logger from "../utils/logger";
+import {
+  getEffectiveStatus,
+  mapStatusToUsageType,
+  getDisplayedInsertedSeeds,
+} from "../../../shared/applicatorStatuses";
 
 // PDF Document Configuration - matches frontend
 const PDF_DOCUMENT_NUMBER = "FR-4001-01E ";
@@ -749,12 +754,15 @@ export function calculateSummary(
   treatment: Treatment,
   applicators: Applicator[],
 ): TreatmentSummary {
-  const fullUseApplicators = applicators.filter((a) => a.usageType === "full");
-  const faultyApplicators = applicators.filter((a) => a.usageType === "faulty");
-  // Count both 'none' and 'sealed' as not used
-  const notUsedApplicators = applicators.filter(
-    (a) => a.usageType === "none" || a.usageType === "sealed",
-  );
+  // Classify by EFFECTIVE status (status-first, usageType only as a legacy
+  // fallback) so the emailed report matches the on-screen frontend totals. A
+  // stale/placeholder usageType must never decide the count: INSERTED → used
+  // (full), FAULTY → used (faulty), everything else → not used.
+  const usageOf = (a: Applicator) =>
+    mapStatusToUsageType(getEffectiveStatus(a.status, a.usageType));
+  const fullUseApplicators = applicators.filter((a) => usageOf(a) === "full");
+  const faultyApplicators = applicators.filter((a) => usageOf(a) === "faulty");
+  const notUsedApplicators = applicators.filter((a) => usageOf(a) === "none");
 
   // Find earliest insertion time
   const insertionTimes = applicators
@@ -767,9 +775,14 @@ export function calculateSummary(
       ? new Date(Math.min(...insertionTimes)).toISOString()
       : "";
 
-  const totalSeeds = applicators
-    .filter((a) => a.status === "INSERTED")
-    .reduce((sum, a) => sum + a.seedQuantity, 0);
+  // Sum the sources ACTUALLY deployed per applicator (full → inserted/seedQty,
+  // faulty → partial insertedSeedsQty, otherwise 0) using the shared helper, so
+  // this safety-critical total equals the per-row "Inserted" column and the
+  // frontend's getActualInsertedSeeds.
+  const totalSeeds = applicators.reduce(
+    (sum, a) => sum + getDisplayedInsertedSeeds(a),
+    0,
+  );
 
   // Calculate total activity
   const activityPerSeed = treatment.activityPerSeed || 0;
@@ -985,30 +998,38 @@ export async function generateTreatmentPdf(
         Math.floor(c.minWidth + (c.flex / totalFlex) * remainingWidth),
       );
 
-      const tableRows = sortedApplicators.map((applicator) => [
-        applicator.serialNumber,
-        applicator.catalog || "N/A",
-        applicator.applicatorType || "N/A",
-        applicator.seedQuantity.toString(),
-        applicator.seedLength ? `${applicator.seedLength}` : "-",
-        applicator.insertionTime &&
-        !isNaN(new Date(applicator.insertionTime).getTime())
-          ? formatDate(applicator.insertionTime)
-          : "N/A",
-        applicator.usageType === "full"
-          ? "Full use"
-          : applicator.usageType === "faulty"
-            ? "Faulty"
-            : applicator.usageType === "sealed"
-              ? "Not Used"
-              : "No Use",
-        applicator.usageType === "full"
-          ? applicator.seedQuantity.toString()
-          : applicator.usageType === "faulty"
-            ? (applicator.insertedSeedsQty || 0).toString()
-            : "0",
-        applicator.comments || "-",
-      ]);
+      const tableRows = sortedApplicators.map((applicator) => {
+        // Resolve usage from the EFFECTIVE status (status-first, usageType only
+        // as a legacy fallback) so a stale/placeholder usageType can't make a
+        // not-deployed applicator read as "Full use" / show its full seed count.
+        const effectiveStatus = getEffectiveStatus(
+          applicator.status,
+          applicator.usageType,
+        );
+        const usage = mapStatusToUsageType(effectiveStatus);
+        const usageLabel =
+          usage === "full"
+            ? "Full use"
+            : usage === "faulty"
+              ? "Faulty"
+              : effectiveStatus === "SEALED"
+                ? "Not Used"
+                : "No Use";
+        return [
+          applicator.serialNumber,
+          applicator.catalog || "N/A",
+          applicator.applicatorType || "N/A",
+          applicator.seedQuantity.toString(),
+          applicator.seedLength ? `${applicator.seedLength}` : "-",
+          applicator.insertionTime &&
+          !isNaN(new Date(applicator.insertionTime).getTime())
+            ? formatDate(applicator.insertionTime)
+            : "N/A",
+          usageLabel,
+          getDisplayedInsertedSeeds(applicator).toString(),
+          applicator.comments || "-",
+        ];
+      });
 
       yPosition = drawTable(
         doc,
