@@ -6,6 +6,10 @@ import { authService } from "@/services/authService";
 function VerificationPage() {
   const { verify, error, clearError, isLoading } = useAuth();
   const [code, setCode] = useState("");
+  // Dev only: the plaintext code the backend returned (no email locally).
+  const [devCode, setDevCode] = useState<string | null>(() =>
+    sessionStorage.getItem("devCode"),
+  );
   const [remainingTime, setRemainingTime] = useState(10); // 10 seconds timeout
   const [resendDisabled, setResendDisabled] = useState(true);
   const navigate = useNavigate();
@@ -54,7 +58,11 @@ function VerificationPage() {
         return;
       }
 
-      await authService.resendVerificationCode(identifier);
+      const result = await authService.resendVerificationCode(identifier);
+      if (result.devCode) {
+        sessionStorage.setItem("devCode", result.devCode);
+        setDevCode(result.devCode);
+      }
       startCountdown();
     } catch (err) {
       console.error("Failed to resend code:", err);
@@ -142,6 +150,12 @@ function VerificationPage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
               />
             </div>
+            {import.meta.env.DEV && devCode && (
+              <p className="mt-2 rounded bg-yellow-50 px-2 py-1 text-sm text-yellow-800">
+                dev: code is{" "}
+                <span className="font-mono font-bold">{devCode}</span>
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col space-y-4">

@@ -34,4 +34,27 @@ describe("matchesSerialQuery", () => {
     expect(matchesSerialQuery(undefined, "A1")).toBe(false);
     expect(matchesSerialQuery(null, "A1")).toBe(false);
   });
+
+  describe("pure-digit query scopes to the A-number suffix (ends-with)", () => {
+    it("does NOT match a digit found only in the batch prefix (reported bug)", () => {
+      // "8" appears in the "82" lot prefix but the A-number is 29 → no match.
+      expect(matchesSerialQuery("260423-82/A29", "8")).toBe(false);
+    });
+
+    it("matches when the A-number ends with the query", () => {
+      expect(matchesSerialQuery("260423-11/A8", "8")).toBe(true);
+      expect(matchesSerialQuery("260423-11/A18", "8")).toBe(true);
+      expect(matchesSerialQuery("260423-11/A28", "8")).toBe(true);
+      expect(matchesSerialQuery("260423-11/A29", "9")).toBe(true);
+    });
+
+    it("works for the legacy '-A' form too", () => {
+      expect(matchesSerialQuery("SO25000015-A8", "8")).toBe(true);
+      expect(matchesSerialQuery("SO25000015-A82", "8")).toBe(false);
+    });
+
+    it("returns false when the serial has no A-number suffix", () => {
+      expect(matchesSerialQuery("260423-82", "8")).toBe(false);
+    });
+  });
 });

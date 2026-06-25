@@ -30,6 +30,7 @@ export const authService = {
       sites?: string[];
       fullAccess?: boolean;
     };
+    devCode?: string; // dev only: plaintext code, shown on the verify screen
   }> {
     try {
       // Validate identifier format
@@ -52,6 +53,7 @@ export const authService = {
         success: true,
         message: `Verification code sent to ${identifier}.`,
         userData: response.data.userData,
+        devCode: response.data.devCode, // undefined in production
       };
     } catch (error: any) {
       console.error("Error requesting verification code:", error);
@@ -179,15 +181,17 @@ export const authService = {
   async resendVerificationCode(identifier: string): Promise<{
     success: boolean;
     message: string;
+    devCode?: string; // dev only: plaintext code, shown on the verify screen
   }> {
     try {
-      await api.post("/auth/resend-code", {
+      const response = await api.post("/auth/resend-code", {
         identifier: identifier.trim(),
       });
 
       return {
         success: true,
         message: "Verification code resent successfully.",
+        devCode: response.data.devCode, // undefined in production
       };
     } catch (error: any) {
       console.error("Error resending verification code:", error);

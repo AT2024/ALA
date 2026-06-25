@@ -212,6 +212,24 @@ export const applicatorService = {
             }
           }
 
+          // seedLength is an order-level value all applicators in the order
+          // share. If the Priority lookup yielded nothing (offline / timeout /
+          // null header field), fall back to any sibling row that already has
+          // it — this keeps already-inserted applicators from showing a blank
+          // Length on resume just because their own row was saved before the
+          // value resolved.
+          if (!orderSeedLength) {
+            const sibling = applicators.find(
+              (a) => (a as any).seedLength != null,
+            );
+            if (sibling) {
+              orderSeedLength = Number((sibling as any).seedLength);
+              logger.info(
+                `Enrichment: Using sibling seedLength ${orderSeedLength} (no order-level value)`,
+              );
+            }
+          }
+
           // Enrich each applicator
           const enrichedApplicators = await Promise.all(
             applicators.map(async (app) => {

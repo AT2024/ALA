@@ -39,6 +39,15 @@ export async function formatAndEnrichApplicators(
 ): Promise<FormattedApplicator[]> {
   const { treatmentId, priorityIdPrefix, defaultUserId, seedLength } = options;
 
+  // seedLength is an order-level value shared by every applicator in the order.
+  // Prefer the order lookup; otherwise fall back to any applicator row that
+  // already carries one, so the whole list shows a consistent Length instead of
+  // some rows resolving and others showing blank.
+  const effectiveSeedLength =
+    seedLength ??
+    (applicators.find((a: any) => a.SIBD_SEEDLEN != null)?.SIBD_SEEDLEN ||
+      null);
+
   const formattedApplicators = await Promise.all(
     applicators.map(async (app: any) => {
       // Get catalog - try PARTNAME first, then look up from PARTS table using PARTDES
@@ -76,7 +85,7 @@ export async function formatAndEnrichApplicators(
         applicatorType: app.PARTDES || app.PARTNAME || "Unknown Applicator",
         insertedSeedsQty: app.INSERTEDSEEDSQTY || app.INTDATA2 || 0,
         catalog: catalog,
-        seedLength: seedLength || app.SIBD_SEEDLEN || null,
+        seedLength: effectiveSeedLength || app.SIBD_SEEDLEN || null,
       };
     }),
   );

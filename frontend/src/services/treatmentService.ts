@@ -258,6 +258,7 @@ export const treatmentService = {
   ): Promise<{
     success: boolean;
     message?: string;
+    devCode?: string; // dev only: plaintext code, shown in the signature modal
   }> {
     const response = await api.post(
       `/treatments/${treatmentId}/finalize/send-code`,
