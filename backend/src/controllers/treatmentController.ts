@@ -1200,6 +1200,9 @@ export const sendFinalizationCode = asyncHandler(
         message: "Verification code sent",
         verificationId: existingVerification.id,
         expiresIn: 3600, // 1 hour in seconds
+        // Dev only: surface the plaintext code (no email locally) so the
+        // signature modal can show it. Never present in production.
+        ...(process.env.NODE_ENV === "development" && { devCode: newCode }),
       });
       return;
     }
@@ -1231,6 +1234,8 @@ export const sendFinalizationCode = asyncHandler(
       message: "Verification code sent",
       verificationId: verification.id,
       expiresIn: 3600, // 1 hour in seconds
+      // Dev only: surface the plaintext code (no email locally). Never in prod.
+      ...(process.env.NODE_ENV === "development" && { devCode: code }),
     });
   },
 );

@@ -184,6 +184,11 @@ export const requestVerificationCode = asyncHandler(
           custName: user.metadata?.custName || "",
           sites: user.metadata?.sites || [],
         },
+        // Development only: surface the plaintext code so the verify screen can
+        // show it (no email locally). Gated to "development" — never in prod.
+        ...(process.env.NODE_ENV === "development" && {
+          devCode: verificationCode,
+        }),
       });
     } catch (error: any) {
       logger.error(`Error requesting verification code: ${error.message}`);
@@ -371,6 +376,10 @@ export const resendVerificationCode = asyncHandler(
       res.status(200).json({
         success: true,
         message: "Verification code resent",
+        // Development only: surface the plaintext code (see requestVerificationCode).
+        ...(process.env.NODE_ENV === "development" && {
+          devCode: verificationCode,
+        }),
       });
     } catch (error: any) {
       logger.error(`Error resending verification code: ${error.message}`);

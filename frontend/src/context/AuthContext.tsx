@@ -122,6 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoginIdentifier(identifier);
       sessionStorage.setItem("loginIdentifier", identifier);
 
+      // Dev only: backend returns the plaintext code (no email locally) so the
+      // verify screen can show it. Absent in production -> nothing stored.
+      if (result.devCode) {
+        sessionStorage.setItem("devCode", result.devCode);
+      }
+
       // Store Priority user data if provided (for session persistence)
       if (result.userData) {
         sessionStorage.setItem(
@@ -178,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear session storage
       sessionStorage.removeItem("loginIdentifier");
       sessionStorage.removeItem("priorityUserData");
+      sessionStorage.removeItem("devCode");
 
       // Navigate based on user role
       // Admin users (positionCode=99) go to mode selection first

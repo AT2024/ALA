@@ -8,6 +8,7 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import { treatmentService } from "@/services/treatmentService";
+import api from "@/services/api";
 import { useTreatment } from "@/context/TreatmentContext";
 
 interface SiteUser {
@@ -84,6 +85,12 @@ const SignatureModal = ({
   const [attemptsRemaining, setAttemptsRemaining] = useState(3);
   const [canResend, setCanResend] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(60);
+  // Dev only: plaintext signature code (no email locally), shown on screen.
+  const [devCode, setDevCode] = useState<string | null>(null);
+
+  // Dev only: after finalize, keep the modal open showing a "View PDF" action
+  // instead of closing immediately (PDF isn't emailed locally).
+  const [finalized, setFinalized] = useState(false);
 
   // Signature details state
   const [signerName, setSignerName] = useState("");
@@ -114,6 +121,8 @@ const SignatureModal = ({
       setResendCountdown(60);
       setConfirmed(false);
       setError(null);
+      setDevCode(null);
+      setFinalized(false);
 
       // Pre-fill user data if provided (for hospital flow)
       if (flowType === "hospital_auto" && userData) {
@@ -188,7 +197,11 @@ const SignatureModal = ({
     setError(null);
 
     try {
-      await treatmentService.sendFinalizationCode(treatmentId, email);
+      const result = await treatmentService.sendFinalizationCode(
+        treatmentId,
+        email,
+      );
+      if (result.devCode) setDevCode(result.devCode); // dev only
       setCurrentStep("code_entry");
       setCanResend(false);
       setResendCountdown(60);
@@ -220,6 +233,25 @@ const SignatureModal = ({
     }
   };
 
+  // Dev only: open the just-finalized PDF in a new tab. Built from the live api
+  // base URL so it works regardless of run mode (Vite proxy / nginx). The PDF
+  // isn't emailed locally, so this is how you see it.
+  const openFinalizedPdf = () => {
+    window.open(`${api.defaults.baseURL}/dev/pdf/${treatmentId}`, "_blank");
+  };
+
+  // Shared post-finalize handling. In dev, keep the modal open with a "View PDF"
+  // action and auto-open the PDF. In production, behave exactly as before.
+  const onFinalizeSuccess = () => {
+    if (import.meta.env.DEV) {
+      setFinalized(true);
+      openFinalizedPdf();
+    } else {
+      onSuccess();
+      onClose();
+    }
+  };
+
   const handleVerifyAndFinalize = async () => {
     if (!signerName.trim()) {
       setError("Please enter your full name");
@@ -242,8 +274,7 @@ const SignatureModal = ({
         signerPosition,
         applicatorsForPdf,
       );
-      onSuccess();
-      onClose();
+      onFinalizeSuccess();
     } catch (err: any) {
       const errorData = err.response?.data;
 
@@ -291,8 +322,7 @@ const SignatureModal = ({
         signerPosition,
         applicatorsForPdf,
       );
-      onSuccess();
-      onClose();
+      onFinalizeSuccess();
     } catch (err: any) {
       setError(
         err.response?.data?.error ||
@@ -492,6 +522,11 @@ const SignatureModal = ({
           className="w-full rounded-md border border-gray-300 px-3 py-3 text-center text-2xl tracking-widest font-mono focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           autoFocus
         />
+        {import.meta.env.DEV && devCode && (
+          <p className="mt-2 rounded bg-yellow-50 px-2 py-1 text-sm text-yellow-800">
+            dev: code is <span className="font-mono font-bold">{devCode}</span>
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-between text-sm">
@@ -776,6 +811,34 @@ const SignatureModal = ({
     </div>
   );
 
+  // Dev only: shown after finalize so the PDF (not emailed locally) is reachable.
+  const renderFinalizedSuccess = () => (
+    <div className="space-y-4 text-center">
+      <CheckCircleIcon className="mx-auto h-12 w-12 text-green-500" />
+      <p className="text-sm text-gray-700">
+        Treatment finalized. The PDF should open in a new tab — if your browser
+        blocked the popup, use the button below.
+      </p>
+      <div className="flex gap-3">
+        <button
+          onClick={openFinalizedPdf}
+          className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+          View PDF
+        </button>
+        <button
+          onClick={() => {
+            onSuccess();
+            onClose();
+          }}
+          className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -822,23 +885,31 @@ const SignatureModal = ({
                   </button>
                 </div>
 
-                {/* Step Indicator - only shown for alphatau verification flow */}
-                {flowType === "alphatau_verification" && renderStepIndicator()}
+                {finalized ? (
+                  renderFinalizedSuccess()
+                ) : (
+                  <>
+                    {/* Step Indicator - only shown for alphatau verification flow */}
+                    {flowType === "alphatau_verification" &&
+                      renderStepIndicator()}
 
-                {/* Error Message */}
-                {error && (
-                  <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200">
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
+                    {/* Error Message */}
+                    {error && (
+                      <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200">
+                        <p className="text-sm text-red-700">{error}</p>
+                      </div>
+                    )}
+
+                    {/* Step Content */}
+                    {currentStep === "email_selection" &&
+                      renderEmailSelection()}
+                    {currentStep === "code_entry" && renderCodeEntry()}
+                    {currentStep === "signature_details" &&
+                      renderSignatureDetails()}
+                    {currentStep === "hospital_confirmation" &&
+                      renderHospitalConfirmation()}
+                  </>
                 )}
-
-                {/* Step Content */}
-                {currentStep === "email_selection" && renderEmailSelection()}
-                {currentStep === "code_entry" && renderCodeEntry()}
-                {currentStep === "signature_details" &&
-                  renderSignatureDetails()}
-                {currentStep === "hospital_confirmation" &&
-                  renderHospitalConfirmation()}
               </Dialog.Panel>
             </Transition.Child>
           </div>

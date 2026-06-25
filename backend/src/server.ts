@@ -71,6 +71,7 @@ import adminRoutes from "./routes/adminRoutes";
 import priorityRoutes from "./routes/priorityRoutes";
 import offlineRoutes from "./routes/offlineRoutes";
 import timeRoutes from "./routes/timeRoutes";
+import devRoutes from "./routes/devRoutes";
 import { initializeDatabase } from "./config/database";
 import "./models"; // Import models to ensure they're loaded before database sync
 import logger from "./utils/logger";
@@ -154,6 +155,7 @@ app.use("/api/admin", apiRateLimit, adminRoutes);
 app.use("/api/proxy/priority", apiRateLimit, priorityRoutes);
 app.use("/api/offline", offlineRoutes);
 app.use("/api/time", timeRoutes);
+app.use("/api/dev", devRoutes); // Dev-only (router 404s in non-development)
 
 // 404 handler
 app.use(notFound);
