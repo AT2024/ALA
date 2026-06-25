@@ -1342,6 +1342,7 @@ export const verifyAndFinalize = asyncHandler(
     const allApplicators = mergeApplicatorsForPdf(
       processedApplicators,
       availableApplicators,
+      treatment.type === "removal",
     );
 
     const signatureDetails: SignatureDetails = {
@@ -1456,6 +1457,7 @@ export const autoFinalize = asyncHandler(
     const allApplicators = mergeApplicatorsForPdf(
       processedApplicators,
       availableApplicators,
+      treatment.type === "removal",
     );
 
     const signatureDetails: SignatureDetails = {

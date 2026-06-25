@@ -747,10 +747,17 @@ docker service logs ala_api | grep -E "ERROR|WARNING|UNAUTHORIZED"
 - ✅ Keep last 3 versions of images (for easy rollback)
 - ✅ Backup database before major changes
 
+### Automated Daily Cleanup
+
+- ✅ A cron job runs [`docker-cleanup.sh`](docker-cleanup.sh) daily at 10:00 UTC. It prunes
+  images older than 72h + build cache **only when `/` usage > 70%**, never touches volumes,
+  and keeps ~3 days of images for rollback. Install once with `Install-CleanupCron.ps1`.
+- ✅ Logs to `~/ala-improved/logs/docker-cleanup.log`. Azure Monitor alerts if the disk stays critical.
+
 ### Monthly Maintenance
 
-- ✅ Review and clean old Docker images: `docker image prune -a`
-- ✅ Check disk space: `df -h`
+- ✅ Spot-check cleanup + disk: `df -h` and `tail ~/ala-improved/logs/docker-cleanup.log`
+  (the daily cron now handles `docker image prune -a`; intervene only on logged WARNINGs)
 - ✅ Review logs for errors: `docker service logs ala_api | grep ERROR`
 - ✅ Verify backups are working: restore to test environment
 

@@ -823,13 +823,22 @@ ssh azureuser@20.217.84.100 "cd ~/ala-improved/deployment && ./deploy"
 - **Prevention**: Pre-deployment checklist enforcement - see [incident report](learnings/errors/2025-10-27-blue-green-production-outage.md)
 - **Critical**: Production is NEVER a test environment, especially for deployment infrastructure
 
-**Pitfall**: Azure VM disk space fills up over time (RESOLVED 2025-11-10)
+**Pitfall**: Azure VM disk space fills up over time (recurred — daily cron added)
 
-- **Symptom**: Disk space fills up causing deployment failures and production issues
-- **Root Cause**: Docker images accumulate with each build (1-2GB per production deployment)
-- **Solution**: Automated cleanup added to deploy scripts - runs after successful deployment
-- **Prevention**: Disk usage warning shows before deployment, automatic cleanup frees 1-3.5GB per deployment cycle
-- **Manual cleanup**: `docker system prune -f` if emergency space needed
+- **Symptom**: Disk fills up; at ~99% Docker wedges entirely (`docker ps` hangs, ports 80/443 refused, prod down)
+- **Root Cause**: `swarm-deploy` builds a NEW timestamped image every deploy (`ala-api:YYYYMMDD-HHMMSS`)
+  and tags it `latest`. Post-deploy `docker image prune -f` removes only **dangling** images — old
+  **tagged** images and build cache accumulate forever, and only between deploys (nothing ran on a timer).
+- **Solution**: Daily cron on the VM runs [`deployment/docker-cleanup.sh`](../deployment/docker-cleanup.sh)
+  at 10:00 UTC. It's **threshold-gated** (prunes only when `/` > 70%) and **age-based**
+  (`docker image prune -af --filter until=72h` + `builder prune`), keeping ~3 days of images for
+  rollback and **never** touching volumes (the Postgres data volume). Install once with
+  [`deployment/Install-CleanupCron.ps1`](../deployment/Install-CleanupCron.ps1).
+- **Escalation**: Azure Monitor metric alert on OS disk free % emails `amitaik@alphatau.com` if the
+  disk stays critical. The alert lives in Azure's control plane, so it fires even when a full disk has
+  already wedged Docker (an in-VM/email alert would hang in that exact scenario).
+- **Manual cleanup**: run `deployment/docker-cleanup.sh` by hand, or `DISK_THRESHOLD=0 deployment/docker-cleanup.sh`
+  to force a prune; `docker system prune -f` for an emergency.
 
 ### CI/CD Pipeline Issues
 

@@ -107,7 +107,74 @@ describe("finalizationHelpers", () => {
       expect(row.status).toBe("SEALED");
       expect(row.seedLength).toBe(140);
       expect(row.catalog).toBe("FLEX-00023-FG");
-      expect(row.usageType).toBe("sealed");
+      // Insertion: an unused applicator was never inserted → usageType "none"
+      // (it still renders as a "Not used" row; the real status is preserved).
+      expect(row.usageType).toBe("none");
+    });
+  });
+
+  describe("mergeApplicatorsForPdf — unused applicators must not count as used", () => {
+    // Reported bug: the PDF "Applicators Used" showed the whole available pool
+    // (e.g. 54) instead of the 1 actually inserted. The Applicator model defaults
+    // usageType to "full", so a status-less available/unused applicator resolved
+    // to INSERTED via getEffectiveStatus and was counted. Insertion-unused rows
+    // must therefore never carry a used-mapping usageType.
+    const { calculateSummary } = jest.requireActual(
+      "../../../src/services/pdfGenerationService",
+    );
+
+    const treatment = {
+      id: "T-count",
+      type: "skin_insertion",
+      subjectId: "P-1",
+      site: "Test Site",
+      date: "2026-06-24",
+      surgeon: "Dr. Test",
+      activityPerSeed: 2.5,
+    };
+
+    it("counts only the inserted applicator when 53 unused carry the default usageType 'full'", () => {
+      const processed = [
+        {
+          id: "used-1",
+          serialNumber: "260423-11/A8",
+          seedQuantity: 5,
+          usageType: "full",
+          status: "INSERTED",
+          insertionTime: "2026-06-24T15:54:00.000Z",
+          insertedSeedsQty: 5,
+        },
+      ];
+      // 53 available-but-unused applicators with the model default (status null,
+      // usageType "full") — the exact shape that produced the inflated count.
+      const available = Array.from({ length: 53 }, (_, i) => ({
+        id: `avail-${i}`,
+        serialNumber: `260423-11/A${100 + i}`,
+        seedQuantity: 5,
+        usageType: "full",
+        status: null,
+      }));
+
+      const merged = mergeApplicatorsForPdf(processed, available, false);
+      const summary = calculateSummary(treatment, merged);
+
+      expect(merged).toHaveLength(54); // all rows still listed in the PDF table
+      expect(summary.totalApplicatorUse).toBe(1); // but only 1 counted as used
+    });
+
+    it("still counts removal applicators carried as usageType 'full' on unused rows", () => {
+      // Removal preserves usageType so removed-but-unprocessed applicators count.
+      const available = [
+        {
+          id: "rem-1",
+          serialNumber: "260423-11/A8",
+          seedQuantity: 5,
+          usageType: "full",
+          status: null,
+        },
+      ];
+      const merged = mergeApplicatorsForPdf([], available, true);
+      expect(merged[0].usageType).toBe("full");
     });
   });
 

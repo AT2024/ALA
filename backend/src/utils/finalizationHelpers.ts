@@ -77,22 +77,30 @@ export interface FinalizationResult {
  *
  * @param processedApplicators - Applicators that were actually used/processed
  * @param availableApplicators - All available applicators for the treatment (includes unused)
+ * @param isRemoval - True for removal treatments. Removal intentionally carries
+ *   usageType "full" on unused-but-removed applicators (so they count as removed).
+ *   For insertion, an unused applicator was by definition NOT inserted, so it must
+ *   never count as used — without this, the model's default usageType "full" on a
+ *   status-less available applicator resolved to INSERTED and inflated the PDF's
+ *   "Applicators Used" total to the whole available pool.
  * @returns Combined array of all applicators formatted for PDF
  *
  * @example
- * const allApplicators = mergeApplicatorsForPdf(processed, available);
+ * const allApplicators = mergeApplicatorsForPdf(processed, available, isRemoval);
  */
 export function mergeApplicatorsForPdf(
   processedApplicators: any[],
   availableApplicators: any[] | undefined,
+  isRemoval: boolean = false,
 ): ApplicatorForPdf[] {
   // Get serial numbers of processed applicators to identify unused ones
   const processedSerials = new Set(
     processedApplicators.map((a) => a.serialNumber),
   );
 
-  // Map unused applicators (those in available but not processed)
-  // Preserve usageType from frontend (e.g., 'full' for removed applicators in removal workflow)
+  // Map unused applicators (those in available but not processed).
+  // Removal: preserve usageType (e.g., 'full' for removed applicators).
+  // Insertion: force "none" — these were never inserted and must not be counted.
   const unusedApplicators: ApplicatorForPdf[] = (availableApplicators || [])
     .filter((a) => !processedSerials.has(a.serialNumber))
     .map((a) => ({
@@ -100,7 +108,9 @@ export function mergeApplicatorsForPdf(
       serialNumber: a.serialNumber,
       applicatorType: a.applicatorType,
       seedQuantity: a.seedQuantity,
-      usageType: (a.usageType as ApplicatorUsageType) || "sealed",
+      usageType: isRemoval
+        ? (a.usageType as ApplicatorUsageType) || "sealed"
+        : "none",
       status: a.status ?? null,
       insertionTime: a.insertionTime || "",
       insertedSeedsQty: a.insertedSeedsQty || 0,
